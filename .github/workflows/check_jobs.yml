@@ -1,0 +1,73 @@
+name: Check Jobs
+
+on:
+  schedule:
+    - cron: "0 */3 * * *"   # every 3 hours
+  workflow_dispatch:          # allow manual run
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium --with-deps
+
+      - name: Run scraper
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scraper.py
+        working-directory: .
+
+      - name: Send email alerts if new jobs found
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python - <<'EOF'
+          import json, sys
+          from pathlib import Path
+
+          seen = json.loads(Path("seen_jobs.json").read_text())
+          # jobs marked "new" this run have no "notified" flag
+          new_jobs = [j for j in seen if not j.get("notified")]
+          if not new_jobs:
+              print("No new jobs — skipping email")
+              sys.exit(0)
+
+          from config_store import load_settings
+          recipient = load_settings().get("recipient_email", "").strip()
+          if not recipient:
+              print("No recipient email configured — skipping email")
+              sys.exit(0)
+
+          from notifier import send_alerts
+          send_alerts(new_jobs, recipient)
+
+          # mark as notified and save
+          for j in seen:
+              j["notified"] = True
+          Path("seen_jobs.json").write_text(json.dumps(seen, indent=2))
+          print(f"Sent {len(new_jobs)} job alert(s) to {recipient}")
+          EOF
+
+      - name: Commit updated JSON files
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add seen_jobs.json companies.json
+          git diff --cached --quiet || git commit -m "chore: update seen_jobs + companies [skip ci]"
+          git push

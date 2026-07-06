@@ -1,0 +1,56 @@
+[
+  {
+    "id": "metlife",
+    "name": "MetLife",
+    "url": "https://careers.metlife.com",
+    "locked": true,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "avalara",
+    "name": "Avalara",
+    "url": "https://careers.avalara.com",
+    "locked": true,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "pokerstars",
+    "name": "PokerStars",
+    "url": "https://careers.pokerstars.com",
+    "locked": true,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "sanofi",
+    "name": "Sanofi",
+    "url": "https://en.jobs.sanofi.com",
+    "locked": true,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "pwc",
+    "name": "PwC",
+    "url": "https://www.pwc.com/gx/en/careers.html",
+    "locked": true,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "accenture",
+    "name": "Accenture",
+    "url": "https://www.accenture.com/us-en/careers",
+    "locked": true,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  }
+]
