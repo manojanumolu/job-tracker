@@ -26,12 +26,13 @@ def _send(to: str, subject: str, html: str, text: str) -> None:
         server.sendmail(addr, to, msg.as_string())
 
 
-def test_mail() -> None:
-    from config_store import load_settings
-    settings = load_settings()
-    recipient = settings.get("recipient_email", "").strip()
+def test_mail(recipient: str = "") -> None:
+    recipient = recipient.strip()
     if not recipient:
-        raise RuntimeError("No recipient email configured in settings.json")
+        from config_store import load_settings
+        recipient = load_settings().get("recipient_email", "").strip()
+    if not recipient:
+        raise RuntimeError("No recipient email configured")
     subject = "Test email from Fresher Job Tracker"
     text = "This is a test email from your Job Tracker. If you received this, email delivery is working correctly."
     html = """<!DOCTYPE html>

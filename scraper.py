@@ -12,9 +12,16 @@ log = logging.getLogger(__name__)
 
 FRESHER_KEYWORDS = [
     "graduate", "entry level", "entry-level", "associate", "0-1 year",
-    "0-2 year", "new grad", "trainee", "fresher", "junior", "intern",
+    "0-2 year", "new grad", "trainee", "fresher", "junior", "internship",
     "campus", "early career", "recent graduate",
 ]
+
+# word-boundary match — plain substring matching let "intern" match inside
+# "international"/"internal", flooding results with unrelated nav links
+_FRESHER_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(k) for k in FRESHER_KEYWORDS) + r")\b",
+    re.IGNORECASE,
+)
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; FresherJobTracker/1.0)",
@@ -29,24 +36,19 @@ API_ENDPOINTS: dict[str, str] = {
 }
 
 # Per-company API config (id -> dict)
+# NOTE: Avalara runs on a custom ATS (not Workday) and Accenture has no public
+# careers API — both previously pointed at guessed endpoints that returned
+# 401/404 on every run. They now fall back to the Playwright scraper below.
 COMPANY_API: dict[str, dict] = {
-    "avalara": {
+    "sanofi": {
         "type": "workday",
-        "url": "https://avalara.wd1.myworkdayjobs.com/wday/cxs/avalara/External/jobs",
-    },
-    "accenture": {
-        "type": "custom",
-        "url": "https://www.accenture.com/api/accenture/searching?currentPage=0&pageSize=10&lang=en&country=US&jobType=0&jobSeniority=0",
-        "path": "data.jobList",
-        "title_key": "jobTitle",
-        "url_key": "jobDetailUrl",
+        "url": "https://sanofi.wd3.myworkdayjobs.com/wday/cxs/sanofi/SanofiCareers/jobs",
     },
 }
 
 
 def _is_fresher(text: str) -> bool:
-    t = text.lower()
-    return any(kw in t for kw in FRESHER_KEYWORDS)
+    return bool(_FRESHER_RE.search(text))
 
 
 def _now_iso() -> str:
@@ -66,28 +68,16 @@ def _scrape_api(company: dict) -> list[dict]:
             r.raise_for_status()
             data = r.json()
             postings = data.get("jobPostings", [])
+            # https://{host}/wday/cxs/{tenant}/{site}/jobs -> https://{host}/{site}
+            parsed = urlparse(url)
+            site = parsed.path.rstrip("/").split("/")[-2]
+            base = f"{parsed.scheme}://{parsed.netloc}/{site}"
             jobs = []
             for p in postings:
                 title = p.get("title", "")
                 if _is_fresher(title + " " + p.get("locationsText", "")):
                     ext = p.get("externalPath", "")
-                    base = url.split("/wday/")[0]
                     jobs.append({"title": title, "url": base + ext, "company": company["name"]})
-            return jobs
-        elif cfg.get("type") == "custom":
-            r = client.get(url)
-            r.raise_for_status()
-            data = r.json()
-            path = cfg.get("path", "")
-            for key in path.split("."):
-                if key:
-                    data = data.get(key, [])
-            jobs = []
-            for item in (data if isinstance(data, list) else []):
-                title = item.get(cfg.get("title_key", "title"), "")
-                job_url = item.get(cfg.get("url_key", "url"), company["url"])
-                if _is_fresher(title):
-                    jobs.append({"title": title, "url": job_url, "company": company["name"]})
             return jobs
     return []
 
@@ -105,11 +95,17 @@ def _scrape_playwright(company: dict) -> list[dict]:
         page = browser.new_page(extra_http_headers={"User-Agent": HEADERS["User-Agent"]})
         try:
             page.goto(company["url"], timeout=30000)
-            page.wait_for_load_state("networkidle", timeout=15000)
+            try:
+                page.wait_for_load_state("networkidle", timeout=8000)
+            except Exception:
+                pass  # page may keep background network activity forever; DOM is usable regardless
             text = page.inner_text("body")
             links = page.query_selector_all("a")
             for link in links:
-                title = (link.inner_text() or "").strip()
+                raw = (link.inner_text() or "").strip()
+                # card-style links wrap a heading + description in one <a>;
+                # only the first line is the actual title/keyword to match on
+                title = raw.splitlines()[0].strip() if raw else ""
                 href = link.get_attribute("href") or ""
                 if title and _is_fresher(title):
                     if href.startswith("/"):
@@ -157,7 +153,8 @@ def run_all() -> list[dict]:
         for job in jobs:
             key = (job["company"], job["title"])
             if key not in seen_keys:
-                job["date"] = datetime.now(timezone.utc).strftime("%b %-d, %H:%M")
+                now = datetime.now(timezone.utc)
+                job["date"] = f"{now:%b} {now.day}, {now:%H:%M}"
                 job["id"] = f"{job['company']}_{job['title'][:40]}".replace(" ", "_")
                 new_jobs.append(job)
                 seen_keys.add(key)

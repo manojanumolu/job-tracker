@@ -150,6 +150,22 @@ section[data-testid="stSidebar"] { display: none !important; }
 
 /* ── columns gap ── */
 [data-testid="stHorizontalBlock"] { gap: 24px !important; }
+
+/* ── Tracked Companies card ── */
+.st-key-tc_card {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--shadow) !important;
+  overflow: hidden !important;
+  margin-bottom: 16px !important;
+}
+.st-key-tc_card [data-testid="stVerticalBlock"] { gap: 0 !important; }
+.st-key-tc_header_row { padding: 14px 22px !important; border-bottom: 1px solid var(--border) !important; }
+.st-key-tc_add_row { padding: 14px 22px !important; background: var(--card-2) !important; border-bottom: 1px solid var(--border) !important; }
+.st-key-tc_remove_row { padding: 12px 22px !important; border-top: 1px solid var(--border) !important; }
+.st-key-tc_header_row h2 { margin: 0 !important; }
+.st-key-tc_header_row p { margin: 3px 0 0 !important; }
 </style>
 """)
 
@@ -313,42 +329,39 @@ for c in companies:
   <td style="padding:14px 22px;"></td>
 </tr>"""
 
-st.html(f"""
-<section style="background:#fff;border:1px solid #eaeaec;border-radius:16px;box-shadow:0 1px 2px rgba(20,20,30,.05),0 2px 8px rgba(20,20,30,.04);overflow:hidden;margin-bottom:16px;">
-  <div style="display:flex;align-items:center;padding:18px 22px;border-bottom:1px solid #eaeaec;">
-    <div>
-      <h2 style="font-size:16px;font-weight:700;letter-spacing:-0.02em;color:#17171a;font-family:'Geist',sans-serif;">Tracked Companies</h2>
-      <p style="margin-top:3px;font-size:12.5px;color:#6c6c76;font-family:'Geist',sans-serif;">{active_count} of {len(companies)} career pages responding &middot; checked every 3 hours</p>
-    </div>
-  </div>
-  <div style="overflow-x:auto;">
-    <table style="width:100%;border-collapse:collapse;min-width:700px;font-size:13.5px;font-family:'Geist',sans-serif;">
-      <thead>
-        <tr style="text-align:left;">
-          <th style="padding:11px 22px;font-size:11px;font-weight:700;color:#9a9aa4;text-transform:uppercase;letter-spacing:0.06em;">Company</th>
-          <th style="padding:11px 16px;font-size:11px;font-weight:700;color:#9a9aa4;text-transform:uppercase;letter-spacing:0.06em;">Career Page</th>
-          <th style="padding:11px 16px;font-size:11px;font-weight:700;color:#9a9aa4;text-transform:uppercase;letter-spacing:0.06em;">Status</th>
-          <th style="padding:11px 16px;font-size:11px;font-weight:700;color:#9a9aa4;text-transform:uppercase;letter-spacing:0.06em;">Last Job Found</th>
-          <th style="padding:11px 16px;font-size:11px;font-weight:700;color:#9a9aa4;text-transform:uppercase;letter-spacing:0.06em;">Last Checked</th>
-          <th style="padding:11px 22px;"></th>
-        </tr>
-      </thead>
-      <tbody>{rows_html}</tbody>
-    </table>
-  </div>
-</section>
-""")
+if "show_add_form" not in st.session_state:
+    st.session_state.show_add_form = False
 
-# ── Add Company expander ───────────────────────────────────────────────────────
-with st.expander("➕  Add Company"):
-    c1, c2, c3 = st.columns([2, 3, 1])
-    with c1:
-        new_name = st.text_input("Company name", placeholder="e.g. Infosys", key="new_name")
-    with c2:
-        new_url = st.text_input("Career page URL", placeholder="https://careers.infosys.com", key="new_url")
-    with c3:
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Add", key="btn_add"):
+with st.container(key="tc_card"):
+    with st.container(key="tc_header_row"):
+        hcol1, hcol2 = st.columns([5, 1], vertical_alignment="center")
+        with hcol1:
+            st.html(f"""
+            <h2 style="font-size:16px;font-weight:700;letter-spacing:-0.02em;color:#17171a;font-family:'Geist',sans-serif;">Tracked Companies</h2>
+            <p style="margin-top:3px;font-size:12.5px;color:#6c6c76;font-family:'Geist',sans-serif;">{active_count} of {len(companies)} career pages responding &middot; checked every 3 hours</p>
+            """)
+        with hcol2:
+            if st.button("➕  Add Company", key="btn_toggle_add", use_container_width=True):
+                st.session_state.show_add_form = not st.session_state.show_add_form
+
+    if st.session_state.show_add_form:
+        with st.container(key="tc_add_row"):
+            fc1, fc2, fc3 = st.columns([2, 3, 2])
+            with fc1:
+                new_name = st.text_input("Company name", placeholder="e.g. Infosys", key="new_name")
+            with fc2:
+                new_url = st.text_input("Career page URL", placeholder="https://careers.infosys.com", key="new_url")
+            with fc3:
+                st.markdown("<br>", unsafe_allow_html=True)
+                fc3a, fc3b = st.columns(2)
+                with fc3a:
+                    cancel_clicked = st.button("Cancel", key="btn_cancel_add", use_container_width=True)
+                with fc3b:
+                    add_clicked = st.button("Add", key="btn_add", use_container_width=True)
+        if cancel_clicked:
+            st.session_state.show_add_form = False
+            st.rerun()
+        if add_clicked:
             name = new_name.strip()
             url = new_url.strip()
             if not name:
@@ -366,21 +379,42 @@ with st.expander("➕  Add Company"):
                 _save(BASE / "companies.json", companies)
                 _commit(BASE / "companies.json", "companies.json", f"chore: add {name}")
                 toast(f"{name} added", "success")
+                st.session_state.show_add_form = False
                 st.rerun()
 
-# ── Remove company ─────────────────────────────────────────────────────────────
-non_locked = [c for c in companies if not c.get("locked", False)]
-if non_locked:
-    r1, r2 = st.columns([4, 1])
-    with r1:
-        remove_name = st.selectbox(
-            "Remove a company",
-            options=["— select to remove —"] + [c["name"] for c in non_locked],
-            key="remove_sel",
-        )
-    with r2:
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Remove", key="btn_remove") and remove_name != "— select to remove —":
+    st.html(f"""
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;min-width:700px;font-size:13.5px;font-family:'Geist',sans-serif;">
+      <thead>
+        <tr style="text-align:left;">
+          <th style="padding:11px 22px;font-size:11px;font-weight:700;color:#9a9aa4;text-transform:uppercase;letter-spacing:0.06em;">Company</th>
+          <th style="padding:11px 16px;font-size:11px;font-weight:700;color:#9a9aa4;text-transform:uppercase;letter-spacing:0.06em;">Career Page</th>
+          <th style="padding:11px 16px;font-size:11px;font-weight:700;color:#9a9aa4;text-transform:uppercase;letter-spacing:0.06em;">Status</th>
+          <th style="padding:11px 16px;font-size:11px;font-weight:700;color:#9a9aa4;text-transform:uppercase;letter-spacing:0.06em;">Last Job Found</th>
+          <th style="padding:11px 16px;font-size:11px;font-weight:700;color:#9a9aa4;text-transform:uppercase;letter-spacing:0.06em;">Last Checked</th>
+          <th style="padding:11px 22px;"></th>
+        </tr>
+      </thead>
+      <tbody>{rows_html}</tbody>
+    </table>
+  </div>
+""")
+
+    # ── Remove company ───────────────────────────────────────────────────────
+    non_locked = [c for c in companies if not c.get("locked", False)]
+    if non_locked:
+        with st.container(key="tc_remove_row"):
+            r1, r2 = st.columns([4, 1])
+            with r1:
+                remove_name = st.selectbox(
+                    "Remove a company",
+                    options=["— select to remove —"] + [c["name"] for c in non_locked],
+                    key="remove_sel",
+                )
+            with r2:
+                st.markdown("<br>", unsafe_allow_html=True)
+                remove_clicked = st.button("Remove", key="btn_remove", use_container_width=True)
+        if remove_clicked and remove_name != "— select to remove —":
             companies = [c for c in companies if c.get("name") != remove_name]
             _save(BASE / "companies.json", companies)
             _commit(BASE / "companies.json", "companies.json", f"chore: remove {remove_name}")
@@ -481,15 +515,19 @@ with col_settings:
     with st.container():
         st.markdown('<div class="accent-btn">', unsafe_allow_html=True)
         if st.button("✈  Send Test Mail", key="btn_test", use_container_width=True):
-            recipient = settings.get("recipient_email", "").strip()
-            if not recipient:
-                toast("Save a recipient email first", "error")
+            recipient = email_val.strip()
+            if not recipient or not re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", recipient):
+                toast("Enter a valid recipient email first", "error")
             else:
                 try:
+                    if settings.get("recipient_email", "") != recipient:
+                        settings["recipient_email"] = recipient
+                        _save(BASE / "settings.json", settings)
+                        _commit(BASE / "settings.json", "settings.json", "chore: update recipient email")
                     import sys
                     sys.path.insert(0, str(BASE))
                     from notifier import test_mail
-                    test_mail()
+                    test_mail(recipient)
                     toast(f"Test email sent — check {recipient}", "success")
                 except Exception as ex:
                     toast(f"Failed: {ex}", "error")

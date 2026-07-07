@@ -2,7 +2,7 @@
   {
     "id": "metlife",
     "name": "MetLife",
-    "url": "https://careers.metlife.com",
+    "url": "https://jobs.metlife.com",
     "locked": true,
     "status": "unknown",
     "last_job": "",
@@ -20,7 +20,7 @@
   {
     "id": "pokerstars",
     "name": "PokerStars",
-    "url": "https://careers.pokerstars.com",
+    "url": "https://careers.flutterinternational.com/our-brands/pokerstars/",
     "locked": true,
     "status": "unknown",
     "last_job": "",
@@ -29,7 +29,7 @@
   {
     "id": "sanofi",
     "name": "Sanofi",
-    "url": "https://en.jobs.sanofi.com",
+    "url": "https://jobs.sanofi.com/en",
     "locked": true,
     "status": "unknown",
     "last_job": "",
