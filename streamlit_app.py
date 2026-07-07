@@ -56,12 +56,13 @@ section[data-testid="stSidebar"] { display: none !important; }
   color: var(--text) !important;
 }
 .stApp * { font-family: 'Geist', ui-sans-serif, system-ui, sans-serif !important; }
+/* keep Streamlit's built-in Material icon glyphs (expander arrow, etc.) working */
+[data-testid="stIconMaterial"] { font-family: 'Material Symbols Rounded' !important; }
 
 /* ── remove element padding/gap ── */
 [data-testid="stVerticalBlockBorderWrapper"],
 [data-testid="stVerticalBlock"] { gap: 0 !important; }
 .element-container { margin: 0 !important; padding: 0 !important; }
-.stHtml { line-height: 0; font-size: 0; }
 
 /* ── buttons ── */
 .stButton > button {
@@ -394,8 +395,38 @@ st.html("<div style='height:24px;'></div>")
 col_alerts, col_settings = st.columns([2, 1], gap="medium")
 
 # ── Recent Alerts ──────────────────────────────────────────────────────────────
+def _alert_row(j: dict) -> str:
+    raw_title = j.get('title', '')
+    title = raw_title[:50] + ('…' if len(raw_title) > 50 else '')
+    return f"""
+  <div style="display:flex;align-items:center;gap:14px;padding:15px 22px;border-top:1px solid #eaeaec;font-family:'Geist',sans-serif;">
+    <span style="width:34px;height:34px;border-radius:9px;background:rgba(79,70,229,0.10);color:#4f46e5;display:grid;place-items:center;flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+    </span>
+    <div style="min-width:0;margin-right:auto;">
+      <div style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#17171a;">{title}</div>
+      <div style="font-size:12px;color:#6c6c76;margin-top:2px;">{j.get('company','')} &middot; <span style="font-family:'Geist Mono',monospace;">{j.get('date','')}</span></div>
+    </div>
+    <a href="{j.get('url','#')}" target="_blank" rel="noopener"
+       style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid #dcdce0;background:#fafafa;color:#17171a;border-radius:8px;text-decoration:none;font-size:12.5px;font-weight:600;">
+      Apply
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+    </a>
+  </div>"""
+
+
+_EMPTY_ALERTS_HTML = """
+  <div style="padding:56px 22px;text-align:center;font-family:'Geist',sans-serif;">
+    <div style="width:46px;height:46px;border-radius:12px;background:#fafafa;border:1px solid #eaeaec;display:inline-grid;place-items:center;color:#9a9aa4;margin-bottom:14px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+    </div>
+    <p style="font-size:14px;font-weight:600;color:#17171a;">No alerts yet</p>
+    <p style="font-size:12.5px;color:#6c6c76;margin-top:4px;">We'll email you the moment a new fresher role appears.</p>
+  </div>"""
+
 with col_alerts:
     alert_count = len(seen_jobs)
+    alerts_body = "".join(_alert_row(j) for j in seen_jobs[:20]) if seen_jobs else _EMPTY_ALERTS_HTML
     st.html(f"""
 <section style="background:#fff;border:1px solid #eaeaec;border-radius:16px;box-shadow:0 1px 2px rgba(20,20,30,.05),0 2px 8px rgba(20,20,30,.04);overflow:hidden;">
   <div style="display:flex;align-items:center;padding:18px 22px;border-bottom:1px solid #eaeaec;">
@@ -405,29 +436,7 @@ with col_alerts:
     </div>
     <span style="font-size:12px;font-weight:600;color:#4f46e5;background:rgba(79,70,229,0.10);padding:4px 10px;border-radius:999px;">{alert_count} new</span>
   </div>
-  {''.join(f"""
-  <div style="display:flex;align-items:center;gap:14px;padding:15px 22px;border-top:1px solid #eaeaec;font-family:'Geist',sans-serif;">
-    <span style="width:34px;height:34px;border-radius:9px;background:rgba(79,70,229,0.10);color:#4f46e5;display:grid;place-items:center;flex-shrink:0;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-    </span>
-    <div style="min-width:0;margin-right:auto;">
-      <div style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#17171a;">{(j.get('title',''))[:50] + ('…' if len(j.get('title',''))>50 else '')}</div>
-      <div style="font-size:12px;color:#6c6c76;margin-top:2px;">{j.get('company','')} &middot; <span style="font-family:'Geist Mono',monospace;">{j.get('date','')}</span></div>
-    </div>
-    <a href="{j.get('url','#')}" target="_blank" rel="noopener"
-       style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid #dcdce0;background:#fafafa;color:#17171a;border-radius:8px;text-decoration:none;font-size:12.5px;font-weight:600;">
-      Apply
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-    </a>
-  </div>
-  """ for j in seen_jobs[:20]) if seen_jobs else """
-  <div style="padding:56px 22px;text-align:center;font-family:'Geist',sans-serif;">
-    <div style="width:46px;height:46px;border-radius:12px;background:#fafafa;border:1px solid #eaeaec;display:inline-grid;place-items:center;color:#9a9aa4;margin-bottom:14px;">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-    </div>
-    <p style="font-size:14px;font-weight:600;color:#17171a;">No alerts yet</p>
-    <p style="font-size:12.5px;color:#6c6c76;margin-top:4px;">We'll email you the moment a new fresher role appears.</p>
-  </div>"""}
+  {alerts_body}
 </section>
 """)
 
