@@ -4,53 +4,53 @@
     "name": "MetLife",
     "url": "https://jobs.metlife.com",
     "locked": true,
-    "status": "unknown",
-    "last_job": "",
-    "last_checked": ""
+    "status": "active",
+    "last_job": "Actuarial Associate",
+    "last_checked": "2026-07-07T17:16:13.607592+00:00"
   },
   {
     "id": "avalara",
     "name": "Avalara",
     "url": "https://careers.avalara.com",
     "locked": true,
-    "status": "unknown",
+    "status": "active",
     "last_job": "",
-    "last_checked": ""
+    "last_checked": "2026-07-07T17:16:15.705681+00:00"
   },
   {
     "id": "pokerstars",
     "name": "PokerStars",
     "url": "https://careers.flutterinternational.com/our-brands/pokerstars/",
     "locked": true,
-    "status": "unknown",
-    "last_job": "",
-    "last_checked": ""
+    "status": "active",
+    "last_job": "Andrew O'Rourke: From Graduate Role to Global Impact at Betfair International",
+    "last_checked": "2026-07-07T17:16:19.416111+00:00"
   },
   {
     "id": "sanofi",
     "name": "Sanofi",
     "url": "https://jobs.sanofi.com/en",
     "locked": true,
-    "status": "unknown",
-    "last_job": "",
-    "last_checked": ""
+    "status": "active",
+    "last_job": "Inside Sanofi’s Graduate Program",
+    "last_checked": "2026-07-07T17:16:32.973697+00:00"
   },
   {
     "id": "pwc",
     "name": "PwC",
     "url": "https://www.pwc.com/gx/en/careers.html",
     "locked": true,
-    "status": "unknown",
+    "status": "active",
     "last_job": "",
-    "last_checked": ""
+    "last_checked": "2026-07-07T17:16:46.262872+00:00"
   },
   {
     "id": "accenture",
     "name": "Accenture",
     "url": "https://www.accenture.com/us-en/careers",
     "locked": true,
-    "status": "unknown",
-    "last_job": "",
-    "last_checked": ""
+    "status": "active",
+    "last_job": "Early career professionals",
+    "last_checked": "2026-07-07T17:16:52.837085+00:00"
   }
 ]
