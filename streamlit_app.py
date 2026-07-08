@@ -270,6 +270,18 @@ section[data-testid="stSidebar"] { display: none !important; }
   transition:border-color .15s,color .15s;
 }
 .hdr-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── emoji/symbol icons ──────────────────────────────────────────────────
+   The blanket ".stApp * { font-family:'Geist' }" rule above can suppress a
+   browser's normal fallback to a color-emoji/symbol font for glyphs Geist
+   doesn't cover, making icons render blank in some browsers even though the
+   character is present in the DOM. Every icon glyph gets this explicit
+   fallback stack so it always paints regardless of that override. */
+.icon-emoji,
+.st-key-btn_refresh [data-testid^="stBaseButton"] p,
+.st-key-btn_theme [data-testid^="stBaseButton"] p {
+  font-family: "Segoe UI Symbol", "Segoe UI Emoji", "Noto Color Emoji", "Noto Sans Symbols", "Apple Color Emoji", sans-serif !important;
+}
 </style>
 """)
 
@@ -313,10 +325,25 @@ def _rel_time(iso: str) -> str:
         return iso
 
 
-def _commit(path: Path, repo_path: str, msg: str):
+def _friendly_github_error(e: Exception) -> str:
+    status = getattr(e, "status", None)
+    if status == 403:
+        return "GitHub rejected this token's permissions (403). It needs 'repo' scope (classic PAT) or 'Contents: write' (fine-grained PAT)."
+    if status == 404:
+        return "GitHub couldn't find the repository with this token (404) — check the token has access to it."
+    if status == 401:
+        return "GitHub rejected this token as invalid or expired (401)."
+    return str(e)
+
+
+def _commit(path: Path, repo_path: str, msg: str) -> tuple[bool, str]:
+    """Push a local file change to GitHub so it survives the next Streamlit
+    Cloud restart. Returns (ok, error) — callers MUST check this and tell the
+    user when it fails, since a change that only lives on local disk here is
+    not actually saved and will silently revert on the next redeploy/restart."""
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
-        return
+        return False, "no GITHUB_TOKEN configured for this app — the change only applies until this app restarts."
     try:
         from github import Github, GithubException
         repo = Github(token).get_repo(GITHUB_REPO)
@@ -324,10 +351,14 @@ def _commit(path: Path, repo_path: str, msg: str):
         try:
             existing = repo.get_contents(repo_path)
             repo.update_file(repo_path, msg, content, existing.sha)
-        except GithubException:
-            repo.create_file(repo_path, msg, content)
-    except Exception:
-        pass
+        except GithubException as ge:
+            if ge.status == 404:
+                repo.create_file(repo_path, msg, content)
+            else:
+                raise
+        return True, ""
+    except Exception as e:
+        return False, _friendly_github_error(e)
 
 
 def _trigger_scrape() -> tuple[bool, str]:
@@ -344,7 +375,10 @@ def _trigger_scrape() -> tuple[bool, str]:
             return True, "Triggered a fresh check — it takes 1–2 minutes to run, then refresh again."
         return False, "GitHub declined to start a new check."
     except Exception as e:
-        return False, f"Couldn't trigger a check: {e}"
+        status = getattr(e, "status", None)
+        if status == 403:
+            return False, "This token can't trigger workflows (403). It needs 'workflow' scope (classic PAT) or 'Actions: write' (fine-grained PAT)."
+        return False, f"Couldn't trigger a check: {_friendly_github_error(e)}"
 
 
 # ── load data ─────────────────────────────────────────────────────────────────
@@ -390,7 +424,7 @@ with st.container(key="app_header"):
     with lc:
         st.html("""
         <div style="display:flex;align-items:center;gap:10px;">
-          <div style="width:36px;height:36px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;flex-shrink:0;">💼</div>
+          <div class="icon-emoji" style="width:36px;height:36px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;flex-shrink:0;">💼</div>
           <div style="line-height:1.2;">
             <div style="font-size:15.5px;font-weight:700;letter-spacing:-0.02em;color:var(--text);font-family:'Geist',sans-serif;">Fresher Job Tracker</div>
             <div style="font-size:12px;color:var(--muted);font-family:'Geist',sans-serif;">Entry-level posting monitor</div>
@@ -408,22 +442,22 @@ with st.container(key="app_header"):
     with pc2:
         st.html("""
         <div class="hdr-pill" title="The scraper runs automatically every 3 hours">
-          🕐 <span class="muted">Next check</span> <b>in ~3 h</b>
+          <span class="icon-emoji">🕐</span> <span class="muted">Next check</span> <b>in ~3 h</b>
         </div>
         """)
     with bc1:
-        if st.button("🔄", key="btn_refresh", help="Trigger a fresh check now (takes 1–2 min)"):
+        if st.button("⟳", key="btn_refresh", help="Trigger a fresh check now (takes 1–2 min)"):
             ok, msg = _trigger_scrape()
             toast(msg, "success" if ok else "error")
             st.rerun()
     with bc2:
-        theme_icon = "☀️" if st.session_state.dark_mode else "🌙"
+        theme_icon = "☀" if st.session_state.dark_mode else "☾"
         if st.button(theme_icon, key="btn_theme", help="Toggle light / dark mode"):
             st.session_state.dark_mode = not st.session_state.dark_mode
             st.rerun()
     with bc3:
         st.html(f"""
-        <a class="hdr-btn" href="https://github.com/{GITHUB_REPO}" target="_blank" rel="noopener" title="View the source repository on GitHub">🐙</a>
+        <a class="hdr-btn" href="https://github.com/{GITHUB_REPO}" target="_blank" rel="noopener" title="View the source repository on GitHub" style="font-size:12px;font-weight:700;letter-spacing:0.02em;">GH</a>
         """)
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -519,8 +553,11 @@ with st.container(key="page_wrap"):
                         "status": "unknown", "last_job": "", "last_checked": "",
                     })
                     _save(BASE / "companies.json", companies)
-                    _commit(BASE / "companies.json", "companies.json", f"chore: add {name}")
-                    toast(f"{name} added", "success")
+                    ok, err = _commit(BASE / "companies.json", "companies.json", f"chore: add {name}")
+                    if ok:
+                        toast(f"{name} added", "success")
+                    else:
+                        toast(f"{name} added, but didn't save permanently: {err}", "error")
                     st.session_state.show_add_form = False
                     st.rerun()
 
@@ -557,8 +594,11 @@ with st.container(key="page_wrap"):
         if remove_clicked and remove_name != "— select to remove —":
             companies = [c for c in companies if c.get("name") != remove_name]
             _save(BASE / "companies.json", companies)
-            _commit(BASE / "companies.json", "companies.json", f"chore: remove {remove_name}")
-            toast(f"{remove_name} removed", "success")
+            ok, err = _commit(BASE / "companies.json", "companies.json", f"chore: remove {remove_name}")
+            if ok:
+                toast(f"{remove_name} removed", "success")
+            else:
+                toast(f"{remove_name} removed, but didn't save permanently: {err}", "error")
             st.rerun()
 
     st.html("<div style='height:24px;'></div>")
@@ -574,7 +614,7 @@ with st.container(key="page_wrap"):
         title = raw_title[:50] + ('…' if len(raw_title) > 50 else '')
         return f"""
         <div style="display:flex;align-items:center;gap:12px;min-width:0;padding:12px 4px;">
-          <span style="width:32px;height:32px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;">💼</span>
+          <span class="icon-emoji" style="width:32px;height:32px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;">💼</span>
           <div style="min-width:0;">
             <div style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);">{title}</div>
             <div style="font-size:12px;color:var(--muted);margin-top:2px;">{j.get('company','')} &middot; <span style="font-family:'Geist Mono',monospace;">{j.get('date','')}</span></div>
@@ -594,7 +634,7 @@ with st.container(key="page_wrap"):
 
     _EMPTY_ALERTS_HTML = """
       <div style="padding:56px 22px;text-align:center;font-family:'Geist',sans-serif;">
-        <div style="width:46px;height:46px;border-radius:12px;background:var(--card-2);border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;color:var(--faint);margin-bottom:14px;font-size:20px;">🔔</div>
+        <div class="icon-emoji" style="width:46px;height:46px;border-radius:12px;background:var(--card-2);border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;color:var(--faint);margin-bottom:14px;font-size:20px;">🔔</div>
         <p style="font-size:14px;font-weight:600;color:var(--text);">No alerts yet</p>
         <p style="font-size:12.5px;color:var(--muted);margin-top:4px;">We'll email you the moment a new fresher role appears.</p>
       </div>"""
@@ -658,16 +698,22 @@ with st.container(key="page_wrap"):
                                      help="Remove the checked alerts only"):
                             remaining = [j for j in seen_jobs_raw if _job_key(j) not in selected_ids]
                             _save(BASE / "seen_jobs.json", remaining)
-                            _commit(BASE / "seen_jobs.json", "seen_jobs.json", f"chore: remove {len(selected_ids)} notification(s)")
-                            toast(f"Removed {len(selected_ids)} notification(s)", "success")
+                            ok, err = _commit(BASE / "seen_jobs.json", "seen_jobs.json", f"chore: remove {len(selected_ids)} notification(s)")
+                            if ok:
+                                toast(f"Removed {len(selected_ids)} notification(s)", "success")
+                            else:
+                                toast(f"Removed locally, but didn't save permanently: {err}", "error")
                             st.rerun()
                     with fc5:
                         if st.button("Clear all", key="btn_clear_all", use_container_width=True,
                                      disabled=(total == 0), help="Remove every stored notification"):
                             _save(BASE / "seen_jobs.json", [])
-                            _commit(BASE / "seen_jobs.json", "seen_jobs.json", "chore: clear all notifications")
+                            ok, err = _commit(BASE / "seen_jobs.json", "seen_jobs.json", "chore: clear all notifications")
                             st.session_state.alerts_page = 0
-                            toast("All notifications cleared", "success")
+                            if ok:
+                                toast("All notifications cleared", "success")
+                            else:
+                                toast(f"Cleared locally, but didn't save permanently: {err}", "error")
                             st.rerun()
 
     # ── Notification Settings ───────────────────────────────────────────────
@@ -675,7 +721,7 @@ with st.container(key="page_wrap"):
         with st.container(key="ns_card"):
             st.html("""
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-              <span style="width:30px;height:30px;border-radius:8px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:15px;">✉️</span>
+              <span class="icon-emoji" style="width:30px;height:30px;border-radius:8px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:16px;">✉</span>
               <h2 style="font-size:16px;font-weight:700;letter-spacing:-0.02em;color:var(--text);font-family:'Geist',sans-serif;">Notification Settings</h2>
             </div>
             <p style="font-size:12.5px;color:var(--muted);margin-bottom:4px;margin-left:40px;font-family:'Geist',sans-serif;">Where alert emails are delivered.</p>
@@ -696,8 +742,11 @@ with st.container(key="page_wrap"):
                 else:
                     settings["recipient_email"] = e
                     _save(BASE / "settings.json", settings)
-                    _commit(BASE / "settings.json", "settings.json", "chore: update recipient email")
-                    toast(f"Saved — alerts go to {e}", "success")
+                    ok, err = _commit(BASE / "settings.json", "settings.json", "chore: update recipient email")
+                    if ok:
+                        toast(f"Saved — alerts go to {e}", "success")
+                    else:
+                        toast(f"Saved locally, but didn't save permanently: {err}", "error")
 
             st.html("""
             <div style="height:1px;background:var(--border);margin-bottom:2px;"></div>
@@ -712,15 +761,19 @@ with st.container(key="page_wrap"):
                         toast("Enter a valid recipient email first", "error")
                     else:
                         try:
+                            persist_err = ""
                             if settings.get("recipient_email", "") != recipient:
                                 settings["recipient_email"] = recipient
                                 _save(BASE / "settings.json", settings)
-                                _commit(BASE / "settings.json", "settings.json", "chore: update recipient email")
+                                _, persist_err = _commit(BASE / "settings.json", "settings.json", "chore: update recipient email")
                             import sys
                             sys.path.insert(0, str(BASE))
                             from notifier import test_mail
                             test_mail(recipient)
-                            toast(f"Test email sent — check {recipient}", "success")
+                            if persist_err:
+                                toast(f"Test email sent, but the address wasn't saved permanently: {persist_err}", "error")
+                            else:
+                                toast(f"Test email sent — check {recipient}", "success")
                         except Exception as ex:
                             toast(f"Failed: {ex}", "error")
 
@@ -730,7 +783,7 @@ with st.container(key="page_wrap"):
       <span>Fresher Job Tracker &middot; internal tool</span>
       <a href="https://github.com/{GITHUB_REPO}" target="_blank" rel="noopener"
          style="display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;">
-        🐙 Source repository
+        Source repository
       </a>
     </footer>
     """)
@@ -744,7 +797,7 @@ if st.session_state.toast:
     icon = "✅" if kind == "success" else "⚠️"
     st.html(f"""
 <div style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;align-items:center;gap:11px;padding:13px 16px;border-radius:12px;background:var(--card);border:1px solid var(--border-strong);box-shadow:0 10px 30px rgba(0,0,0,.15);max-width:340px;font-family:'Geist',sans-serif;">
-  <span style="width:26px;height:26px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:{icon_bg};color:{icon_color};font-size:14px;">{icon}</span>
+  <span class="icon-emoji" style="width:26px;height:26px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:{icon_bg};color:{icon_color};font-size:14px;">{icon}</span>
   <div style="font-size:13px;font-weight:500;color:var(--text);line-height:1.4;">{msg}</div>
 </div>
 """)
