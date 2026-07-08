@@ -166,6 +166,45 @@ section[data-testid="stSidebar"] { display: none !important; }
 .st-key-tc_remove_row { padding: 12px 22px !important; border-top: 1px solid var(--border) !important; }
 .st-key-tc_header_row h2 { margin: 0 !important; }
 .st-key-tc_header_row p { margin: 3px 0 0 !important; }
+
+/* ── Recent Alerts card ── */
+.st-key-alerts_card {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--shadow) !important;
+  overflow: hidden !important;
+}
+.st-key-alerts_card [data-testid="stVerticalBlock"] { gap: 0 !important; }
+.st-key-alerts_header_row { padding: 16px 20px !important; border-bottom: 1px solid var(--border) !important; }
+.st-key-alerts_header_row h2 { margin: 0 !important; }
+.st-key-alerts_header_row p { margin: 3px 0 0 !important; }
+.st-key-alerts_footer_row { padding: 12px 20px !important; border-top: 1px solid var(--border) !important; background: var(--card-2) !important; }
+.st-key-alerts_footer_row [data-testid="stHorizontalBlock"] { gap: 8px !important; }
+.st-key-alerts_page_label { text-align: center !important; font-size: 12px !important; color: var(--muted) !important; font-family: 'Geist Mono', monospace !important; padding-top: 8px !important; }
+.st-key-alerts_card .stCheckbox { padding-left: 20px !important; padding-top: 2px !important; }
+
+/* ── Notification Settings card ── */
+.st-key-ns_card {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--shadow) !important;
+  padding: 22px !important;
+}
+.st-key-ns_card [data-testid="stVerticalBlock"] { gap: 4px !important; }
+
+/* ── header pills / refresh button ── */
+.hdr-pill {
+  display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border);
+  border-radius:999px;background:#fff;font-size:12.5px;font-family:'Geist',sans-serif;cursor:default;
+}
+.hdr-btn {
+  height:34px;display:inline-flex;align-items:center;gap:6px;padding:0 11px;border:1px solid var(--border);
+  background:#fff;color:var(--text);border-radius:9px;text-decoration:none;font-size:12.5px;font-weight:500;
+  font-family:'Geist',sans-serif;cursor:pointer;transition:border-color .15s,color .15s;
+}
+.hdr-btn:hover { border-color: var(--accent); color: var(--accent); }
 </style>
 """)
 
@@ -230,7 +269,17 @@ def _commit(path: Path, repo_path: str, msg: str):
 # ── load data ─────────────────────────────────────────────────────────────────
 companies: list[dict] = _load(BASE / "companies.json", [])
 settings: dict = _load(BASE / "settings.json", {"recipient_email": ""})
-seen_jobs: list[dict] = list(reversed(_load(BASE / "seen_jobs.json", [])[-50:]))
+# oldest-first, exactly as stored — this is the copy any save/remove operation
+# must filter, so notification cleanup never silently truncates scraper dedup history
+seen_jobs_raw: list[dict] = _load(BASE / "seen_jobs.json", [])
+seen_jobs: list[dict] = list(reversed(seen_jobs_raw))  # newest-first, for display
+
+ALERTS_PAGE_SIZE = 10
+
+
+def _job_key(j: dict) -> str:
+    return j.get("id") or f"{j.get('company','')}_{j.get('title','')}"
+
 
 # ── session state ──────────────────────────────────────────────────────────────
 if "email_val" not in st.session_state:
@@ -239,6 +288,8 @@ if "toast" not in st.session_state:
     st.session_state.toast = None
 if "toast_kind" not in st.session_state:
     st.session_state.toast_kind = "success"
+if "alerts_page" not in st.session_state:
+    st.session_state.alerts_page = 0
 
 
 def toast(msg: str, kind: str = "success"):
@@ -255,29 +306,30 @@ active_count = sum(1 for c in companies if c.get("status") not in ("broken",))
 
 st.html(f"""
 <div style="position:sticky;top:0;z-index:20;background:rgba(246,246,247,0.88);backdrop-filter:blur(14px);border-bottom:1px solid #eaeaec;">
-  <div style="max-width:1120px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-    <div style="display:flex;align-items:center;gap:11px;margin-right:auto;">
-      <div style="width:36px;height:36px;border-radius:10px;background:#4f46e5;color:#fff;display:grid;place-items:center;box-shadow:0 1px 2px rgba(20,20,30,.1);">
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-      </div>
+  <div style="max-width:1120px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:10px;margin-right:auto;">
+      <div style="width:36px;height:36px;border-radius:10px;background:#4f46e5;display:grid;place-items:center;box-shadow:0 1px 2px rgba(20,20,30,.1);font-size:18px;line-height:1;">💼</div>
       <div style="line-height:1.2;">
         <div style="font-size:15.5px;font-weight:700;letter-spacing:-0.02em;color:#17171a;font-family:'Geist',sans-serif;">Fresher Job Tracker</div>
         <div style="font-size:12px;color:#6c6c76;font-family:'Geist',sans-serif;">Entry-level posting monitor</div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-      <div style="display:flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid #eaeaec;border-radius:999px;background:#fff;font-size:12.5px;font-family:'Geist',sans-serif;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>
+    <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+      <div class="hdr-pill" title="Time since the scraper last ran and refreshed this data">
+        <span style="color:#22c55e;font-weight:700;">✓</span>
         <span style="color:#6c6c76;">Last checked</span>
         <span style="font-weight:600;font-family:'Geist Mono',monospace;">{last_checked_str}</span>
       </div>
-      <div style="display:flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid #eaeaec;border-radius:999px;background:#fff;font-size:12.5px;font-family:'Geist',sans-serif;">
+      <div class="hdr-pill" title="The scraper runs automatically every 3 hours">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
         <span style="color:#6c6c76;">Next check</span>
         <span style="font-weight:600;font-family:'Geist Mono',monospace;">in ~3 h</span>
       </div>
-      <a href="https://github.com/manojanumolu/job-tracker" target="_blank" rel="noopener"
-         style="height:34px;display:inline-flex;align-items:center;gap:7px;padding:0 11px;border:1px solid #eaeaec;background:#fff;color:#17171a;border-radius:9px;text-decoration:none;font-size:12.5px;font-weight:500;font-family:'Geist',sans-serif;">
+      <button type="button" class="hdr-btn" onclick="window.location.reload()" title="Reload the page to see the latest data">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        Refresh
+      </button>
+      <a href="https://github.com/manojanumolu/job-tracker" target="_blank" rel="noopener" class="hdr-btn" title="View the source repository on GitHub">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
         GitHub
       </a>
@@ -429,24 +481,30 @@ st.html("<div style='height:24px;'></div>")
 col_alerts, col_settings = st.columns([2, 1], gap="medium")
 
 # ── Recent Alerts ──────────────────────────────────────────────────────────────
-def _alert_row(j: dict) -> str:
+def _alert_info_html(j: dict) -> str:
     raw_title = j.get('title', '')
     title = raw_title[:50] + ('…' if len(raw_title) > 50 else '')
     return f"""
-  <div style="display:flex;align-items:center;gap:14px;padding:15px 22px;border-top:1px solid #eaeaec;font-family:'Geist',sans-serif;">
-    <span style="width:34px;height:34px;border-radius:9px;background:rgba(79,70,229,0.10);color:#4f46e5;display:grid;place-items:center;flex-shrink:0;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-    </span>
-    <div style="min-width:0;margin-right:auto;">
-      <div style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#17171a;">{title}</div>
-      <div style="font-size:12px;color:#6c6c76;margin-top:2px;">{j.get('company','')} &middot; <span style="font-family:'Geist Mono',monospace;">{j.get('date','')}</span></div>
-    </div>
-    <a href="{j.get('url','#')}" target="_blank" rel="noopener"
-       style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid #dcdce0;background:#fafafa;color:#17171a;border-radius:8px;text-decoration:none;font-size:12.5px;font-weight:600;">
-      Apply
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-    </a>
-  </div>"""
+    <div style="display:flex;align-items:center;gap:12px;min-width:0;padding:12px 4px;">
+      <span style="width:32px;height:32px;border-radius:9px;background:rgba(79,70,229,0.10);color:#4f46e5;display:grid;place-items:center;flex-shrink:0;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      </span>
+      <div style="min-width:0;">
+        <div style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#17171a;">{title}</div>
+        <div style="font-size:12px;color:#6c6c76;margin-top:2px;">{j.get('company','')} &middot; <span style="font-family:'Geist Mono',monospace;">{j.get('date','')}</span></div>
+      </div>
+    </div>"""
+
+
+def _alert_apply_html(j: dict) -> str:
+    return f"""
+    <div style="padding:12px 20px 12px 0;text-align:right;">
+      <a href="{j.get('url','#')}" target="_blank" rel="noopener"
+         style="display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid #dcdce0;background:#fafafa;color:#17171a;border-radius:8px;text-decoration:none;font-size:12.5px;font-weight:600;white-space:nowrap;">
+        Apply
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+      </a>
+    </div>"""
 
 
 _EMPTY_ALERTS_HTML = """
@@ -459,60 +517,113 @@ _EMPTY_ALERTS_HTML = """
   </div>"""
 
 with col_alerts:
-    alert_count = len(seen_jobs)
-    alerts_body = "".join(_alert_row(j) for j in seen_jobs[:20]) if seen_jobs else _EMPTY_ALERTS_HTML
-    st.html(f"""
-<section style="background:#fff;border:1px solid #eaeaec;border-radius:16px;box-shadow:0 1px 2px rgba(20,20,30,.05),0 2px 8px rgba(20,20,30,.04);overflow:hidden;">
-  <div style="display:flex;align-items:center;padding:18px 22px;border-bottom:1px solid #eaeaec;">
-    <div style="margin-right:auto;">
-      <h2 style="font-size:16px;font-weight:700;letter-spacing:-0.02em;color:#17171a;font-family:'Geist',sans-serif;">Recent Alerts</h2>
-      <p style="margin-top:3px;font-size:12.5px;color:#6c6c76;font-family:'Geist',sans-serif;">New fresher postings, newest first</p>
-    </div>
-    <span style="font-size:12px;font-weight:600;color:#4f46e5;background:rgba(79,70,229,0.10);padding:4px 10px;border-radius:999px;">{alert_count} new</span>
-  </div>
-  {alerts_body}
-</section>
-""")
+    with st.container(key="alerts_card"):
+        total = len(seen_jobs)
+        page = st.session_state.alerts_page
+        max_page = max(0, (total - 1) // ALERTS_PAGE_SIZE) if total else 0
+        page = min(page, max_page)
+        st.session_state.alerts_page = page
+        start = page * ALERTS_PAGE_SIZE
+        end = start + ALERTS_PAGE_SIZE
+        page_jobs = seen_jobs[start:end]
+
+        with st.container(key="alerts_header_row"):
+            hc1, hc2 = st.columns([5, 1], vertical_alignment="center")
+            with hc1:
+                st.html("""
+                <h2 style="font-size:16px;font-weight:700;letter-spacing:-0.02em;color:#17171a;font-family:'Geist',sans-serif;">Recent Alerts</h2>
+                <p style="margin-top:3px;font-size:12.5px;color:#6c6c76;font-family:'Geist',sans-serif;">New fresher postings, newest first</p>
+                """)
+            with hc2:
+                st.html(f"""
+                <div style="text-align:right;"><span style="font-size:12px;font-weight:600;color:#4f46e5;background:rgba(79,70,229,0.10);padding:4px 10px;border-radius:999px;">{total} total</span></div>
+                """)
+
+        if not page_jobs:
+            st.html(_EMPTY_ALERTS_HTML)
+        else:
+            page_ids = []
+            for i, j in enumerate(page_jobs):
+                jid = _job_key(j)
+                page_ids.append(jid)
+                if i > 0:
+                    st.html('<div style="border-top:1px solid var(--border);"></div>')
+                rc1, rc2, rc3 = st.columns([0.5, 5, 1.2], vertical_alignment="center")
+                with rc1:
+                    st.checkbox(f"Select {j.get('title','')}", key=f"chk_{jid}", label_visibility="collapsed")
+                with rc2:
+                    st.html(_alert_info_html(j))
+                with rc3:
+                    st.html(_alert_apply_html(j))
+
+            with st.container(key="alerts_footer_row"):
+                selected_ids = [jid for jid in page_ids if st.session_state.get(f"chk_{jid}")]
+                fc1, fc2, fc3, fc4, fc5 = st.columns([1.1, 1.3, 1.6, 1.1, 1.1], vertical_alignment="center")
+                with fc1:
+                    if st.button("← Previous", key="alerts_prev", disabled=(page == 0), use_container_width=True):
+                        st.session_state.alerts_page = page - 1
+                        st.rerun()
+                with fc2:
+                    st.html(f'<div class="st-key-alerts_page_label">{start + 1}–{min(end, total)} of {total}</div>')
+                with fc3:
+                    if st.button("Next →", key="alerts_next", disabled=(end >= total), use_container_width=True):
+                        st.session_state.alerts_page = page + 1
+                        st.rerun()
+                with fc4:
+                    if st.button(f"Remove ({len(selected_ids)})", key="btn_remove_selected",
+                                 disabled=(len(selected_ids) == 0), use_container_width=True,
+                                 help="Remove the checked alerts only"):
+                        remaining = [j for j in seen_jobs_raw if _job_key(j) not in selected_ids]
+                        _save(BASE / "seen_jobs.json", remaining)
+                        _commit(BASE / "seen_jobs.json", "seen_jobs.json", f"chore: remove {len(selected_ids)} notification(s)")
+                        toast(f"Removed {len(selected_ids)} notification(s)", "success")
+                        st.rerun()
+                with fc5:
+                    if st.button("Clear all", key="btn_clear_all", use_container_width=True,
+                                 disabled=(total == 0), help="Remove every stored notification"):
+                        _save(BASE / "seen_jobs.json", [])
+                        _commit(BASE / "seen_jobs.json", "seen_jobs.json", "chore: clear all notifications")
+                        st.session_state.alerts_page = 0
+                        toast("All notifications cleared", "success")
+                        st.rerun()
 
 # ── Notification Settings ──────────────────────────────────────────────────────
 with col_settings:
-    st.html("""
-<section style="background:#fff;border:1px solid #eaeaec;border-radius:16px;box-shadow:0 1px 2px rgba(20,20,30,.05),0 2px 8px rgba(20,20,30,.04);padding:22px;">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-    <span style="width:30px;height:30px;border-radius:8px;background:rgba(79,70,229,0.10);color:#4f46e5;display:grid;place-items:center;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-    </span>
-    <h2 style="font-size:16px;font-weight:700;letter-spacing:-0.02em;color:#17171a;font-family:'Geist',sans-serif;">Notification Settings</h2>
-  </div>
-  <p style="font-size:12.5px;color:#6c6c76;margin-bottom:20px;margin-left:40px;font-family:'Geist',sans-serif;">Where alert emails are delivered.</p>
-""")
+    with st.container(key="ns_card"):
+        st.html("""
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+          <span style="width:30px;height:30px;border-radius:8px;background:rgba(79,70,229,0.10);color:#4f46e5;display:grid;place-items:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          </span>
+          <h2 style="font-size:16px;font-weight:700;letter-spacing:-0.02em;color:#17171a;font-family:'Geist',sans-serif;">Notification Settings</h2>
+        </div>
+        <p style="font-size:12.5px;color:#6c6c76;margin-bottom:16px;margin-left:40px;font-family:'Geist',sans-serif;">Where alert emails are delivered.</p>
+        """)
 
-    email_val = st.text_input(
-        "Recipient email",
-        value=st.session_state.email_val,
-        placeholder="you@example.com",
-        key="email_input",
-    )
-    st.session_state.email_val = email_val
+        email_val = st.text_input(
+            "Recipient email",
+            value=st.session_state.email_val,
+            placeholder="you@example.com",
+            key="email_input",
+        )
+        st.session_state.email_val = email_val
 
-    if st.button("Save", key="btn_save_email"):
-        e = email_val.strip()
-        if not re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", e):
-            toast("Enter a valid email address", "error")
-        else:
-            settings["recipient_email"] = e
-            _save(BASE / "settings.json", settings)
-            _commit(BASE / "settings.json", "settings.json", "chore: update recipient email")
-            toast(f"Saved — alerts go to {e}", "success")
+        if st.button("Save", key="btn_save_email"):
+            e = email_val.strip()
+            if not re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", e):
+                toast("Enter a valid email address", "error")
+            else:
+                settings["recipient_email"] = e
+                _save(BASE / "settings.json", settings)
+                _commit(BASE / "settings.json", "settings.json", "chore: update recipient email")
+                toast(f"Saved — alerts go to {e}", "success")
 
-    st.html("""
-  <div style="height:1px;background:#eaeaec;margin:20px 0;"></div>
-  <p style="font-size:12px;font-weight:600;color:#6c6c76;margin-bottom:6px;font-family:'Geist',sans-serif;">Verify delivery</p>
-  <p style="font-size:12.5px;color:#6c6c76;margin-bottom:12px;font-family:'Geist',sans-serif;">Send yourself a sample alert to confirm emails arrive.</p>
-</section>
-""")
+        st.html("""
+        <div style="height:1px;background:#eaeaec;margin:18px 0 14px;"></div>
+        <p style="font-size:12px;font-weight:600;color:#6c6c76;margin-bottom:6px;font-family:'Geist',sans-serif;">Verify delivery</p>
+        <p style="font-size:12.5px;color:#6c6c76;margin-bottom:14px;font-family:'Geist',sans-serif;">Send yourself a sample alert to confirm emails arrive.</p>
+        """)
 
-    with st.container():
         st.markdown('<div class="accent-btn">', unsafe_allow_html=True)
         if st.button("✈  Send Test Mail", key="btn_test", use_container_width=True):
             recipient = email_val.strip()
