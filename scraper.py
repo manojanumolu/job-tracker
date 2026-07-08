@@ -3,7 +3,7 @@ import re
 import time
 import logging
 from datetime import datetime, timezone
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 import httpx
 
@@ -164,11 +164,12 @@ def _scrape_playwright(company: dict) -> list[dict]:
                     and _is_fresher(raw)
                     and _is_india(raw)
                 ):
-                    if href.startswith("/"):
-                        parsed = urlparse(company["url"])
-                        href = f"{parsed.scheme}://{parsed.netloc}{href}"
-                    elif not href.startswith("http"):
-                        href = company["url"]
+                    # urljoin resolves every relative form correctly (root-relative,
+                    # page-relative, absolute) — the previous manual check fell back
+                    # to the generic career-page URL for plain "job/123"-style relative
+                    # hrefs, which is why "Apply" sometimes opened the homepage instead
+                    # of the specific job posting.
+                    href = urljoin(company["url"], href) if href else company["url"]
                     jobs.append({"title": title, "url": href, "company": company["name"]})
         except Exception as e:
             log.warning("Playwright error for %s: %s", company["name"], e)

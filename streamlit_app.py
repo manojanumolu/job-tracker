@@ -1,8 +1,10 @@
 import json
+import os
 import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 import streamlit as st
 
@@ -13,31 +15,68 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = False
+
+# ── theme palettes ────────────────────────────────────────────────────────────
+LIGHT = {
+    "bg": "#f6f6f7", "card": "#ffffff", "card2": "#fafafa",
+    "border": "#eaeaec", "border_strong": "#dcdce0",
+    "text": "#17171a", "muted": "#6c6c76", "faint": "#9a9aa4",
+    "accent": "#4f46e5", "accent_soft": "rgba(79,70,229,0.10)",
+    "good": "#22c55e", "good_soft": "rgba(34,197,94,0.12)",
+    "bad": "#ef4444", "bad_soft": "rgba(239,68,68,0.12)",
+    "shadow": "0 1px 2px rgba(20,20,30,.05), 0 2px 8px rgba(20,20,30,.04)",
+    "dot": "rgba(20,20,30,.045)",
+    "header_bg": "rgba(246,246,247,0.88)",
+}
+DARK = {
+    "bg": "#101012", "card": "#18181b", "card2": "#1e1e22",
+    "border": "#2b2b30", "border_strong": "#38383e",
+    "text": "#f3f3f5", "muted": "#a3a3ad", "faint": "#77777f",
+    "accent": "#6d64f0", "accent_soft": "rgba(109,100,240,0.18)",
+    "good": "#34d399", "good_soft": "rgba(52,211,153,0.16)",
+    "bad": "#f87171", "bad_soft": "rgba(248,113,113,0.16)",
+    "shadow": "0 1px 2px rgba(0,0,0,.4), 0 2px 10px rgba(0,0,0,.35)",
+    "dot": "rgba(255,255,255,.045)",
+    "header_bg": "rgba(16,16,18,0.88)",
+}
+TH = DARK if st.session_state.dark_mode else LIGHT
+
 # ── CSS injection via st.html() — works in Streamlit 1.36+ ───────────────────
+# NOTE: inline <svg> icons rendered through st.html() silently fail to paint in
+# this app's hosting environment (confirmed empirically — the DOM node exists
+# but nothing draws), while plain Unicode/emoji glyphs always render. Every
+# icon in this file is therefore plain text/emoji, not svg, by design.
+_root_vars = f"""
+:root {{
+  --bg: {TH['bg']};
+  --card: {TH['card']};
+  --card-2: {TH['card2']};
+  --border: {TH['border']};
+  --border-strong: {TH['border_strong']};
+  --text: {TH['text']};
+  --muted: {TH['muted']};
+  --faint: {TH['faint']};
+  --accent: {TH['accent']};
+  --accent-soft: {TH['accent_soft']};
+  --good: {TH['good']};
+  --good-soft: {TH['good_soft']};
+  --bad: {TH['bad']};
+  --bad-soft: {TH['bad_soft']};
+  --shadow: {TH['shadow']};
+  --dot: {TH['dot']};
+  --header-bg: {TH['header_bg']};
+}}
+"""
+
 st.html("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-:root {
-  --bg: #f6f6f7;
-  --card: #ffffff;
-  --card-2: #fafafa;
-  --border: #eaeaec;
-  --border-strong: #dcdce0;
-  --text: #17171a;
-  --muted: #6c6c76;
-  --faint: #9a9aa4;
-  --accent: #4f46e5;
-  --accent-soft: rgba(79,70,229,0.10);
-  --good: #22c55e;
-  --good-soft: rgba(34,197,94,0.12);
-  --bad: #ef4444;
-  --bad-soft: rgba(239,68,68,0.12);
-  --shadow: 0 1px 2px rgba(20,20,30,.05), 0 2px 8px rgba(20,20,30,.04);
-  --dot: rgba(20,20,30,.045);
-}
+""" + _root_vars + """
 
 /* ── hide Streamlit chrome ── */
 #MainMenu, footer, header[data-testid="stHeader"] { visibility: hidden; height: 0; }
@@ -47,7 +86,7 @@ section[data-testid="stSidebar"] { display: none !important; }
 .stApp {
   background-color: var(--bg) !important;
   background-image:
-    radial-gradient(900px 400px at 50% -120px, rgba(79,70,229,0.08), transparent 68%),
+    radial-gradient(900px 400px at 50% -120px, var(--accent-soft), transparent 68%),
     radial-gradient(var(--dot) 1px, transparent 1.4px);
   background-size: auto, 24px 24px;
   background-position: center top, center top;
@@ -65,7 +104,7 @@ section[data-testid="stSidebar"] { display: none !important; }
 .element-container { margin: 0 !important; padding: 0 !important; }
 
 /* ── buttons ── */
-.stButton > button {
+[data-testid^="stBaseButton"] {
   font-family: 'Geist', sans-serif !important;
   border-radius: 9px !important;
   border: 1px solid var(--border-strong) !important;
@@ -79,13 +118,16 @@ section[data-testid="stSidebar"] { display: none !important; }
   height: auto !important;
   line-height: 1.4 !important;
 }
-.stButton > button:hover {
+[data-testid^="stBaseButton"]:hover {
   border-color: var(--accent) !important;
   color: var(--accent) !important;
   background: var(--card-2) !important;
 }
+[data-testid^="stBaseButton"]:disabled {
+  opacity: 0.45 !important;
+}
 /* ── accent button (Send Test Mail) ── */
-.accent-btn > button {
+.st-key-test_mail_btn [data-testid^="stBaseButton"] {
   background: var(--accent) !important;
   color: #fff !important;
   border: none !important;
@@ -96,7 +138,7 @@ section[data-testid="stSidebar"] { display: none !important; }
   box-shadow: 0 6px 18px rgba(79,70,229,0.25), var(--shadow) !important;
   width: 100% !important;
 }
-.accent-btn > button:hover {
+.st-key-test_mail_btn [data-testid^="stBaseButton"]:hover {
   background: #4338ca !important;
   color: #fff !important;
 }
@@ -128,6 +170,7 @@ section[data-testid="stSidebar"] { display: none !important; }
   border: 1px solid var(--border-strong) !important;
   border-radius: 9px !important;
   background: var(--card-2) !important;
+  color: var(--text) !important;
 }
 
 /* ── expander ── */
@@ -150,6 +193,24 @@ section[data-testid="stSidebar"] { display: none !important; }
 
 /* ── columns gap ── */
 [data-testid="stHorizontalBlock"] { gap: 24px !important; }
+
+/* ── page width wrapper ── */
+.st-key-page_wrap { max-width: 1120px; margin: 0 auto; padding: 24px 24px 40px; }
+
+/* ── sticky app header ── */
+.st-key-app_header {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--header-bg);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 24px !important;
+}
+.st-key-app_header [data-testid="stHorizontalBlock"] { align-items: center !important; gap: 8px !important; }
+.st-key-app_header [data-testid^="stBaseButton"] {
+  width: 36px !important; height: 36px !important; padding: 0 !important;
+  display: flex !important; align-items: center !important; justify-content: center !important;
+  font-size: 15px !important; border-radius: 9px !important; box-shadow: none !important;
+}
 
 /* ── Tracked Companies card ── */
 .st-key-tc_card {
@@ -192,17 +253,21 @@ section[data-testid="stSidebar"] { display: none !important; }
   box-shadow: var(--shadow) !important;
   padding: 22px !important;
 }
-.st-key-ns_card [data-testid="stVerticalBlock"] { gap: 4px !important; }
+.st-key-ns_card [data-testid="stVerticalBlock"] { gap: 14px !important; }
 
-/* ── header pills / refresh button ── */
+/* ── header pills / icon buttons ── */
 .hdr-pill {
   display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border);
-  border-radius:999px;background:#fff;font-size:12.5px;font-family:'Geist',sans-serif;cursor:default;
+  border-radius:999px;background:var(--card);font-size:12.5px;font-family:'Geist',sans-serif;
+  cursor:default;color:var(--text);white-space:nowrap;
 }
+.hdr-pill .muted { color: var(--muted); }
+.hdr-pill b { font-family:'Geist Mono',monospace; font-weight:600; }
 .hdr-btn {
-  height:34px;display:inline-flex;align-items:center;gap:6px;padding:0 11px;border:1px solid var(--border);
-  background:#fff;color:var(--text);border-radius:9px;text-decoration:none;font-size:12.5px;font-weight:500;
-  font-family:'Geist',sans-serif;cursor:pointer;transition:border-color .15s,color .15s;
+  height:36px;width:36px;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:9px;
+  text-decoration:none;font-size:15px;font-weight:500;font-family:'Geist',sans-serif;cursor:pointer;
+  transition:border-color .15s,color .15s;
 }
 .hdr-btn:hover { border-color: var(--accent); color: var(--accent); }
 </style>
@@ -210,6 +275,7 @@ section[data-testid="stSidebar"] { display: none !important; }
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 BASE = Path(__file__).parent
+GITHUB_REPO = "manojanumolu/job-tracker"
 
 
 def _load(path: Path, default):
@@ -225,7 +291,6 @@ def _save(path: Path, data) -> None:
 
 def _host(url: str) -> str:
     try:
-        from urllib.parse import urlparse
         return urlparse(url).netloc.replace("www.", "")
     except Exception:
         return url
@@ -249,13 +314,12 @@ def _rel_time(iso: str) -> str:
 
 
 def _commit(path: Path, repo_path: str, msg: str):
-    import os
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
         return
     try:
         from github import Github, GithubException
-        repo = Github(token).get_repo("manojanumolu/job-tracker")
+        repo = Github(token).get_repo(GITHUB_REPO)
         content = path.read_text("utf-8")
         try:
             existing = repo.get_contents(repo_path)
@@ -264,6 +328,23 @@ def _commit(path: Path, repo_path: str, msg: str):
             repo.create_file(repo_path, msg, content)
     except Exception:
         pass
+
+
+def _trigger_scrape() -> tuple[bool, str]:
+    """Ask GitHub Actions to run check_jobs.yml right now (workflow_dispatch)."""
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        return False, "Can't trigger a live check — no GITHUB_TOKEN configured for this app."
+    try:
+        from github import Github
+        repo = Github(token).get_repo(GITHUB_REPO)
+        workflow = repo.get_workflow("check_jobs.yml")
+        ok = workflow.create_dispatch(ref="main")
+        if ok:
+            return True, "Triggered a fresh check — it takes 1–2 minutes to run, then refresh again."
+        return False, "GitHub declined to start a new check."
+    except Exception as e:
+        return False, f"Couldn't trigger a check: {e}"
 
 
 # ── load data ─────────────────────────────────────────────────────────────────
@@ -304,70 +385,78 @@ last_checked_times = [c.get("last_checked", "") for c in companies if c.get("las
 last_checked_str = _rel_time(max(last_checked_times)) if last_checked_times else "never"
 active_count = sum(1 for c in companies if c.get("status") not in ("broken",))
 
-st.html(f"""
-<div style="position:sticky;top:0;z-index:20;background:rgba(246,246,247,0.88);backdrop-filter:blur(14px);border-bottom:1px solid #eaeaec;">
-  <div style="max-width:1120px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-    <div style="display:flex;align-items:center;gap:10px;margin-right:auto;">
-      <div style="width:36px;height:36px;border-radius:10px;background:#4f46e5;display:grid;place-items:center;box-shadow:0 1px 2px rgba(20,20,30,.1);font-size:18px;line-height:1;">💼</div>
-      <div style="line-height:1.2;">
-        <div style="font-size:15.5px;font-weight:700;letter-spacing:-0.02em;color:#17171a;font-family:'Geist',sans-serif;">Fresher Job Tracker</div>
-        <div style="font-size:12px;color:#6c6c76;font-family:'Geist',sans-serif;">Entry-level posting monitor</div>
-      </div>
-    </div>
-    <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
-      <div class="hdr-pill" title="Time since the scraper last ran and refreshed this data">
-        <span style="color:#22c55e;font-weight:700;">✓</span>
-        <span style="color:#6c6c76;">Last checked</span>
-        <span style="font-weight:600;font-family:'Geist Mono',monospace;">{last_checked_str}</span>
-      </div>
-      <div class="hdr-pill" title="The scraper runs automatically every 3 hours">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-        <span style="color:#6c6c76;">Next check</span>
-        <span style="font-weight:600;font-family:'Geist Mono',monospace;">in ~3 h</span>
-      </div>
-      <button type="button" class="hdr-btn" onclick="window.location.reload()" title="Reload the page to see the latest data">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
-        Refresh
-      </button>
-      <a href="https://github.com/manojanumolu/job-tracker" target="_blank" rel="noopener" class="hdr-btn" title="View the source repository on GitHub">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
-        GitHub
-      </a>
-    </div>
-  </div>
-</div>
-<div style="max-width:1120px;margin:0 auto;padding:28px 24px 0;font-family:'Geist',sans-serif;">
-""")
+with st.container(key="app_header"):
+    lc, pc1, pc2, bc1, bc2, bc3 = st.columns([6, 1.6, 1.6, 0.45, 0.45, 0.45], vertical_alignment="center")
+    with lc:
+        st.html("""
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:36px;height:36px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;flex-shrink:0;">💼</div>
+          <div style="line-height:1.2;">
+            <div style="font-size:15.5px;font-weight:700;letter-spacing:-0.02em;color:var(--text);font-family:'Geist',sans-serif;">Fresher Job Tracker</div>
+            <div style="font-size:12px;color:var(--muted);font-family:'Geist',sans-serif;">Entry-level posting monitor</div>
+          </div>
+        </div>
+        """)
+    with pc1:
+        st.html(f"""
+        <div class="hdr-pill" title="Time since the scraper last ran and refreshed this data">
+          <span style="color:var(--good);font-weight:700;">✓</span>
+          <span class="muted">Last checked</span>
+          <b>{last_checked_str}</b>
+        </div>
+        """)
+    with pc2:
+        st.html("""
+        <div class="hdr-pill" title="The scraper runs automatically every 3 hours">
+          🕐 <span class="muted">Next check</span> <b>in ~3 h</b>
+        </div>
+        """)
+    with bc1:
+        if st.button("🔄", key="btn_refresh", help="Trigger a fresh check now (takes 1–2 min)"):
+            ok, msg = _trigger_scrape()
+            toast(msg, "success" if ok else "error")
+            st.rerun()
+    with bc2:
+        theme_icon = "☀️" if st.session_state.dark_mode else "🌙"
+        if st.button(theme_icon, key="btn_theme", help="Toggle light / dark mode"):
+            st.session_state.dark_mode = not st.session_state.dark_mode
+            st.rerun()
+    with bc3:
+        st.html(f"""
+        <a class="hdr-btn" href="https://github.com/{GITHUB_REPO}" target="_blank" rel="noopener" title="View the source repository on GitHub">🐙</a>
+        """)
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TRACKED COMPANIES TABLE
+# PAGE BODY
 # ═══════════════════════════════════════════════════════════════════════════════
-rows_html = ""
-for c in companies:
-    status = c.get("status", "unknown")
-    is_broken = status == "broken"
-    is_active = status == "active"
-    status_label = "Broken" if is_broken else ("Active" if is_active else "Pending")
-    status_color = "#ef4444" if is_broken else ("#22c55e" if is_active else "#9a9aa4")
-    status_bg = "rgba(239,68,68,0.12)" if is_broken else ("rgba(34,197,94,0.12)" if is_active else "rgba(156,163,175,0.12)")
-    initial = c.get("name", "?")[0].upper()
-    host = _host(c.get("url", ""))
-    last_job = c.get("last_job", "") or "—"
-    last_checked = _rel_time(c.get("last_checked", ""))
-    core_badge = '<span style="font-size:10px;color:#9a9aa4;border:1px solid #eaeaec;padding:1px 6px;border-radius:5px;letter-spacing:0.03em;margin-left:6px;">CORE</span>' if c.get("locked") else ""
-    rows_html += f"""
-<tr style="border-top:1px solid #eaeaec;">
+with st.container(key="page_wrap"):
+
+    # ── TRACKED COMPANIES TABLE ──────────────────────────────────────────────
+    rows_html = ""
+    for c in companies:
+        status = c.get("status", "unknown")
+        is_broken = status == "broken"
+        is_active = status == "active"
+        status_label = "Broken" if is_broken else ("Active" if is_active else "Pending")
+        status_color = "var(--bad)" if is_broken else ("var(--good)" if is_active else "var(--faint)")
+        status_bg = "var(--bad-soft)" if is_broken else ("var(--good-soft)" if is_active else "var(--accent-soft)")
+        initial = c.get("name", "?")[0].upper()
+        host = _host(c.get("url", ""))
+        last_job = c.get("last_job", "") or "—"
+        last_checked = _rel_time(c.get("last_checked", ""))
+        core_badge = '<span style="font-size:10px;color:var(--faint);border:1px solid var(--border);padding:1px 6px;border-radius:5px;letter-spacing:0.03em;margin-left:6px;">CORE</span>' if c.get("locked") else ""
+        rows_html += f"""
+<tr style="border-top:1px solid var(--border);">
   <td style="padding:14px 22px;">
     <div style="display:flex;align-items:center;gap:10px;">
-      <span style="width:26px;height:26px;border-radius:7px;background:rgba(79,70,229,0.10);color:#4f46e5;display:grid;place-items:center;font-size:12px;font-weight:700;flex-shrink:0;">{initial}</span>
-      <span style="font-weight:600;font-size:13.5px;">{c.get('name','')}</span>{core_badge}
+      <span style="width:26px;height:26px;border-radius:7px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-size:12px;font-weight:700;flex-shrink:0;">{initial}</span>
+      <span style="font-weight:600;font-size:13.5px;color:var(--text);">{c.get('name','')}</span>{core_badge}
     </div>
   </td>
   <td style="padding:14px 16px;">
     <a href="{c.get('url','')}" target="_blank" rel="noopener"
-       style="display:inline-flex;align-items:center;gap:5px;color:#6c6c76;text-decoration:none;font-family:'Geist Mono',monospace;font-size:12px;">
-      {host}
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+       style="display:inline-flex;align-items:center;gap:5px;color:var(--muted);text-decoration:none;font-family:'Geist Mono',monospace;font-size:12px;">
+      {host} ↗
     </a>
   </td>
   <td style="padding:14px 16px;">
@@ -376,91 +465,90 @@ for c in companies:
       {status_label}
     </span>
   </td>
-  <td style="padding:14px 16px;color:#17171a;font-size:13.5px;">{last_job}</td>
-  <td style="padding:14px 16px;color:#6c6c76;font-family:'Geist Mono',monospace;font-size:12px;">{last_checked}</td>
+  <td style="padding:14px 16px;color:var(--text);font-size:13.5px;">{last_job}</td>
+  <td style="padding:14px 16px;color:var(--muted);font-family:'Geist Mono',monospace;font-size:12px;">{last_checked}</td>
   <td style="padding:14px 22px;"></td>
 </tr>"""
 
-if "show_add_form" not in st.session_state:
-    st.session_state.show_add_form = False
+    if "show_add_form" not in st.session_state:
+        st.session_state.show_add_form = False
 
-with st.container(key="tc_card"):
-    with st.container(key="tc_header_row"):
-        hcol1, hcol2 = st.columns([5, 1], vertical_alignment="center")
-        with hcol1:
-            st.html(f"""
-            <h2 style="font-size:16px;font-weight:700;letter-spacing:-0.02em;color:#17171a;font-family:'Geist',sans-serif;">Tracked Companies</h2>
-            <p style="margin-top:3px;font-size:12.5px;color:#6c6c76;font-family:'Geist',sans-serif;">{active_count} of {len(companies)} career pages responding &middot; checked every 3 hours</p>
-            """)
-        with hcol2:
-            if st.button("➕  Add Company", key="btn_toggle_add", use_container_width=True):
-                st.session_state.show_add_form = not st.session_state.show_add_form
+    with st.container(key="tc_card"):
+        with st.container(key="tc_header_row"):
+            hcol1, hcol2 = st.columns([5, 1], vertical_alignment="center")
+            with hcol1:
+                st.html(f"""
+                <h2 style="font-size:16px;font-weight:700;letter-spacing:-0.02em;color:var(--text);font-family:'Geist',sans-serif;">Tracked Companies</h2>
+                <p style="margin-top:3px;font-size:12.5px;color:var(--muted);font-family:'Geist',sans-serif;">{active_count} of {len(companies)} career pages responding &middot; checked every 3 hours</p>
+                """)
+            with hcol2:
+                if st.button("➕  Add Company", key="btn_toggle_add", use_container_width=True,
+                             help="Track a new company's career page"):
+                    st.session_state.show_add_form = not st.session_state.show_add_form
 
-    if st.session_state.show_add_form:
-        with st.container(key="tc_add_row"):
-            fc1, fc2, fc3 = st.columns([2, 3, 2])
-            with fc1:
-                new_name = st.text_input("Company name", placeholder="e.g. Infosys", key="new_name")
-            with fc2:
-                new_url = st.text_input("Career page URL", placeholder="https://careers.infosys.com", key="new_url")
-            with fc3:
-                st.markdown("<br>", unsafe_allow_html=True)
-                fc3a, fc3b = st.columns(2)
-                with fc3a:
-                    cancel_clicked = st.button("Cancel", key="btn_cancel_add", use_container_width=True)
-                with fc3b:
-                    add_clicked = st.button("Add", key="btn_add", use_container_width=True)
-        if cancel_clicked:
-            st.session_state.show_add_form = False
-            st.rerun()
-        if add_clicked:
-            name = new_name.strip()
-            url = new_url.strip()
-            if not name:
-                toast("Company name is required", "error")
-            elif not url.startswith("http"):
-                toast("URL must start with https://", "error")
-            elif any(c.get("name", "").lower() == name.lower() for c in companies):
-                toast(f"{name} is already tracked", "error")
-            else:
-                companies.append({
-                    "id": f"c{int(time.time())}",
-                    "name": name, "url": url, "locked": False,
-                    "status": "unknown", "last_job": "", "last_checked": "",
-                })
-                _save(BASE / "companies.json", companies)
-                _commit(BASE / "companies.json", "companies.json", f"chore: add {name}")
-                toast(f"{name} added", "success")
+        if st.session_state.show_add_form:
+            with st.container(key="tc_add_row"):
+                fc1, fc2, fc3 = st.columns([2, 3, 2])
+                with fc1:
+                    new_name = st.text_input("Company name", placeholder="e.g. Infosys", key="new_name")
+                with fc2:
+                    new_url = st.text_input("Career page URL", placeholder="https://careers.infosys.com", key="new_url")
+                with fc3:
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    fc3a, fc3b = st.columns(2)
+                    with fc3a:
+                        cancel_clicked = st.button("Cancel", key="btn_cancel_add", use_container_width=True)
+                    with fc3b:
+                        add_clicked = st.button("Add", key="btn_add", use_container_width=True)
+            if cancel_clicked:
                 st.session_state.show_add_form = False
                 st.rerun()
+            if add_clicked:
+                name = new_name.strip()
+                url = new_url.strip()
+                if not name:
+                    toast("Company name is required", "error")
+                elif not url.startswith("http"):
+                    toast("URL must start with https://", "error")
+                elif any(c.get("name", "").lower() == name.lower() for c in companies):
+                    toast(f"{name} is already tracked", "error")
+                else:
+                    companies.append({
+                        "id": f"c{int(time.time())}",
+                        "name": name, "url": url, "locked": False,
+                        "status": "unknown", "last_job": "", "last_checked": "",
+                    })
+                    _save(BASE / "companies.json", companies)
+                    _commit(BASE / "companies.json", "companies.json", f"chore: add {name}")
+                    toast(f"{name} added", "success")
+                    st.session_state.show_add_form = False
+                    st.rerun()
 
-    st.html(f"""
-  <div style="overflow-x:auto;">
-    <table style="width:100%;border-collapse:collapse;min-width:700px;font-size:13.5px;font-family:'Geist',sans-serif;">
-      <thead>
-        <tr style="text-align:left;">
-          <th style="padding:11px 22px;font-size:11px;font-weight:700;color:#9a9aa4;text-transform:uppercase;letter-spacing:0.06em;">Company</th>
-          <th style="padding:11px 16px;font-size:11px;font-weight:700;color:#9a9aa4;text-transform:uppercase;letter-spacing:0.06em;">Career Page</th>
-          <th style="padding:11px 16px;font-size:11px;font-weight:700;color:#9a9aa4;text-transform:uppercase;letter-spacing:0.06em;">Status</th>
-          <th style="padding:11px 16px;font-size:11px;font-weight:700;color:#9a9aa4;text-transform:uppercase;letter-spacing:0.06em;">Last Job Found</th>
-          <th style="padding:11px 16px;font-size:11px;font-weight:700;color:#9a9aa4;text-transform:uppercase;letter-spacing:0.06em;">Last Checked</th>
-          <th style="padding:11px 22px;"></th>
-        </tr>
-      </thead>
-      <tbody>{rows_html}</tbody>
-    </table>
-  </div>
-""")
+        st.html(f"""
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;min-width:700px;font-size:13.5px;font-family:'Geist',sans-serif;">
+          <thead>
+            <tr style="text-align:left;">
+              <th style="padding:11px 22px;font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:0.06em;">Company</th>
+              <th style="padding:11px 16px;font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:0.06em;">Career Page</th>
+              <th style="padding:11px 16px;font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:0.06em;">Status</th>
+              <th style="padding:11px 16px;font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:0.06em;">Last Job Found</th>
+              <th style="padding:11px 16px;font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:0.06em;">Last Checked</th>
+              <th style="padding:11px 22px;"></th>
+            </tr>
+          </thead>
+          <tbody>{rows_html}</tbody>
+        </table>
+      </div>
+    """)
 
-    # ── Remove company ───────────────────────────────────────────────────────
-    non_locked = [c for c in companies if not c.get("locked", False)]
-    if non_locked:
+        # ── Remove company — any tracked company, core or not ───────────────────
         with st.container(key="tc_remove_row"):
             r1, r2 = st.columns([4, 1])
             with r1:
                 remove_name = st.selectbox(
                     "Remove a company",
-                    options=["— select to remove —"] + [c["name"] for c in non_locked],
+                    options=["— select to remove —"] + [c["name"] for c in companies],
                     key="remove_sel",
                 )
             with r2:
@@ -473,204 +561,191 @@ with st.container(key="tc_card"):
             toast(f"{remove_name} removed", "success")
             st.rerun()
 
-st.html("<div style='height:24px;'></div>")
+    st.html("<div style='height:24px;'></div>")
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# TWO COLUMNS — RECENT ALERTS  +  NOTIFICATION SETTINGS
-# ═══════════════════════════════════════════════════════════════════════════════
-col_alerts, col_settings = st.columns([2, 1], gap="medium")
+    # ═══════════════════════════════════════════════════════════════════════════
+    # TWO COLUMNS — RECENT ALERTS  +  NOTIFICATION SETTINGS
+    # ═══════════════════════════════════════════════════════════════════════════
+    col_alerts, col_settings = st.columns([2, 1], gap="medium")
 
-# ── Recent Alerts ──────────────────────────────────────────────────────────────
-def _alert_info_html(j: dict) -> str:
-    raw_title = j.get('title', '')
-    title = raw_title[:50] + ('…' if len(raw_title) > 50 else '')
-    return f"""
-    <div style="display:flex;align-items:center;gap:12px;min-width:0;padding:12px 4px;">
-      <span style="width:32px;height:32px;border-radius:9px;background:rgba(79,70,229,0.10);color:#4f46e5;display:grid;place-items:center;flex-shrink:0;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-      </span>
-      <div style="min-width:0;">
-        <div style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#17171a;">{title}</div>
-        <div style="font-size:12px;color:#6c6c76;margin-top:2px;">{j.get('company','')} &middot; <span style="font-family:'Geist Mono',monospace;">{j.get('date','')}</span></div>
-      </div>
-    </div>"""
+    # ── Recent Alerts ────────────────────────────────────────────────────────
+    def _alert_info_html(j: dict) -> str:
+        raw_title = j.get('title', '')
+        title = raw_title[:50] + ('…' if len(raw_title) > 50 else '')
+        return f"""
+        <div style="display:flex;align-items:center;gap:12px;min-width:0;padding:12px 4px;">
+          <span style="width:32px;height:32px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;">💼</span>
+          <div style="min-width:0;">
+            <div style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);">{title}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px;">{j.get('company','')} &middot; <span style="font-family:'Geist Mono',monospace;">{j.get('date','')}</span></div>
+          </div>
+        </div>"""
 
 
-def _alert_apply_html(j: dict) -> str:
-    return f"""
-    <div style="padding:12px 20px 12px 0;text-align:right;">
-      <a href="{j.get('url','#')}" target="_blank" rel="noopener"
-         style="display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid #dcdce0;background:#fafafa;color:#17171a;border-radius:8px;text-decoration:none;font-size:12.5px;font-weight:600;white-space:nowrap;">
-        Apply
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+    def _alert_apply_html(j: dict) -> str:
+        return f"""
+        <div style="padding:12px 20px 12px 0;text-align:right;">
+          <a href="{j.get('url','#')}" target="_blank" rel="noopener"
+             style="display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--border-strong);background:var(--card-2);color:var(--text);border-radius:8px;text-decoration:none;font-size:12.5px;font-weight:600;white-space:nowrap;">
+            Apply ↗
+          </a>
+        </div>"""
+
+
+    _EMPTY_ALERTS_HTML = """
+      <div style="padding:56px 22px;text-align:center;font-family:'Geist',sans-serif;">
+        <div style="width:46px;height:46px;border-radius:12px;background:var(--card-2);border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;color:var(--faint);margin-bottom:14px;font-size:20px;">🔔</div>
+        <p style="font-size:14px;font-weight:600;color:var(--text);">No alerts yet</p>
+        <p style="font-size:12.5px;color:var(--muted);margin-top:4px;">We'll email you the moment a new fresher role appears.</p>
+      </div>"""
+
+    with col_alerts:
+        with st.container(key="alerts_card"):
+            total = len(seen_jobs)
+            page = st.session_state.alerts_page
+            max_page = max(0, (total - 1) // ALERTS_PAGE_SIZE) if total else 0
+            page = min(page, max_page)
+            st.session_state.alerts_page = page
+            start = page * ALERTS_PAGE_SIZE
+            end = start + ALERTS_PAGE_SIZE
+            page_jobs = seen_jobs[start:end]
+
+            with st.container(key="alerts_header_row"):
+                hc1, hc2 = st.columns([5, 1], vertical_alignment="center")
+                with hc1:
+                    st.html("""
+                    <h2 style="font-size:16px;font-weight:700;letter-spacing:-0.02em;color:var(--text);font-family:'Geist',sans-serif;">Recent Alerts</h2>
+                    <p style="margin-top:3px;font-size:12.5px;color:var(--muted);font-family:'Geist',sans-serif;">New fresher postings, newest first</p>
+                    """)
+                with hc2:
+                    st.html(f"""
+                    <div style="text-align:right;"><span style="font-size:12px;font-weight:600;color:var(--accent);background:var(--accent-soft);padding:4px 10px;border-radius:999px;">{total} total</span></div>
+                    """)
+
+            if not page_jobs:
+                st.html(_EMPTY_ALERTS_HTML)
+            else:
+                page_ids = []
+                for i, j in enumerate(page_jobs):
+                    jid = _job_key(j)
+                    page_ids.append(jid)
+                    if i > 0:
+                        st.html('<div style="border-top:1px solid var(--border);"></div>')
+                    rc1, rc2, rc3 = st.columns([0.5, 5, 1.2], vertical_alignment="center")
+                    with rc1:
+                        st.checkbox(f"Select {j.get('title','')}", key=f"chk_{jid}", label_visibility="collapsed")
+                    with rc2:
+                        st.html(_alert_info_html(j))
+                    with rc3:
+                        st.html(_alert_apply_html(j))
+
+                with st.container(key="alerts_footer_row"):
+                    selected_ids = [jid for jid in page_ids if st.session_state.get(f"chk_{jid}")]
+                    fc1, fc2, fc3, fc4, fc5 = st.columns([1.1, 1.3, 1.6, 1.1, 1.1], vertical_alignment="center")
+                    with fc1:
+                        if st.button("← Previous", key="alerts_prev", disabled=(page == 0), use_container_width=True):
+                            st.session_state.alerts_page = page - 1
+                            st.rerun()
+                    with fc2:
+                        st.html(f'<div class="st-key-alerts_page_label">{start + 1}–{min(end, total)} of {total}</div>')
+                    with fc3:
+                        if st.button("Next →", key="alerts_next", disabled=(end >= total), use_container_width=True):
+                            st.session_state.alerts_page = page + 1
+                            st.rerun()
+                    with fc4:
+                        if st.button(f"Remove ({len(selected_ids)})", key="btn_remove_selected",
+                                     disabled=(len(selected_ids) == 0), use_container_width=True,
+                                     help="Remove the checked alerts only"):
+                            remaining = [j for j in seen_jobs_raw if _job_key(j) not in selected_ids]
+                            _save(BASE / "seen_jobs.json", remaining)
+                            _commit(BASE / "seen_jobs.json", "seen_jobs.json", f"chore: remove {len(selected_ids)} notification(s)")
+                            toast(f"Removed {len(selected_ids)} notification(s)", "success")
+                            st.rerun()
+                    with fc5:
+                        if st.button("Clear all", key="btn_clear_all", use_container_width=True,
+                                     disabled=(total == 0), help="Remove every stored notification"):
+                            _save(BASE / "seen_jobs.json", [])
+                            _commit(BASE / "seen_jobs.json", "seen_jobs.json", "chore: clear all notifications")
+                            st.session_state.alerts_page = 0
+                            toast("All notifications cleared", "success")
+                            st.rerun()
+
+    # ── Notification Settings ───────────────────────────────────────────────
+    with col_settings:
+        with st.container(key="ns_card"):
+            st.html("""
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+              <span style="width:30px;height:30px;border-radius:8px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:15px;">✉️</span>
+              <h2 style="font-size:16px;font-weight:700;letter-spacing:-0.02em;color:var(--text);font-family:'Geist',sans-serif;">Notification Settings</h2>
+            </div>
+            <p style="font-size:12.5px;color:var(--muted);margin-bottom:4px;margin-left:40px;font-family:'Geist',sans-serif;">Where alert emails are delivered.</p>
+            """)
+
+            email_val = st.text_input(
+                "Recipient email",
+                value=st.session_state.email_val,
+                placeholder="you@example.com",
+                key="email_input",
+            )
+            st.session_state.email_val = email_val
+
+            if st.button("Save", key="btn_save_email"):
+                e = email_val.strip()
+                if not re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", e):
+                    toast("Enter a valid email address", "error")
+                else:
+                    settings["recipient_email"] = e
+                    _save(BASE / "settings.json", settings)
+                    _commit(BASE / "settings.json", "settings.json", "chore: update recipient email")
+                    toast(f"Saved — alerts go to {e}", "success")
+
+            st.html("""
+            <div style="height:1px;background:var(--border);margin-bottom:2px;"></div>
+            <p style="font-size:12px;font-weight:600;color:var(--muted);font-family:'Geist',sans-serif;">Verify delivery</p>
+            <p style="font-size:12.5px;color:var(--muted);margin-bottom:2px;font-family:'Geist',sans-serif;">Send yourself a sample alert to confirm emails arrive.</p>
+            """)
+
+            with st.container(key="test_mail_btn"):
+                if st.button("✈  Send Test Mail", key="btn_test", use_container_width=True):
+                    recipient = email_val.strip()
+                    if not recipient or not re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", recipient):
+                        toast("Enter a valid recipient email first", "error")
+                    else:
+                        try:
+                            if settings.get("recipient_email", "") != recipient:
+                                settings["recipient_email"] = recipient
+                                _save(BASE / "settings.json", settings)
+                                _commit(BASE / "settings.json", "settings.json", "chore: update recipient email")
+                            import sys
+                            sys.path.insert(0, str(BASE))
+                            from notifier import test_mail
+                            test_mail(recipient)
+                            toast(f"Test email sent — check {recipient}", "success")
+                        except Exception as ex:
+                            toast(f"Failed: {ex}", "error")
+
+    # ── Footer ───────────────────────────────────────────────────────────────
+    st.html(f"""
+    <footer style="margin:32px auto 0;padding:0 0 8px;display:flex;align-items:center;justify-content:space-between;color:var(--faint);font-size:12px;font-family:'Geist',sans-serif;">
+      <span>Fresher Job Tracker &middot; internal tool</span>
+      <a href="https://github.com/{GITHUB_REPO}" target="_blank" rel="noopener"
+         style="display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;">
+        🐙 Source repository
       </a>
-    </div>"""
-
-
-_EMPTY_ALERTS_HTML = """
-  <div style="padding:56px 22px;text-align:center;font-family:'Geist',sans-serif;">
-    <div style="width:46px;height:46px;border-radius:12px;background:#fafafa;border:1px solid #eaeaec;display:inline-grid;place-items:center;color:#9a9aa4;margin-bottom:14px;">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-    </div>
-    <p style="font-size:14px;font-weight:600;color:#17171a;">No alerts yet</p>
-    <p style="font-size:12.5px;color:#6c6c76;margin-top:4px;">We'll email you the moment a new fresher role appears.</p>
-  </div>"""
-
-with col_alerts:
-    with st.container(key="alerts_card"):
-        total = len(seen_jobs)
-        page = st.session_state.alerts_page
-        max_page = max(0, (total - 1) // ALERTS_PAGE_SIZE) if total else 0
-        page = min(page, max_page)
-        st.session_state.alerts_page = page
-        start = page * ALERTS_PAGE_SIZE
-        end = start + ALERTS_PAGE_SIZE
-        page_jobs = seen_jobs[start:end]
-
-        with st.container(key="alerts_header_row"):
-            hc1, hc2 = st.columns([5, 1], vertical_alignment="center")
-            with hc1:
-                st.html("""
-                <h2 style="font-size:16px;font-weight:700;letter-spacing:-0.02em;color:#17171a;font-family:'Geist',sans-serif;">Recent Alerts</h2>
-                <p style="margin-top:3px;font-size:12.5px;color:#6c6c76;font-family:'Geist',sans-serif;">New fresher postings, newest first</p>
-                """)
-            with hc2:
-                st.html(f"""
-                <div style="text-align:right;"><span style="font-size:12px;font-weight:600;color:#4f46e5;background:rgba(79,70,229,0.10);padding:4px 10px;border-radius:999px;">{total} total</span></div>
-                """)
-
-        if not page_jobs:
-            st.html(_EMPTY_ALERTS_HTML)
-        else:
-            page_ids = []
-            for i, j in enumerate(page_jobs):
-                jid = _job_key(j)
-                page_ids.append(jid)
-                if i > 0:
-                    st.html('<div style="border-top:1px solid var(--border);"></div>')
-                rc1, rc2, rc3 = st.columns([0.5, 5, 1.2], vertical_alignment="center")
-                with rc1:
-                    st.checkbox(f"Select {j.get('title','')}", key=f"chk_{jid}", label_visibility="collapsed")
-                with rc2:
-                    st.html(_alert_info_html(j))
-                with rc3:
-                    st.html(_alert_apply_html(j))
-
-            with st.container(key="alerts_footer_row"):
-                selected_ids = [jid for jid in page_ids if st.session_state.get(f"chk_{jid}")]
-                fc1, fc2, fc3, fc4, fc5 = st.columns([1.1, 1.3, 1.6, 1.1, 1.1], vertical_alignment="center")
-                with fc1:
-                    if st.button("← Previous", key="alerts_prev", disabled=(page == 0), use_container_width=True):
-                        st.session_state.alerts_page = page - 1
-                        st.rerun()
-                with fc2:
-                    st.html(f'<div class="st-key-alerts_page_label">{start + 1}–{min(end, total)} of {total}</div>')
-                with fc3:
-                    if st.button("Next →", key="alerts_next", disabled=(end >= total), use_container_width=True):
-                        st.session_state.alerts_page = page + 1
-                        st.rerun()
-                with fc4:
-                    if st.button(f"Remove ({len(selected_ids)})", key="btn_remove_selected",
-                                 disabled=(len(selected_ids) == 0), use_container_width=True,
-                                 help="Remove the checked alerts only"):
-                        remaining = [j for j in seen_jobs_raw if _job_key(j) not in selected_ids]
-                        _save(BASE / "seen_jobs.json", remaining)
-                        _commit(BASE / "seen_jobs.json", "seen_jobs.json", f"chore: remove {len(selected_ids)} notification(s)")
-                        toast(f"Removed {len(selected_ids)} notification(s)", "success")
-                        st.rerun()
-                with fc5:
-                    if st.button("Clear all", key="btn_clear_all", use_container_width=True,
-                                 disabled=(total == 0), help="Remove every stored notification"):
-                        _save(BASE / "seen_jobs.json", [])
-                        _commit(BASE / "seen_jobs.json", "seen_jobs.json", "chore: clear all notifications")
-                        st.session_state.alerts_page = 0
-                        toast("All notifications cleared", "success")
-                        st.rerun()
-
-# ── Notification Settings ──────────────────────────────────────────────────────
-with col_settings:
-    with st.container(key="ns_card"):
-        st.html("""
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-          <span style="width:30px;height:30px;border-radius:8px;background:rgba(79,70,229,0.10);color:#4f46e5;display:grid;place-items:center;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-          </span>
-          <h2 style="font-size:16px;font-weight:700;letter-spacing:-0.02em;color:#17171a;font-family:'Geist',sans-serif;">Notification Settings</h2>
-        </div>
-        <p style="font-size:12.5px;color:#6c6c76;margin-bottom:16px;margin-left:40px;font-family:'Geist',sans-serif;">Where alert emails are delivered.</p>
-        """)
-
-        email_val = st.text_input(
-            "Recipient email",
-            value=st.session_state.email_val,
-            placeholder="you@example.com",
-            key="email_input",
-        )
-        st.session_state.email_val = email_val
-
-        if st.button("Save", key="btn_save_email"):
-            e = email_val.strip()
-            if not re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", e):
-                toast("Enter a valid email address", "error")
-            else:
-                settings["recipient_email"] = e
-                _save(BASE / "settings.json", settings)
-                _commit(BASE / "settings.json", "settings.json", "chore: update recipient email")
-                toast(f"Saved — alerts go to {e}", "success")
-
-        st.html("""
-        <div style="height:1px;background:#eaeaec;margin:18px 0 14px;"></div>
-        <p style="font-size:12px;font-weight:600;color:#6c6c76;margin-bottom:6px;font-family:'Geist',sans-serif;">Verify delivery</p>
-        <p style="font-size:12.5px;color:#6c6c76;margin-bottom:14px;font-family:'Geist',sans-serif;">Send yourself a sample alert to confirm emails arrive.</p>
-        """)
-
-        st.markdown('<div class="accent-btn">', unsafe_allow_html=True)
-        if st.button("✈  Send Test Mail", key="btn_test", use_container_width=True):
-            recipient = email_val.strip()
-            if not recipient or not re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", recipient):
-                toast("Enter a valid recipient email first", "error")
-            else:
-                try:
-                    if settings.get("recipient_email", "") != recipient:
-                        settings["recipient_email"] = recipient
-                        _save(BASE / "settings.json", settings)
-                        _commit(BASE / "settings.json", "settings.json", "chore: update recipient email")
-                    import sys
-                    sys.path.insert(0, str(BASE))
-                    from notifier import test_mail
-                    test_mail(recipient)
-                    toast(f"Test email sent — check {recipient}", "success")
-                except Exception as ex:
-                    toast(f"Failed: {ex}", "error")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-# ── Footer ─────────────────────────────────────────────────────────────────────
-st.html("""
-</div>
-<footer style="max-width:1120px;margin:32px auto 0;padding:0 24px 48px;display:flex;align-items:center;justify-content:space-between;color:#9a9aa4;font-size:12px;font-family:'Geist',sans-serif;">
-  <span>Fresher Job Tracker &middot; internal tool</span>
-  <a href="https://github.com/manojanumolu/job-tracker" target="_blank" rel="noopener"
-     style="display:inline-flex;align-items:center;gap:6px;color:#6c6c76;text-decoration:none;">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
-    Source repository
-  </a>
-</footer>
-""")
+    </footer>
+    """)
 
 # ── Toast ──────────────────────────────────────────────────────────────────────
 if st.session_state.toast:
     msg = st.session_state.toast
     kind = st.session_state.toast_kind
-    icon_bg = "rgba(34,197,94,0.12)" if kind == "success" else "rgba(239,68,68,0.12)"
-    icon_color = "#22c55e" if kind == "success" else "#ef4444"
-    icon = '<path d="M20 6 9 17l-5-5"/>' if kind == "success" else '<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>'
-    sw = "2.4" if kind == "success" else "2.2"
+    icon_bg = "var(--good-soft)" if kind == "success" else "var(--bad-soft)"
+    icon_color = "var(--good)" if kind == "success" else "var(--bad)"
+    icon = "✅" if kind == "success" else "⚠️"
     st.html(f"""
-<div style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;align-items:center;gap:11px;padding:13px 16px;border-radius:12px;background:#fff;border:1px solid #dcdce0;box-shadow:0 10px 30px rgba(0,0,0,.15);max-width:340px;font-family:'Geist',sans-serif;">
-  <span style="width:26px;height:26px;border-radius:7px;flex-shrink:0;display:grid;place-items:center;background:{icon_bg};color:{icon_color};">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{sw}" stroke-linecap="round" stroke-linejoin="round">{icon}</svg>
-  </span>
-  <div style="font-size:13px;font-weight:500;color:#17171a;line-height:1.4;">{msg}</div>
+<div style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;align-items:center;gap:11px;padding:13px 16px;border-radius:12px;background:var(--card);border:1px solid var(--border-strong);box-shadow:0 10px 30px rgba(0,0,0,.15);max-width:340px;font-family:'Geist',sans-serif;">
+  <span style="width:26px;height:26px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:{icon_bg};color:{icon_color};font-size:14px;">{icon}</span>
+  <div style="font-size:13px;font-weight:500;color:var(--text);line-height:1.4;">{msg}</div>
 </div>
 """)
     time.sleep(3)
