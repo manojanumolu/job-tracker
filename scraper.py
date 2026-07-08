@@ -23,6 +23,38 @@ _FRESHER_RE = re.compile(
     re.IGNORECASE,
 )
 
+# "Associate" alone also matches senior titles like "Associate Director" —
+# reject anything carrying a seniority/experience signal even if a fresher
+# keyword matched too.
+SENIOR_EXCLUDE_KEYWORDS = [
+    "director", "senior", "sr.", "sr ", "staff", "principal", "lead",
+    "manager", "head of", "vice president", "vp,", "vp ", "chief",
+    "president", "executive", "years of experience", "years experience",
+    "3+ year", "5+ year", "7+ year", "10+ year",
+]
+_SENIOR_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(k) for k in SENIOR_EXCLUDE_KEYWORDS) + r")\b",
+    re.IGNORECASE,
+)
+
+# Career pages mix real postings with employee-spotlight/blog content
+# ("Meet Nils Libert, Associate Scientist in R&D") that happens to contain
+# fresher keywords but isn't a job listing at all.
+_NOT_A_JOB_RE = re.compile(
+    r"^\s*meet\b|^\s*[\w'’.-]+\s+[\w'’.-]+\s*:\s", re.IGNORECASE,
+)
+_NOT_A_JOB_URL_RE = re.compile(r"/(blog|news|stories|insights|article)s?/", re.IGNORECASE)
+
+INDIA_KEYWORDS = [
+    "india", "bengaluru", "bangalore", "hyderabad", "pune", "chennai",
+    "mumbai", "gurgaon", "gurugram", "noida", "delhi", "kolkata",
+    "ahmedabad", "kochi", "coimbatore", "indore", "navi mumbai",
+]
+_INDIA_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(k) for k in INDIA_KEYWORDS) + r")\b",
+    re.IGNORECASE,
+)
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; FresherJobTracker/1.0)",
     "Accept": "application/json, text/html, */*",
@@ -48,7 +80,19 @@ COMPANY_API: dict[str, dict] = {
 
 
 def _is_fresher(text: str) -> bool:
-    return bool(_FRESHER_RE.search(text))
+    return bool(_FRESHER_RE.search(text)) and not _SENIOR_RE.search(text)
+
+
+def _is_india(text: str) -> bool:
+    return bool(_INDIA_RE.search(text))
+
+
+def _is_real_job(title: str, href: str) -> bool:
+    if _NOT_A_JOB_RE.search(title):
+        return False
+    if href and _NOT_A_JOB_URL_RE.search(href):
+        return False
+    return True
 
 
 def _now_iso() -> str:
@@ -75,9 +119,15 @@ def _scrape_api(company: dict) -> list[dict]:
             jobs = []
             for p in postings:
                 title = p.get("title", "")
-                if _is_fresher(title + " " + p.get("locationsText", "")):
-                    ext = p.get("externalPath", "")
-                    jobs.append({"title": title, "url": base + ext, "company": company["name"]})
+                location = p.get("locationsText", "")
+                ext = p.get("externalPath", "")
+                if not _is_real_job(title, ext):
+                    continue
+                if not _is_fresher(title + " " + location):
+                    continue
+                if not _is_india(location or title):
+                    continue
+                jobs.append({"title": title, "url": base + ext, "company": company["name"]})
             return jobs
     return []
 
@@ -103,11 +153,17 @@ def _scrape_playwright(company: dict) -> list[dict]:
             links = page.query_selector_all("a")
             for link in links:
                 raw = (link.inner_text() or "").strip()
-                # card-style links wrap a heading + description in one <a>;
-                # only the first line is the actual title/keyword to match on
+                # card-style links wrap a heading + description (and often the
+                # location) in one <a>; the first line is the display title,
+                # but fresher/seniority/location checks run over the whole card
                 title = raw.splitlines()[0].strip() if raw else ""
                 href = link.get_attribute("href") or ""
-                if title and _is_fresher(title):
+                if (
+                    title
+                    and _is_real_job(title, href)
+                    and _is_fresher(raw)
+                    and _is_india(raw)
+                ):
                     if href.startswith("/"):
                         parsed = urlparse(company["url"])
                         href = f"{parsed.scheme}://{parsed.netloc}{href}"
@@ -160,9 +216,14 @@ def run_all() -> list[dict]:
                 seen_keys.add(key)
         time.sleep(1)
 
-    save_companies(companies)
+    # commit=False: the GitHub Actions workflow itself does one git commit+push
+    # at the end of the run. Letting this also push via the API caused a second,
+    # independent commit on every run — the workflow's later `git push` would
+    # then be rejected as non-fast-forward (remote had already moved), failing
+    # the job even though the scrape itself succeeded.
+    save_companies(companies, commit=False)
     if new_jobs:
-        save_seen_jobs(seen + new_jobs)
+        save_seen_jobs(seen + new_jobs, commit=False)
     return new_jobs
 
 
