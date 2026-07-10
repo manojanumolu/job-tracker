@@ -6,7 +6,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-10T12:18:20.313365+00:00"
+    "last_checked": "2026-07-10T12:54:36.027758+00:00"
   },
   {
     "id": "avalara",
@@ -15,7 +15,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-10T12:18:22.479732+00:00"
+    "last_checked": "2026-07-10T12:54:38.336704+00:00"
   },
   {
     "id": "pokerstars",
@@ -24,7 +24,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-10T12:18:26.136416+00:00"
+    "last_checked": "2026-07-10T12:54:42.029027+00:00"
   },
   {
     "id": "sanofi",
@@ -33,7 +33,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-10T12:18:38.792440+00:00"
+    "last_checked": "2026-07-10T12:54:55.371408+00:00"
   },
   {
     "id": "pwc",
@@ -42,7 +42,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-10T12:18:51.780761+00:00"
+    "last_checked": "2026-07-10T12:55:08.385371+00:00"
   },
   {
     "id": "accenture",
@@ -51,15 +51,15 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-10T12:18:58.286073+00:00"
+    "last_checked": "2026-07-10T12:55:15.117692+00:00"
   },
   {
     "id": "c1783687965",
     "name": "npcl",
     "url": "https://www.npci.org.in/careers",
     "locked": false,
-    "status": "unknown",
+    "status": "active",
     "last_job": "",
-    "last_checked": ""
+    "last_checked": "2026-07-10T12:55:27.781918+00:00"
   }
 ]
