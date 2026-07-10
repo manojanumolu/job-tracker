@@ -205,8 +205,10 @@ def run_all() -> list[dict]:
         jobs, status = scrape_company(company)
         company["status"] = status
         company["last_checked"] = _now_iso()
-        if jobs:
-            company["last_job"] = jobs[0]["title"]
+        # reflect what this scrape actually sees — only updating when jobs
+        # were found left titles from removed postings (and pre-filter junk)
+        # stuck in the UI forever
+        company["last_job"] = jobs[0]["title"] if jobs else ""
         for job in jobs:
             key = (job["company"], job["title"])
             if key not in seen_keys:
