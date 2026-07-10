@@ -5,6 +5,11 @@ on:
     - cron: "0 */3 * * *"   # every 3 hours
   workflow_dispatch:          # allow manual run
 
+# queue overlapping runs instead of letting them race each other's git push
+concurrency:
+  group: check-jobs
+  cancel-in-progress: false
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -14,6 +19,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so the pre-push rebase below has a merge base
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -69,5 +76,19 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add seen_jobs.json companies.json
-          git diff --cached --quiet || git commit -m "chore: update seen_jobs + companies [skip ci]"
-          git push
+          if git diff --cached --quiet; then
+            echo "No data changes to commit"
+            exit 0
+          fi
+          git commit -m "chore: update seen_jobs + companies [skip ci]"
+          # main may have moved while this run executed (another run, the
+          # Streamlit app saving settings, or a manual push). Rebase our data
+          # commit on top and retry; -X theirs keeps THIS run's freshly
+          # scraped JSON if the same files changed on both sides.
+          for attempt in 1 2 3; do
+            git pull --rebase -X theirs origin main && git push && exit 0
+            echo "push attempt $attempt failed, retrying..."
+            sleep 5
+          done
+          echo "Could not push after 3 attempts"
+          exit 1
