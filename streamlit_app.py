@@ -157,6 +157,10 @@ section[data-testid="stSidebar"] { display: none !important; }
   border-color: var(--accent) !important;
   box-shadow: 0 0 0 3px rgba(79,70,229,0.12) !important;
 }
+.stTextInput input::placeholder {
+  color: var(--faint) !important;
+  opacity: 0.7 !important;
+}
 .stTextInput label {
   font-size: 12px !important;
   font-weight: 600 !important;
@@ -207,10 +211,17 @@ section[data-testid="stSidebar"] { display: none !important; }
 }
 .st-key-app_header [data-testid="stHorizontalBlock"] { align-items: center !important; gap: 8px !important; }
 .st-key-app_header [data-testid^="stBaseButton"] {
-  width: 36px !important; height: 36px !important; padding: 0 !important;
+  width: 38px !important; height: 38px !important; min-height: 38px !important; padding: 0 !important;
   display: flex !important; align-items: center !important; justify-content: center !important;
-  font-size: 15px !important; border-radius: 9px !important; box-shadow: none !important;
+  font-size: 16px !important; line-height: 1 !important; border-radius: 10px !important;
+  border: 1px solid var(--border-strong) !important; background: var(--card) !important;
+  box-shadow: none !important;
 }
+.st-key-app_header [data-testid^="stBaseButton"]:hover {
+  border-color: var(--accent) !important; color: var(--accent) !important; background: var(--card) !important;
+}
+/* keep the whole right-hand cluster on one tidy row */
+.st-key-app_header .element-container { display: flex; justify-content: flex-end; }
 
 /* ── Tracked Companies card ── */
 .st-key-tc_card {
@@ -254,20 +265,24 @@ section[data-testid="stSidebar"] { display: none !important; }
   padding: 22px !important;
 }
 .st-key-ns_card [data-testid="stVerticalBlock"] { gap: 14px !important; }
+.st-key-ns_card [data-testid="stHorizontalBlock"] { gap: 10px !important; }
+.st-key-tc_header_row [data-testid="stHorizontalBlock"] { gap: 10px !important; }
+.st-key-tc_remove_row [data-testid="stHorizontalBlock"] { gap: 10px !important; }
+.st-key-tc_remove_row .stCheckbox { padding: 4px 0 !important; }
 
-/* ── header pills / icon buttons ── */
+/* ── header pills / icon buttons — all exactly 38px tall so the row reads as one unit ── */
 .hdr-pill {
-  display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border);
-  border-radius:999px;background:var(--card);font-size:12.5px;font-family:'Geist',sans-serif;
+  display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 14px;border:1px solid var(--border-strong);
+  border-radius:10px;background:var(--card);font-size:12.5px;font-family:'Geist',sans-serif;
   cursor:default;color:var(--text);white-space:nowrap;
 }
 .hdr-pill .muted { color: var(--muted); }
 .hdr-pill b { font-family:'Geist Mono',monospace; font-weight:600; }
 .hdr-btn {
-  height:36px;width:36px;display:inline-flex;align-items:center;justify-content:center;gap:6px;
-  border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:9px;
-  text-decoration:none;font-size:15px;font-weight:500;font-family:'Geist',sans-serif;cursor:pointer;
-  transition:border-color .15s,color .15s;
+  height:38px;width:38px;display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--border-strong);background:var(--card);color:var(--text);border-radius:10px;
+  text-decoration:none;font-size:12px;font-weight:700;letter-spacing:0.02em;font-family:'Geist',sans-serif;
+  cursor:pointer;transition:border-color .15s,color .15s;flex-shrink:0;
 }
 .hdr-btn:hover { border-color: var(--accent); color: var(--accent); }
 
@@ -420,29 +435,28 @@ last_checked_str = _rel_time(max(last_checked_times)) if last_checked_times else
 active_count = sum(1 for c in companies if c.get("status") not in ("broken",))
 
 with st.container(key="app_header"):
-    lc, pc1, pc2, bc1, bc2, bc3 = st.columns([6, 1.6, 1.6, 0.45, 0.45, 0.45], vertical_alignment="center")
+    lc, pc, bc1, bc2, bc3 = st.columns([5.2, 4.4, 0.42, 0.42, 0.42], vertical_alignment="center")
     with lc:
         st.html("""
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div class="icon-emoji" style="width:36px;height:36px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;flex-shrink:0;">💼</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-right:auto;">
+          <div class="icon-emoji" style="width:38px;height:38px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;flex-shrink:0;">💼</div>
           <div style="line-height:1.2;">
             <div style="font-size:15.5px;font-weight:700;letter-spacing:-0.02em;color:var(--text);font-family:'Geist',sans-serif;">Fresher Job Tracker</div>
             <div style="font-size:12px;color:var(--muted);font-family:'Geist',sans-serif;">Entry-level posting monitor</div>
           </div>
         </div>
         """)
-    with pc1:
+    with pc:
         st.html(f"""
-        <div class="hdr-pill" title="Time since the scraper last ran and refreshed this data">
-          <span style="color:var(--good);font-weight:700;">✓</span>
-          <span class="muted">Last checked</span>
-          <b>{last_checked_str}</b>
-        </div>
-        """)
-    with pc2:
-        st.html("""
-        <div class="hdr-pill" title="The scraper runs automatically every 3 hours">
-          <span class="icon-emoji">🕐</span> <span class="muted">Next check</span> <b>in ~3 h</b>
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
+          <div class="hdr-pill" title="Time since the scraper last ran and refreshed this data">
+            <span style="color:var(--good);font-weight:700;">✓</span>
+            <span class="muted">Last checked</span>
+            <b>{last_checked_str}</b>
+          </div>
+          <div class="hdr-pill" title="The scraper runs automatically every 3 hours">
+            <span class="icon-emoji">🕐</span> <span class="muted">Next check</span> <b>in ~3 h</b>
+          </div>
         </div>
         """)
     with bc1:
@@ -457,7 +471,7 @@ with st.container(key="app_header"):
             st.rerun()
     with bc3:
         st.html(f"""
-        <a class="hdr-btn" href="https://github.com/{GITHUB_REPO}" target="_blank" rel="noopener" title="View the source repository on GitHub" style="font-size:12px;font-weight:700;letter-spacing:0.02em;">GH</a>
+        <a class="hdr-btn" href="https://github.com/{GITHUB_REPO}" target="_blank" rel="noopener" title="View the source repository on GitHub">GH</a>
         """)
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -506,10 +520,12 @@ with st.container(key="page_wrap"):
 
     if "show_add_form" not in st.session_state:
         st.session_state.show_add_form = False
+    if "show_remove_form" not in st.session_state:
+        st.session_state.show_remove_form = False
 
     with st.container(key="tc_card"):
         with st.container(key="tc_header_row"):
-            hcol1, hcol2 = st.columns([5, 1], vertical_alignment="center")
+            hcol1, hcol2, hcol3 = st.columns([3.8, 1.15, 1.35], vertical_alignment="center")
             with hcol1:
                 st.html(f"""
                 <h2 style="font-size:16px;font-weight:700;letter-spacing:-0.02em;color:var(--text);font-family:'Geist',sans-serif;">Tracked Companies</h2>
@@ -519,6 +535,12 @@ with st.container(key="page_wrap"):
                 if st.button("➕  Add Company", key="btn_toggle_add", use_container_width=True,
                              help="Track a new company's career page"):
                     st.session_state.show_add_form = not st.session_state.show_add_form
+                    st.session_state.show_remove_form = False
+            with hcol3:
+                if st.button("➖  Remove Company", key="btn_toggle_remove", use_container_width=True,
+                             help="Pick companies to stop tracking"):
+                    st.session_state.show_remove_form = not st.session_state.show_remove_form
+                    st.session_state.show_add_form = False
 
         if st.session_state.show_add_form:
             with st.container(key="tc_add_row"):
@@ -579,27 +601,34 @@ with st.container(key="page_wrap"):
       </div>
     """)
 
-        # ── Remove company — any tracked company, core or not ───────────────────
-        with st.container(key="tc_remove_row"):
-            r1, r2 = st.columns([4, 1])
-            with r1:
-                remove_name = st.selectbox(
-                    "Remove a company",
-                    options=["— select to remove —"] + [c["name"] for c in companies],
-                    key="remove_sel",
-                )
-            with r2:
-                st.markdown("<br>", unsafe_allow_html=True)
-                remove_clicked = st.button("Remove", key="btn_remove", use_container_width=True)
-        if remove_clicked and remove_name != "— select to remove —":
-            companies = [c for c in companies if c.get("name") != remove_name]
-            _save(BASE / "companies.json", companies)
-            ok, err = _commit(BASE / "companies.json", "companies.json", f"chore: remove {remove_name}")
-            if ok:
-                toast(f"{remove_name} removed", "success")
-            else:
-                toast(f"{remove_name} removed, but didn't save permanently: {err}", "error")
-            st.rerun()
+        # ── Remove company — checkbox picker, any tracked company ────────────────
+        if st.session_state.show_remove_form and companies:
+            with st.container(key="tc_remove_row"):
+                st.html('<p style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;font-family:\'Geist\',sans-serif;">Tick the companies to stop tracking</p>')
+                grid = st.columns(3)
+                for i, c in enumerate(companies):
+                    with grid[i % 3]:
+                        st.checkbox(c["name"], key=f"rm_{c['id']}")
+                to_remove = [c for c in companies if st.session_state.get(f"rm_{c['id']}")]
+                rb1, rb2, _sp = st.columns([1, 1.4, 2.6])
+                with rb1:
+                    if st.button("Cancel", key="btn_cancel_remove", use_container_width=True):
+                        st.session_state.show_remove_form = False
+                        st.rerun()
+                with rb2:
+                    if st.button(f"Remove selected ({len(to_remove)})", key="btn_remove",
+                                 disabled=(len(to_remove) == 0), use_container_width=True):
+                        removed_names = ", ".join(c["name"] for c in to_remove)
+                        removed_ids = {c["id"] for c in to_remove}
+                        companies = [c for c in companies if c["id"] not in removed_ids]
+                        _save(BASE / "companies.json", companies)
+                        ok, err = _commit(BASE / "companies.json", "companies.json", f"chore: remove {removed_names}")
+                        if ok:
+                            toast(f"Removed {removed_names}", "success")
+                        else:
+                            toast(f"Removed {removed_names}, but didn't save permanently: {err}", "error")
+                        st.session_state.show_remove_form = False
+                        st.rerun()
 
     st.html("<div style='height:24px;'></div>")
 
@@ -727,15 +756,19 @@ with st.container(key="page_wrap"):
             <p style="font-size:12.5px;color:var(--muted);margin-bottom:4px;margin-left:40px;font-family:'Geist',sans-serif;">Where alert emails are delivered.</p>
             """)
 
-            email_val = st.text_input(
-                "Recipient email",
-                value=st.session_state.email_val,
-                placeholder="you@example.com",
-                key="email_input",
-            )
-            st.session_state.email_val = email_val
+            in_col, save_col = st.columns([2.7, 1], vertical_alignment="bottom")
+            with in_col:
+                email_val = st.text_input(
+                    "Recipient email",
+                    value=st.session_state.email_val,
+                    placeholder="careers@gmail.com",
+                    key="email_input",
+                )
+                st.session_state.email_val = email_val
+            with save_col:
+                save_clicked = st.button("Save", key="btn_save_email", use_container_width=True)
 
-            if st.button("Save", key="btn_save_email"):
+            if save_clicked:
                 e = email_val.strip()
                 if not re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", e):
                     toast("Enter a valid email address", "error")
@@ -749,9 +782,9 @@ with st.container(key="page_wrap"):
                         toast(f"Saved locally, but didn't save permanently: {err}", "error")
 
             st.html("""
-            <div style="height:1px;background:var(--border);margin-bottom:2px;"></div>
+            <div style="height:1px;background:var(--border);margin:8px 0 4px;"></div>
             <p style="font-size:12px;font-weight:600;color:var(--muted);font-family:'Geist',sans-serif;">Verify delivery</p>
-            <p style="font-size:12.5px;color:var(--muted);margin-bottom:2px;font-family:'Geist',sans-serif;">Send yourself a sample alert to confirm emails arrive.</p>
+            <p style="font-size:12.5px;color:var(--muted);margin-bottom:4px;font-family:'Geist',sans-serif;">Send yourself a sample alert to confirm emails arrive.</p>
             """)
 
             with st.container(key="test_mail_btn"):
