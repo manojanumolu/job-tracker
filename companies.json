@@ -52,5 +52,14 @@
     "status": "active",
     "last_job": "",
     "last_checked": "2026-07-10T12:18:58.286073+00:00"
+  },
+  {
+    "id": "c1783687965",
+    "name": "npcl",
+    "url": "https://www.npci.org.in/careers",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
   }
 ]
