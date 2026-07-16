@@ -6,7 +6,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-16T02:44:11.213598+00:00"
+    "last_checked": "2026-07-16T05:42:52.786911+00:00"
   },
   {
     "id": "avalara",
@@ -15,7 +15,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-16T02:44:13.385366+00:00"
+    "last_checked": "2026-07-16T05:42:55.041198+00:00"
   },
   {
     "id": "pokerstars",
@@ -24,7 +24,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-16T02:44:17.208553+00:00"
+    "last_checked": "2026-07-16T05:42:58.978984+00:00"
   },
   {
     "id": "sanofi",
@@ -32,8 +32,8 @@
     "url": "https://jobs.sanofi.com/en",
     "locked": true,
     "status": "active",
-    "last_job": "",
-    "last_checked": "2026-07-16T02:44:30.064675+00:00"
+    "last_job": "Associate – Evidence Synthesis",
+    "last_checked": "2026-07-16T05:43:01.152456+00:00"
   },
   {
     "id": "pwc",
@@ -42,7 +42,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-16T02:44:43.347210+00:00"
+    "last_checked": "2026-07-16T05:43:14.236378+00:00"
   },
   {
     "id": "accenture",
@@ -51,7 +51,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-16T02:44:49.580506+00:00"
+    "last_checked": "2026-07-16T05:43:20.709102+00:00"
   },
   {
     "id": "c1783687965",
@@ -60,6 +60,6 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-16T02:45:04.941913+00:00"
+    "last_checked": "2026-07-16T05:43:29.613882+00:00"
   }
 ]
