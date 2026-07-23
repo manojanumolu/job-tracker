@@ -6,7 +6,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-23T08:37:36.619735+00:00"
+    "last_checked": "2026-07-23T11:12:46.820096+00:00"
   },
   {
     "id": "avalara",
@@ -15,7 +15,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-23T08:37:39.072016+00:00"
+    "last_checked": "2026-07-23T11:12:49.040544+00:00"
   },
   {
     "id": "pokerstars",
@@ -24,7 +24,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-23T08:37:43.038970+00:00"
+    "last_checked": "2026-07-23T11:12:52.763449+00:00"
   },
   {
     "id": "sanofi",
@@ -32,8 +32,8 @@
     "url": "https://jobs.sanofi.com/en",
     "locked": true,
     "status": "active",
-    "last_job": "Associate – HEVA (Evidence Synthesis)",
-    "last_checked": "2026-07-23T08:37:45.576086+00:00"
+    "last_job": "",
+    "last_checked": "2026-07-23T11:13:06.176942+00:00"
   },
   {
     "id": "pwc",
@@ -42,7 +42,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-23T08:37:57.976400+00:00"
+    "last_checked": "2026-07-23T11:13:19.211878+00:00"
   },
   {
     "id": "accenture",
@@ -51,7 +51,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-23T08:38:04.515187+00:00"
+    "last_checked": "2026-07-23T11:13:26.108340+00:00"
   },
   {
     "id": "c1783687965",
@@ -60,6 +60,6 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-23T08:38:18.244225+00:00"
+    "last_checked": "2026-07-23T11:13:39.294794+00:00"
   }
 ]
