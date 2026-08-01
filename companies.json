@@ -6,7 +6,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-31T22:07:27.389021+00:00"
+    "last_checked": "2026-08-01T02:55:48.392708+00:00"
   },
   {
     "id": "avalara",
@@ -15,7 +15,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-31T22:07:29.629690+00:00"
+    "last_checked": "2026-08-01T02:55:50.755358+00:00"
   },
   {
     "id": "pokerstars",
@@ -24,7 +24,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-31T22:07:33.592877+00:00"
+    "last_checked": "2026-08-01T02:55:55.309078+00:00"
   },
   {
     "id": "sanofi",
@@ -33,7 +33,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-31T22:07:46.758045+00:00"
+    "last_checked": "2026-08-01T02:56:08.438243+00:00"
   },
   {
     "id": "pwc",
@@ -42,7 +42,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-31T22:07:59.629337+00:00"
+    "last_checked": "2026-08-01T02:56:22.040078+00:00"
   },
   {
     "id": "accenture",
@@ -51,7 +51,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-31T22:08:06.400811+00:00"
+    "last_checked": "2026-08-01T02:56:29.260824+00:00"
   },
   {
     "id": "c1783687965",
@@ -60,6 +60,6 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-07-31T22:08:19.292831+00:00"
+    "last_checked": "2026-08-01T02:56:43.180514+00:00"
   }
 ]
