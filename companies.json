@@ -6,7 +6,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-08-07T10:03:21.252998+00:00"
+    "last_checked": "2026-08-07T13:07:21.352825+00:00"
   },
   {
     "id": "avalara",
@@ -15,7 +15,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-08-07T10:03:23.608593+00:00"
+    "last_checked": "2026-08-07T13:07:23.743302+00:00"
   },
   {
     "id": "pokerstars",
@@ -24,7 +24,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-08-07T10:03:27.306638+00:00"
+    "last_checked": "2026-08-07T13:07:27.693761+00:00"
   },
   {
     "id": "sanofi",
@@ -32,8 +32,8 @@
     "url": "https://jobs.sanofi.com/en",
     "locked": true,
     "status": "active",
-    "last_job": "",
-    "last_checked": "2026-08-07T10:03:40.343515+00:00"
+    "last_job": "Associate Container Platform Engineer",
+    "last_checked": "2026-08-07T13:07:30.126072+00:00"
   },
   {
     "id": "pwc",
@@ -42,7 +42,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-08-07T10:03:53.192817+00:00"
+    "last_checked": "2026-08-07T13:07:43.308359+00:00"
   },
   {
     "id": "accenture",
@@ -51,7 +51,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-08-07T10:03:59.629734+00:00"
+    "last_checked": "2026-08-07T13:07:50.359662+00:00"
   },
   {
     "id": "c1783687965",
@@ -60,6 +60,6 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-08-07T10:04:13.170339+00:00"
+    "last_checked": "2026-08-07T13:07:52.683422+00:00"
   }
 ]
