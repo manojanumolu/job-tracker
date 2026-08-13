@@ -6,7 +6,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-08-13T04:52:28.060773+00:00"
+    "last_checked": "2026-08-13T07:37:16.045165+00:00"
   },
   {
     "id": "avalara",
@@ -15,7 +15,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-08-13T04:52:30.343186+00:00"
+    "last_checked": "2026-08-13T07:37:18.308357+00:00"
   },
   {
     "id": "pokerstars",
@@ -24,7 +24,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-08-13T04:52:33.971881+00:00"
+    "last_checked": "2026-08-13T07:37:22.192473+00:00"
   },
   {
     "id": "sanofi",
@@ -32,8 +32,8 @@
     "url": "https://jobs.sanofi.com/en",
     "locked": true,
     "status": "active",
-    "last_job": "",
-    "last_checked": "2026-08-13T04:52:46.652363+00:00"
+    "last_job": "S2P Solution Associate Specialist",
+    "last_checked": "2026-08-13T07:37:24.329024+00:00"
   },
   {
     "id": "pwc",
@@ -42,7 +42,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-08-13T04:52:59.615444+00:00"
+    "last_checked": "2026-08-13T07:37:37.725258+00:00"
   },
   {
     "id": "accenture",
@@ -51,7 +51,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-08-13T04:53:06.451486+00:00"
+    "last_checked": "2026-08-13T07:37:44.258908+00:00"
   },
   {
     "id": "c1783687965",
@@ -60,6 +60,6 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-08-13T04:53:20.689082+00:00"
+    "last_checked": "2026-08-13T07:37:53.396470+00:00"
   }
 ]
