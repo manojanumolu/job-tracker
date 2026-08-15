@@ -6,7 +6,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-08-15T03:40:52.529149+00:00"
+    "last_checked": "2026-08-15T06:40:06.718438+00:00"
   },
   {
     "id": "avalara",
@@ -15,7 +15,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-08-15T03:40:54.933021+00:00"
+    "last_checked": "2026-08-15T06:40:08.979209+00:00"
   },
   {
     "id": "pokerstars",
@@ -24,16 +24,16 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-08-15T03:40:58.369031+00:00"
+    "last_checked": "2026-08-15T06:40:12.288307+00:00"
   },
   {
     "id": "sanofi",
     "name": "Sanofi",
     "url": "https://jobs.sanofi.com/en",
     "locked": true,
-    "status": "active",
+    "status": "broken",
     "last_job": "",
-    "last_checked": "2026-08-15T03:41:11.593283+00:00"
+    "last_checked": "2026-08-15T06:40:14.095332+00:00"
   },
   {
     "id": "pwc",
@@ -42,7 +42,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-08-15T03:41:24.938564+00:00"
+    "last_checked": "2026-08-15T06:40:26.840448+00:00"
   },
   {
     "id": "accenture",
@@ -51,7 +51,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-08-15T03:41:32.399417+00:00"
+    "last_checked": "2026-08-15T06:40:34.532379+00:00"
   },
   {
     "id": "c1783687965",
@@ -60,6 +60,6 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-08-15T03:41:40.957412+00:00"
+    "last_checked": "2026-08-15T06:40:48.169029+00:00"
   }
 ]
