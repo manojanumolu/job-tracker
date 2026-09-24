@@ -6,7 +6,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-09-24T11:17:46.111028+00:00"
+    "last_checked": "2026-09-24T16:41:28.649474+00:00"
   },
   {
     "id": "avalara",
@@ -15,7 +15,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-09-24T11:17:48.472044+00:00"
+    "last_checked": "2026-09-24T16:41:30.922245+00:00"
   },
   {
     "id": "pokerstars",
@@ -24,7 +24,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-09-24T11:17:52.544663+00:00"
+    "last_checked": "2026-09-24T16:41:34.869409+00:00"
   },
   {
     "id": "sanofi",
@@ -32,8 +32,8 @@
     "url": "https://jobs.sanofi.com/en",
     "locked": true,
     "status": "active",
-    "last_job": "Source-to-Pay Strategic Support Associate",
-    "last_checked": "2026-09-24T11:17:54.885303+00:00"
+    "last_job": "",
+    "last_checked": "2026-09-24T16:41:51.108192+00:00"
   },
   {
     "id": "pwc",
@@ -42,7 +42,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-09-24T11:18:08.002823+00:00"
+    "last_checked": "2026-09-24T16:42:03.477713+00:00"
   },
   {
     "id": "accenture",
@@ -51,7 +51,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-09-24T11:18:15.397900+00:00"
+    "last_checked": "2026-09-24T16:42:10.312940+00:00"
   },
   {
     "id": "c1783687965",
@@ -60,6 +60,6 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-09-24T11:18:17.948423+00:00"
+    "last_checked": "2026-09-24T16:42:23.788066+00:00"
   }
 ]
