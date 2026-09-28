@@ -49,6 +49,8 @@ pip install -r requirements-dev.txt
 python -m pytest
 ```
 
+The Playwright end-to-end test is skipped when Chromium isn't installed (`playwright install chromium`); set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to use an existing Chromium binary.
+
 ## How it works
 
 - **scraper.py** — tries a JSON/API endpoint first; falls back to Playwright. For each India-located candidate it opens the job's detail page (Workday detail API, or the page's schema.org `JobPosting` JSON-LD / description block) before classifying it. Marks companies "broken" on failure without crashing.

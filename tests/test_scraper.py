@@ -95,7 +95,8 @@ def test_jsonld_location():
         {"address": {"addressLocality": "Hyderabad", "addressCountry": {"name": "IN"}}},
         {"address": {"addressLocality": "Pune", "addressRegion": "MH", "addressCountry": "India"}},
     ]}
-    assert scraper._jsonld_location(posting) == "Hyderabad | IN | Pune | MH | India"
+    # ISO country codes are normalised so the India check can match them
+    assert scraper._jsonld_location(posting) == "Hyderabad | India | Pune | MH | India"
     assert scraper._jsonld_location({"jobLocation": {"address": "Bengaluru, India"}}) == "Bengaluru, India"
     assert scraper._jsonld_location({}) == ""
 
@@ -111,7 +112,127 @@ def test_is_india(text, expected):
     assert scraper._is_india(text) is expected
 
 
-def test_is_fresher_compat_wrapper():
-    assert scraper._is_fresher("Graduate Software Engineer\nHyderabad, India")
-    assert not scraper._is_fresher("Associate Project Specialist – Medical Communications\nHyderabad")
-    assert not scraper._is_fresher("Associate Software Engineer\n2-4 years experience")
+@pytest.mark.parametrize(
+    "text",
+    ["India", "Bengaluru, India", "Hyderabad, India", "Pune, India", "Chennai, India",
+     "Remote - India", "India / Singapore", "Singapore | Hyderabad"],
+)
+def test_is_india_accepts_india_and_multi_location(text):
+    assert scraper._is_india(text)
+
+
+# ---------------------------------------------------------------------------
+# Workday robustness
+# ---------------------------------------------------------------------------
+
+def _run_workday(monkeypatch, postings, details):
+    """Run _scrape_api against a mocked Workday; ``details`` maps
+    externalPath -> response (dict body, int status, or Exception)."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        if request.method == "POST":
+            return httpx.Response(200, json={"jobPostings": postings})
+        ext = url[len(DETAIL_BASE):]
+        resp = details.get(ext, 404)
+        if isinstance(resp, Exception):
+            raise resp
+        if isinstance(resp, int):
+            return httpx.Response(resp)
+        return httpx.Response(200, json=resp)
+
+    real_client = httpx.Client
+    monkeypatch.setattr(
+        scraper.httpx, "Client",
+        lambda *a, **kw: real_client(*a, **{**kw, "transport": httpx.MockTransport(handler)}),
+    )
+    return scraper._scrape_api({"id": "sanofi", "name": "Sanofi", "url": "x"})
+
+
+def test_workday_malformed_postings_do_not_abort_company(monkeypatch):
+    good = {"title": "Graduate Trainee", "locationsText": "Hyderabad", "externalPath": "/job/ok"}
+    postings = [
+        "not-a-dict",
+        {"title": None, "locationsText": None, "externalPath": None},
+        {"title": "Graduate Analyst", "locationsText": "Pune", "externalPath": "/job/null-info"},
+        {"title": "Graduate Engineer", "locationsText": "Pune", "externalPath": "/job/str-country"},
+        {"title": "Graduate Developer", "locationsText": "Pune", "externalPath": "/job/http500"},
+        {"title": "Graduate Designer", "locationsText": "Pune", "externalPath": "/job/timeout"},
+        good,
+    ]
+    details = {
+        "/job/null-info": {"jobPostingInfo": None},
+        "/job/str-country": {"jobPostingInfo": {"jobDescription": None, "location": "Pune",
+                                                "additionalLocations": [None, 3], "country": "India"}},
+        "/job/http500": 500,
+        "/job/timeout": httpx.ReadTimeout("timed out"),
+        "/job/ok": {"jobPostingInfo": {"jobDescription": "<p>Open to 2025 graduates.</p>",
+                                       "location": "Hyderabad", "country": {"descriptor": "India"}}},
+    }
+    jobs = _run_workday(monkeypatch, postings, details)
+    titles = {j["title"] for j in jobs}
+    # every well-formed or recoverable posting survives; failed detail fetches
+    # fall back to the list-view title + location
+    assert titles == {"Graduate Trainee", "Graduate Analyst", "Graduate Engineer",
+                      "Graduate Developer", "Graduate Designer"}
+
+
+def test_workday_list_request_unchanged(monkeypatch):
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST":
+            import json as _json
+            seen["url"] = str(request.url)
+            seen["payload"] = _json.loads(request.content)
+        return httpx.Response(200, json={"jobPostings": []})
+
+    real_client = httpx.Client
+    monkeypatch.setattr(
+        scraper.httpx, "Client",
+        lambda *a, **kw: real_client(*a, **{**kw, "transport": httpx.MockTransport(handler)}),
+    )
+    assert scraper._scrape_api({"id": "sanofi", "name": "Sanofi", "url": "x"}) == []
+    assert seen["url"] == LIST_URL
+    assert seen["payload"] == {"limit": 20, "offset": 0, "searchText": "", "locations": []}
+
+
+def test_workday_india_in_additional_locations(monkeypatch):
+    postings = [{"title": "Graduate Trainee", "locationsText": "2 Locations", "externalPath": "/job/multi"}]
+    details = {"/job/multi": {"jobPostingInfo": {
+        "jobDescription": "", "location": "Singapore", "additionalLocations": ["Hyderabad"],
+        "country": {"descriptor": "Singapore"}}}}
+    assert [j["title"] for j in _run_workday(monkeypatch, postings, details)] == ["Graduate Trainee"]
+
+
+# ---------------------------------------------------------------------------
+# JSON-LD helpers
+# ---------------------------------------------------------------------------
+
+def test_jsonld_location_country_code_and_remote():
+    assert scraper._is_india(scraper._jsonld_location(
+        {"jobLocation": {"address": {"addressCountry": "IN"}}}))
+    assert scraper._is_india(scraper._jsonld_location(
+        {"jobLocationType": "TELECOMMUTE",
+         "applicantLocationRequirements": {"@type": "Country", "name": "India"}}))
+    assert not scraper._is_india(scraper._jsonld_location(
+        {"jobLocation": {"address": {"addressLocality": "Austin", "addressCountry": "US"}}}))
+
+
+@pytest.mark.parametrize("posting", [
+    {"jobLocation": "Hyderabad"}, {"jobLocation": [None, 5, {"address": 7}]},
+    {"applicantLocationRequirements": "India"}, {"jobLocation": {"address": None}},
+])
+def test_jsonld_location_malformed_does_not_crash(posting):
+    assert isinstance(scraper._jsonld_location(posting), str)
+
+
+def test_pick_posting_prefers_matching_title():
+    postings = [{"title": "Senior Engineer"}, {"title": "Graduate Engineer"}, "junk"]
+    assert scraper._pick_posting(postings, "Graduate Engineer")["title"] == "Graduate Engineer"
+    assert scraper._pick_posting(postings, "Other")["title"] == "Senior Engineer"
+    assert scraper._pick_posting(["junk"], "x") is None
+
+
+def test_same_page_ignores_fragment_and_trailing_slash():
+    assert scraper._same_page("https://a.com/careers#top", "https://a.com/careers/")
+    assert not scraper._same_page("https://a.com/careers/job/1", "https://a.com/careers")

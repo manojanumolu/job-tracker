@@ -246,3 +246,128 @@ def test_seniority_word_boundaries():
     # substrings of senior words must not trigger a rejection
     assert classify_job("Leadership Development Programme - Graduate").accepted
     assert classify_job("Management Trainee").accepted
+
+
+# ---------------------------------------------------------------------------
+# Regressions found in the final audit
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "title, description",
+    [
+        # bare years in a title are always experience
+        ("Graduate Software Engineer — 2 years", ""),
+        ("Associate Project Specialist — 2 years", ""),
+        ("Junior Software Engineer — 2 years", ""),
+        ("Graduate Software Engineer (2 Yrs)", ""),
+        # "freshers" mentioned about the team, not the applicant
+        ("Software Engineer", "You will mentor freshers and must have 5+ years experience"),
+        # "preferred" in a neighbouring clause doesn't make the requirement optional
+        ("Graduate Software Engineer", "2+ years of experience required, Master's preferred."),
+        # unit-less and hyphenated forms
+        ("Graduate Analyst", "Years of Experience: 2-4"),
+        ("Graduate Analyst", "Experience: 3+"),
+        ("Graduate Analyst", "Total Experience (in years): 2"),
+        ("Graduate Analyst", "3-year experience in Java"),
+        ("Graduate Analyst", "2 years C++ experience"),
+        ("Graduate Analyst", "3 years .NET experience"),
+        ("Trainee", "1 year of internship experience is required"),
+        # numbered levels
+        ("Software Engineer 2", ""),
+        ("SDE-2", ""),
+        ("SDE 3", ""),
+    ],
+)
+def test_audit_experienced_rejected(title, description):
+    result = classify_job(title, description)
+    assert result.category in {Category.EXPERIENCED, Category.SENIOR}, result
+
+
+@pytest.mark.parametrize(
+    "title, description",
+    [
+        ("Software Engineer", "You will mentor freshers and new team members."),
+        ("Software Engineer", "You will guide trainees on the team."),
+        ("Software Engineer", "Support entry-level staff with onboarding."),
+        ("Post Graduate Teacher (PGT) - Maths", ""),
+        ("Campus Recruiter", ""),
+        ("Early Careers Talent Acquisition Partner", ""),
+        ("Early Careers", ""),
+        ("Graduate Programs", ""),
+        ("Explore Early Careers", ""),
+        ("Students & Graduates", ""),
+        ("Campus Hiring India", ""),
+        ("Software Engineer I", ""),
+        ("Sales Executive", ""),
+    ],
+)
+def test_audit_no_false_fresher_signal(title, description):
+    assert not classify_job(title, description).accepted
+
+
+@pytest.mark.parametrize(
+    "title, description",
+    [
+        ("Apprentice Software Engineer", ""),
+        ("New Graduate Software Engineer", ""),
+        ("Software Engineer — no experience required", ""),
+        ("Software Engineer I", "Experience: 0-2 years"),
+        ("Associate", "Experience: Fresher"),
+        ("Associate Consultant", "Experience: 0 - 2 Years"),
+        ("Software Engineer", "Years of Experience: 0-1"),
+        ("Executive - Operations", "Freshers welcome"),
+        ("Software Engineering Intern", "Open to 2026 graduates"),
+        ("Graduate Programme 2026 – Technology", ""),
+        ("Lead Generation Executive", "Freshers can apply"),
+        ("Graduate Software Engineer",
+         "Minimum qualifications:\nBachelor's degree.\nPreferred qualifications:\n2 years of experience with Java."),
+        # bonds / service agreements / company boilerplate aren't requirements
+        ("Software Engineer", "Candidates must sign a minimum 2 years service agreement. Open to freshers."),
+        ("Graduate Trainee", "Stipend for 6 months, followed by a 2-year bond."),
+        ("Graduate Analyst", "We have 10+ years of experience serving clients."),
+        ("Graduate Analyst", "Sanofi, with over 12 years of experience in India"),
+        # age limits, notice periods, salary ranges
+        ("Graduate Trainee", "Age: 21-25 years. Eligibility: 2024/2025 pass-outs with 60% throughout."),
+        ("Graduate Trainee", "Notice period: 0-30 days. CTC 3-5 LPA."),
+    ],
+)
+def test_audit_eligible_accepted(title, description):
+    result = classify_job(title, description)
+    assert result.accepted, result
+
+
+@pytest.mark.parametrize(
+    "text, min_years",
+    [
+        ("2+ yrs", 2), ("2 year's experience", 2), ("2 years' experience", 2),
+        ("2–4 yrs", 2), ("2 - 4 years", 2), ("2 to 4 years", 2), ("minimum of 2 years", 2),
+        ("at least two years", 2), ("two years of experience", 2), ("two to four years", 2),
+        ("0–1 year", 0), ("0 to 1 year", 0), ("3-year experience", 3),
+        ("Years of Experience: 2-4", 2), ("Experience: 3+", 3),
+    ],
+)
+def test_audit_parse_formats(text, min_years):
+    reqs = parse_experience_requirements(text)
+    assert reqs and min(r.min_years for r in reqs) == pytest.approx(min_years)
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["2-year contract", "2026 graduate", "6-month internship", "2025 batch",
+     "15 years of company history", "a 2 year contract with experience in SAP",
+     "minimum 2 years bond", "2-year graduate programme", "Age: 21-25 years",
+     "Notice period: 0-30 days"],
+)
+def test_audit_parse_ignores_unrelated_numbers(text):
+    assert parse_experience_requirements(text) == []
+
+
+@pytest.mark.parametrize(
+    "title, expected",
+    [("2 yrs", 2), ("2 yr", 2), ("2 years", 2), ("Engineer - 1 year", 1)],
+)
+def test_bare_years_count_in_titles(title, expected):
+    reqs = parse_experience_requirements(title, title=True)
+    assert [r.min_years for r in reqs] == [expected]
+    # ...but not in descriptions, where they're often durations
+    assert parse_experience_requirements(title) == []
