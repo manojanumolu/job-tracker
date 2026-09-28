@@ -3,52 +3,29 @@ import re
 import time
 import logging
 from datetime import datetime, timezone
+from html import unescape
 from urllib.parse import urlparse, urljoin
 
 import httpx
 
+from job_classifier import Category, Classification, classify_job, is_real_job
+
 logging.basicConfig(level=logging.INFO, format="[scraper] %(message)s")
 log = logging.getLogger(__name__)
 
-FRESHER_KEYWORDS = [
-    "graduate", "entry level", "entry-level", "associate", "0-1 year",
-    "0-2 year", "new grad", "trainee", "fresher", "junior", "internship",
-    "campus", "early career", "recent graduate",
-]
-
-# word-boundary match — plain substring matching let "intern" match inside
-# "international"/"internal", flooding results with unrelated nav links
-_FRESHER_RE = re.compile(
-    r"\b(?:" + "|".join(re.escape(k) for k in FRESHER_KEYWORDS) + r")\b",
-    re.IGNORECASE,
-)
-
-# "Associate" alone also matches senior titles like "Associate Director" —
-# reject anything carrying a seniority/experience signal even if a fresher
-# keyword matched too.
-SENIOR_EXCLUDE_KEYWORDS = [
-    "director", "senior", "sr.", "sr ", "staff", "principal", "lead",
-    "manager", "head of", "vice president", "vp,", "vp ", "chief",
-    "president", "executive", "years of experience", "years experience",
-    "3+ year", "5+ year", "7+ year", "10+ year",
-]
-_SENIOR_RE = re.compile(
-    r"\b(?:" + "|".join(re.escape(k) for k in SENIOR_EXCLUDE_KEYWORDS) + r")\b",
-    re.IGNORECASE,
-)
-
-# Career pages mix real postings with employee-spotlight/blog content
-# ("Meet Nils Libert, Associate Scientist in R&D") that happens to contain
-# fresher keywords but isn't a job listing at all.
-_NOT_A_JOB_RE = re.compile(
-    r"^\s*meet\b|^\s*[\w'’.-]+\s+[\w'’.-]+\s*:\s", re.IGNORECASE,
-)
-_NOT_A_JOB_URL_RE = re.compile(r"/(blog|news|stories|insights|article)s?/", re.IGNORECASE)
+# Fresher/entry-level classification lives in job_classifier.py (pure text
+# logic, unit tested in tests/). The old keyword list treated words such as
+# "associate", "junior" and "internship" as proof of a fresher role and missed
+# most experience requirements ("2-4 years", "minimum 2 yrs", ...).
+MAX_DETAIL_FETCHES = 30  # per company, bounds run time on pages with many cards
 
 INDIA_KEYWORDS = [
     "india", "bengaluru", "bangalore", "hyderabad", "pune", "chennai",
     "mumbai", "gurgaon", "gurugram", "noida", "delhi", "kolkata",
     "ahmedabad", "kochi", "coimbatore", "indore", "navi mumbai",
+    "thiruvananthapuram", "trivandrum", "mysuru", "mysore", "jaipur",
+    "chandigarh", "mohali", "vadodara", "nagpur", "visakhapatnam",
+    "bhubaneswar", "gandhinagar",
 ]
 _INDIA_RE = re.compile(
     r"\b(?:" + "|".join(re.escape(k) for k in INDIA_KEYWORDS) + r")\b",
@@ -80,23 +57,70 @@ COMPANY_API: dict[str, dict] = {
 
 
 def _is_fresher(text: str) -> bool:
-    return bool(_FRESHER_RE.search(text)) and not _SENIOR_RE.search(text)
+    """Backward-compatible boolean wrapper around classify_job."""
+    title, _, rest = (text or "").strip().partition("\n")
+    return classify_job(title, rest).accepted
 
 
 def _is_india(text: str) -> bool:
-    return bool(_INDIA_RE.search(text))
+    return bool(_INDIA_RE.search(text or ""))
 
 
 def _is_real_job(title: str, href: str) -> bool:
-    if _NOT_A_JOB_RE.search(title):
-        return False
-    if href and _NOT_A_JOB_URL_RE.search(href):
-        return False
-    return True
+    return is_real_job(title, href)
+
+
+_BLOCK_TAG_RE = re.compile(r"<\s*(?:br|/p|/li|/div|/h[1-6]|/tr|li)\b[^>]*>", re.IGNORECASE)
+_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _html_to_text(html: str) -> str:
+    """Strip tags but keep block boundaries as newlines, so the classifier can
+    tell bullet points / sentences apart."""
+    text = _BLOCK_TAG_RE.sub("\n", html or "")
+    text = unescape(_TAG_RE.sub(" ", text))
+    return "\n".join(line.strip() for line in text.splitlines() if line.strip())
+
+
+def _log_decision(company: str, title: str, result: Classification) -> None:
+    log.info("  %s: %s — %s", company, title, result)
+
+
+def _job(title: str, url: str, company: str, result: Classification) -> dict:
+    return {
+        "title": title,
+        "url": url,
+        "company": company,
+        "category": result.category.value,
+        "reason": result.reason,
+    }
 
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+# Classifications that are final from the title/card alone — no point
+# fetching a detail page for them.
+_HARD_REJECT = {Category.NOT_A_JOB, Category.SENIOR, Category.EXPERIENCED}
+
+# Workday's list API reports multi-location postings as "3 Locations"
+_WORKDAY_MULTI_LOC_RE = re.compile(r"^\s*\d+\s+locations?\s*$", re.IGNORECASE)
+
+
+def _workday_detail(client: httpx.Client, url: str) -> tuple[str, str] | None:
+    """Fetch a Workday posting's description and its full location list."""
+    try:
+        r = client.get(url)
+        r.raise_for_status()
+        info = r.json().get("jobPostingInfo", {})
+    except Exception as e:
+        log.warning("Workday detail fetch failed for %s: %s", url, e)
+        return None
+    locations = [info.get("location") or ""] + list(info.get("additionalLocations") or [])
+    country = (info.get("country") or {}).get("descriptor", "")
+    location_text = " | ".join(x for x in locations + [country] if x)
+    return _html_to_text(info.get("jobDescription", "")), location_text
 
 
 def _scrape_api(company: dict) -> list[dict]:
@@ -105,6 +129,7 @@ def _scrape_api(company: dict) -> list[dict]:
     if not cfg:
         return []
     url = cfg["url"]
+    name = company["name"]
     with httpx.Client(headers=HEADERS, timeout=20, follow_redirects=True) as client:
         if cfg.get("type") == "workday":
             payload = {"limit": 20, "offset": 0, "searchText": "", "locations": []}
@@ -116,20 +141,118 @@ def _scrape_api(company: dict) -> list[dict]:
             parsed = urlparse(url)
             site = parsed.path.rstrip("/").split("/")[-2]
             base = f"{parsed.scheme}://{parsed.netloc}/{site}"
+            # detail API: https://{host}/wday/cxs/{tenant}/{site}{externalPath}
+            cxs_base = url.rstrip("/").rsplit("/", 1)[0]
             jobs = []
             for p in postings:
                 title = p.get("title", "")
                 location = p.get("locationsText", "")
                 ext = p.get("externalPath", "")
-                if not _is_real_job(title, ext):
+                pre = classify_job(title, url=ext)
+                if pre.category in _HARD_REJECT:
+                    _log_decision(name, title, pre)
                     continue
-                if not _is_fresher(title + " " + location):
+                # a concrete non-India location in the list view is final;
+                # "N Locations" needs the detail page to know
+                if location and not _WORKDAY_MULTI_LOC_RE.match(location) and not _is_india(location):
                     continue
-                if not _is_india(location or title):
+                detail = _workday_detail(client, cxs_base + ext) if ext else None
+                if detail:
+                    description, location_text = detail
+                else:
+                    description, location_text = "", location or title
+                if not _is_india(location_text):
                     continue
-                jobs.append({"title": title, "url": base + ext, "company": company["name"]})
+                result = classify_job(title, description, url=ext)
+                _log_decision(name, title, result)
+                if result.accepted:
+                    jobs.append(_job(title, base + ext, name, result))
             return jobs
     return []
+
+
+# Pulls schema.org JobPosting data (description + location) out of a detail
+# page's JSON-LD — most ATSs emit it for Google Jobs, JS-rendered or not.
+_JSONLD_JS = """
+() => {
+  const out = [];
+  const visit = (o) => {
+    if (!o || typeof o !== 'object') return;
+    if (Array.isArray(o)) { o.forEach(visit); return; }
+    const t = o['@type'];
+    if (t === 'JobPosting' || (Array.isArray(t) && t.includes('JobPosting'))) out.push(o);
+    if (o['@graph']) visit(o['@graph']);
+  };
+  document.querySelectorAll('script[type="application/ld+json"]').forEach(s => {
+    try { visit(JSON.parse(s.textContent)); } catch (e) {}
+  });
+  return out;
+}
+"""
+
+# Fallback containers for the description when a page has no JSON-LD.
+_DESCRIPTION_SELECTORS = [
+    '[data-automation-id="jobPostingDescription"]',
+    '[itemprop="description"]',
+    '[class*="job-description" i]',
+    '[class*="jobdescription" i]',
+    '[class*="job-details" i]',
+    '[class*="description" i]',
+    "article",
+    "main",
+]
+
+
+def _jsonld_location(posting: dict) -> str:
+    locs = posting.get("jobLocation") or []
+    if isinstance(locs, dict):
+        locs = [locs]
+    parts: list[str] = []
+    for loc in locs:
+        addr = (loc or {}).get("address") or {}
+        if isinstance(addr, str):
+            parts.append(addr)
+            continue
+        for key in ("addressLocality", "addressRegion", "addressCountry"):
+            val = addr.get(key)
+            if isinstance(val, dict):
+                val = val.get("name", "")
+            if val:
+                parts.append(str(val))
+    return " | ".join(parts)
+
+
+def _playwright_detail(page, url: str) -> tuple[str, str] | None:
+    """Open a job detail page; return (description, location). ``location``
+    is "" when the page has no structured location data."""
+    try:
+        page.goto(url, timeout=20000)
+        try:
+            page.wait_for_load_state("networkidle", timeout=5000)
+        except Exception:
+            pass
+        postings = page.evaluate(_JSONLD_JS) or []
+        if postings:
+            posting = postings[0]
+            description = _html_to_text(str(posting.get("description", "")))
+            extra = posting.get("experienceRequirements")
+            if isinstance(extra, str):
+                description += "\n" + extra
+            elif isinstance(extra, dict):
+                months = extra.get("monthsOfExperience")
+                if months is not None:
+                    description += f"\nExperience: {months} months"
+            return description, _jsonld_location(posting)
+        for selector in _DESCRIPTION_SELECTORS:
+            el = page.query_selector(selector)
+            if el:
+                text = (el.inner_text() or "").strip()
+                if len(text) > 200:
+                    return text, ""
+        return None
+    except Exception as e:
+        log.warning("Detail page failed for %s: %s", url, e)
+        return None
 
 
 def _scrape_playwright(company: dict) -> list[dict]:
@@ -139,6 +262,7 @@ def _scrape_playwright(company: dict) -> list[dict]:
         log.warning("Playwright not installed — skipping JS scrape for %s", company["name"])
         return []
 
+    name = company["name"]
     jobs = []
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -149,30 +273,54 @@ def _scrape_playwright(company: dict) -> list[dict]:
                 page.wait_for_load_state("networkidle", timeout=8000)
             except Exception:
                 pass  # page may keep background network activity forever; DOM is usable regardless
-            text = page.inner_text("body")
-            links = page.query_selector_all("a")
-            for link in links:
+            candidates: list[tuple[str, str, str]] = []
+            seen: set[tuple[str, str]] = set()
+            for link in page.query_selector_all("a"):
                 raw = (link.inner_text() or "").strip()
                 # card-style links wrap a heading + description (and often the
                 # location) in one <a>; the first line is the display title,
-                # but fresher/seniority/location checks run over the whole card
-                title = raw.splitlines()[0].strip() if raw else ""
+                # the rest of the card is extra evidence for the classifier
+                title, _, card_rest = raw.partition("\n")
+                title = title.strip()
                 href = link.get_attribute("href") or ""
-                if (
-                    title
-                    and _is_real_job(title, href)
-                    and _is_fresher(raw)
-                    and _is_india(raw)
-                ):
-                    # urljoin resolves every relative form correctly (root-relative,
-                    # page-relative, absolute) — the previous manual check fell back
-                    # to the generic career-page URL for plain "job/123"-style relative
-                    # hrefs, which is why "Apply" sometimes opened the homepage instead
-                    # of the specific job posting.
-                    href = urljoin(company["url"], href) if href else company["url"]
-                    jobs.append({"title": title, "url": href, "company": company["name"]})
+                # India must come from the job's own card, never from the
+                # surrounding career page (nav links, country pickers)
+                if not title or not is_real_job(title, href) or not _is_india(raw):
+                    continue
+                # urljoin resolves every relative form correctly (root-relative,
+                # page-relative, absolute) — the previous manual check fell back
+                # to the generic career-page URL for plain "job/123"-style relative
+                # hrefs, which is why "Apply" sometimes opened the homepage instead
+                # of the specific job posting.
+                href = urljoin(company["url"], href) if href else company["url"]
+                if (title, href) in seen:
+                    continue
+                seen.add((title, href))
+                pre = classify_job(title, card_rest, url=href)
+                if pre.category in _HARD_REJECT:
+                    _log_decision(name, title, pre)
+                    continue
+                candidates.append((title, card_rest, href))
+
+            detail_page = browser.new_page(extra_http_headers={"User-Agent": HEADERS["User-Agent"]})
+            for i, (title, card_rest, href) in enumerate(candidates):
+                detail = None
+                fetchable = href.startswith("http") and href.rstrip("/") != company["url"].rstrip("/")
+                if fetchable and i < MAX_DETAIL_FETCHES:
+                    detail = _playwright_detail(detail_page, href)
+                description = card_rest
+                if detail:
+                    detail_text, detail_location = detail
+                    if detail_location and not _is_india(detail_location):
+                        log.info("  %s: %s — skipped, detail location %r", name, title, detail_location)
+                        continue
+                    description = f"{card_rest}\n{detail_text}"
+                result = classify_job(title, description, url=href)
+                _log_decision(name, title, result)
+                if result.accepted:
+                    jobs.append(_job(title, href, name, result))
         except Exception as e:
-            log.warning("Playwright error for %s: %s", company["name"], e)
+            log.warning("Playwright error for %s: %s", name, e)
         finally:
             browser.close()
     return jobs
