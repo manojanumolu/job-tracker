@@ -26,392 +26,413 @@ log = logging.getLogger("streamlit_app")
 
 BASE = Path(__file__).parent
 GITHUB_REPO = "manojanumolu/job-tracker"
+ACTIONS_URL = f"https://github.com/{GITHUB_REPO}/actions/workflows/check_jobs.yml"
 LOGO_PATH = BASE / "assets" / "logo.png"
 
-st.set_page_config(
-    page_title="Fresher Job Tracker",
-    page_icon=str(LOGO_PATH) if LOGO_PATH.exists() else "💼",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
+# ── routing ───────────────────────────────────────────────────────────────────
+# One script, several views. The current view lives in session state and is
+# mirrored to the URL (?page=companies&company=sanofi) so links and browser
+# reloads land on the same screen.
+PAGES = {
+    "home": ("Home", ":material/home:"),
+    "jobs": ("Jobs", ":material/work:"),
+    "companies": ("Companies", ":material/apartment:"),
+    "monitoring": ("Monitoring", ":material/monitor_heart:"),
+    "email": ("Email & Notifications", ":material/mail:"),
+    "settings": ("Settings", ":material/settings:"),
+}
+NAV_GROUPS = [("Discover", ["home", "jobs", "companies", "monitoring"]),
+              ("Management", ["email", "settings"])]
 
+if "page" not in st.session_state:
+    qp = st.query_params
+    st.session_state.page = qp.get("page") if qp.get("page") in PAGES else "home"
+    st.session_state.job_id = qp.get("job") or None
+    st.session_state.company_id = qp.get("company") or None
+    st.session_state.company_view = "add" if qp.get("view") == "add" else None
 if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = False
 
-# ── theme tokens (Stitch "Fresher Job Tracker Redesign" palette) ─────────────
+st.set_page_config(
+    page_title=f"{PAGES[st.session_state.page][0]} · Fresher Job Tracker",
+    page_icon=str(LOGO_PATH) if LOGO_PATH.exists() else "💼",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# ── theme ─────────────────────────────────────────────────────────────────────
 LIGHT = {
-    "bg": "#faf8ff", "lowest": "#ffffff", "low": "#f2f3ff", "container": "#eaedff",
-    "high": "#e2e7ff", "highest": "#dae2fd",
-    "on-surface": "#131b2e", "variant": "#464555", "outline": "#777587", "outline-variant": "#c7c4d8",
-    "primary": "#3525cd", "primary-btn": "#3525cd", "primary-btn-hover": "#4f46e5", "on-primary": "#ffffff",
-    "primary-fixed": "#e2dfff", "on-primary-fixed": "#0f0069",
-    "secondary": "#006c49", "secondary-container": "#6cf8bb", "on-secondary-container": "#00714d",
-    "tertiary-fixed": "#ffddb8", "on-tertiary-fixed": "#2a1700", "amber": "#885500",
-    "error": "#ba1a1a", "error-container": "#ffdad6", "on-error-container": "#93000a",
-    "shadow": "0 1px 2px 0 rgba(0,0,0,0.05)",
-    "shadow-md": "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)",
-    "header-bg": "rgba(250,248,255,0.85)",
-    "glow-a": "rgba(53,37,205,0.05)", "glow-b": "rgba(0,108,73,0.10)",
+    "bg": "#f8fafc", "surface": "#ffffff", "surface-2": "#f8fafc", "hover": "#f1f5f9",
+    "border": "#e2e8f0", "border-strong": "#cbd5e1",
+    "text": "#0f172a", "text-2": "#334155", "muted": "#64748b",
+    "accent": "#4f46e5", "accent-hover": "#4338ca", "accent-text": "#4338ca", "accent-soft": "#eef2ff",
+    "on-accent": "#ffffff",
+    "green": "#15803d", "green-soft": "#f0fdf4", "amber": "#b45309", "amber-soft": "#fffbeb",
+    "red": "#b91c1c", "red-soft": "#fef2f2", "gray": "#475569", "gray-soft": "#f1f5f9",
+    "shadow": "0 1px 2px rgba(15,23,42,0.04)",
+    "shadow-lg": "0 10px 30px -10px rgba(15,23,42,0.18)",
 }
 DARK = {
-    "bg": "#0e1220", "lowest": "#161b2b", "low": "#1b2133", "container": "#232a40",
-    "high": "#2b3450", "highest": "#343e5c",
-    "on-surface": "#e6e8f5", "variant": "#b9bbcf", "outline": "#8e90a6", "outline-variant": "#464555",
-    "primary": "#c3c0ff", "primary-btn": "#4f46e5", "primary-btn-hover": "#6159f0", "on-primary": "#ffffff",
-    "primary-fixed": "#2e2a6b", "on-primary-fixed": "#e2dfff",
-    "secondary": "#4edea3", "secondary-container": "#005236", "on-secondary-container": "#6ffbbe",
-    "tertiary-fixed": "#653e00", "on-tertiary-fixed": "#ffddb8", "amber": "#ffb95f",
-    "error": "#ffb4ab", "error-container": "#93000a", "on-error-container": "#ffdad6",
-    "shadow": "0 1px 2px 0 rgba(0,0,0,0.35)",
-    "shadow-md": "0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.3)",
-    "header-bg": "rgba(14,18,32,0.85)",
-    "glow-a": "rgba(195,192,255,0.07)", "glow-b": "rgba(78,222,163,0.07)",
+    "bg": "#0b1020", "surface": "#111827", "surface-2": "#0f172a", "hover": "#1e293b",
+    "border": "#1f2937", "border-strong": "#334155",
+    "text": "#f1f5f9", "text-2": "#cbd5e1", "muted": "#94a3b8",
+    "accent": "#6366f1", "accent-hover": "#818cf8", "accent-text": "#a5b4fc", "accent-soft": "rgba(99,102,241,0.16)",
+    "on-accent": "#ffffff",
+    "green": "#4ade80", "green-soft": "rgba(74,222,128,0.12)", "amber": "#fbbf24", "amber-soft": "rgba(251,191,36,0.12)",
+    "red": "#f87171", "red-soft": "rgba(248,113,113,0.12)", "gray": "#94a3b8", "gray-soft": "rgba(148,163,184,0.14)",
+    "shadow": "0 1px 2px rgba(0,0,0,0.3)",
+    "shadow-lg": "0 10px 30px -10px rgba(0,0,0,0.6)",
 }
 TH = DARK if st.session_state.dark_mode else LIGHT
 _root_vars = ":root {" + "".join(f"--{k}:{v};" for k, v in TH.items()) + "}"
 
-# NOTE: inline <svg> doesn't paint in this app's hosting environment, so every
-# icon is a Material Symbols ligature (the font Streamlit itself bundles, with
-# Stitch's Outlined cut preferred when Google Fonts is reachable). The .ms box
-# is fixed-width with overflow hidden, so a font failure never spills words.
-# Widgets that need styling are wrapped in st.container(key=...) and targeted
-# via .st-key-*; raw HTML tags are never opened and closed across st.* calls.
+# One typeface (Inter) everywhere; numbers use tabular figures instead of a
+# monospace font. Icons are Material Symbols ligatures — inline <svg> doesn't
+# paint in this app's hosting environment. Widgets that need styling are
+# wrapped in st.container(key=...) and targeted via .st-key-*; raw HTML tags
+# are never opened in one st.* call and closed in another.
 _CSS = """
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0..1,0&display=block');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0&display=block');
 
-:root {
-  --font-head: 'Manrope', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
-}
+:root { --font: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; --sidebar-w: 240px; }
 
 /* ── Streamlit chrome ── */
-#MainMenu, footer:not(.site-footer), header[data-testid="stHeader"] { display: none !important; }
+#MainMenu, footer:not(.app-foot), header[data-testid="stHeader"] { display: none !important; }
 .stDeployButton, [data-testid="stToolbar"], [data-testid="stDecoration"] { display: none !important; }
-section[data-testid="stSidebar"], [data-testid="collapsedControl"] { display: none !important; }
-.block-container, [data-testid="stMainBlockContainer"] { padding: 0 !important; max-width: 100% !important; }
+[data-testid="stSidebarHeader"], [data-testid="stSidebarCollapseButton"], [data-testid="stSidebarCollapsedControl"],
+[data-testid="stExpandSidebarButton"], [data-testid="stSidebarResizeHandle"] { display: none !important; }
 .stApp, [data-testid="stAppViewContainer"], .stMain { background: var(--bg) !important; }
-.stApp { font-family: var(--font-body); color: var(--on-surface); -webkit-font-smoothing: antialiased; }
-.stApp p, .stApp label, .stApp input, .stApp button, .stApp textarea { font-family: var(--font-body); }
-[data-testid="stElementContainer"]:has(> .stHtml:empty) { display: none; }
+.stApp, .stApp p, .stApp label, .stApp input, .stApp button, .stApp textarea, .stApp li, .stApp h1, .stApp h2, .stApp h3, .stApp h4,
+[data-baseweb="popover"] * { font-family: var(--font) !important; }
+.stApp { color: var(--text); -webkit-font-smoothing: antialiased; font-feature-settings: 'cv11', 'ss01'; }
+.stApp h1, .stApp h2, .stApp h3, .stApp h4 { padding: 0 !important; margin: 0; letter-spacing: -0.015em; color: var(--text); }
+.stApp a { text-decoration: none !important; }
+.num { font-variant-numeric: tabular-nums; }
+[data-testid="stMainBlockContainer"], .block-container {
+  max-width: 1160px !important; padding: 32px 40px 48px !important; margin: 0 !important;
+}
+[data-testid="stMainBlockContainer"] > div > [data-testid="stVerticalBlock"] { gap: 24px; }
 
 /* ── icons ── */
 .ms {
-  font-family: 'Material Symbols Outlined', 'Material Symbols Rounded' !important;
-  font-weight: normal; font-style: normal; line-height: 1; letter-spacing: normal;
-  text-transform: none; white-space: nowrap; direction: ltr; -webkit-font-smoothing: antialiased;
-  font-feature-settings: 'liga'; font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-  display: inline-block; overflow: hidden; flex-shrink: 0; vertical-align: middle;
+  font-family: 'Material Symbols Rounded' !important; font-weight: normal; font-style: normal; line-height: 1;
+  letter-spacing: normal; text-transform: none; white-space: nowrap; direction: ltr; font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased; display: inline-block; overflow: hidden; flex-shrink: 0; vertical-align: middle;
   font-size: 18px; width: 1em; height: 1em;
 }
-.ms.s12 { font-size: 12px; } .ms.s14 { font-size: 14px; } .ms.s15 { font-size: 15px; }
-.ms.s16 { font-size: 16px; } .ms.s18 { font-size: 18px; } .ms.s20 { font-size: 20px; } .ms.s28 { font-size: 28px; }
+.ms.s16 { font-size: 16px; } .ms.s20 { font-size: 20px; } .ms.s24 { font-size: 24px; }
 [data-testid="stIconMaterial"] { font-family: 'Material Symbols Rounded' !important; }
 
-/* ── type scale (Stitch tokens) ── */
-.t-display { font-family: var(--font-head); font-size: 48px; line-height: 56px; letter-spacing: -0.02em; font-weight: 700; }
-.t-hsm { font-family: var(--font-head); font-size: 20px; line-height: 28px; letter-spacing: -0.01em; font-weight: 600; }
-.t-title { font-family: var(--font-head); font-size: 16px; line-height: 24px; letter-spacing: -0.005em; font-weight: 600; }
-.t-body-lg { font-size: 16px; line-height: 26px; }
-.t-body-md { font-size: 14px; line-height: 22px; }
-.t-body-sm { font-size: 13px; line-height: 18px; letter-spacing: 0.005em; }
-.t-label-md { font-size: 12px; line-height: 16px; letter-spacing: 0.02em; font-weight: 600; }
-.t-label-sm { font-size: 11px; line-height: 14px; letter-spacing: 0.04em; font-weight: 600; }
-.t-badge { font-size: 10px; line-height: 12px; letter-spacing: 0.06em; font-weight: 700; text-transform: uppercase; }
-.mono { font-family: var(--font-mono) !important; }
-.c-variant { color: var(--variant); } .c-outline { color: var(--outline); } .c-primary { color: var(--primary); }
-.c-secondary { color: var(--secondary); } .c-surface { color: var(--on-surface); } .c-error { color: var(--error); }
-.c-amber { color: var(--amber); }
+/* ── type ── */
+.page-title { font-size: 26px; line-height: 34px; font-weight: 650; letter-spacing: -0.02em; color: var(--text); margin: 0; }
+.page-sub { font-size: 14px; line-height: 20px; color: var(--muted); margin: 4px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.section-title { font-size: 16px; line-height: 24px; font-weight: 600; color: var(--text); margin: 0; }
+.section-sub { font-size: 13px; line-height: 18px; color: var(--muted); margin: 2px 0 0; }
+.muted { color: var(--muted); } .text-2 { color: var(--text-2); } .accent { color: var(--accent-text); }
+.sep { color: var(--border-strong); }
+
+/* ── status pills: one system everywhere ── */
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 12px; line-height: 20px; font-weight: 500; white-space: nowrap; }
+.pill i { width: 6px; height: 6px; border-radius: 999px; background: currentColor; display: inline-block; }
+.pill.healthy, .pill.fresher, .pill.on { color: var(--green); background: var(--green-soft); }
+.pill.delayed, .pill.pending-mail { color: var(--amber); background: var(--amber-soft); }
+.pill.failing, .pill.off { color: var(--red); background: var(--red-soft); }
+.pill.pending, .pill.legacy, .pill.neutral { color: var(--gray); background: var(--gray-soft); }
+.pill.entry, .pill.checking, .pill.new { color: var(--accent-text); background: var(--accent-soft); }
 .dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; flex-shrink: 0; }
-.dot.sm { width: 6px; height: 6px; }
-.bg-secondary { background: var(--secondary); } .bg-outline { background: var(--outline); }
-.bg-primary { background: var(--primary); } .bg-error { background: var(--error); } .bg-amber { background: var(--amber); }
-@keyframes jt-pulse { 50% { opacity: .45; } }
-@keyframes jt-ping { 75%, 100% { transform: scale(2); opacity: 0; } }
-.pulse { animation: jt-pulse 2s cubic-bezier(.4,0,.6,1) infinite; }
-.ping { position: relative; }
-.ping::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: inherit; animation: jt-ping 1.4s cubic-bezier(0,0,.2,1) infinite; }
-.stApp a, .btn-apply, .btn-add, .hdr-icon { text-decoration: none !important; }
-.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.dot.healthy { background: var(--green); } .dot.delayed { background: var(--amber); } .dot.failing { background: var(--red); }
+.dot.pending { background: var(--gray); } .dot.checking { background: var(--accent); }
 
-/* ── generic cards ── */
-.card, .st-key-jobs_toolbar, [class*="st-key-jc_"], .st-key-portals_card, .st-key-add_card, .st-key-ns_card,
-.st-key-jobs_empty {
-  background: var(--lowest) !important; border-radius: 12px !important; box-shadow: var(--shadow) !important;
+/* ── surfaces ── */
+.panel, .st-key-stats, [class*="st-key-joblist_"], .st-key-company_list, .st-key-add_form, .st-key-email_form,
+.st-key-test_panel, [class*="st-key-set_"], .st-key-mon_table, .st-key-job_main, .st-key-job_side, .st-key-co_side,
+.st-key-co_jobs, .st-key-empty {
+  background: var(--surface) !important; border: 1px solid var(--border) !important; border-radius: 12px !important;
+  box-shadow: var(--shadow) !important;
+}
+.st-key-add_form, .st-key-email_form, .st-key-test_panel, [class*="st-key-set_"], .st-key-job_main, .st-key-job_side,
+.st-key-co_side, .st-key-empty { padding: 20px 24px !important; gap: 16px !important; }
+
+/* ── page header ── */
+.st-key-page_head > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"],
+.st-key-page_head > [data-testid="stHorizontalBlock"] { align-items: flex-end !important; gap: 16px !important; flex-wrap: wrap !important; }
+.st-key-page_head [data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
+.st-key-page_head [data-testid="stColumn"]:first-child { flex: 1 1 320px !important; }
+.st-key-page_actions > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"],
+.st-key-page_actions > [data-testid="stHorizontalBlock"] { gap: 8px !important; flex-wrap: nowrap !important; }
+.st-key-page_actions [data-testid="stColumn"] { flex: 0 0 auto !important; }
+
+/* ── stats strip: one panel, divided cells ── */
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.stat { padding: 16px 20px; min-width: 0; }
+.stat + .stat { border-left: 1px solid var(--border); }
+.stat .k { font-size: 13px; line-height: 18px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.stat .v { font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); margin-top: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat .n { font-size: 13px; line-height: 18px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-key-stats { padding: 0 !important; overflow: hidden; }
+
+/* ── filter bar ── */
+[class*="st-key-filters_"] > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"],
+[class*="st-key-filters_"] > [data-testid="stHorizontalBlock"] { gap: 8px !important; flex-wrap: wrap !important; align-items: flex-end !important; }
+[class*="st-key-filters_"] [data-testid="stColumn"] { flex: 1 1 150px !important; width: auto !important; min-width: 140px !important; max-width: 240px; }
+[class*="st-key-filters_"] [data-testid="stColumn"]:first-child { max-width: none; }
+[class*="st-key-filters_"] [data-testid="stColumn"]:first-child { flex: 2 1 240px !important; }
+[class*="st-key-filters_"] [data-testid="stColumn"]:last-child { flex: 0 0 auto !important; min-width: 0 !important; }
+:is(.st-key-h_q, .st-key-j_q, .st-key-co_q) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])::before {
+  content: "search"; font-family: 'Material Symbols Rounded' !important; font-feature-settings: 'liga'; font-weight: 400;
+  font-size: 18px; width: 18px; overflow: hidden; white-space: nowrap; flex-shrink: 0;
+  color: var(--muted); margin-left: 12px; align-self: center; line-height: 1; box-sizing: content-box;
 }
 
-/* ── layout wrappers ── */
-.st-key-page_wrap { max-width: 1280px; margin: 0 auto; padding: 8px 32px 48px; gap: 24px !important; }
-:is(.st-key-main_grid, .st-key-main_grid > [data-testid="stLayoutWrapper"]) > [data-testid="stHorizontalBlock"] { gap: 24px !important; }
-:is(.st-key-main_grid, .st-key-main_grid > [data-testid="stLayoutWrapper"]) > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:first-child { flex: 8 1 0 !important; width: auto !important; min-width: 0 !important; }
-:is(.st-key-main_grid, .st-key-main_grid > [data-testid="stLayoutWrapper"]) > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child { flex: 4 1 0 !important; width: auto !important; min-width: 0 !important; }
-.st-key-feed_col, .st-key-rail_col { gap: 16px !important; }
-.st-key-job_stream { gap: 8px !important; }
+/* ── job list: one panel, divided rows ── */
+[class*="st-key-joblist_"] { padding: 0 !important; gap: 0 !important; overflow: hidden; }
+[class*="st-key-jr_"] { padding: 16px 20px !important; gap: 0 !important; transition: background .15s; }
+[class*="st-key-jr_"] + [class*="st-key-jr_"], [class*="st-key-joblist_"] > [data-testid="stElementContainer"] + [class*="st-key-jr_"] { border-top: 1px solid var(--border); }
+[class*="st-key-jr_"]:hover { background: var(--surface-2); }
+[class*="st-key-jr_"] > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"],
+[class*="st-key-jr_"] > [data-testid="stHorizontalBlock"] { gap: 16px !important; align-items: center !important; flex-wrap: nowrap !important; }
+[class*="st-key-jr_"] [data-testid="stColumn"] { width: auto !important; min-width: 0 !important; flex: 0 0 auto !important; }
+[class*="st-key-jr_"] [data-testid="stColumn"]:first-child { flex: 1 1 auto !important; }
+[class*="st-key-jr_"] [data-testid="stColumn"]:last-child [data-testid="stVerticalBlock"] { flex-direction: row !important; gap: 8px !important; align-items: center; flex-wrap: nowrap; }
+[class*="st-key-jr_"] [data-testid="stColumn"]:last-child [data-testid="stElementContainer"] { width: auto !important; flex: 0 0 auto; }
+.job { display: flex; gap: 14px; min-width: 0; align-items: flex-start; }
+.logo { width: 40px; height: 40px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-text); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; flex-shrink: 0; }
+.logo.lg { width: 56px; height: 56px; border-radius: 14px; font-size: 22px; }
+.job-body { min-width: 0; flex: 1; }
+.job-title { font-size: 16px; line-height: 22px; font-weight: 600; color: var(--text); margin: 0; overflow-wrap: anywhere; }
+.job-meta { font-size: 14px; line-height: 20px; color: var(--muted); margin-top: 2px; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; }
+.job-meta .co { color: var(--text-2); font-weight: 500; }
+.job-why { font-size: 13px; line-height: 18px; color: var(--muted); margin-top: 8px; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.job-why span.t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.list-foot { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--muted); }
+.st-key-list_foot_h, .st-key-list_foot_j { padding: 10px 20px !important; border-top: 1px solid var(--border); }
+.st-key-list_foot_h > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-list_foot_h > [data-testid="stHorizontalBlock"],
+.st-key-list_foot_j > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-list_foot_j > [data-testid="stHorizontalBlock"] { align-items: center !important; gap: 8px !important; flex-wrap: nowrap !important; }
+.st-key-list_foot_h [data-testid="stColumn"], .st-key-list_foot_j [data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
+.st-key-list_foot_h [data-testid="stColumn"]:first-child, .st-key-list_foot_j [data-testid="stColumn"]:first-child { flex: 1 1 auto !important; }
 
-/* ── header ── */
-.st-key-app_header {
-  position: sticky; top: 0; z-index: 50; background: var(--header-bg) !important;
-  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-  box-shadow: 0 1px 8px rgba(0,0,0,0.04);
-  padding: 0 max(32px, calc((100% - 1280px) / 2 + 32px)) !important;
-}
-:is(.st-key-app_header, .st-key-app_header > [data-testid="stLayoutWrapper"]) > [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 4px !important; align-items: center !important; min-height: 64px; }
-.st-key-app_header [data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
-.st-key-app_header [data-testid="stColumn"]:first-child { flex: 1 1 auto !important; }
-.st-key-app_header [data-testid="stColumn"]:nth-child(2) { margin-right: 4px; }
-.hdr-brand { display: flex; align-items: center; gap: 16px; min-width: 0; }
-.hdr-logo { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.hdr-logo img { height: 32px; width: 32px; border-radius: 8px; display: block; }
-.hdr-logo .name { font-family: var(--font-head); font-size: 16px; font-weight: 600; letter-spacing: -0.025em; line-height: 1; color: var(--on-surface); }
-.hdr-logo .sub { font-size: 11px; line-height: 1; margin-top: 4px; color: var(--variant); letter-spacing: .04em; }
-.hdr-nav { display: flex; align-items: center; gap: 16px; margin-left: 16px; }
-.hdr-nav a { font-size: 14px; line-height: 22px; color: var(--variant) !important; transition: color .15s; white-space: nowrap; }
-.hdr-nav a:hover { color: var(--on-surface) !important; }
-.hdr-nav a.active { color: var(--primary) !important; font-weight: 600; }
-.hdr-pills { display: flex; align-items: center; gap: 4px; }
-.pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
-.pill.mon { background: var(--container); color: var(--secondary); }
-.pill.chk { background: var(--low); color: var(--variant); gap: 4px; }
-.pill.nxt { background: var(--lowest); color: var(--variant); padding: 4px 8px; }
-.pill.warn { background: var(--tertiary-fixed); color: var(--on-tertiary-fixed); }
-.hdr-icon {
-  width: 34px; height: 34px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;
-  background: var(--lowest); color: var(--variant) !important; transition: background .15s, color .15s;
-}
-.hdr-icon:hover { background: var(--high); color: var(--on-surface) !important; }
-.st-key-app_header [data-testid^="stBaseButton"] {
-  width: 34px !important; height: 34px !important; min-height: 34px !important; padding: 0 !important;
-  border-radius: 8px !important; border: none !important; background: var(--lowest) !important;
-  color: var(--variant) !important; box-shadow: none !important;
-}
-.st-key-app_header [data-testid^="stBaseButton"]:hover { background: var(--high) !important; color: var(--on-surface) !important; }
-.st-key-app_header [data-testid^="stBaseButton"] [data-testid="stIconMaterial"] { font-size: 18px !important; }
-.st-key-app_header [data-testid="stElementContainer"] { width: auto !important; }
+/* buttons that look like links */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 8px; font-size: 14px; font-weight: 500; white-space: nowrap; transition: background .15s, border-color .15s; }
+.btn.primary { background: var(--accent); color: var(--on-accent) !important; }
+.btn.primary:hover { background: var(--accent-hover); }
+.btn.ghost { background: var(--surface); color: var(--text) !important; border: 1px solid var(--border); }
+.btn.ghost:hover { background: var(--hover); border-color: var(--border-strong); }
+.btn.disabled { background: var(--hover); color: var(--muted) !important; }
+.link { color: var(--accent-text) !important; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; overflow-wrap: anywhere; }
+.link:hover { text-decoration: underline !important; }
 
-/* ── hero ── */
-.hero { position: relative; overflow: hidden; border-radius: 12px; background: var(--low); padding: 32px; box-shadow: var(--shadow); }
-.hero .glow-a { position: absolute; top: -96px; right: -96px; width: 384px; height: 384px; border-radius: 999px; background: var(--glow-a); filter: blur(64px); pointer-events: none; }
-.hero .glow-b { position: absolute; bottom: -80px; left: 33%; width: 320px; height: 320px; border-radius: 999px; background: var(--glow-b); filter: blur(40px); pointer-events: none; }
-.hero-inner { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 16px; }
-.hero-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
-.status-badge { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 999px; text-transform: uppercase; font-weight: 700; letter-spacing: .05em; }
-.status-badge.ok { background: var(--secondary-container); color: var(--on-secondary-container); }
-.status-badge.warn { background: var(--tertiary-fixed); color: var(--on-tertiary-fixed); }
-.status-badge.idle { background: var(--container); color: var(--variant); }
-.engine-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; background: var(--lowest); color: var(--variant); box-shadow: var(--shadow); }
-.hero h1 { color: var(--on-surface); margin: 0; padding: 0; }
-.hero h1 .accent { color: var(--primary); text-decoration: underline wavy; text-decoration-color: color-mix(in srgb, var(--primary) 22%, transparent); text-underline-offset: 6px; text-decoration-thickness: 2px; }
-.hero p.lead { color: var(--variant); margin: 8px 0 0; max-width: 672px; }
-.strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding-top: 4px; }
-.strip-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; background: var(--lowest); box-shadow: var(--shadow); min-width: 0; }
-.strip-ic { width: 32px; height: 32px; border-radius: 999px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.strip-ic.a { background: var(--high); color: var(--primary); }
-.strip-ic.b { background: var(--secondary-container); color: var(--secondary); }
-.strip-ic.c { background: var(--high); color: var(--secondary); }
-.strip-ic.d { background: var(--primary-fixed); color: var(--primary); }
-.strip-ic.w { background: var(--tertiary-fixed); color: var(--amber); }
-.strip-k { text-transform: uppercase; color: var(--variant); }
-.strip-v { color: var(--on-surface); }
+/* ── detail views ── */
+.detail-head { display: flex; gap: 16px; align-items: flex-start; }
+.detail-title { font-size: 26px; line-height: 34px; font-weight: 650; letter-spacing: -0.02em; margin: 0; color: var(--text); overflow-wrap: anywhere; }
+.kv { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 10px 16px; font-size: 14px; line-height: 20px; margin: 12px 0 0 !important; padding: 0 !important; }
+.kv dt { color: var(--muted); margin: 0 !important; padding: 0 !important; } .kv dd { margin: 0 !important; padding: 0 !important; color: var(--text); min-width: 0; overflow-wrap: anywhere; }
+.note { font-size: 14px; line-height: 20px; color: var(--muted); margin: 0; }
+.why { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 20px; color: var(--text); }
+.why .ms { color: var(--green); margin-top: 1px; }
+.quote { margin-top: 10px; padding: 10px 12px; border-left: 3px solid var(--border-strong); background: var(--surface-2); border-radius: 0 8px 8px 0; font-size: 13px; line-height: 18px; color: var(--text-2); }
+.st-key-job_cols > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-job_cols > [data-testid="stHorizontalBlock"],
+.st-key-co_cols > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-co_cols > [data-testid="stHorizontalBlock"] { gap: 24px !important; align-items: flex-start !important; }
+.st-key-job_actions > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-job_actions > [data-testid="stHorizontalBlock"],
+.st-key-co_actions > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-co_actions > [data-testid="stHorizontalBlock"] { gap: 8px !important; flex-wrap: wrap !important; }
+.st-key-job_actions [data-testid="stColumn"], .st-key-co_actions [data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
+.st-key-job_main, .st-key-job_side, .st-key-co_side { gap: 20px !important; }
+.divider { border-top: 1px solid var(--border); margin: 0; }
+[data-testid="stExpander"] details { border: 1px solid var(--border) !important; border-radius: 10px !important; background: var(--surface) !important; }
+[data-testid="stExpander"] summary p { font-size: 14px !important; font-weight: 600 !important; color: var(--text) !important; }
+[data-testid="stExpander"] summary:hover { color: var(--accent-text) !important; }
 
-/* ── metric cards ── */
-.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-.metric { padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; transition: box-shadow .2s; min-width: 0; }
-.metric:hover { box-shadow: var(--shadow-md) !important; }
-.metric-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.metric-mid { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
-.metric-num { font-family: var(--font-head); font-size: 48px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; color: var(--on-surface); }
-.metric-num.mono { letter-spacing: -0.04em; }
-.tag-active { padding: 2px 8px; border-radius: 4px; background: var(--secondary-container); color: var(--secondary); }
-.tag-warn { padding: 2px 8px; border-radius: 4px; background: var(--error-container); color: var(--on-error-container); }
-.bar-track { width: 100%; height: 6px; border-radius: 999px; background: var(--container); overflow: hidden; }
-.bar-fill { height: 6px; border-radius: 999px; background: var(--primary); }
-.spark { display: flex; align-items: flex-end; gap: 3px; height: 24px; }
-.spark span { flex: 1; border-radius: 2px 2px 0 0; background: var(--primary); min-height: 2px; opacity: .85; }
-.spark span.zero { background: var(--container); opacity: 1; }
+/* ── companies list ── */
+.st-key-company_list { padding: 0 !important; gap: 0 !important; overflow: hidden; }
+[class*="st-key-cr_"] { padding: 14px 20px !important; transition: background .15s; }
+[class*="st-key-cr_"] + [class*="st-key-cr_"] { border-top: 1px solid var(--border); }
+[class*="st-key-cr_"]:hover { background: var(--surface-2); }
+[class*="st-key-cr_"] > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"],
+[class*="st-key-cr_"] > [data-testid="stHorizontalBlock"] { gap: 16px !important; align-items: center !important; flex-wrap: nowrap !important; }
+[class*="st-key-cr_"] [data-testid="stColumn"] { width: auto !important; min-width: 0 !important; flex: 0 0 auto !important; }
+[class*="st-key-cr_"] [data-testid="stColumn"]:first-child { flex: 1 1 auto !important; }
+.co-row { display: grid; grid-template-columns: minmax(0, 1.6fr) 110px 100px 110px; gap: 16px; align-items: center; min-width: 0; }
+.co-name { display: flex; gap: 12px; align-items: center; min-width: 0; }
+.co-name .t { font-size: 15px; line-height: 20px; font-weight: 600; color: var(--text); display: flex; gap: 8px; align-items: center; }
+.co-name .h { font-size: 13px; line-height: 18px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.co-cell { font-size: 14px; color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.co-cell .l { display: none; }
+.list-head { display: grid; grid-template-columns: minmax(0, 1.6fr) 110px 100px 110px 88px; gap: 16px; padding: 10px 20px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--border); background: var(--surface-2); }
+.tag { font-size: 12px; line-height: 18px; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 0 6px; font-weight: 500; }
 
-/* ── feed toolbar ── */
-.st-key-jobs_toolbar { padding: 16px !important; gap: 8px !important; }
-:is(.st-key-jobs_toolbar, .st-key-jobs_toolbar > [data-testid="stLayoutWrapper"]) > [data-testid="stHorizontalBlock"] { align-items: center !important; gap: 8px !important; }
-:is(.st-key-jobs_toolbar, .st-key-jobs_toolbar > [data-testid="stLayoutWrapper"]) > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:first-child { flex: 1 1 auto !important; width: auto !important; min-width: 0 !important; }
-:is(.st-key-jobs_toolbar, .st-key-jobs_toolbar > [data-testid="stLayoutWrapper"]) > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child { flex: 0 0 260px !important; width: 260px !important; min-width: 240px !important; }
-.st-key-job_search [data-baseweb="input"]::before {
-  content: "search"; font-family: 'Material Symbols Outlined', 'Material Symbols Rounded'; font-size: 18px;
-  width: 18px; overflow: hidden; color: var(--outline); padding-left: 12px; align-self: center; line-height: 1;
-}
-.st-key-job_search input { padding-left: 8px !important; }
-.st-key-job_filter_wrap { border-top: 1px solid var(--container); padding-top: 8px; }
-.st-key-job_filter_wrap [data-testid="stButtonGroup"] > div { gap: 8px !important; flex-wrap: wrap; }
-.st-key-job_filter_wrap :is([data-testid^="stBaseButton-pills"], button[data-variant="pills"]) {
-  border: none !important; border-radius: 999px !important; padding: 4px 12px !important; min-height: 0 !important;
-  background: var(--container) !important; color: var(--variant) !important; box-shadow: none !important;
-}
-.st-key-job_filter_wrap :is([data-testid^="stBaseButton-pills"], button[data-variant="pills"]) p { font-size: 12px !important; line-height: 16px !important; font-weight: 500 !important; letter-spacing: .02em; color: inherit !important; }
-.st-key-job_filter_wrap :is([data-testid^="stBaseButton-pills"], button[data-variant="pills"]):hover { color: var(--on-surface) !important; }
-.st-key-job_filter_wrap :is([data-testid="stBaseButton-pillsActive"], button[data-variant="pills"][aria-checked="true"]) {
-  background: var(--primary-btn) !important; color: var(--on-primary) !important; box-shadow: var(--shadow) !important;
-}
-.st-key-job_filter_wrap :is([data-testid="stBaseButton-pillsActive"], button[data-variant="pills"][aria-checked="true"]) p { font-weight: 600 !important; }
-
-/* ── job cards ── */
-[class*="st-key-jc_"] { padding: 16px !important; gap: 8px !important; transition: box-shadow .2s; overflow: hidden; }
-[class*="st-key-jc_"]:hover { box-shadow: var(--shadow-md) !important; }
-[class*="st-key-jc_"]:hover .job-title { color: var(--primary); }
-[class*="st-key-jc_"] [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 8px !important; }
-[class*="st-key-jc_"] [data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
-[class*="st-key-jc_"] [data-testid="stColumn"]:first-child { flex: 1 1 auto !important; }
-.job-head { display: flex; align-items: flex-start; gap: 16px; min-width: 0; }
-.avatar { width: 48px; height: 48px; border-radius: 12px; background: var(--high); color: var(--primary); display: flex; align-items: center; justify-content: center; font-family: var(--font-head); font-size: 24px; font-weight: 700; flex-shrink: 0; }
-.badges { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 4px; }
-.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; }
-.badge.fresher { padding: 2px 10px; background: var(--secondary-container); color: var(--on-secondary-container); }
-.badge.entry { background: var(--primary-fixed); color: var(--on-primary-fixed); }
-.badge.neutral { background: var(--container); color: var(--variant); }
-.badge.strong { background: var(--high); color: var(--on-surface); }
-.job-title { color: var(--on-surface); transition: color .15s; margin: 0; overflow-wrap: anywhere; }
-.job-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--variant); margin-top: 4px; }
-.job-meta .co { font-weight: 600; color: var(--on-surface); }
-.job-meta .loc { display: inline-flex; align-items: center; gap: 4px; }
-.reason { padding: 12px; border-radius: 8px; background: var(--low); color: var(--variant); display: flex; align-items: center; gap: 8px; margin: 0; }
-.job-foot { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; color: var(--outline); min-height: 30px; }
-.btn-apply {
-  display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 16px; border-radius: 8px; white-space: nowrap;
-  background: var(--primary-btn); color: var(--on-primary) !important; box-shadow: var(--shadow); transition: background .15s, box-shadow .15s;
-}
-.btn-apply:hover { background: var(--primary-btn-hover); box-shadow: var(--shadow-md); }
-.btn-apply.off { background: var(--container); color: var(--outline) !important; box-shadow: none; }
-[class*="st-key-jc_"] [data-testid="stBaseButton-secondary"] { padding: 6px 12px !important; min-height: 30px !important; }
-[class*="st-key-jc_"] [data-testid="stBaseButton-tertiary"] {
-  width: 32px !important; height: 32px !important; min-height: 32px !important; padding: 0 !important; border-radius: 8px !important;
-  color: var(--outline) !important; background: transparent !important; border: none !important;
-}
-[class*="st-key-jc_"] [data-testid="stBaseButton-tertiary"]:hover { color: var(--error) !important; background: var(--container) !important; }
-
-/* ── empty state ── */
-.st-key-jobs_empty { padding: 32px !important; align-items: center; text-align: center; gap: 8px !important; }
-.empty-ic { width: 56px; height: 56px; border-radius: 999px; background: var(--container); color: var(--outline); display: inline-flex; align-items: center; justify-content: center; }
-.empty { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.empty h4 { color: var(--on-surface); margin: 0; }
-.empty p { color: var(--variant); max-width: 448px; margin: 0; }
-
-/* ── pager ── */
-:is(.st-key-jobs_pager, .st-key-jobs_pager > [data-testid="stLayoutWrapper"]) > [data-testid="stHorizontalBlock"] { align-items: center !important; gap: 8px !important; flex-wrap: nowrap !important; }
-.st-key-jobs_pager [data-testid="stColumn"] { flex: 1 1 0 !important; width: auto !important; min-width: 0 !important; }
-.pager-label { text-align: center; color: var(--variant); padding: 6px 0; }
-
-/* ── right rail cards ── */
-.st-key-portals_card, .st-key-add_card, .st-key-ns_card { padding: 16px !important; gap: 8px !important; }
-.card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.card-head .lh { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.card-head h2, .card-head h3 { margin: 0; color: var(--on-surface); }
-.count-chip { padding: 2px 8px; border-radius: 999px; background: var(--container); font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--on-surface); }
-.btn-add { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 8px; background: var(--primary-btn); color: var(--on-primary) !important; transition: background .15s; }
-.btn-add:hover { background: var(--primary-btn-hover); }
-.sq-ic { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.sq-ic.a { background: var(--high); color: var(--primary); }
-.sq-ic.b { background: var(--secondary-container); color: var(--secondary); }
-.portal-list { display: flex; flex-direction: column; padding-top: 4px; }
-.portal { padding: 8px 0 6px; display: flex; flex-direction: column; min-width: 0; }
-.portal + .portal { border-top: 1px solid var(--low); }
-.portal-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.portal-name .t-title { line-height: 1.25; color: var(--on-surface); }
-.state { display: inline-flex; align-items: center; gap: 4px; font-weight: 500; }
-.core { font-size: 9.5px; letter-spacing: .06em; font-weight: 700; color: var(--outline); border: 1px solid var(--outline-variant); border-radius: 4px; padding: 0 5px; line-height: 14px; }
-.portal a.host { color: var(--variant) !important; display: inline-flex; align-items: center; gap: 4px; max-width: 100%; transition: color .15s; }
-.portal a.host:hover { color: var(--primary) !important; }
-.portal .pmeta { display: flex; align-items: center; gap: 8px; color: var(--outline); margin-top: 2px; min-width: 0; }
-.card-head p, .card-sub { margin: 0; color: var(--variant); }
-.field-label { display: block; color: var(--on-surface); margin: 0 0 4px; }
-.fake-select { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-radius: 8px; background: var(--low); color: var(--on-surface); }
-.hint { color: var(--outline); margin: 4px 0 0; }
-.sync { display: flex; align-items: center; gap: 6px; }
-.divider { border-top: 1px solid var(--low); margin: 4px 0 0; }
-.row-between { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-:is(.st-key-ns_card, .st-key-ns_card > [data-testid="stLayoutWrapper"]) > [data-testid="stHorizontalBlock"] { gap: 8px !important; flex-wrap: nowrap !important; align-items: flex-end !important; }
-:is(.st-key-ns_card, .st-key-ns_card > [data-testid="stLayoutWrapper"]) > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:first-child { flex: 1 1 auto !important; min-width: 0 !important; width: auto !important; }
-:is(.st-key-ns_card, .st-key-ns_card > [data-testid="stLayoutWrapper"]) > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
-.st-key-ns_card [data-testid="stBaseButton-secondary"] { min-height: 38px !important; }
-.st-key-remove_row { gap: 4px !important; padding-top: 4px; border-top: 1px solid var(--low); }
-.st-key-remove_row [data-testid="stHorizontalBlock"] { gap: 8px !important; }
+/* ── monitoring table ── */
+.st-key-mon_table { padding: 0 !important; overflow: hidden; }
+.mon { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.mon th { text-align: left; font-weight: 500; color: var(--muted); font-size: 13px; padding: 10px 16px; background: var(--surface-2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+.mon td { padding: 14px 16px; border-bottom: 1px solid var(--border); color: var(--text-2); vertical-align: top; }
+.mon tr:last-child td { border-bottom: none; }
+.mon td.c { color: var(--text); font-weight: 600; }
+.mon td .sub { color: var(--muted); font-size: 13px; font-weight: 400; margin-top: 2px; overflow-wrap: anywhere; }
+.mon td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* ── widgets ── */
-.stTextInput label p, .stCheckbox label p { font-size: 11px !important; line-height: 14px !important; letter-spacing: .04em; font-weight: 600 !important; color: var(--on-surface) !important; }
-.stCheckbox label p { font-size: 13px !important; letter-spacing: 0; font-weight: 500 !important; }
-.stTextInput [data-baseweb="input"], .stTextInput [data-baseweb="base-input"] {
-  background: var(--low) !important; border: none !important; border-radius: 8px !important;
+.stTextInput label p, .stSelectbox label p, .stCheckbox label p { font-size: 13px !important; line-height: 18px !important; font-weight: 500 !important; color: var(--text-2) !important; }
+.stTextInput [data-baseweb="input"], [data-testid="stTextInputRootElement"], [data-baseweb="select"] > div, .stSelectbox [role="group"] {
+  background: var(--surface) !important; border: 1px solid var(--border-strong) !important; border-radius: 8px !important;
+  min-height: 38px; transition: border-color .15s, box-shadow .15s;
 }
-.stTextInput [data-baseweb="input"] * { background-color: transparent !important; }
-.stTextInput [data-baseweb="input"] { border: 1px solid transparent !important; transition: box-shadow .15s, background .15s; }
-.stTextInput [data-baseweb="input"]:focus-within { background: var(--lowest) !important; box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent) !important; border-color: transparent !important; }
-.stTextInput input { font-size: 13px !important; line-height: 18px !important; color: var(--on-surface) !important; padding: 8px 12px !important; background: transparent !important; -webkit-text-fill-color: var(--on-surface); }
-.stTextInput input::placeholder { color: var(--outline) !important; -webkit-text-fill-color: var(--outline); opacity: 1; }
+.stTextInput [data-baseweb="input"] *, [data-testid="stTextInputRootElement"] * { background-color: transparent !important; }
+.stTextInput [data-baseweb="input"]:hover, [data-testid="stTextInputRootElement"]:hover, [data-baseweb="select"] > div:hover, .stSelectbox [role="group"]:hover { border-color: var(--muted) !important; }
+.stTextInput [data-baseweb="input"]:focus-within, [data-testid="stTextInputRootElement"]:focus-within, [data-baseweb="select"] > div:focus-within, .stSelectbox [role="group"]:focus-within {
+  border-color: var(--accent) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent) !important;
+}
+.stTextInput input { font-size: 14px !important; color: var(--text) !important; -webkit-text-fill-color: var(--text); padding: 8px 12px !important; }
+.stTextInput input::placeholder { color: var(--muted) !important; -webkit-text-fill-color: var(--muted); opacity: 1; }
+.stSelectbox input, .stSelectbox [role="group"] * { font-size: 14px !important; color: var(--text) !important; -webkit-text-fill-color: var(--text); }
+.stSelectbox svg { fill: var(--muted) !important; color: var(--muted) !important; }
+[data-baseweb="select"] * { font-size: 14px !important; color: var(--text) !important; }
+[data-baseweb="select"] svg { fill: var(--muted) !important; }
+[data-baseweb="popover"] ul, [data-baseweb="popover"] [role="listbox"] { background: var(--surface) !important; }
+[data-baseweb="popover"] li { color: var(--text) !important; font-size: 14px !important; }
+[data-baseweb="popover"] li:hover, [data-baseweb="popover"] li[aria-selected="true"] { background: var(--hover) !important; }
 [data-testid="InputInstructions"] { display: none !important; }
 
 [data-testid^="stBaseButton"] {
-  border-radius: 8px !important; box-shadow: none !important; min-height: 34px !important; padding: 6px 12px !important;
-  transition: background .15s, color .15s, box-shadow .15s !important;
+  border-radius: 8px !important; min-height: 36px !important; padding: 0 14px !important; box-shadow: none !important;
+  transition: background .15s, border-color .15s, color .15s !important;
 }
-[data-testid^="stBaseButton"] [data-testid="stMarkdownContainer"] { display: flex !important; align-items: center; padding: 0 !important; margin: 0 !important; min-height: 0 !important; }
-[data-testid^="stBaseButton"] p { margin: 0 !important; padding: 0 !important; font-size: 12px !important; line-height: 16px !important; font-weight: 600 !important; letter-spacing: .02em; }
-[data-testid="stBaseButton-secondary"] { background: var(--container) !important; color: var(--on-surface) !important; border: none !important; }
-[data-testid="stBaseButton-secondary"]:hover { background: var(--high) !important; color: var(--on-surface) !important; }
-[data-testid="stBaseButton-secondary"]:disabled { opacity: .45 !important; }
-[data-testid="stBaseButton-primary"] { background: var(--primary-btn) !important; color: var(--on-primary) !important; border: none !important; }
-[data-testid="stBaseButton-primary"]:hover { background: var(--primary-btn-hover) !important; }
-[data-testid="stBaseButton-tertiary"] { color: var(--primary) !important; }
-.st-key-test_mail_btn [data-testid="stBaseButton-secondary"] { color: var(--primary) !important; }
-.st-key-test_mail_btn [data-testid="stBaseButton-secondary"] p { color: var(--primary) !important; }
+[data-testid^="stBaseButton"] [data-testid="stMarkdownContainer"] { display: flex !important; align-items: center; margin: 0 !important; padding: 0 !important; }
+[data-testid^="stBaseButton"] p { margin: 0 !important; font-size: 14px !important; line-height: 20px !important; font-weight: 500 !important; white-space: nowrap; }
+[data-testid="stBaseButton-secondary"] { background: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--border) !important; }
+[data-testid="stBaseButton-secondary"]:hover { background: var(--hover) !important; border-color: var(--border-strong) !important; color: var(--text) !important; }
+[data-testid="stBaseButton-primary"] { background: var(--accent) !important; color: var(--on-accent) !important; border: 1px solid var(--accent) !important; }
+[data-testid="stBaseButton-primary"]:hover { background: var(--accent-hover) !important; border-color: var(--accent-hover) !important; }
+[data-testid^="stBaseButton"]:disabled { opacity: .45 !important; }
+[data-testid="stBaseButton-tertiary"] { color: var(--muted) !important; background: transparent !important; border: none !important; }
+[data-testid="stBaseButton-tertiary"]:hover { color: var(--text) !important; background: var(--hover) !important; }
+.st-key-danger [data-testid^="stBaseButton"], .st-key-danger_confirm [data-testid="stBaseButton-secondary"] { color: var(--red) !important; }
+.st-key-danger_confirm [data-testid="stBaseButton-secondary"] { color: var(--text) !important; }
+.st-key-danger_confirm [data-testid="stBaseButton-primary"] { background: var(--red) !important; border-color: var(--red) !important; color: #fff !important; }
+[class*="st-key-dismiss_"] [data-testid^="stBaseButton"], [class*="st-key-restore_"] [data-testid^="stBaseButton"] { width: 36px !important; padding: 0 !important; }
 
-/* ── dialog ── */
-[data-testid="stDialog"] [role="dialog"] { background: var(--lowest) !important; border-radius: 12px !important; color: var(--on-surface); }
-[data-testid="stDialog"] h2, [data-testid="stDialog"] [data-testid="stHeading"] * { font-family: var(--font-head) !important; color: var(--on-surface) !important; }
-.dlg { display: flex; flex-direction: column; gap: 8px; }
-.dlg .ok { padding: 12px; border-radius: 8px; background: color-mix(in srgb, var(--secondary-container) 40%, transparent); color: var(--on-secondary-container); display: flex; align-items: center; gap: 8px; }
-.dlg .muted-box { padding: 12px; border-radius: 8px; background: var(--low); }
-.dlg ul { margin: 0; padding-left: 18px; color: var(--variant); }
-.dlg li { margin: 2px 0; }
+/* segmented tabs (st.pills) */
+.st-key-jobs_tab_wrap [data-testid="stButtonGroup"] > div, .st-key-co_status_wrap [data-testid="stButtonGroup"] > div {
+  gap: 2px !important; background: var(--hover); padding: 3px; border-radius: 10px; display: inline-flex !important; flex-wrap: wrap;
+}
+.st-key-jobs_tab_wrap button[data-variant="pills"], .st-key-co_status_wrap button[data-variant="pills"],
+.st-key-jobs_tab_wrap [data-testid^="stBaseButton-pills"], .st-key-co_status_wrap [data-testid^="stBaseButton-pills"] {
+  border: none !important; border-radius: 8px !important; background: transparent !important; color: var(--muted) !important; min-height: 32px !important; padding: 0 12px !important;
+}
+.st-key-jobs_tab_wrap button[data-variant="pills"][aria-checked="true"], .st-key-co_status_wrap button[data-variant="pills"][aria-checked="true"],
+.st-key-jobs_tab_wrap [data-testid="stBaseButton-pillsActive"], .st-key-co_status_wrap [data-testid="stBaseButton-pillsActive"] {
+  background: var(--surface) !important; color: var(--text) !important; box-shadow: 0 1px 2px rgba(15,23,42,.08) !important;
+}
+.st-key-jobs_tab_wrap button[data-variant="pills"] p, .st-key-co_status_wrap button[data-variant="pills"] p { color: inherit !important; font-size: 14px !important; }
+
+/* ── sidebar ── */
+section[data-testid="stSidebar"] {
+  width: var(--sidebar-w) !important; min-width: var(--sidebar-w) !important; max-width: var(--sidebar-w) !important;
+  background: var(--surface) !important; border-right: 1px solid var(--border) !important; transform: none !important;
+}
+section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { background: var(--surface) !important; }
+[data-testid="stSidebarContent"] { padding: 0 !important; }
+[data-testid="stSidebarUserContent"] { padding: 20px 12px 16px !important; margin: 0 !important; width: 100% !important; min-height: 100vh; display: flex; flex-direction: column; }
+[data-testid="stSidebarUserContent"] > div { flex: 1 1 auto; display: flex; flex-direction: column; }
+[data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] { flex: 1 1 auto; }
+[data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-side_foot_wrap) { margin-top: auto; }
+[data-testid="stSidebarUserContent"] [data-testid="stVerticalBlock"] { gap: 2px !important; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 20px; }
+.brand img { width: 32px; height: 32px; border-radius: 9px; display: block; }
+.brand .n { font-size: 15px; line-height: 20px; font-weight: 650; letter-spacing: -0.01em; color: var(--text); }
+.brand .s { font-size: 12px; line-height: 16px; color: var(--muted); }
+.nav-group { font-size: 11.5px; line-height: 16px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 16px 12px 6px; }
+[class*="st-key-nav_"] [data-testid^="stBaseButton"] {
+  width: 100% !important; justify-content: flex-start !important; min-height: 38px !important; padding: 0 12px !important;
+  border-radius: 8px !important; color: var(--text-2) !important; background: transparent !important; border: none !important; gap: 10px;
+}
+[class*="st-key-nav_"] [data-testid^="stBaseButton"] > div { justify-content: flex-start !important; gap: 10px !important; }
+[class*="st-key-nav_"] [data-testid^="stBaseButton"]:hover { background: var(--hover) !important; color: var(--text) !important; }
+[class*="st-key-nav_"] [data-testid="stIconMaterial"] { font-size: 20px !important; color: var(--muted); }
+[class*="st-key-nav_"] p { font-size: 14px !important; font-weight: 500 !important; }
+.side-foot { margin-top: auto; padding: 14px 12px 4px; border-top: 1px solid var(--border); font-size: 13px; line-height: 18px; color: var(--muted); }
+.side-foot .st { display: flex; align-items: center; gap: 8px; color: var(--text); font-weight: 500; }
+.side-foot a { color: var(--muted) !important; }
+.side-foot a:hover { color: var(--accent-text) !important; }
+.st-key-side_foot_wrap { margin-top: auto; }
+
+/* mobile top nav (phones only) */
+.st-key-mnav { display: none !important; }
 
 /* ── footer ── */
-.site-footer { background: var(--low); margin-top: 8px; }
-.site-footer .in { max-width: 1280px; margin: 0 auto; padding: 24px 32px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.site-footer .l { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; color: var(--variant); }
-.site-footer a { color: var(--outline) !important; }
-.site-footer a:hover { color: var(--primary) !important; }
+.app-foot { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 8px; }
+.app-foot a { color: var(--muted) !important; } .app-foot a:hover { color: var(--accent-text) !important; }
 
-/* ── responsive (Stitch breakpoints: xl 1280, lg 1024, md 768, sm 640) ── */
-@media (max-width: 1279px) { .hdr-pills { display: none; } }
+/* ── empty ── */
+.empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 24px 8px; }
+.empty .ic { width: 48px; height: 48px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-text); display: flex; align-items: center; justify-content: center; margin-bottom: 4px; }
+.empty h3 { font-size: 16px; line-height: 24px; font-weight: 600; }
+.empty p { font-size: 14px; line-height: 20px; color: var(--muted); max-width: 460px; margin: 0; }
+.st-key-empty_actions > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-empty_actions > [data-testid="stHorizontalBlock"] { justify-content: center !important; gap: 8px !important; }
+.st-key-empty_actions [data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
+
+/* ── responsive ── */
+@media (max-width: 1279px) {
+  [data-testid="stMainBlockContainer"], .block-container { padding: 28px 28px 40px !important; }
+}
+@media (max-width: 1100px) {
+  .co-row { grid-template-columns: minmax(0, 1fr) 100px 90px; } .list-head { grid-template-columns: minmax(0, 1fr) 100px 90px 88px; }
+  .co-row > :nth-child(4), .list-head > :nth-child(4) { display: none; }
+}
+/* tablet: icon rail */
 @media (max-width: 1023px) {
-  .hdr-nav { display: none; }
-  .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  :is(.st-key-main_grid, .st-key-main_grid > [data-testid="stLayoutWrapper"]) > [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; }
-  :is(.st-key-main_grid, .st-key-main_grid > [data-testid="stLayoutWrapper"]) > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(n) { flex: 1 1 100% !important; width: 100% !important; }
+  :root { --sidebar-w: 72px; }
+  .brand { justify-content: center; padding: 0 0 16px; } .brand > div { display: none; }
+  .nav-group { font-size: 0; padding: 10px 0 4px; border-top: 1px solid var(--border); margin: 8px 8px 0; }
+  [class*="st-key-nav_"] [data-testid^="stBaseButton"] { justify-content: center !important; padding: 0 !important; }
+  [class*="st-key-nav_"] [data-testid^="stBaseButton"] > div { justify-content: center !important; }
+  [class*="st-key-nav_"] p { display: none !important; }
+  [data-testid="stSidebarUserContent"] { padding: 16px 8px !important; }
+  .side-foot { padding: 12px 0 0; text-align: center; } .side-foot .txt { display: none; } .side-foot .st { justify-content: center; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat:nth-child(3) { border-left: none; } .stat:nth-child(n+3) { border-top: 1px solid var(--border); }
+  .st-key-job_cols > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-job_cols > [data-testid="stHorizontalBlock"],
+  .st-key-co_cols > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-co_cols > [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; }
+  .st-key-job_cols [data-testid="stColumn"]:nth-child(n), .st-key-co_cols [data-testid="stColumn"]:nth-child(n) { flex: 1 1 100% !important; width: 100% !important; }
 }
+/* phone: sidebar hidden, top nav bar instead */
 @media (max-width: 767px) {
-  .st-key-page_wrap { padding: 4px 16px 32px; gap: 16px !important; }
-  .st-key-app_header { padding: 0 16px !important; }
-  .hero { padding: 24px; }
-  .t-display { font-size: 32px; line-height: 40px; letter-spacing: -0.01em; }
-  .strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .site-footer .in { padding: 24px 16px; justify-content: center; text-align: center; }
-  .site-footer .l { justify-content: center; }
+  section[data-testid="stSidebar"] { display: none !important; }
+  [data-testid="stMainBlockContainer"], .block-container { padding: 0 16px 32px !important; }
+  [data-testid="stMainBlockContainer"] > div > [data-testid="stVerticalBlock"] { gap: 20px; }
+  .st-key-mnav {
+    display: flex !important; position: sticky; top: 0; z-index: 30; margin: 0 -16px; padding: 8px 12px !important;
+    background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border);
+  }
+  .st-key-mnav > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-mnav > [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 2px !important; overflow-x: auto; scrollbar-width: none; }
+  .st-key-mnav [data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
+  .st-key-mnav [data-testid^="stBaseButton"] { border: none !important; background: transparent !important; min-height: 36px !important; padding: 0 10px !important; color: var(--text-2) !important; }
+  .st-key-mnav [data-testid="stIconMaterial"] { font-size: 20px !important; }
+  .st-key-mnav p { font-size: 13px !important; }
+  .page-title, .detail-title { font-size: 22px; line-height: 30px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat { padding: 14px 16px; } .stat .v { font-size: 20px; line-height: 28px; }
+  [class*="st-key-jr_"] { padding: 14px 16px !important; }
+  [class*="st-key-jr_"] > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], [class*="st-key-jr_"] > [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 10px !important; }
+  [class*="st-key-jr_"] [data-testid="stColumn"]:first-child { flex: 1 1 100% !important; }
+  [class*="st-key-jr_"] [data-testid="stColumn"]:last-child { margin-left: 54px; }
+  .job-why { display: none; }
+  .co-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .co-row > :nth-child(3), .co-row > :nth-child(4), .list-head { display: none; }
+  [class*="st-key-cr_"] { padding: 12px 16px !important; }
+  .kv { grid-template-columns: minmax(0, 1fr); gap: 2px; } .kv dd { margin-bottom: 10px; }
+  .mon thead { display: none; }
+  .mon, .mon tbody, .mon tr, .mon td { display: block; width: 100%; }
+  .mon tr { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .mon td { border: none; padding: 2px 0; }
+  .mon td[data-l]::before { content: attr(data-l) ": "; color: var(--muted); }
+  .st-key-add_form, .st-key-email_form, .st-key-test_panel, [class*="st-key-set_"], .st-key-job_main, .st-key-job_side, .st-key-co_side, .st-key-empty { padding: 16px !important; }
 }
-@media (max-width: 639px) {
-  .metrics { grid-template-columns: minmax(0, 1fr); }
-  .hdr-logo .sub { display: none; }
-  :is(.st-key-jobs_toolbar, .st-key-jobs_toolbar > [data-testid="stLayoutWrapper"]) > [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; }
-  :is(.st-key-jobs_toolbar, .st-key-jobs_toolbar > [data-testid="stLayoutWrapper"]) > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(n) { flex: 1 1 100% !important; width: 100% !important; min-width: 0 !important; }
-  [class*="st-key-jc_"] .job-head { gap: 12px; }
-  [class*="st-key-jc_"] .avatar { width: 40px; height: 40px; font-size: 20px; border-radius: 10px; }
-  .strip-item { padding: 10px; gap: 8px; }
-  .foot-host { display: none; }
-}
-@media (max-width: 420px) { .strip { grid-template-columns: minmax(0, 1fr); } }
 """
 
 st.html(f"<style>{_root_vars}\n{_CSS}</style>")
 
 
-# ── helpers ──────────────────────────────────────────────────────────────────
+# ── helpers ───────────────────────────────────────────────────────────────────
 def _load(path: Path, default):
     try:
         return json.loads(path.read_text("utf-8"))
@@ -426,14 +447,13 @@ def _host(url: str) -> str:
         return url
 
 
-def _short_url(url: str) -> str:
-    """"https://www.accenture.com/us-en/careers" -> "accenture.com/us-en/careers"."""
+def _short_url(url: str, limit: int = 40) -> str:
     try:
         p = urlparse(url)
     except ValueError:
         return url
-    path = p.path.rstrip("/")
-    return (p.netloc.replace("www.", "") + (path if len(path) <= 28 else path[:27] + "…")) or url
+    s = p.netloc.replace("www.", "") + p.path.rstrip("/")
+    return s if len(s) <= limit else s[: limit - 1] + "…"
 
 
 def _parse_iso(iso: str) -> datetime | None:
@@ -446,19 +466,16 @@ def _parse_iso(iso: str) -> datetime | None:
 
 def _ago(dt: datetime | None, now: datetime | None = None) -> str:
     if dt is None:
-        return "—"
+        return "never"
     diff = int(((now or datetime.now(timezone.utc)) - dt).total_seconds())
     if diff < 60:
         return "just now"
     if diff < 3600:
-        return f"{diff // 60}m ago"
+        return f"{diff // 60} min ago"
     if diff < 86400:
         return f"{diff // 3600}h ago"
-    return f"{diff // 86400}d ago"
-
-
-def _rel_time(iso: str) -> str:
-    return _ago(_parse_iso(iso)) if iso else "—"
+    days = diff // 86400
+    return "1 day ago" if days == 1 else f"{days} days ago"
 
 
 def _found_at(date_str: str, now: datetime) -> datetime | None:
@@ -471,16 +488,27 @@ def _found_at(date_str: str, now: datetime) -> datetime | None:
     return dt.replace(year=now.year - 1) if dt > now + timedelta(days=1) else dt
 
 
-def _next_check_delta() -> str:
+def _next_scan() -> str:
     """check_jobs.yml runs at minute 0 of every 3rd UTC hour (0, 3, 6, …)."""
     now = datetime.now(timezone.utc)
     nxt = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=3 - now.hour % 3)
     mins = int((nxt - now).total_seconds() // 60)
-    return f"{mins}m" if mins < 60 else f"{mins // 60}h {mins % 60:02d}m"
+    if mins < 1:
+        return "due now"
+    return f"in {mins} min" if mins < 60 else f"in {mins // 60}h {mins % 60:02d}m"
 
 
-def _ms(name: str, size: str = "", cls: str = "") -> str:
-    return f'<span class="ms {size} {cls}" aria-hidden="true">{name}</span>'
+def _ms(name: str, size: str = "") -> str:
+    return f'<span class="ms {size}" aria-hidden="true">{name}</span>'
+
+
+def _initial(name: str) -> str:
+    name = (name or "").strip()
+    return escape(name[:1].upper()) if name[:1].isalnum() else "•"
+
+
+def _plural(n: int, word: str, many: str | None = None) -> str:
+    return f"{n} {word if n == 1 else (many or word + 's')}"
 
 
 @st.cache_resource(show_spinner=False)
@@ -489,6 +517,17 @@ def _logo_data_uri() -> str:
         return "data:image/png;base64," + base64.b64encode(LOGO_PATH.read_bytes()).decode("ascii")
     except OSError:
         return ""
+
+
+@st.cache_resource(show_spinner=False)
+def _api_scrapers() -> dict:
+    """Company ids the scraper reads through a dedicated API (currently
+    Workday); every other portal is read with Playwright."""
+    try:
+        from scraper import COMPANY_API
+        return {cid: (cfg.get("type") or "api") for cid, cfg in COMPANY_API.items()}
+    except Exception:
+        return {}
 
 
 def _trigger_scrape() -> tuple[bool, str]:
@@ -501,7 +540,7 @@ def _trigger_scrape() -> tuple[bool, str]:
         repo = Github(token).get_repo(GITHUB_REPO)
         workflow = repo.get_workflow("check_jobs.yml")
         if workflow.create_dispatch(ref="main"):
-            return True, "Check started — it takes a few minutes. Use Reload afterwards to see new jobs."
+            return True, "Check started — it takes a few minutes. Use Refresh afterwards to see new jobs."
         return False, "GitHub declined to start a new check."
     except Exception as e:
         log.warning("workflow dispatch failed: %s", e)
@@ -511,7 +550,7 @@ def _trigger_scrape() -> tuple[bool, str]:
 
 
 # Latest data straight from GitHub, shared by all sessions and refreshed at
-# most every 5 minutes (or on Reload) — the local checkout can be hours old.
+# most every 5 minutes (or on Refresh) — the local checkout can be hours old.
 @st.cache_data(ttl=300, show_spinner=False)
 def _remote_snapshot() -> dict:
     return fetch_remote_json(["companies.json", "settings.json", "seen_jobs.json"])
@@ -537,33 +576,47 @@ def _widget_key(prefix: str, key: str) -> str:
     return f"{prefix}_{hashlib.sha1(key.encode('utf-8')).hexdigest()[:16]}"
 
 
-# ── load data ─────────────────────────────────────────────────────────────────
+def _jid(job: dict) -> str:
+    return hashlib.sha1(job_key(job).encode("utf-8")).hexdigest()[:12]
+
+
+def _restore_jobs(keys: set[str]):
+    """Undo a dismissal. The record keeps its ``notified`` flag, so restoring
+    never causes a second email."""
+    def _mutate(seen: list[dict]) -> list[dict]:
+        for j in seen:
+            if isinstance(j, dict) and job_key(j) in keys:
+                j.pop("dismissed", None)
+        return seen
+    return _mutate
+
+
+# ── data ──────────────────────────────────────────────────────────────────────
 companies: list[dict] = [c for c in _load_synced("companies.json", []) if isinstance(c, dict)]
 settings: dict = _load_synced("settings.json", {"recipient_email": ""})
-# seen_jobs.json is also the scraper's dedup history: alerts are dismissed
+# seen_jobs.json is also the scraper's dedup history: jobs are dismissed
 # (hidden), never deleted, or the scraper would email them again
-all_records: list = _load_synced("seen_jobs.json", [])
-seen_jobs: list[dict] = visible_jobs(all_records)  # newest-first
+all_records: list[dict] = [j for j in _load_synced("seen_jobs.json", []) if isinstance(j, dict)]
+active_jobs: list[dict] = visible_jobs(all_records)                                   # newest-first
+dismissed_jobs: list[dict] = [j for j in reversed(all_records) if j.get("dismissed")]  # newest-first
 
-ALERTS_PAGE_SIZE = 10
-SPARK_WEEKS = 12
+NOW = datetime.now(timezone.utc)
 _EMAIL_RE = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+$")
 _CHECK_COOLDOWN_S = 300
-# cron runs every 3 h; allow one missed/slow run before calling it delayed
-_MONITOR_STALE_H = 7
-_CATEGORY_CLASS = {"FRESHER": "fresher", "ENTRY_LEVEL": "entry"}
+_STALE_H = 7          # cron runs every 3 h; allow a missed/slow run before "delayed"
+HOME_LIMIT = 8
+JOBS_PAGE = 12
+_CATEGORY_PILL = {"FRESHER": "fresher", "ENTRY_LEVEL": "entry"}
+LEGACY_LABEL = "Keyword match"  # records from before the classifier existed
 
-
-# ── session state ──────────────────────────────────────────────────────────────
-if "email_val" not in st.session_state:
-    st.session_state.email_val = settings.get("recipient_email", "")
-for _k, _v in (("toast", None), ("toast_kind", "success"), ("alerts_page", 0),
-               ("show_remove_form", False), ("test_status", None)):
+for _k, _v in (("toast", None), ("toast_kind", "success"), ("jobs_page", 0), ("test_status", None),
+               ("email_val", settings.get("recipient_email", "")), ("confirm_remove", None),
+               ("just_added", None), ("job_from", "jobs"), ("confirm_clear", False)):
     if _k not in st.session_state:
         st.session_state[_k] = _v
 if st.session_state.pop("_clear_add_form", False):
-    st.session_state.new_name = ""
-    st.session_state.new_url = ""
+    for _k in ("new_name", "new_url", "new_website"):
+        st.session_state[_k] = ""
 
 
 def toast(msg: str, kind: str = "success"):
@@ -571,90 +624,156 @@ def toast(msg: str, kind: str = "success"):
     st.session_state.toast_kind = kind
 
 
-# ── derived, real-data metrics ───────────────────────────────────────────────
-NOW = datetime.now(timezone.utc)
-total_companies = len(companies)
-broken_count = sum(1 for c in companies if c.get("status") == "broken")
-active_count = sum(1 for c in companies if c.get("status") == "active")
-responding = total_companies - broken_count
-last_checked_dt = max((d for d in (_parse_iso(c.get("last_checked", "")) for c in companies) if d), default=None)
-last_checked_str = _ago(last_checked_dt, NOW) if last_checked_dt else "never"
-checked_ok = sum(1 for c in companies if c.get("status") == "active" and c.get("last_checked"))
-recipient_saved = (settings.get("recipient_email") or "").strip()
+def go(page: str, **extra):
+    st.session_state.page = page
+    st.session_state.job_id = extra.get("job")
+    st.session_state.company_id = extra.get("company")
+    st.session_state.company_view = extra.get("view")
+    st.session_state.confirm_remove = None
+    if extra.get("job"):
+        st.session_state.job_from = extra.get("origin", st.session_state.get("page_before", "jobs"))
+
+
+# ── derived state ─────────────────────────────────────────────────────────────
 _check_trigger = st.session_state.get("last_check_trigger", 0)
-
-jobs_found = [(j, _found_at(j.get("date") or "", NOW)) for j in seen_jobs]
-total_jobs = len(seen_jobs)
-new_this_week = sum(1 for _, d in jobs_found if d and NOW - d <= timedelta(days=7))
-latest_found = max((d for _, d in jobs_found if d), default=None)
-# weekly discoveries over every record (dismissed ones were still found)
-weekly = [0] * SPARK_WEEKS
-for rec in all_records:
-    if isinstance(rec, dict):
-        d = _found_at(rec.get("date") or "", NOW)
-        if d:
-            w = (NOW - d).days // 7
-            if 0 <= w < SPARK_WEEKS:
-                weekly[SPARK_WEEKS - 1 - w] += 1
-jobs_per_company: dict[str, int] = {}
-for j in seen_jobs:
-    jobs_per_company[j.get("company") or ""] = jobs_per_company.get(j.get("company") or "", 0) + 1
-cat_counts = {cat: sum(1 for j in seen_jobs if j.get("category") == cat) for cat in _CATEGORY_CLASS}
+last_scan = max((d for d in (_parse_iso(c.get("last_checked", "")) for c in companies) if d), default=None)
+scan_stale = last_scan is None or NOW - last_scan > timedelta(hours=_STALE_H)
 
 
-def _company_state(c: dict) -> tuple[str, str, str]:
-    """(label, text-color class, dot class) from the scraper's real status."""
-    status = c.get("status")
+def portal_status(c: dict) -> tuple[str, str]:
+    """(css key, label) from the scraper's own status + last_checked."""
     checked = _parse_iso(c.get("last_checked", ""))
-    if (_check_trigger and time.time() - _check_trigger < 1200 and status != "broken"
+    if (_check_trigger and time.time() - _check_trigger < 1200 and c.get("status") != "broken"
             and (checked is None or checked.timestamp() < _check_trigger)):
-        return "Checking", "c-primary", "bg-primary pulse"
-    if status == "broken":
-        return "Error", "c-error", "bg-error"
-    if status == "active":
-        return "Active", "c-secondary", "bg-secondary"
-    return "Waiting", "c-outline", "bg-outline"
+        return "checking", "Checking"
+    if c.get("status") == "broken":
+        return "failing", "Failing"
+    if checked is None or c.get("status") not in ("active",):
+        return "pending", "Pending"
+    if NOW - checked > timedelta(hours=_STALE_H):
+        return "delayed", "Delayed"
+    return "healthy", "Healthy"
+
+
+statuses = {c.get("id"): portal_status(c) for c in companies}
+n_by_status = {k: sum(1 for s in statuses.values() if s[0] == k) for k in ("healthy", "delayed", "failing", "pending", "checking")}
+if not companies:
+    overall = ("pending", "No portals yet")
+elif n_by_status["failing"] == len(companies):
+    overall = ("failing", "All portals failing")
+elif n_by_status["failing"]:
+    overall = ("failing", f"{_plural(n_by_status['failing'], 'portal')} failing")
+elif last_scan is None:
+    overall = ("pending", "Waiting for first scan")
+elif scan_stale:
+    overall = ("delayed", "Scans delayed")
+else:
+    overall = ("healthy", "All portals healthy")
+
+found = {id(j): _found_at(j.get("date") or "", NOW) for j in all_records}
+new_this_week = sum(1 for j in active_jobs if found[id(j)] and NOW - found[id(j)] <= timedelta(days=7))
+jobs_by_company: dict[str, list[dict]] = {}
+for j in reversed(all_records):
+    jobs_by_company.setdefault((j.get("company") or "").strip(), []).append(j)
+recipient = (settings.get("recipient_email") or "").strip()
+
+
+def company_jobs(c: dict) -> list[dict]:
+    return jobs_by_company.get((c.get("name") or "").strip(), [])
+
+
+def find_company(name: str) -> dict | None:
+    name = (name or "").strip().lower()
+    return next((c for c in companies if (c.get("name") or "").strip().lower() == name), None)
+
+
+def job_category(j: dict) -> tuple[str, str]:
+    cat = j.get("category")
+    if cat in _CATEGORY_PILL:
+        return _CATEGORY_PILL[cat], category_label(j)
+    return "legacy", LEGACY_LABEL
+
+
+def job_why(j: dict, long: bool = False) -> str:
+    if j.get("reason") or j.get("category") in _CATEGORY_PILL:
+        return friendly_reason(j)
+    return ("Matched the tracker's earlier keyword filter — it was found before the classifier started recording reasons."
+            if long else "Found by the earlier keyword filter")
+
+
+def job_locations(j: dict) -> list[str]:
+    return [p.strip() for p in re.split(r"\s*·\s*", j.get("location") or "") if p.strip()]
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# HEADER
+# SIDEBAR
 # ═══════════════════════════════════════════════════════════════════════════════
-monitor_stale = last_checked_dt is None or NOW - last_checked_dt > timedelta(hours=_MONITOR_STALE_H)
-logo_uri = _logo_data_uri()
-logo_img = f'<img src="{logo_uri}" alt="Fresher Job Tracker logo">' if logo_uri else ""
+current = st.session_state.page
+st.html(f"<style>.st-key-nav_{current} [data-testid^='stBaseButton'], .st-key-nav_{current} [data-testid^='stBaseButton']:hover, "
+        f".st-key-mob_{current} [data-testid^='stBaseButton'], .st-key-mob_{current} [data-testid^='stBaseButton']:hover"
+        "{background: var(--accent-soft) !important; color: var(--accent-text) !important;}"
+        f".st-key-nav_{current} [data-testid='stIconMaterial'], .st-key-mob_{current} [data-testid='stIconMaterial']"
+        "{color: var(--accent-text) !important;}"
+        f".st-key-nav_{current} p {{font-weight: 600 !important;}}</style>")
 
-with st.container(key="app_header"):
-    lc, pc, b0, b1, b2, b3 = st.columns([6, 4, 0.4, 0.4, 0.4, 0.4], vertical_alignment="center")
-    with lc:
-        st.html(f"""
-        <div class="hdr-brand">
-          <div class="hdr-logo">{logo_img}
-            <div style="display:flex;flex-direction:column;"><span class="name">Fresher Job Tracker</span><span class="sub">Entry-level posting monitor</span></div>
-          </div>
-          <nav class="hdr-nav">
-            <a class="active" href="#live-feed">Live Feed</a>
-            <a href="#company-radar">Company Radar</a>
-            <a href="#add-portal">Add Portal</a>
-            <a href="#email-alerts">Email Alerts</a>
-          </nav>
+with st.sidebar:
+    logo = _logo_data_uri()
+    st.html(f"""<div class="brand">{f'<img src="{logo}" alt="">' if logo else ''}
+      <div><div class="n">Fresher Job Tracker</div><div class="s">Entry-level job radar</div></div></div>""")
+    for gi, (group, items) in enumerate(NAV_GROUPS):
+        if gi:
+            st.html(f'<div class="nav-group">{group}</div>')
+        for key in items:
+            label, icon = PAGES[key]
+            st.button(label, key=f"nav_{key}", icon=icon, type="tertiary", use_container_width=True,
+                      on_click=go, args=(key,))
+    with st.container(key="side_foot_wrap"):
+        st.html(f"""<div class="side-foot">
+          <div class="st"><span class="dot {overall[0]}"></span><span class="txt">{escape(overall[1])}</span></div>
+          <div class="txt num" style="margin-top:4px;">Last scan {_ago(last_scan, NOW)}</div>
+          <div class="txt" style="margin-top:10px;"><a href="https://github.com/{GITHUB_REPO}" target="_blank" rel="noopener">Source on GitHub</a></div>
         </div>""")
-    with pc:
-        mon_pill = (f'<span class="pill mon t-label-sm"><span class="dot sm bg-secondary pulse"></span>Monitoring {total_companies} {"company" if total_companies == 1 else "companies"}</span>'
-                    if not monitor_stale else
-                    '<span class="pill warn t-label-sm"><span class="dot sm bg-amber"></span>Monitoring delayed</span>')
-        st.html(f"""
-        <div class="hdr-pills">
-          {mon_pill}
-          <span class="pill chk t-label-sm" title="When the scraper last refreshed this data">{_ms("check_circle", "s14", "c-secondary")}Checked {last_checked_str}</span>
-          <span class="pill nxt t-label-sm" title="The scraper runs automatically every 3 hours"><span class="mono c-outline">Next ~{_next_check_delta()}</span></span>
-        </div>""")
-    with b0:
-        if st.button("", icon=":material/refresh:", key="btn_refresh", help="Reload the latest jobs and company status"):
+
+# phones: the sidebar is hidden and this compact bar takes over (CSS decides)
+with st.container(key="mnav"):
+    cols = st.columns(len(PAGES))
+    for col, key in zip(cols, PAGES):
+        with col:
+            label, icon = PAGES[key]
+            st.button({"email": "Email", "monitoring": "Monitor"}.get(key, label), key=f"mob_{key}",
+                      icon=icon, on_click=go, args=(key,))
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SHARED PIECES
+# ═══════════════════════════════════════════════════════════════════════════════
+def page_header(title: str, sub_html: str = "", actions=None):
+    with st.container(key="page_head"):
+        c1, c2 = st.columns([3, 2], vertical_alignment="bottom")
+        with c1:
+            st.html(f'<h1 class="page-title">{escape(title)}</h1>' + (f'<div class="page-sub">{sub_html}</div>' if sub_html else ""))
+        with c2:
+            if actions:
+                with st.container(key="page_actions"):
+                    actions()
+
+
+def status_line() -> str:
+    return (f'<span class="dot {overall[0]}"></span><span>{escape(overall[1])}</span><span class="sep">·</span>'
+            f'<span class="num">Last scan {_ago(last_scan, NOW)}</span><span class="sep">·</span>'
+            f'<span class="num">Next scan {_next_scan()}</span>')
+
+
+def scan_actions():
+    a, b = st.columns(2)
+    with a:
+        if st.button("Refresh", key="btn_refresh", icon=":material/refresh:", help="Reload the latest jobs and portal status"):
             _remote_snapshot.clear()
             toast("Showing the latest data", "success")
             st.rerun()
-    with b1:
-        if st.button("", icon=":material/play_arrow:", key="btn_run_check", help="Run a fresh check now (takes a few minutes)"):
+    with b:
+        if st.button("Run check", key="btn_run_check", icon=":material/play_arrow:",
+                     help="Ask GitHub Actions to scan every portal now (takes a few minutes)"):
             since = time.time() - st.session_state.get("last_check_trigger", 0)
             if since < _CHECK_COOLDOWN_S:
                 toast(f"A check was just started — try again in {int((_CHECK_COOLDOWN_S - since) // 60) + 1} min", "error")
@@ -664,560 +783,731 @@ with st.container(key="app_header"):
                     st.session_state.last_check_trigger = time.time()
                 toast(msg, "success" if ok else "error")
             st.rerun()
-    with b2:
-        theme_icon = ":material/light_mode:" if st.session_state.dark_mode else ":material/dark_mode:"
-        if st.button("", icon=theme_icon, key="btn_theme", help="Toggle light / dark mode"):
-            st.session_state.dark_mode = not st.session_state.dark_mode
-            st.rerun()
-    with b3:
-        st.html(f'<a class="hdr-icon" href="https://github.com/{GITHUB_REPO}" target="_blank" rel="noopener" '
-                f'title="View the source repository on GitHub">{_ms("code")}</a>')
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# PAGE BODY
-# ═══════════════════════════════════════════════════════════════════════════════
-def _hero_html() -> str:
-    if last_checked_dt is None:
-        badge = '<span class="status-badge idle t-label-md"><span class="dot bg-outline"></span>Awaiting first check</span>'
-    elif monitor_stale:
-        badge = f'<span class="status-badge warn t-label-md"><span class="dot bg-amber"></span>Monitoring delayed · last run {last_checked_str}</span>'
-    else:
-        badge = '<span class="status-badge ok t-label-md"><span class="dot bg-secondary ping"></span>Autonomous monitoring active</span>'
-    pass_note = f"({checked_ok}/{total_companies} OK)" if total_companies else ""
-    email_on = bool(recipient_saved)
-    return f"""
-    <section class="hero">
-      <div class="glow-a"></div><div class="glow-b"></div>
-      <div class="hero-inner">
-        <div class="hero-top">
-          {badge}
-          <span class="engine-chip t-label-sm">{_ms("verified", "s15", "c-primary")}Engine: Fresher classifier (Workday + Playwright)</span>
-        </div>
-        <div style="max-width:768px;">
-          <h1 class="t-display">Your job search, <span class="accent">on autopilot.</span></h1>
-          <p class="lead t-body-lg">Fresher Job Tracker checks every tracked company's career portal every 3 hours,
-          screens each posting for fresher and entry-level eligibility, keeps only India roles,
-          and emails you the moment a genuine match appears.</p>
-        </div>
-        <div class="strip">
-          <div class="strip-item"><div class="strip-ic a">{_ms("corporate_fare")}</div>
-            <div style="min-width:0;"><div class="strip-k t-label-sm">Radar scope</div><div class="strip-v t-title truncate">{total_companies} Portals Tracked</div></div></div>
-          <div class="strip-item"><div class="strip-ic b">{_ms("schedule")}</div>
-            <div style="min-width:0;"><div class="strip-k t-label-sm">Next cycle</div><div class="strip-v t-title mono truncate">~{_next_check_delta()}</div></div></div>
-          <div class="strip-item"><div class="strip-ic {"c" if not monitor_stale else "w"}">{_ms("cloud_done" if not monitor_stale else "cloud_off")}</div>
-            <div style="min-width:0;"><div class="strip-k t-label-sm">Last pass</div><div class="strip-v t-title truncate">{last_checked_str} {pass_note}</div></div></div>
-          <div class="strip-item"><div class="strip-ic {"d" if email_on else "w"}">{_ms("mark_email_read" if email_on else "unsubscribe")}</div>
-            <div style="min-width:0;"><div class="strip-k t-label-sm">Email alerts</div><div class="strip-v t-title truncate">{"On · recipient set" if email_on else "Off · no recipient"}</div></div></div>
-        </div>
-      </div>
-    </section>"""
-
-
-def _metrics_html() -> str:
-    names = [escape((c.get("name") or "").strip() or "Unnamed") for c in companies]
-    names_str = ", ".join(names[:3]) + (f" +{len(names) - 3}" if len(names) > 3 else "")
-    health_pct = round(100 * responding / total_companies) if total_companies else 0
-    all_ok = total_companies and broken_count == 0
-    comp_tag = ('<span class="tag-active t-label-sm">Active</span>' if all_ok else
-                f'<span class="tag-warn t-label-sm">{broken_count} failing</span>' if broken_count else
-                '<span class="tag-warn t-label-sm">None</span>')
-    peak = max(weekly) or 1
-    bars = "".join(
-        f'<span class="{"zero" if n == 0 else ""}" style="height:{max(8, round(100 * n / peak))}%;" '
-        f'title="{n} found {SPARK_WEEKS - 1 - i}w ago"></span>' for i, n in enumerate(weekly))
-    trend = (f'<span class="mono t-label-sm c-secondary" style="display:inline-flex;align-items:center;gap:4px;">{_ms("trending_up", "s12")}+{new_this_week} this week</span>'
-             if new_this_week else '<span class="mono t-label-sm c-outline">0 this week</span>')
-    health_word, health_cls = (("Healthy", "c-secondary") if health_pct == 100 else
-                               ("Degraded", "c-amber") if health_pct >= 50 else ("Failing", "c-error"))
-    if not total_companies:
-        health_word, health_cls = "No portals", "c-outline"
-    latest_note = f"Latest found {_ago(latest_found, NOW)}" if latest_found else "Nothing found yet"
-    return f"""
-    <section class="metrics">
-      <div class="card metric">
-        <div class="metric-top"><span class="t-label-md c-variant">Companies Tracked</span>{comp_tag}</div>
-        <div class="metric-mid"><span class="metric-num">{total_companies}</span><span class="t-label-sm c-variant truncate" style="font-weight:400;">{names_str}</span></div>
-        <div class="bar-track"><div class="bar-fill" style="width:{health_pct}%;"></div></div>
-      </div>
-      <div class="card metric">
-        <div class="metric-top"><span class="t-label-md c-variant">Fresh Jobs Listed</span>{trend}</div>
-        <div class="metric-mid"><span class="metric-num">{total_jobs}</span><span class="t-label-sm c-secondary">{sum(1 for v in jobs_per_company.values() if v)} {"company" if len(jobs_per_company) == 1 else "companies"}</span></div>
-        <div class="spark" title="Jobs found per week, last {SPARK_WEEKS} weeks">{bars}</div>
-      </div>
-      <div class="card metric">
-        <div class="metric-top"><span class="t-label-md c-variant">New This Week</span><span class="mono t-label-sm c-primary">Last 7 days</span></div>
-        <div class="metric-mid"><span class="metric-num c-primary">{new_this_week}</span><span class="t-label-sm c-variant" style="font-weight:400;">of {total_jobs} listed</span></div>
-        <div style="display:flex;align-items:center;gap:4px;"><span class="dot {"bg-secondary" if latest_found else "bg-outline"}"></span><span class="t-body-sm c-variant">{latest_note}</span></div>
-      </div>
-      <div class="card metric">
-        <div class="metric-top"><span class="t-label-md c-variant">Scraper Pipeline</span>{_ms("bolt", "s16", "c-secondary" if all_ok else "c-amber")}</div>
-        <div class="metric-mid"><span class="metric-num mono">{health_pct}%</span><span class="t-label-sm {health_cls}">{health_word}</span></div>
-        <div class="t-body-sm c-variant truncate">{responding} of {total_companies} career pages responding</div>
-      </div>
-    </section>"""
-
-
-def _job_head_html(j: dict, found: datetime | None) -> str:
-    raw_title = (j.get("title") or "Untitled posting").strip() or "Untitled posting"
-    company = (j.get("company") or "").strip()
-    initial = company[:1].upper() if company[:1].isalnum() else "•"
-    badges = []
-    cat = j.get("category")
-    # records written before the classifier existed have no category
-    if cat in _CATEGORY_CLASS:
-        dot = '<span class="dot sm bg-secondary pulse"></span>' if cat == "FRESHER" else ""
-        badges.append(f'<span class="badge {_CATEGORY_CLASS[cat]} t-badge">{dot}{escape(category_label(j))}</span>')
-    url = safe_url(j.get("url", ""))
-    if "myworkdayjobs.com" in url:
-        badges.append('<span class="badge neutral t-badge">Workday</span>')
-    if j.get("notified"):
-        badges.append(f'<span class="t-label-sm c-secondary" style="display:inline-flex;align-items:center;gap:4px;">{_ms("mark_email_read", "s14")}Emailed</span>')
-    else:
-        badges.append(f'<span class="t-label-sm c-amber" style="display:inline-flex;align-items:center;gap:4px;">{_ms("schedule_send", "s14")}Email pending</span>')
-    meta = []
-    if company:
-        meta.append(f'<span class="co">{escape(company)}</span>')
-    if j.get("location"):
-        meta.append(f'<span class="loc">{_ms("location_on", "s15")}{escape(j["location"])}</span>')
-    if j.get("date"):
-        meta.append(f'<span class="mono c-outline">Found {escape(j["date"])}</span>')
-    sep = '<span aria-hidden="true">·</span>'
-    return f"""
-    <div class="job-head">
-      <div class="avatar">{escape(initial)}</div>
-      <div style="min-width:0;">
-        <div class="badges">{"".join(badges)}</div>
-        <h3 class="job-title t-hsm" title="{escape(raw_title, quote=True)}">{escape(raw_title)}</h3>
-        <div class="job-meta t-body-sm">{sep.join(meta) or "&nbsp;"}</div>
-      </div>
-    </div>"""
-
-
-def _job_reason_html(j: dict) -> str:
-    if j.get("reason") or j.get("category") in _CATEGORY_CLASS:
-        return f'<p class="reason t-body-sm">{_ms("check_circle", "s18", "c-secondary")}<span>{escape(friendly_reason(j))}</span></p>'
-    host = _host(safe_url(j.get("url", "")))
-    text = f"Direct posting on {escape(host)}" if host else "Posting link unavailable"
-    return f'<p class="reason t-body-sm">{_ms("link", "s18", "c-outline")}<span>{text}</span></p>'
-
-
-def _job_foot_html(j: dict, found: datetime | None) -> str:
-    url = safe_url(j.get("url", ""))
-    host = _host(url)
-    found_txt = f"Found {_ago(found, NOW)}" if found else "Found date unknown"
-    host_txt = (f'<span class="foot-host" aria-hidden="true">·</span><span class="foot-host truncate">{escape(host)}</span>'
-                if host else "")
-    return (f'<div class="job-foot t-label-sm"><span class="dot {"bg-secondary" if url else "bg-outline"}"></span>'
-            f'<span style="white-space:nowrap;">{found_txt}</span>{host_txt}</div>')
-
-
-def _job_apply_html(j: dict) -> str:
+def apply_link(j: dict, label: str = "Apply") -> str:
     url = safe_url(j.get("url", ""))
     if not url:
-        return '<span class="btn-apply off t-label-md">No link</span>'
-    return (f'<a class="btn-apply t-label-md" href="{escape(url, quote=True)}" target="_blank" rel="noopener noreferrer">'
-            f'Apply Now {_ms("arrow_outward", "s14")}</a>')
+        return '<span class="btn disabled">No link</span>'
+    return (f'<a class="btn primary" href="{escape(url, quote=True)}" target="_blank" rel="noopener noreferrer">'
+            f'{label} {_ms("arrow_outward", "s16")}</a>')
 
 
-@st.dialog("Eligibility details")
-def _job_details(j: dict) -> None:
-    title = (j.get("title") or "Untitled posting").strip() or "Untitled posting"
-    items = [f"<li>Company: {escape(j.get('company') or '—')}</li>"]
-    if j.get("location"):
-        items.append(f"<li>Location: {escape(j['location'])}</li>")
-    if j.get("date"):
-        items.append(f"<li>Found: {escape(j['date'])} UTC</li>")
-    items.append(f"<li>Email alert: {'sent' if j.get('notified') else 'pending'}</li>")
-    host = _host(safe_url(j.get("url", "")))
-    if host:
-        items.append(f"<li>Portal: {escape(host)}</li>")
-    if j.get("reason") or j.get("category") in _CATEGORY_CLASS:
-        verdict = f'<div class="ok t-label-md">{_ms("verified_user", "s20", "c-secondary")}Classifier verdict: {escape(category_label(j))} — {escape(friendly_reason(j))}</div>'
+def filter_jobs(prefix: str, jobs: list[dict]) -> list[dict]:
+    """Search · location · category · company · sort · clear."""
+    locs = sorted({loc for j in jobs for loc in job_locations(j)}, key=str.lower)
+    comps = sorted({(j.get("company") or "").strip() for j in jobs if (j.get("company") or "").strip()}, key=str.lower)
+    cats = {"all": "All categories", "FRESHER": "Fresher", "ENTRY_LEVEL": "Entry level", "legacy": LEGACY_LABEL}
+    sorts = {"new": "Newest first", "old": "Oldest first", "company": "Company A–Z", "title": "Title A–Z"}
+    keys = {k: f"{prefix}_{k}" for k in ("q", "loc", "cat", "co", "sort")}
+    defaults = {"q": "", "loc": "All locations", "cat": "all", "co": "All companies", "sort": "new"}
+    for k, v in defaults.items():
+        st.session_state.setdefault(keys[k], v)
+    if st.session_state[keys["loc"]] not in ["All locations", *locs]:
+        st.session_state[keys["loc"]] = "All locations"
+    if st.session_state[keys["co"]] not in ["All companies", *comps]:
+        st.session_state[keys["co"]] = "All companies"
+    active = any(st.session_state[keys[k]] != v for k, v in defaults.items())
+
+    def _clear():
+        for k, v in defaults.items():
+            st.session_state[keys[k]] = v
+
+    with st.container(key=f"filters_{prefix}"):
+        c = st.columns([2.4, 1.3, 1.3, 1.3, 1.3, 0.7], vertical_alignment="bottom")
+        with c[0]:
+            q = st.text_input("Search", key=keys["q"], placeholder="Search title, company or location",
+                              label_visibility="collapsed").strip().lower()
+        with c[1]:
+            loc = st.selectbox("Location", ["All locations", *locs], key=keys["loc"], label_visibility="collapsed")
+        with c[2]:
+            cat = st.selectbox("Category", list(cats), key=keys["cat"], format_func=cats.get, label_visibility="collapsed")
+        with c[3]:
+            co = st.selectbox("Company", ["All companies", *comps], key=keys["co"], label_visibility="collapsed")
+        with c[4]:
+            sort = st.selectbox("Sort", list(sorts), key=keys["sort"], format_func=sorts.get, label_visibility="collapsed")
+        with c[5]:
+            st.button("Clear", key=f"{prefix}_clear", on_click=_clear, disabled=not active,
+                      help="Clear all filters", use_container_width=True)
+
+    out = []
+    for j in jobs:
+        if loc != "All locations" and loc not in job_locations(j):
+            continue
+        if cat == "legacy" and j.get("category") in _CATEGORY_PILL:
+            continue
+        if cat in _CATEGORY_PILL and j.get("category") != cat:
+            continue
+        if co != "All companies" and (j.get("company") or "").strip() != co:
+            continue
+        if q and q not in " ".join(str(j.get(k) or "") for k in ("title", "company", "location", "reason")).lower():
+            continue
+        out.append(j)
+    epoch = datetime.min.replace(tzinfo=timezone.utc)
+    if sort == "old":
+        out.sort(key=lambda j: found[id(j)] or epoch)
+    elif sort == "company":
+        out.sort(key=lambda j: ((j.get("company") or "").lower(), (j.get("title") or "").lower()))
+    elif sort == "title":
+        out.sort(key=lambda j: (j.get("title") or "").lower())
     else:
-        verdict = (f'<div class="muted-box t-body-sm c-variant">{_ms("history", "s18", "c-outline")} '
-                   "Recorded before the classifier stored match reasons, so no eligibility trace is available.</div>")
-    trace = (f'<div class="muted-box"><div class="t-label-sm c-outline mono" style="text-transform:uppercase;">Classifier reason trace</div>'
-             f'<p class="t-body-sm c-surface" style="margin:4px 0 0;">{escape(j["reason"])}</p></div>') if j.get("reason") else ""
+        out.sort(key=lambda j: found[id(j)] or epoch, reverse=True)
+    st.session_state[f"{prefix}_filtered_sig"] = (q, loc, cat, co, sort)
+    return out, active, _clear
+
+
+def job_row(j: dict, idx: str, origin: str):
+    jkey = job_key(j)
+    raw_title = (j.get("title") or "Untitled posting").strip() or "Untitled posting"
+    company = (j.get("company") or "").strip()
+    pill_cls, pill_label = job_category(j)
+    meta = [f'<span class="co">{escape(company)}</span>'] if company else []
+    if j.get("location"):
+        meta.append(f'<span>{escape(j["location"])}</span>')
+    d = found[id(j)]
+    if d or j.get("date"):
+        meta.append(f'<span class="num" title="{escape(j.get("date") or "", quote=True)} UTC">Found {_ago(d, NOW) if d else escape(j["date"])}</span>')
+    sep = '<span class="sep">·</span>'
+    with st.container(key=f"jr_{idx}"):
+        c1, c2 = st.columns([5, 2], vertical_alignment="center")
+        with c1:
+            st.html(f"""
+            <div class="job">
+              <div class="logo">{_initial(company)}</div>
+              <div class="job-body">
+                <h3 class="job-title" title="{escape(raw_title, quote=True)}">{escape(raw_title)}</h3>
+                <div class="job-meta">{sep.join(meta) or '&nbsp;'}</div>
+                <div class="job-why"><span class="pill {pill_cls}">{escape(pill_label)}</span><span class="t">{escape(job_why(j))}</span></div>
+              </div>
+            </div>""")
+        with c2:
+            st.html(apply_link(j))
+            st.button("Details", key=_widget_key("crit", jkey), on_click=go, args=("jobs",),
+                      kwargs={"job": _jid(j), "origin": origin})
+            if j.get("dismissed"):
+                if st.button("", icon=":material/undo:", key=_widget_key("restore", jkey),
+                             help="Restore to active jobs (it won't be emailed again)"):
+                    _, saved, err = _save_change("seen_jobs.json", _restore_jobs({jkey}), [], "chore: restore 1 alert(s)")
+                    toast("Job restored" if saved else f"Restored here, but not saved permanently. {err}",
+                          "success" if saved else "error")
+                    st.rerun()
+            elif st.button("", icon=":material/close:", key=_widget_key("dismiss", jkey),
+                           help="Dismiss — hide this job (it won't be emailed again)"):
+                _, saved, err = _save_change("seen_jobs.json", dismiss_jobs({jkey}), [], "chore: dismiss 1 alert(s)")
+                toast("Removed 1 alert(s)" if saved else f"Removed here, but not saved permanently. {err}",
+                      "success" if saved else "error")
+                st.rerun()
+
+
+def empty_state(icon: str, title: str, text: str, actions=None):
+    with st.container(key="empty"):
+        st.html(f'<div class="empty"><div class="ic">{_ms(icon, "s24")}</div><h3>{escape(title)}</h3><p>{text}</p></div>')
+        if actions:
+            with st.container(key="empty_actions"):
+                actions()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PAGES
+# ═══════════════════════════════════════════════════════════════════════════════
+def page_home():
+    page_header("Discover jobs", status_line(), scan_actions)
+
     st.html(f"""
-    <div class="dlg">
-      <h3 class="t-title c-surface" style="margin:0;">{escape(title)}</h3>
-      {verdict}
-      <ul class="t-body-sm">{"".join(items)}</ul>
-      {trace}
-      <div style="display:flex;justify-content:flex-end;padding-top:8px;">{_job_apply_html(j)}</div>
+    <div class="panel st-key-stats"><div class="stats">
+      <div class="stat"><div class="k">Jobs found</div><div class="v">{len(active_jobs)}</div>
+        <div class="n">{_plural(len(dismissed_jobs), 'dismissed job') if dismissed_jobs else 'Fresher &amp; entry-level'}</div></div>
+      <div class="stat"><div class="k">New this week</div><div class="v">{new_this_week}</div><div class="n">Found in the last 7 days</div></div>
+      <div class="stat"><div class="k">Companies monitored</div><div class="v">{len(companies)}</div>
+        <div class="n">{" · ".join(f"{n_by_status[k]} {k}" for k in ("healthy", "delayed", "failing", "pending") if n_by_status[k]) or "—"}</div></div>
+      <div class="stat"><div class="k">Last scan</div><div class="v">{_ago(last_scan, NOW)}</div>
+        <div class="n">Next scan {_next_scan()}</div></div>
+    </div></div>""")
+
+    if not active_jobs:
+        def _acts():
+            a, b = st.columns(2)
+            with a:
+                if dismissed_jobs:
+                    st.button(f"View {_plural(len(dismissed_jobs), 'dismissed job')}", key="btn_home_dismissed",
+                              on_click=lambda: (go("jobs"), st.session_state.update(jobs_tab="dismissed")))
+            with b:
+                st.button("Open monitoring", key="btn_home_mon", on_click=go, args=("monitoring",))
+        empty_state("travel_explore", "No alerts yet",
+                    f"The tracker checks {_plural(len(companies), 'company', 'companies')} every 3 hours. New fresher and "
+                    "entry-level roles in India appear here — and in your inbox — as soon as a portal publishes them.",
+                    _acts)
+        return
+
+    st.html('<div><h2 class="section-title">Latest jobs</h2>'
+            '<p class="section-sub">Newest fresher and entry-level roles found on the portals you track</p></div>')
+    shown, active, clear = filter_jobs("h", active_jobs)
+    if not shown:
+        empty_state("search_off", "No jobs match these filters",
+                    "Try a different search or clear the filters to see every job.",
+                    lambda: st.button("Clear filters", key="btn_reset_filters", on_click=clear))
+        return
+    with st.container(key="joblist_home"):
+        for i, j in enumerate(shown[:HOME_LIMIT]):
+            job_row(j, f"h{i}", "home")
+        with st.container(key="list_foot_h"):
+            f1, f2 = st.columns([3, 1], vertical_alignment="center")
+            with f1:
+                st.html(f'<span class="muted num" style="font-size:13px;">Showing {min(HOME_LIMIT, len(shown))} of {_plural(len(shown), "job")}</span>')
+            with f2:
+                st.button("View all jobs", key="btn_all_jobs", icon=":material/arrow_forward:", icon_position="right",
+                          on_click=go, args=("jobs",))
+
+
+def page_jobs():
+    page_header("Jobs", f"{_plural(len(all_records), 'job')} found by the tracker · {len(active_jobs)} active · "
+                        f"{len(dismissed_jobs)} dismissed")
+    st.session_state.setdefault("jobs_tab", "active")
+    with st.container(key="jobs_tab_wrap"):
+        tab = st.pills("Show", ["active", "dismissed"], key="jobs_tab", label_visibility="collapsed",
+                       format_func=lambda t: f"Active ({len(active_jobs)})" if t == "active" else f"Dismissed ({len(dismissed_jobs)})")
+    tab = tab or "active"
+    source = active_jobs if tab == "active" else dismissed_jobs
+    if not source:
+        empty_state("inbox", "No alerts yet" if tab == "active" else "Nothing dismissed",
+                    "New jobs appear here after the next scan." if tab == "active"
+                    else "Jobs you dismiss are kept here so they're never emailed twice — you can restore them anytime.")
+        return
+    shown, active, clear = filter_jobs("j", source)
+    sig = (tab, st.session_state.get("j_filtered_sig"))
+    if st.session_state.get("_jobs_sig") != sig:
+        st.session_state._jobs_sig = sig
+        st.session_state.jobs_page = 0
+    if not shown:
+        empty_state("search_off", "No jobs match these filters", "Try a different search or clear the filters.",
+                    lambda: st.button("Clear filters", key="btn_reset_filters", on_click=clear))
+        return
+    total = len(shown)
+    last_page = (total - 1) // JOBS_PAGE
+    page = min(st.session_state.jobs_page, last_page)
+    start, end = page * JOBS_PAGE, min(total, page * JOBS_PAGE + JOBS_PAGE)
+    with st.container(key="joblist_jobs"):
+        for i, j in enumerate(shown[start:end]):
+            job_row(j, f"j{i}", "jobs")
+        with st.container(key="list_foot_j"):
+            f1, f2, f3 = st.columns([3, 1, 1], vertical_alignment="center")
+            with f1:
+                st.html(f'<span class="muted num" style="font-size:13px;">{start + 1}–{end} of {total}</span>')
+            with f2:
+                if st.button("Previous", key="alerts_prev", icon=":material/chevron_left:", disabled=page == 0):
+                    st.session_state.jobs_page = page - 1
+                    st.rerun()
+            with f3:
+                if st.button("Next", key="alerts_next", icon=":material/chevron_right:", icon_position="right",
+                             disabled=end >= total):
+                    st.session_state.jobs_page = page + 1
+                    st.rerun()
+
+
+def page_job_detail(j: dict):
+    back = st.session_state.get("job_from", "jobs")
+    st.button(f"Back to {PAGES.get(back, PAGES['jobs'])[0]}", key="btn_back", icon=":material/arrow_back:",
+              type="tertiary", on_click=go, args=(back,))
+    jkey = job_key(j)
+    title = (j.get("title") or "Untitled posting").strip() or "Untitled posting"
+    company = (j.get("company") or "").strip()
+    c = find_company(company)
+    pill_cls, pill_label = job_category(j)
+    url = safe_url(j.get("url", ""))
+    d = found[id(j)]
+    st.html(f"""
+    <div class="detail-head">
+      <div class="logo lg">{_initial(company)}</div>
+      <div style="min-width:0;">
+        <h1 class="detail-title">{escape(title)}</h1>
+        <div class="page-sub"><span class="text-2" style="font-weight:500;">{escape(company or 'Unknown company')}</span>
+          {f'<span class="sep">·</span><span>{escape(j["location"])}</span>' if j.get("location") else ''}
+          <span class="sep">·</span><span class="pill {pill_cls}">{escape(pill_label)}</span>
+          {'<span class="pill neutral">Dismissed</span>' if j.get('dismissed') else ''}</div>
+      </div>
     </div>""")
+    with st.container(key="job_actions"):
+        a = st.columns(4)
+        with a[0]:
+            st.html(apply_link(j, "Apply on company site"))
+        with a[1]:
+            if j.get("dismissed"):
+                if st.button("Restore", key="detail_restore", icon=":material/undo:"):
+                    _, saved, err = _save_change("seen_jobs.json", _restore_jobs({jkey}), [], "chore: restore 1 alert(s)")
+                    toast("Job restored" if saved else f"Restored here, but not saved permanently. {err}",
+                          "success" if saved else "error")
+                    st.rerun()
+            elif st.button("Dismiss", key="detail_dismiss", icon=":material/close:"):
+                _, saved, err = _save_change("seen_jobs.json", dismiss_jobs({jkey}), [], "chore: dismiss 1 alert(s)")
+                toast("Removed 1 alert(s)" if saved else f"Removed here, but not saved permanently. {err}",
+                      "success" if saved else "error")
+                go(back)
+                st.rerun()
+        with a[2]:
+            if c:
+                st.button("Company details", key="btn_job_company", icon=":material/apartment:",
+                          on_click=go, args=("companies",), kwargs={"company": c.get("id")})
+
+    with st.container(key="job_cols"):
+        main, side = st.columns([3, 2])
+    with main:
+        with st.container(key="job_main"):
+            rows = [("Company", escape(company or "—")),
+                    ("Location", escape(j.get("location") or "Not captured for this posting")),
+                    ("Category", escape(pill_label)),
+                    ("Experience", escape(friendly_reason(j)) if "years experience" in friendly_reason(j) or
+                     "No prior experience" in friendly_reason(j) else "Not stated in the captured text"),
+                    ("Found", f'<span class="num">{escape(j.get("date") or "—")} UTC</span>' + (f' <span class="muted">({_ago(d, NOW)})</span>' if d else "")),
+                    ("Status", "Dismissed" if j.get("dismissed") else "Active")]
+            st.html('<h2 class="section-title">Job overview</h2><dl class="kv">'
+                    + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in rows) + "</dl>")
+            st.html('<div class="divider"></div>')
+            reason = (j.get("reason") or "").strip()
+            classified = bool(reason) or j.get("category") in _CATEGORY_PILL
+            st.html(f"""<h2 class="section-title">Why this matched</h2>
+              <div class="why">{_ms("check_circle", "s20")}<div>{escape(job_why(j, long=True))}
+              {f'<div class="quote"><span class="muted">Classifier trace:</span> {escape(reason)}</div>' if reason else ''}
+              {'' if classified else '<div class="note" style="margin-top:6px;">No classifier trace was recorded for this job.</div>'}
+              </div></div>""")
+            with st.expander("Description & requirements"):
+                st.html('<p class="note">The scraper reads the full posting to classify it but doesn\'t store the description, '
+                        'requirements or skills. Open the posting on the company site for the complete details.</p>')
+    with side:
+        with st.container(key="job_side"):
+            src = [("Portal", escape(_host(url)) if url else "—"),
+                   ("Platform", "Workday" if "myworkdayjobs.com" in url else "Company career site"),
+                   ("Posting", f'<a class="link" href="{escape(url, quote=True)}" target="_blank" rel="noopener">Open posting {_ms("open_in_new", "s16")}</a>' if url else "No link"),
+                   ("Email alert", "Sent" if j.get("notified") else "Pending — goes out after the next check")]
+            st.html('<h2 class="section-title">Source</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
+                    + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in src) + "</dl>")
+            st.html('<div class="divider"></div>')
+            if c:
+                k, lbl = statuses.get(c.get("id"), ("pending", "Pending"))
+                curl = safe_url(c.get("url", ""))
+                co = [("Monitoring", f'<span class="pill {k}"><i></i>{lbl}</span>'),
+                      ("Career portal", f'<a class="link" href="{escape(curl, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(curl, 30))}</a>' if curl else "—"),
+                      ("Last checked", f'<span class="num">{_ago(_parse_iso(c.get("last_checked", "")), NOW)}</span>'),
+                      ("Jobs found", str(len(company_jobs(c))))]
+                st.html('<h2 class="section-title">Company</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
+                        + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in co) + "</dl>")
+            else:
+                st.html('<h2 class="section-title">Company</h2><p class="note">This company is no longer tracked.</p>')
 
 
-with st.container(key="page_wrap"):
-    st.html(_hero_html())
-    st.html(_metrics_html())
-
-    with st.container(key="main_grid"):
-        col_feed, col_rail = st.columns([8, 4])
-
-    # ── LEFT: verified listings ──────────────────────────────────────────────
-    with col_feed:
-        with st.container(key="feed_col"):
-            with st.container(key="jobs_toolbar"):
-                t1, t2 = st.columns([3, 2], vertical_alignment="center")
-                with t1:
-                    st.html(f"""
-                    <div id="live-feed" style="scroll-margin-top:80px;">
-                      <h2 class="t-hsm c-surface" style="margin:0;">Verified Fresher Listings</h2>
-                      <p class="t-body-sm c-variant" style="margin:0;">{total_jobs} {"posting" if total_jobs == 1 else "postings"} · newest first · pulled directly from company career portals</p>
+def page_companies():
+    def _acts():
+        st.button("Add company", key="btn_open_add", type="primary", icon=":material/add:",
+                  on_click=go, args=("companies",), kwargs={"view": "add"})
+    page_header("Companies", f"{_plural(len(companies), 'career portal')} monitored every 3 hours", _acts)
+    if not companies:
+        empty_state("apartment", "No companies yet", "Add a company's career page and the tracker will start checking it on the next scan.")
+        return
+    f1, f2 = st.columns([2, 3], vertical_alignment="center")
+    with f1:
+        q = st.text_input("Search companies", key="co_q", placeholder="Search companies", label_visibility="collapsed").strip().lower()
+    with f2:
+        with st.container(key="co_status_wrap"):
+            opts = ["all", "healthy", "delayed", "failing", "pending"]
+            sel = st.pills("Status", [o for o in opts if o == "all" or n_by_status[o]], key="co_status",
+                           label_visibility="collapsed", default="all",
+                           format_func=lambda o: f"All ({len(companies)})" if o == "all" else f"{o.title()} ({n_by_status[o]})")
+    sel = sel or "all"
+    rows = [c for c in companies
+            if (not q or q in f"{c.get('name', '')} {c.get('url', '')}".lower())
+            and (sel == "all" or statuses[c.get("id")][0] == sel)]
+    if not rows:
+        empty_state("search_off", "No companies match", "Try another name or status.")
+        return
+    with st.container(key="company_list"):
+        st.html('<div class="list-head"><span>Company</span><span>Status</span><span>Jobs found</span><span>Last checked</span><span></span></div>')
+        for c in rows:
+            name = (c.get("name") or "").strip() or "Unnamed"
+            curl = safe_url(c.get("url", ""))
+            k, lbl = statuses[c.get("id")]
+            is_new = c.get("id") == st.session_state.just_added
+            tags = ('<span class="tag" title="Built-in company">Core</span>' if c.get("locked") else "") + \
+                   ('<span class="pill new">New</span>' if is_new else "")
+            with st.container(key=f"cr_{_widget_key('c', str(c.get('id')))}"):
+                r1, r2 = st.columns([6, 1], vertical_alignment="center")
+                with r1:
+                    st.html(f"""<div class="co-row">
+                      <div class="co-name"><div class="logo">{_initial(name)}</div>
+                        <div style="min-width:0;"><div class="t">{escape(name)}{tags}</div>
+                        <div class="h">{escape(_short_url(curl)) if curl else '<span style="color:var(--red)">Invalid career page URL</span>'}</div></div></div>
+                      <div><span class="pill {k}"><i></i>{lbl}</span></div>
+                      <div class="co-cell">{len(company_jobs(c))}<span class="l"> jobs</span></div>
+                      <div class="co-cell muted">{_ago(_parse_iso(c.get("last_checked", "")), NOW)}</div>
                     </div>""")
-                with t2:
-                    query = st.text_input("Search jobs", key="job_search", placeholder="Filter title, company, city…",
-                                          label_visibility="collapsed").strip().lower()
-                filter_opts = ["all", "FRESHER", "ENTRY_LEVEL"] + sorted(
-                    (c for c in jobs_per_company if c), key=lambda c: (-jobs_per_company[c], c.lower()))
-                filter_labels = {"all": f"All ({total_jobs})",
-                                 "FRESHER": f"Fresher only ({cat_counts['FRESHER']})",
-                                 "ENTRY_LEVEL": f"Entry level ({cat_counts['ENTRY_LEVEL']})"}
-                if st.session_state.get("job_filter") not in filter_opts:
-                    st.session_state.job_filter = "all"
-                with st.container(key="job_filter_wrap"):
-                    chosen = st.pills("Filter", filter_opts, key="job_filter", label_visibility="collapsed",
-                                      format_func=lambda o: filter_labels.get(o, f"{o} ({jobs_per_company.get(o, 0)})"))
-            chosen = chosen or "all"
+                with r2:
+                    st.button("View", key=f"view_{_widget_key('c', str(c.get('id')))}", icon=":material/chevron_right:",
+                              icon_position="right", on_click=go, args=("companies",), kwargs={"company": c.get("id")})
 
-            def _match(j: dict) -> bool:
-                if chosen in _CATEGORY_CLASS and j.get("category") != chosen:
-                    return False
-                if chosen not in ("all", *_CATEGORY_CLASS) and (j.get("company") or "") != chosen:
-                    return False
-                if query:
-                    hay = " ".join(str(j.get(k) or "") for k in ("title", "company", "location", "reason")).lower()
-                    return query in hay
-                return True
 
-            filtered = [(j, d) for j, d in jobs_found if _match(j)]
-            sig = (chosen, query)
-            if st.session_state.get("_feed_sig") != sig:
-                st.session_state._feed_sig = sig
-                st.session_state.alerts_page = 0
-            total = len(filtered)
-            max_page = max(0, (total - 1) // ALERTS_PAGE_SIZE) if total else 0
-            page = min(st.session_state.alerts_page, max_page)
-            st.session_state.alerts_page = page
-            start, end = page * ALERTS_PAGE_SIZE, page * ALERTS_PAGE_SIZE + ALERTS_PAGE_SIZE
+def page_add_company():
+    st.button("Back to Companies", key="btn_back", icon=":material/arrow_back:", type="tertiary",
+              on_click=go, args=("companies",))
+    page_header("Add a company", "Start monitoring a company's career portal for fresher and entry-level roles")
+    with st.container(key="add_form"):
+        name = st.text_input("Company name", placeholder="e.g. Infosys", key="new_name")
+        url = st.text_input("Career portal URL", placeholder="https://careers.example.com/jobs", key="new_url",
+                            help="The page that lists open jobs — not the company's home page.")
+        site = st.text_input("Company website (optional)", placeholder="https://www.example.com", key="new_website")
+        st.html(f"""<div class="note" style="display:flex;gap:10px;align-items:flex-start;">
+          {_ms("info", "s20")}<div>The scraper opens this page with a headless browser (Playwright) on every scan,
+          follows each job link, and keeps roles in India that the classifier marks as fresher or entry level.
+          A dedicated Workday API is only used for companies already configured for it (currently
+          {escape(", ".join(sorted(n.title() for n in _api_scrapers())) or "none")}). There's no per-company
+          scraper choice — it's automatic.</div></div>""")
+        b1, b2 = st.columns([1, 4])
+        with b1:
+            submit = st.button("Start tracking", key="btn_add", type="primary", use_container_width=True)
+        with b2:
+            st.button("Cancel", key="btn_cancel_add", on_click=go, args=("companies",))
+    if submit:
+        n, u, w = name.strip(), url.strip(), site.strip()
+        if not n:
+            toast("Company name is required", "error")
+        elif not safe_url(u):
+            toast("Enter the full career page URL, starting with https://", "error")
+        elif w and not safe_url(w):
+            toast("The website must be a full URL starting with https://", "error")
+        elif find_company(n):
+            toast(f"{n} is already tracked", "error")
+        elif any((c.get("url") or "").rstrip("/") == u.rstrip("/") for c in companies):
+            toast("That career page is already tracked", "error")
+        else:
+            new = {"id": f"c{int(time.time())}", "name": n, "url": u, "locked": False,
+                   "status": "unknown", "last_job": "", "last_checked": ""}
+            if w:
+                new["website"] = w
 
-            with st.container(key="job_stream"):
-                if not filtered:
-                    with st.container(key="jobs_empty"):
-                        if total_jobs == 0:
-                            st.html(f"""
-                            <div class="empty">
-                              <div class="empty-ic">{_ms("notifications", "s28")}</div>
-                              <h4 class="t-hsm">No alerts yet</h4>
-                              <p class="t-body-md">Keep monitoring — the tracker checks every portal every 3 hours and emails you the moment a new fresher role appears.</p>
-                            </div>""")
-                        else:
-                            st.html(f"""
-                            <div class="empty">
-                              <div class="empty-ic">{_ms("search_off", "s28")}</div>
-                              <h4 class="t-hsm">No matching jobs in this view</h4>
-                              <p class="t-body-md">None of the {total_jobs} listed postings match this filter. New roles appear here as soon as a portal publishes them.</p>
-                            </div>""")
-                            def _reset_filters():
-                                st.session_state.job_filter = "all"
-                                st.session_state.job_search = ""
-                            st.button("Reset filters", key="btn_reset_filters", on_click=_reset_filters)
-                for i, (j, found) in enumerate(filtered[start:end]):
-                    jkey = job_key(j)
-                    with st.container(key=f"jc_{i}"):
-                        h1c, h2c = st.columns([12, 1])
-                        with h1c:
-                            st.html(_job_head_html(j, found))
-                        with h2c:
-                            if st.button("", icon=":material/close:", key=_widget_key("dismiss", jkey), type="tertiary",
-                                         help="Dismiss this alert (it won't be emailed again)"):
-                                _, saved, err = _save_change("seen_jobs.json", dismiss_jobs({jkey}), [],
-                                                             "chore: dismiss 1 alert(s)")
-                                if saved:
-                                    toast("Removed 1 alert(s)", "success")
-                                else:
-                                    toast(f"Removed here, but not saved permanently. {err}", "error")
-                                st.rerun()
-                        st.html(_job_reason_html(j))
-                        f1, f2, f3 = st.columns([6, 1, 1], vertical_alignment="center")
-                        with f1:
-                            st.html(_job_foot_html(j, found))
-                        with f2:
-                            if st.button("View Criteria", key=_widget_key("crit", jkey)):
-                                _job_details(j)
-                        with f3:
-                            st.html(_job_apply_html(j))
+            def _add(latest: list) -> list:
+                if not any((c.get("name") or "").strip().lower() == n.lower() for c in latest):
+                    latest.append(new)
+                return latest
 
-            if total_jobs:
-                with st.container(key="jobs_pager"):
-                    p1, p2, p3, p4 = st.columns([1.1, 1.4, 1.1, 1.2], vertical_alignment="center")
-                    with p1:
-                        if st.button("← Prev", key="alerts_prev", disabled=(page == 0), use_container_width=True):
-                            st.session_state.alerts_page = page - 1
-                            st.rerun()
-                    with p2:
-                        label = f"{start + 1}–{min(end, total)} of {total}" if total else f"0 of {total_jobs}"
-                        st.html(f'<div class="pager-label t-label-md mono">{label}</div>')
-                    with p3:
-                        if st.button("Next →", key="alerts_next", disabled=(end >= total), use_container_width=True):
-                            st.session_state.alerts_page = page + 1
-                            st.rerun()
-                    with p4:
-                        if st.button("Clear all", key="btn_clear_all", use_container_width=True,
-                                     help="Hide every alert (already-seen jobs won't be emailed again)"):
-                            _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(None), [],
-                                                         "chore: dismiss all alerts")
-                            st.session_state.alerts_page = 0
-                            if saved:
-                                toast("All alerts cleared", "success")
-                            else:
-                                toast(f"Cleared here, but not saved permanently. {err}", "error")
-                            st.rerun()
+            _, saved, err = _save_change("companies.json", _add, [], f"chore: add {n}")
+            toast(f"{n} added — it will be checked on the next scan" if saved
+                  else f"{n} added, but not saved permanently. {err}", "success" if saved else "error")
+            st.session_state.just_added = new["id"]
+            st.session_state._clear_add_form = True
+            go("companies")
+        st.rerun()
 
-    # ── RIGHT: portals, add portal, email ────────────────────────────────────
-    with col_rail:
-        with st.container(key="rail_col"):
-            with st.container(key="portals_card"):
-                rows = []
-                for c in companies:
-                    name = escape((c.get("name") or "").strip() or "Unnamed")
-                    label, txt_cls, dot_cls = _company_state(c)
-                    page_url = safe_url(c.get("url", ""))
-                    link = (f'<a class="host t-body-sm" href="{escape(page_url, quote=True)}" target="_blank" rel="noopener">'
-                            f'<span class="truncate">{escape(_short_url(page_url))}</span>{_ms("open_in_new", "s12")}</a>'
-                            if page_url else '<span class="t-body-sm c-error">Invalid career page URL</span>')
-                    n = jobs_per_company.get(c.get("name") or "", 0)
-                    last_job = (c.get("last_job") or "").strip()
-                    first = (f'<span class="truncate" title="{escape(last_job, quote=True)}">Last match: {escape(last_job)}</span>'
-                             if last_job else f'<span>{n} {"job" if n == 1 else "jobs"} listed</span>')
-                    when = ('<span class="mono c-primary">Scanning now…</span>' if label == "Checking"
-                            else f'<span class="mono" style="flex-shrink:0;">{_rel_time(c.get("last_checked", ""))}</span>')
-                    core = '<span class="core" title="Built-in company">CORE</span>' if c.get("locked") else ""
-                    rows.append(f"""
-                    <div class="portal">
-                      <div class="portal-name"><span class="t-title truncate">{name}</span>
-                        <span class="state t-label-sm {txt_cls}"><span class="dot sm {dot_cls}"></span>{label}</span>{core}</div>
-                      {link}
-                      <div class="pmeta t-label-sm">{first}<span aria-hidden="true">·</span>{when}</div>
-                    </div>""")
-                empty_portals = '<p class="t-body-sm c-variant" style="margin:8px 0;">No career portals tracked yet — add one below.</p>'
-                st.html(f"""
-                <div id="company-radar" style="scroll-margin-top:80px;">
-                  <div class="card-head">
-                    <div>
-                      <div class="lh"><h2 class="t-title">Monitored Career Portals</h2><span class="count-chip">{total_companies}</span></div>
-                      <p class="t-label-sm" style="font-weight:400;">{active_count} active · {broken_count} failing · checked every 3 hours</p>
-                    </div>
-                    <a class="btn-add t-label-md" href="#add-portal">{_ms("add", "s16")}Add</a>
-                  </div>
-                  <div class="portal-list">{"".join(rows) or empty_portals}</div>
-                </div>""")
 
-                if companies:
-                    if st.button("Remove portals", key="btn_toggle_remove", icon=":material/tune:",
-                                 use_container_width=True, help="Pick companies to stop tracking"):
-                        st.session_state.show_remove_form = not st.session_state.show_remove_form
+def page_company_detail(c: dict):
+    st.button("Back to Companies", key="btn_back", icon=":material/arrow_back:", type="tertiary",
+              on_click=go, args=("companies",))
+    name = (c.get("name") or "").strip() or "Unnamed"
+    curl = safe_url(c.get("url", ""))
+    site = safe_url(c.get("website", ""))
+    k, lbl = statuses[c.get("id")]
+    jobs = company_jobs(c)
+    st.html(f"""<div class="detail-head"><div class="logo lg">{_initial(name)}</div><div style="min-width:0;">
+      <h1 class="detail-title">{escape(name)}</h1>
+      <div class="page-sub"><span class="pill {k}"><i></i>{lbl}</span>
+        {'<span class="tag">Core</span>' if c.get('locked') else ''}
+        <span class="sep">·</span><span>{_plural(len(jobs), 'job')} found</span></div></div></div>""")
+    with st.container(key="co_actions"):
+        a = st.columns(4)
+        with a[0]:
+            if curl:
+                st.html(f'<a class="btn primary" href="{escape(curl, quote=True)}" target="_blank" rel="noopener">Career portal {_ms("arrow_outward", "s16")}</a>')
+        with a[1]:
+            if site:
+                st.html(f'<a class="btn ghost" href="{escape(site, quote=True)}" target="_blank" rel="noopener">Website {_ms("arrow_outward", "s16")}</a>')
+        with a[2]:
+            with st.container(key="danger"):
+                if st.session_state.confirm_remove != c.get("id"):
+                    if st.button("Stop tracking", key="btn_remove_company", icon=":material/delete:"):
+                        st.session_state.confirm_remove = c.get("id")
                         st.rerun()
-                if st.session_state.show_remove_form and companies:
-                    with st.container(key="remove_row"):
-                        st.html('<p class="t-label-sm c-variant" style="margin:4px 0;">Tick the companies to stop tracking</p>')
-                        for c in companies:
-                            st.checkbox(c.get("name") or "Unnamed", key=f"rm_{c.get('id')}")
-                        to_remove = [c for c in companies if st.session_state.get(f"rm_{c.get('id')}")]
-                        rb1, rb2 = st.columns([1, 1.6])
-                        with rb1:
-                            if st.button("Cancel", key="btn_cancel_remove", use_container_width=True):
-                                st.session_state.show_remove_form = False
-                                st.rerun()
-                        with rb2:
-                            if st.button(f"Remove selected ({len(to_remove)})", key="btn_remove", type="primary",
-                                         disabled=(len(to_remove) == 0), use_container_width=True):
-                                removed_names = ", ".join(c.get("name", "") for c in to_remove)
-                                removed_ids = {c.get("id") for c in to_remove}
-                                _, saved, err = _save_change(
-                                    "companies.json",
-                                    lambda latest: [c for c in latest if c.get("id") not in removed_ids],
-                                    [], f"chore: remove {removed_names}",
-                                )
-                                for cid in removed_ids:
-                                    st.session_state.pop(f"rm_{cid}", None)
-                                if saved:
-                                    toast(f"Removed {removed_names}", "success")
-                                else:
-                                    toast(f"Removed {removed_names}, but not saved permanently. {err}", "error")
-                                st.session_state.show_remove_form = False
-                                st.rerun()
+    if st.session_state.confirm_remove == c.get("id"):
+        with st.container(key="danger_confirm"):
+            st.html(f'<p class="note" style="color:var(--text);">Stop tracking <b>{escape(name)}</b>? Jobs already found stay in your history.</p>')
+            y, n_ = st.columns([1, 4])
+            with y:
+                if st.button("Yes, stop tracking", key="btn_remove", type="primary"):
+                    cid = c.get("id")
+                    _, saved, err = _save_change("companies.json", lambda latest: [x for x in latest if x.get("id") != cid],
+                                                 [], f"chore: remove {name}")
+                    toast(f"Removed {name}" if saved else f"Removed {name}, but not saved permanently. {err}",
+                          "success" if saved else "error")
+                    go("companies")
+                    st.rerun()
+            with n_:
+                if st.button("Cancel", key="btn_cancel_remove"):
+                    st.session_state.confirm_remove = None
+                    st.rerun()
 
-            # ── Add Career Portal ─────────────────────────────────────────────
-            with st.container(key="add_card"):
-                st.html(f"""
-                <div id="add-portal" class="card-head" style="justify-content:flex-start;scroll-margin-top:80px;">
-                  <div class="sq-ic a">{_ms("add_link")}</div>
-                  <div><h3 class="t-title">Add Career Portal</h3><p class="t-label-sm" style="font-weight:400;">Tracked from the next scheduled check</p></div>
-                </div>""")
-                new_name = st.text_input("Company Name", placeholder="e.g. Cisco, MetLife", key="new_name")
-                new_url = st.text_input("Career Page URL (Workday or ATS)",
-                                        placeholder="https://cisco.wd3.myworkdayjobs.com/…", key="new_url")
-                st.html(f"""
-                <div>
-                  <span class="field-label t-label-sm">Scrape Driver</span>
-                  <div class="fake-select t-body-sm" title="Chosen automatically by the scraper">
-                    <span>Auto-detect · Playwright headless browser</span>{_ms("lock", "s16", "c-outline")}</div>
-                  <p class="hint t-label-sm" style="font-weight:400;">Selected automatically: companies with a configured Workday API use it; every other portal is read with Playwright.</p>
-                </div>""")
-                if st.button("+ Start Tracking", key="btn_add", type="primary", use_container_width=True):
-                    name = new_name.strip()
-                    url = new_url.strip()
-                    if not name:
-                        toast("Company name is required", "error")
-                    elif not safe_url(url):
-                        toast("Enter the full career page URL, starting with https://", "error")
-                    elif any((c.get("name") or "").lower() == name.lower() for c in companies):
-                        toast(f"{name} is already tracked", "error")
-                    else:
-                        new_company = {
-                            "id": f"c{int(time.time())}",
-                            "name": name, "url": url, "locked": False,
-                            "status": "unknown", "last_job": "", "last_checked": "",
-                        }
+    with st.container(key="co_cols"):
+        main, side = st.columns([3, 2])
+    with side:
+        with st.container(key="co_side"):
+            driver = _api_scrapers().get(c.get("id"))
+            checked = _parse_iso(c.get("last_checked", ""))
+            health = [("Status", f'<span class="pill {k}"><i></i>{lbl}</span>'),
+                      ("Last checked", f'<span class="num">{_ago(checked, NOW)}</span>' + (f' <span class="muted num">({checked:%b %d, %H:%M} UTC)</span>' if checked else "")),
+                      ("Scraper", f"{driver.title()} API, Playwright fallback" if driver else "Playwright (headless browser)"),
+                      ("Latest scan", escape(c.get("last_job") or "No matching job on the last scan"))]
+            if k == "failing":
+                health.append(("Error", f'The last scan failed. <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">See the Actions log</a>'))
+            st.html('<h2 class="section-title">Portal health</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
+                    + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in health) + "</dl>")
+            st.html('<div class="divider"></div>')
+            cats = {"FRESHER": 0, "ENTRY_LEVEL": 0, "legacy": 0}
+            for j in jobs:
+                cats[j.get("category") if j.get("category") in _CATEGORY_PILL else "legacy"] += 1
+            info = [("Career portal", f'<a class="link" href="{escape(curl, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(curl, 30))}</a>' if curl else "Invalid URL"),
+                    ("Website", f'<a class="link" href="{escape(site, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(site, 30))}</a>' if site else '<span class="muted">Not set</span>'),
+                    ("Classified", f"{cats['FRESHER']} fresher · {cats['ENTRY_LEVEL']} entry level"
+                                   + (f" · {cats['legacy']} keyword match" if cats["legacy"] else ""))]
+            st.html('<h2 class="section-title">Details</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
+                    + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in info) + "</dl>")
+    with main:
+        st.html(f'<div><h2 class="section-title">Recent jobs from {escape(name)}</h2>'
+                f'<p class="section-sub">{_plural(len(jobs), "job")} found · {sum(1 for j in jobs if j.get("dismissed"))} dismissed</p></div>')
+        if jobs:
+            with st.container(key="joblist_company"):
+                for i, j in enumerate(jobs[:10]):
+                    job_row(j, f"c{i}", "companies")
+        else:
+            empty_state("inbox", "No jobs found yet", "Matching fresher and entry-level roles from this portal will appear here.")
 
-                        def _add(latest: list) -> list:
-                            if not any((c.get("name") or "").lower() == name.lower() for c in latest):
-                                latest.append(new_company)
-                            return latest
 
-                        _, saved, err = _save_change("companies.json", _add, [], f"chore: add {name}")
-                        if saved:
-                            toast(f"{name} added", "success")
-                        else:
-                            toast(f"{name} added, but not saved permanently. {err}", "error")
-                        st.session_state._clear_add_form = True
-                        st.rerun()
+def page_monitoring():
+    page_header("Monitoring", "The scraper runs on GitHub Actions every 3 hours and checks every tracked portal", scan_actions)
+    st.html(f"""
+    <div class="panel st-key-stats"><div class="stats">
+      <div class="stat"><div class="k"><span class="dot {overall[0]}"></span>Overall</div><div class="v" style="font-size:20px;">{escape(overall[1])}</div>
+        <div class="n">{_plural(len(companies), 'portal')} tracked</div></div>
+      <div class="stat"><div class="k">Last scan</div><div class="v">{_ago(last_scan, NOW)}</div>
+        <div class="n num">{f"{last_scan:%b %d, %H:%M} UTC" if last_scan else "No scan recorded"}</div></div>
+      <div class="stat"><div class="k">Next scan</div><div class="v">{_next_scan().removeprefix("in ").capitalize() if _next_scan() == "due now" else _next_scan().removeprefix("in ")}</div><div class="n">Every 3 hours (UTC)</div></div>
+      <div class="stat"><div class="k">Portals</div><div class="v">{n_by_status['healthy']}<span class="muted" style="font-size:16px;font-weight:500;"> / {len(companies)} healthy</span></div>
+        <div class="n">{n_by_status['delayed']} delayed · {n_by_status['failing']} failing · {n_by_status['pending'] + n_by_status['checking']} pending</div></div>
+    </div></div>""")
+    if not companies:
+        empty_state("monitor_heart", "Nothing to monitor", "Add a company to start scanning its career portal.")
+        return
+    rows = []
+    order = {"failing": 0, "delayed": 1, "checking": 2, "pending": 3, "healthy": 4}
+    for c in sorted(companies, key=lambda c: (order[statuses[c.get("id")][0]], (c.get("name") or "").lower())):
+        k, lbl = statuses[c.get("id")]
+        curl = safe_url(c.get("url", ""))
+        checked = _parse_iso(c.get("last_checked", ""))
+        note = {"failing": f'Last scan failed — <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">see log</a>',
+                "delayed": f"No scan for over {_STALE_H} hours",
+                "pending": "Not scanned yet — added since the last run",
+                "checking": "Check requested"}.get(k, "—")
+        driver = _api_scrapers().get(c.get("id"))
+        rows.append(f"""<tr>
+          <td class="c">{escape((c.get('name') or '').strip() or 'Unnamed')}
+            <div class="sub">{f'<a class="link" href="{escape(curl, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(curl, 34))}</a>' if curl else 'Invalid URL'}</div></td>
+          <td data-l="Status"><span class="pill {k}"><i></i>{lbl}</span></td>
+          <td class="num" data-l="Last checked">{_ago(checked, NOW)}</td>
+          <td class="num" data-l="Jobs found">{len(company_jobs(c))}</td>
+          <td data-l="Scraper">{f"{driver.title()} API" if driver else "Playwright"}</td>
+          <td data-l="Notes">{note}</td></tr>""")
+    with st.container(key="mon_table"):
+        st.html('<table class="mon"><thead><tr><th>Company</th><th>Status</th><th>Last checked</th><th>Jobs found</th>'
+                '<th>Scraper</th><th>Notes</th></tr></thead><tbody>' + "".join(rows) + "</tbody></table>")
+    st.html(f'<p class="note">Statuses come from the scraper: <b>Healthy</b> = scanned successfully in the last {_STALE_H} hours · '
+            f'<b>Delayed</b> = no successful scan for {_STALE_H}+ hours · <b>Failing</b> = the last scan errored · '
+            f'<b>Pending</b> = not scanned yet. Full run logs: <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">GitHub Actions</a>.</p>')
 
-            # ── Email Alert Delivery ──────────────────────────────────────────
-            with st.container(key="ns_card"):
-                status_badge = ('<span class="tag-active t-label-sm" style="border-radius:999px;">✓ Active</span>'
-                                if recipient_saved else
-                                '<span class="tag-warn t-label-sm" style="border-radius:999px;">Not set</span>')
-                st.html(f"""
-                <div id="email-alerts" style="scroll-margin-top:80px;display:flex;flex-direction:column;gap:8px;">
-                  <div class="card-head">
-                    <div class="lh"><div class="sq-ic b">{_ms("forward_to_inbox")}</div>
-                      <div><h3 class="t-title">Email Alert Delivery</h3><p class="t-label-sm" style="font-weight:400;">Sent after each check that finds new jobs</p></div></div>
-                    {status_badge}
-                  </div>
-                  <p class="card-sub t-body-sm">Receive an alert whenever a genuine fresher posting passes the classifier.</p>
-                  <span class="field-label t-label-sm" style="margin:0;">Recipient Email</span>
-                </div>""")
-                in_col, save_col = st.columns([3, 1], vertical_alignment="bottom")
-                with in_col:
-                    email_val = st.text_input("Recipient email", value=st.session_state.email_val,
-                                              placeholder="you@gmail.com", key="email_input",
-                                              label_visibility="collapsed")
-                    st.session_state.email_val = email_val
-                with save_col:
-                    save_clicked = st.button("Save", key="btn_save_email")
 
-                def _set_recipient(addr: str) -> tuple[bool, str]:
-                    def _mutate(latest: dict) -> dict:
-                        latest = latest if isinstance(latest, dict) else {}
-                        latest["recipient_email"] = addr
-                        return latest
-                    data, saved, err = _save_change("settings.json", _mutate, {}, "chore: update recipient email")
-                    settings.update(data)
-                    return saved, err
+def page_email():
+    notified = [j for j in all_records if j.get("notified")]
+    last_mail = max((found[id(j)] for j in notified if found[id(j)]), default=None)
+    pending = [j for j in all_records if not j.get("notified")]
+    page_header("Email & Notifications", (
+        f'<span class="pill {"on" if recipient else "off"}"><i></i>{"Alerts on" if recipient else "Alerts off"}</span>'
+        + (f'<span>Sending to {escape(recipient)}</span>' if recipient else '<span>Add a recipient to turn alerts on</span>')))
 
-                if save_clicked:
-                    e = email_val.strip()
-                    if not _EMAIL_RE.match(e):
-                        toast("Enter a valid email address", "error")
-                    else:
-                        saved, err = _set_recipient(e)
-                        if saved:
-                            toast(f"Saved — alerts go to {e}", "success")
-                        else:
-                            toast(f"Saved here, but not saved permanently. {err}", "error")
-                        st.rerun()
+    def _set_recipient(addr: str) -> tuple[bool, str]:
+        def _mutate(latest: dict) -> dict:
+            latest = latest if isinstance(latest, dict) else {}
+            latest["recipient_email"] = addr
+            return latest
+        data, saved, err = _save_change("settings.json", _mutate, {}, "chore: update recipient email")
+        settings.update(data)
+        return saved, err
 
-                synced = bool(os.environ.get("GITHUB_TOKEN"))
-                sync_line = (f'<div class="sync t-label-sm c-secondary">{_ms("cloud_sync", "s14")}Saved to settings.json and synced to GitHub</div>'
-                             if synced else
-                             f'<div class="sync t-label-sm c-amber">{_ms("cloud_off", "s14")}No GitHub token — changes are saved on this server only</div>')
-                ts = st.session_state.test_status
-                if ts is None:
-                    ts_html = '<span class="mono c-outline" style="font-size:11px;">Not sent this session</span>'
-                elif ts[0]:
-                    ts_html = f'<span class="mono c-secondary" style="font-size:11px;">Sent {escape(ts[1])} UTC</span>'
-                else:
-                    ts_html = f'<span class="mono c-error" style="font-size:11px;">Failed {escape(ts[1])} UTC</span>'
-                st.html(f"""
-                <div style="display:flex;flex-direction:column;gap:8px;">
-                  {sync_line}
-                  <div class="divider"></div>
-                  <div class="row-between"><span class="t-label-sm c-surface">Verification Dispatch</span>{ts_html}</div>
-                  <p class="card-sub t-body-sm">Send a sample alert through the configured Gmail account to confirm emails arrive.</p>
-                </div>""")
+    with st.container(key="email_form"):
+        st.html('<div><h2 class="section-title">Recipient</h2><p class="section-sub">Where new-job alerts are delivered.</p></div>')
+        i1, i2 = st.columns([4, 1], vertical_alignment="bottom")
+        with i1:
+            email_val = st.text_input("Recipient email", value=st.session_state.email_val, placeholder="you@example.com",
+                                      key="email_input")
+            st.session_state.email_val = email_val
+        with i2:
+            save = st.button("Save", key="btn_save_email", type="primary", use_container_width=True)
+        synced = bool(os.environ.get("GITHUB_TOKEN"))
+        st.html(f'<p class="note">{_ms("cloud_done" if synced else "cloud_off", "s16")} '
+                + ("Saved to settings.json in the GitHub repository, which the scraper reads on every run."
+                   if synced else "No GitHub token — changes are saved on this server only and the scraper won't see them.")
+                + "</p>")
+    if save:
+        e = email_val.strip()
+        if not _EMAIL_RE.match(e):
+            toast("Enter a valid email address", "error")
+        else:
+            saved, err = _set_recipient(e)
+            toast(f"Saved — alerts go to {e}" if saved else f"Saved here, but not saved permanently. {err}",
+                  "success" if saved else "error")
+            st.rerun()
 
-                with st.container(key="test_mail_btn"):
-                    if st.button("Send Test Email", key="btn_test", icon=":material/send:", use_container_width=True):
-                        recipient = email_val.strip()
-                        stamp = datetime.now(timezone.utc).strftime("%H:%M")
-                        if not _EMAIL_RE.match(recipient):
-                            toast("Enter a valid recipient email first", "error")
-                        else:
-                            persist_err = ""
-                            if settings.get("recipient_email", "") != recipient:
-                                _, persist_err = _set_recipient(recipient)
-                            try:
-                                from notifier import test_mail
-                                test_mail(recipient)
-                            except Exception as ex:
-                                log.warning("test mail failed: %s", ex)
-                                st.session_state.test_status = (False, stamp)
-                                if "GMAIL_" in str(ex):
-                                    toast("Email isn't configured for this app (Gmail address / app password missing).", "error")
-                                else:
-                                    toast("Couldn't send the test email. Check the Gmail app password and try again.", "error")
-                            else:
-                                st.session_state.test_status = (True, stamp)
-                                if persist_err:
-                                    toast(f"Test email sent, but the address wasn't saved permanently. {persist_err}", "error")
-                                else:
-                                    toast(f"Test email sent — check {recipient}", "success")
-                        st.rerun()
+    with st.container(key="test_panel"):
+        ts = st.session_state.test_status
+        status = ("Not sent this session" if ts is None else
+                  f"Sent at {ts[1]} UTC" if ts[0] else f"Failed at {ts[1]} UTC")
+        t1, t2 = st.columns([4, 1], vertical_alignment="center")
+        with t1:
+            st.html(f'<div><h2 class="section-title">Test delivery</h2><p class="section-sub">Send a sample alert to confirm emails arrive. '
+                    f'<span class="num" style="color:var({"--green" if ts and ts[0] else "--red" if ts else "--muted"});">{status}</span></p></div>')
+        with t2:
+            test = st.button("Send test email", key="btn_test", icon=":material/send:", use_container_width=True)
+    if test:
+        to = email_val.strip()
+        stamp = datetime.now(timezone.utc).strftime("%H:%M")
+        if not _EMAIL_RE.match(to):
+            toast("Enter a valid recipient email first", "error")
+        else:
+            persist_err = ""
+            if settings.get("recipient_email", "") != to:
+                _, persist_err = _set_recipient(to)
+            try:
+                from notifier import test_mail
+                test_mail(to)
+            except Exception as ex:
+                log.warning("test mail failed: %s", ex)
+                st.session_state.test_status = (False, stamp)
+                toast("Email isn't configured for this app (Gmail address / app password missing)." if "GMAIL_" in str(ex)
+                      else "Couldn't send the test email. Check the Gmail app password and try again.", "error")
+            else:
+                st.session_state.test_status = (True, stamp)
+                toast(f"Test email sent, but the address wasn't saved permanently. {persist_err}" if persist_err
+                      else f"Test email sent — check {to}", "error" if persist_err else "success")
+        st.rerun()
 
-# ── Footer ─────────────────────────────────────────────────────────────────────
-st.html(f"""
-<footer class="site-footer">
-  <div class="in">
-    <div class="l t-body-sm">
-      <span class="mono c-primary" style="display:inline-flex;align-items:center;gap:4px;font-weight:500;"><span class="dot bg-secondary"></span>Fresher classifier</span>
-      <span>·</span><span>India roles only</span>
-      <span>·</span><span>Checks every 3 hours</span>
-      <span>·</span><span class="c-surface">Workday &amp; Playwright scrapers</span>
-    </div>
-    <a class="t-body-sm" href="https://github.com/{GITHUB_REPO}" target="_blank" rel="noopener">Fresher Job Tracker · Source on GitHub</a>
-  </div>
-</footer>""")
+    with st.container(key="set_behavior"):
+        rows = [("Last alert", f'<span class="num">Covered a job found {last_mail:%b %d, %H:%M} UTC</span> <span class="muted">({_ago(last_mail, NOW)})</span>'
+                 if last_mail else "No alert emails recorded yet"),
+                ("Jobs emailed", str(len(notified))),
+                ("Waiting to send", f"{len(pending)} — sent after the next check" if pending else "0")]
+        st.html('<div><h2 class="section-title">Delivery</h2></div><dl class="kv">'
+                + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in rows) + "</dl>")
+        st.html("""<div class="divider"></div><div><h2 class="section-title">How alerts work</h2></div>
+          <ul class="note" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;">
+            <li>After every scheduled check (every 3 hours), jobs found for the first time are sent in one email.</li>
+            <li>Each job is emailed once. Dismissed jobs stay in the history so they're never sent again.</li>
+            <li>If sending fails, the jobs stay unsent and the next check retries.</li>
+            <li>Mail is sent through the Gmail account configured in the repository's GitHub Actions secrets — credentials are never shown here.</li>
+          </ul>""")
 
-# ── Toast ──────────────────────────────────────────────────────────────────────
-# Shown once and faded out with CSS; the old sleep(3)+rerun froze the whole
-# app for 3 s after every action, swallowing clicks made in the meantime.
+
+def page_settings():
+    page_header("Settings", "Preferences and read-only details of how the tracker is configured")
+    with st.container(key="set_appearance"):
+        a1, a2 = st.columns([4, 1], vertical_alignment="center")
+        with a1:
+            st.html('<div><h2 class="section-title">Appearance</h2><p class="section-sub">'
+                    f'{"Dark" if st.session_state.dark_mode else "Light"} theme · applies to this browser session</p></div>')
+        with a2:
+            if st.button("Use light theme" if st.session_state.dark_mode else "Use dark theme", key="btn_theme",
+                         icon=":material/light_mode:" if st.session_state.dark_mode else ":material/dark_mode:",
+                         use_container_width=True):
+                st.session_state.dark_mode = not st.session_state.dark_mode
+                st.rerun()
+    with st.container(key="set_data"):
+        synced = bool(os.environ.get("GITHUB_TOKEN"))
+        d1, d2 = st.columns([4, 1], vertical_alignment="center")
+        with d1:
+            st.html('<div><h2 class="section-title">Data &amp; sync</h2><p class="section-sub">'
+                    + (f"Live data from github.com/{GITHUB_REPO}, cached for up to 5 minutes."
+                       if synced else "Reading the files bundled with this deployment — no GitHub token is configured.")
+                    + "</p></div>")
+        with d2:
+            if st.button("Reload data", key="btn_reload", icon=":material/refresh:", use_container_width=True):
+                _remote_snapshot.clear()
+                toast("Showing the latest data", "success")
+                st.rerun()
+    with st.container(key="set_engine"):
+        api = _api_scrapers()
+        rows = [("Schedule", 'Every 3 hours (cron <span class="num">0 */3 * * *</span>) — set in .github/workflows/check_jobs.yml'),
+                ("Roles kept", "Fresher and entry-level roles located in India"),
+                ("Scrapers", f"Workday API for {escape(', '.join(sorted(n.title() for n in api)))}; Playwright for every other portal"
+                             if api else "Playwright for every portal"),
+                ("Detail pages", "Each candidate job's own page is read before it is classified")]
+        st.html('<div><h2 class="section-title">Scanning</h2><p class="section-sub">Defined in the repository; change them there.</p></div>'
+                '<dl class="kv">' + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in rows) + "</dl>")
+    with st.container(key="set_maint"):
+        st.html('<div><h2 class="section-title">Maintenance</h2><p class="section-sub">Dismiss every active job at once. '
+                'They stay in the history (Jobs → Dismissed) and are never emailed again.</p></div>')
+        m1, _m2 = st.columns([1, 3])
+        with m1:
+            with st.container(key="danger"):
+                if st.button(f"Dismiss all {len(active_jobs)} jobs", key="btn_clear_all", disabled=not active_jobs,
+                             use_container_width=True):
+                    _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(None), [], "chore: dismiss all alerts")
+                    toast("All alerts cleared" if saved else f"Cleared here, but not saved permanently. {err}",
+                          "success" if saved else "error")
+                    st.rerun()
+    st.html(f"""<div class="app-foot"><span>Fresher Job Tracker</span>
+      <a href="https://github.com/{GITHUB_REPO}" target="_blank" rel="noopener">Source on GitHub</a></div>""")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ROUTER
+# ═══════════════════════════════════════════════════════════════════════════════
+page = st.session_state.page
+jobs_by_id = {_jid(j): j for j in all_records}
+if page == "jobs" and st.session_state.job_id:
+    job = jobs_by_id.get(st.session_state.job_id)
+    if job:
+        page_job_detail(job)
+    else:
+        st.session_state.job_id = None
+        page_jobs()
+elif page == "companies" and st.session_state.company_view == "add":
+    page_add_company()
+elif page == "companies" and st.session_state.company_id:
+    comp = next((c for c in companies if str(c.get("id")) == str(st.session_state.company_id)), None)
+    if comp:
+        page_company_detail(comp)
+    else:
+        st.session_state.company_id = None
+        page_companies()
+else:
+    {"home": page_home, "jobs": page_jobs, "companies": page_companies, "monitoring": page_monitoring,
+     "email": page_email, "settings": page_settings}[page]()
+st.session_state.page_before = st.session_state.page
+
+# mirror the view into the URL (only when it changed, so no extra reruns)
+want = {"page": st.session_state.page}
+if st.session_state.job_id:
+    want["job"] = st.session_state.job_id
+if st.session_state.company_id:
+    want["company"] = str(st.session_state.company_id)
+if st.session_state.company_view:
+    want["view"] = st.session_state.company_view
+if dict(st.query_params) != want:
+    st.query_params.from_dict(want)
+
+# ── toast ─────────────────────────────────────────────────────────────────────
+# Shown once and faded out with CSS; a sleep()+rerun would freeze the app.
 if st.session_state.toast:
     msg = escape(st.session_state.toast, quote=False)
-    kind = st.session_state.toast_kind
+    ok = st.session_state.toast_kind == "success"
     st.session_state.toast = None
-    ok = kind == "success"
     st.html(f"""
 <style>
 @keyframes jt-toast {{ 0%, 85% {{ opacity: 1; }} 100% {{ opacity: 0; visibility: hidden; }} }}
 .jt-toast {{ animation: jt-toast {4 if ok else 6}s ease-in forwards; }}
 @media (max-width: 640px) {{ .jt-toast {{ left: 16px; right: 16px; bottom: 16px; max-width: none !important; }} }}
 </style>
-<div class="jt-toast" role="status" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;background:var(--lowest);box-shadow:0 20px 25px -5px rgba(15,23,42,.12),0 8px 10px -6px rgba(15,23,42,.08);max-width:360px;">
-  <span style="width:28px;height:28px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var({"--secondary-container" if ok else "--error-container"});color:var({"--secondary" if ok else "--error"});">{_ms("check_circle" if ok else "error", "s18")}</span>
-  <div class="t-body-sm" style="font-weight:500;color:var(--on-surface);">{msg}</div>
-</div>
-""")
+<div class="jt-toast" role="status" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-lg);max-width:380px;">
+  <span style="display:flex;color:var({'--green' if ok else '--red'});">{_ms('check_circle' if ok else 'error', 's20')}</span>
+  <div style="font-size:14px;line-height:20px;color:var(--text);">{msg}</div>
+</div>""")

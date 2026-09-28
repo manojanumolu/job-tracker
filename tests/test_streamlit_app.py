@@ -3,6 +3,7 @@ temp directory, with no GitHub token, so production JSON is never touched."""
 import hashlib
 import json
 import shutil
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -10,7 +11,7 @@ import pytest
 st_testing = pytest.importorskip("streamlit.testing.v1")
 
 REPO = Path(__file__).resolve().parent.parent
-APP_FILES = ["streamlit_app.py", "config_store.py", "notifier.py", "job_classifier.py"]
+APP_FILES = ["streamlit_app.py", "config_store.py", "notifier.py", "job_classifier.py", "scraper.py"]
 
 OLD_RECORD = {  # shape written before the classifier existed
     "title": "Junior Associate - Evidence Synthesis",
@@ -46,11 +47,16 @@ def app(tmp_path, monkeypatch):
     import streamlit as st
     st.cache_data.clear()  # the app's GitHub snapshot cache is process-wide
 
-    def make(seen):
+    def make(seen, page=None, query=None):
         (tmp_path / "seen_jobs.json").write_text(json.dumps(seen))
         at = st_testing.AppTest.from_file(str(tmp_path / "streamlit_app.py"), default_timeout=30)
         at.tmp_path = tmp_path
-        return at.run()
+        for k, v in (query or {}).items():
+            at.query_params[k] = v
+        at.run()
+        if page:
+            at.button(key=f"nav_{page}").click().run()
+        return at
     return make
 
 
@@ -62,41 +68,87 @@ def _seen(at):
     return json.loads((at.tmp_path / "seen_jobs.json").read_text("utf-8"))
 
 
-def _dismiss_key(job: dict) -> str:
+def _companies(at):
+    return json.loads((at.tmp_path / "companies.json").read_text("utf-8"))
+
+
+def _key(prefix: str, job: dict) -> str:
     from config_store import job_key
-    return "dismiss_" + hashlib.sha1(job_key(job).encode("utf-8")).hexdigest()[:16]
+    return f"{prefix}_" + hashlib.sha1(job_key(job).encode("utf-8")).hexdigest()[:16]
 
 
-def _crit_buttons(at):
-    return [b for b in at.button if (b.key or "").startswith("crit_")]
+def _nav(at, page):
+    at.button(key=f"nav_{page}").click().run()
+    assert not at.exception
+    return at
 
+
+# ── navigation / information architecture ───────────────────────────────────
+
+def test_every_page_renders_and_updates_the_url(app):
+    at = app([OLD_RECORD, NEW_RECORD])
+    assert not at.exception and "Discover jobs" in _html(at)
+    for page, heading in [("jobs", "Jobs"), ("companies", "Companies"), ("monitoring", "Monitoring"),
+                          ("email", "Email &amp; Notifications"), ("settings", "Settings"), ("home", "Discover jobs")]:
+        _nav(at, page)
+        assert f'<h1 class="page-title">{heading}</h1>' in _html(at)
+        assert at.query_params["page"] == [page]
+
+
+def test_home_is_only_about_jobs(app):
+    """Company management, monitoring detail and email settings live on
+    their own pages, not on Home."""
+    at = app([NEW_RECORD])
+    keys = {b.key for b in at.button}
+    assert not keys & {"btn_add", "btn_save_email", "btn_test", "btn_clear_all", "btn_theme"}
+    assert not [t for t in at.text_input if t.key in ("new_name", "new_url", "email_input")]
+    html = _html(at)
+    assert "Latest jobs" in html and "Graduate Software Engineer" in html
+
+
+def test_deep_link_to_a_company_page(app):
+    at = app([], query={"page": "companies", "company": "sanofi"})
+    assert not at.exception
+    html = _html(at)
+    assert '<h1 class="detail-title">Sanofi</h1>' in html and "Portal health" in html
+
+
+def test_unknown_deep_links_fall_back_safely(app):
+    at = app([], query={"page": "nope", "job": "missing"})
+    assert not at.exception and "Discover jobs" in _html(at)
+    at = app([], query={"page": "companies", "company": "missing"})
+    assert not at.exception and '<h1 class="page-title">Companies</h1>' in _html(at)
+
+
+# ── job list rendering (real data, escaping, legacy records) ────────────────
 
 def test_renders_old_and_new_records(app):
     at = app([OLD_RECORD, NEW_RECORD])
     assert not at.exception
     html = _html(at)
-    assert "2 postings" in html
     assert "Junior Associate - Evidence Synthesis" in html          # old record, no category
+    assert "Keyword match" in html                                 # labelled honestly, not "verified"
     assert "Graduate Software Engineer" in html and "Entry level" in html
     assert "Pune · India" in html
     assert 'href="https://pwc.example/job/2?src=a&amp;x=1"' in html  # escaped query string
-    # newest first
-    assert html.index("Graduate Software Engineer") < html.index("Junior Associate")
+    assert html.index("Graduate Software Engineer") < html.index("Junior Associate")  # newest first
+    _nav(at, "jobs")
+    assert "2 jobs found by the tracker · 2 active · 0 dismissed" in _html(at)
 
 
 def test_empty_state(app):
     at = app([])
     assert not at.exception
     assert "No alerts yet" in _html(at)
-    assert "0 postings" in _html(at)
-    assert not [b for b in at.button if b.key == "btn_clear_all"]    # nothing to page or clear
+    _nav(at, "settings")
+    assert at.button(key="btn_clear_all").disabled                 # nothing to dismiss
 
 
 def test_missing_and_malformed_fields(app):
-    at = app([{"title": "Graduate Trainee"}, {}, "junk", {"title": None, "url": "javascript:alert(1)"}])
+    at = app([{"title": "Graduate Trainee"}, {}, "junk", {"title": None, "url": "javascript:alert(1)"}], page="jobs")
     assert not at.exception
     html = _html(at)
-    assert "3 postings" in html                       # non-dict junk skipped
+    assert "3 jobs found by the tracker" in html                    # non-dict junk skipped
     assert "Untitled posting" in html
     assert "javascript:" not in html
     assert "No link" in html
@@ -112,26 +164,42 @@ def test_special_characters_escaped(app):
     assert "Johnson &amp; Johnson &lt;India&gt;" in html
 
 
+# ── dismiss / restore / clear (dedup history is never deleted) ───────────────
+
 def test_duplicate_ids_do_not_crash_and_remove_only_the_selected(app):
     a = {**OLD_RECORD, "id": "Sanofi_Associate_–_Evidence_Synthesis,_C", "url": "https://x/R1",
          "title": "Associate – Evidence Synthesis, Clinical Outcomes"}
     b = {**a, "url": "https://x/R2", "title": "Associate – Evidence Synthesis, Clinical Oncology"}
     at = app([a, b])
-    assert not at.exception and _dismiss_key(a) != _dismiss_key(b)
-    at.button(key=_dismiss_key(b)).click().run()
+    assert not at.exception and _key("dismiss", a) != _key("dismiss", b)
+    at.button(key=_key("dismiss", b)).click().run()
     assert not at.exception
     seen = _seen(at)
     assert len(seen) == 2                               # records kept for dedup
     assert [j.get("dismissed", False) for j in seen] == [False, True]
-    assert "1 posting " in _html(at) and "Removed here, but not saved permanently" in _html(at)
+    assert "Removed here, but not saved permanently" in _html(at)
+    _nav(at, "jobs")
+    assert "1 active · 1 dismissed" in _html(at)
+
+
+def test_dismissed_jobs_can_be_restored_without_re_emailing(app):
+    at = app([{**OLD_RECORD, "dismissed": True}, NEW_RECORD], page="jobs")
+    at.pills(key="jobs_tab").set_value("dismissed").run()
+    assert "Junior Associate - Evidence Synthesis" in _html(at)
+    at.button(key=_key("restore", OLD_RECORD)).click().run()
+    assert not at.exception
+    seen = _seen(at)
+    assert "dismissed" not in seen[0] and seen[0]["notified"] is True   # still counts as emailed
+    assert "2 active · 0 dismissed" in _html(at)
 
 
 def test_clear_all_hides_but_keeps_dedup_history(app):
-    at = app([OLD_RECORD, NEW_RECORD])
+    at = app([OLD_RECORD, NEW_RECORD], page="settings")
     at.button(key="btn_clear_all").click().run()
     assert not at.exception
     seen = _seen(at)
     assert len(seen) == 2 and all(j["dismissed"] for j in seen)
+    _nav(at, "home")
     assert "No alerts yet" in _html(at)
     # the scraper still treats them as seen -> no duplicate emails
     assert {(j["company"], j["title"]) for j in seen} == {("Sanofi", OLD_RECORD["title"]),
@@ -141,45 +209,217 @@ def test_clear_all_hides_but_keeps_dedup_history(app):
 def test_pagination_counts(app):
     jobs = [{**NEW_RECORD, "id": f"j{i}", "url": f"https://x/{i}", "title": f"Graduate {i}"}
             for i in range(23)]
-    at = app(jobs)
-    assert "1–10 of 23" in _html(at)
+    at = app(jobs, page="jobs")
+    assert "1–12 of 23" in _html(at)
     at.button(key="alerts_next").click().run()
-    at.button(key="alerts_next").click().run()
-    assert "21–23 of 23" in _html(at)
+    assert "13–23 of 23" in _html(at)
     assert at.button(key="alerts_next").disabled
+    at = app(jobs)
+    assert "Showing 8 of 23 jobs" in _html(at)          # Home shows a short list + link to Jobs
+    at.button(key="btn_all_jobs").click().run()
+    assert at.query_params["page"] == ["jobs"]
 
+
+# ── filters ──────────────────────────────────────────────────────────────────
+
+def test_search_location_category_company_and_sort(app):
+    at = app([OLD_RECORD, NEW_RECORD, FRESHER_RECORD])
+    assert not at.exception
+    at.selectbox(key="h_cat").set_value("FRESHER").run()
+    html = _html(at)
+    assert "Trainee Analyst" in html and "Graduate Software Engineer" not in html
+    at.selectbox(key="h_cat").set_value("legacy").run()
+    html = _html(at)
+    assert "Junior Associate - Evidence Synthesis" in html and "Trainee Analyst" not in html
+    at.selectbox(key="h_cat").set_value("all").run()
+    at.selectbox(key="h_loc").set_value("Pune").run()
+    html = _html(at)
+    assert "Graduate Software Engineer" in html and "Trainee Analyst" not in html
+    at.selectbox(key="h_loc").set_value("All locations").run()
+    at.selectbox(key="h_co").set_value("MetLife").run()
+    assert "Trainee Analyst" in _html(at) and "Graduate Software Engineer" not in _html(at)
+    at.button(key="h_clear").click().run()
+    at.selectbox(key="h_sort").set_value("old").run()
+    html = _html(at)
+    assert html.index("Junior Associate") < html.index("Trainee Analyst") < html.index("Graduate Software Engineer")
+    at.text_input(key="h_q").set_value("no such role").run()
+    assert "No jobs match these filters" in _html(at)
+    at.button(key="btn_reset_filters").click().run()
+    assert not at.exception
+    assert at.text_input(key="h_q").value == "" and at.selectbox(key="h_sort").value == "new"
+    assert "Trainee Analyst" in _html(at) and "Graduate Software Engineer" in _html(at)
+
+
+def test_filter_options_come_from_the_data(app):
+    at = app([OLD_RECORD, NEW_RECORD, FRESHER_RECORD])
+    assert at.selectbox(key="h_loc").options == ["All locations", "Hyderabad", "India", "Pune"]
+    assert at.selectbox(key="h_co").options == ["All companies", "MetLife", "PwC", "Sanofi"]
+
+
+# ── job details ──────────────────────────────────────────────────────────────
+
+def test_job_details_show_real_fields_only(app):
+    at = app([FRESHER_RECORD, OLD_RECORD])
+    at.button(key=_key("crit", FRESHER_RECORD)).click().run()
+    assert not at.exception
+    html = _html(at)
+    assert '<h1 class="detail-title">Trainee Analyst</h1>' in html
+    assert "Why this matched" in html and "fresher signal: &#x27;Freshers welcome&#x27;" in html
+    assert "Hyderabad · India" in html and "Email alert" in html
+    assert at.query_params["page"] == ["jobs"] and at.query_params["job"]
+    at.button(key="btn_back").click().run()
+    assert "Discover jobs" in _html(at)                  # back to where it was opened
+
+    at.button(key=_key("crit", OLD_RECORD)).click().run()
+    html = _html(at)
+    assert "No classifier trace was recorded for this job" in html
+    assert "Not captured for this posting" in html        # no invented location
+    at.button(key="detail_dismiss").click().run()
+    assert not at.exception and _seen(at)[1].get("dismissed") is True
+
+
+def test_job_detail_links_to_company(app):
+    at = app([OLD_RECORD])
+    at.button(key=_key("crit", OLD_RECORD)).click().run()
+    at.button(key="btn_job_company").click().run()
+    assert not at.exception
+    assert '<h1 class="detail-title">Sanofi</h1>' in _html(at)
+    assert "Workday API, Playwright fallback" in _html(at)       # real scraper config
+
+
+# ── companies ────────────────────────────────────────────────────────────────
+
+def test_add_and_remove_company(app):
+    at = app([], page="companies")
+    at.button(key="btn_open_add").click().run()
+    assert "Add a company" in _html(at) and at.query_params["view"] == ["add"]
+    at.text_input(key="new_name").set_value("Infosys & Co <x>").run()
+    at.text_input(key="new_url").set_value("javascript:alert(1)").run()
+    at.button(key="btn_add").click().run()
+    assert "starting with https://" in _html(at)
+    assert at.text_input(key="new_name").value == "Infosys & Co <x>"   # values kept after an error
+    at.text_input(key="new_url").set_value("https://careers.infosys.com").run()
+    at.text_input(key="new_website").set_value("https://www.infosys.com").run()
+    at.button(key="btn_add").click().run()
+    assert not at.exception
+    companies = _companies(at)
+    added = companies[-1]
+    assert added["name"] == "Infosys & Co <x>" and added["url"] == "https://careers.infosys.com"
+    assert added["website"] == "https://www.infosys.com" and added["status"] == "unknown"
+    html = _html(at)
+    assert '<h1 class="page-title">Companies</h1>' in html          # returned to the list
+    assert "Infosys &amp; Co &lt;x&gt;" in html and "New</span>" in html and "Pending" in html
+
+    view_key = "view_c_" + hashlib.sha1(added["id"].encode()).hexdigest()[:16]
+    at.button(key=view_key).click().run()
+    html = _html(at)
+    assert 'href="https://careers.infosys.com"' in html and 'href="https://www.infosys.com"' in html
+    at.button(key="btn_remove_company").click().run()
+    assert "Stop tracking <b>Infosys &amp; Co &lt;x&gt;</b>?" in _html(at)   # asks first
+    at.button(key="btn_remove").click().run()
+    assert not at.exception
+    assert [c["name"] for c in _companies(at)] == [c["name"] for c in companies[:-1]]
+    assert at.query_params["page"] == ["companies"] and "company" not in at.query_params
+
+
+def test_add_company_validation(app):
+    first = json.loads((REPO / "companies.json").read_text("utf-8"))[0]
+    at = app([], page="companies")
+    at.button(key="btn_open_add").click().run()
+    at.text_input(key="new_name").set_value(first["name"].upper()).run()
+    at.text_input(key="new_url").set_value("https://example.com/careers").run()
+    at.button(key="btn_add").click().run()
+    assert "is already tracked" in _html(at)
+    at.text_input(key="new_name").set_value("Brand New").run()
+    at.text_input(key="new_url").set_value(first["url"] + "/").run()
+    at.button(key="btn_add").click().run()
+    assert "That career page is already tracked" in _html(at)
+    at.text_input(key="new_url").set_value("https://brand.example/jobs").run()
+    at.text_input(key="new_website").set_value("brand.example").run()
+    at.button(key="btn_add").click().run()
+    assert "website must be a full URL" in _html(at)
+    assert len(_companies(at)) == len(json.loads((REPO / "companies.json").read_text("utf-8")))
+
+
+def test_company_search(app):
+    at = app([], page="companies")
+    at.text_input(key="co_q").set_value("sanofi").run()
+    html = _html(at)
+    assert "jobs.sanofi.com" in html and "jobs.metlife.com" not in html
+
+
+def test_company_with_empty_name_does_not_crash(app):
+    at = app([])
+    (at.tmp_path / "companies.json").write_text(json.dumps([{"id": "x", "name": "", "url": "ftp://bad"}]))
+    _nav(at, "companies")
+    assert "Unnamed" in _html(at)
+    assert "Invalid career page URL" in _html(at)
+
+
+def test_statuses_come_from_scraper_data(app):
+    now = datetime.now(timezone.utc)
+    at = app([])
+    (at.tmp_path / "companies.json").write_text(json.dumps([
+        {"id": "a", "name": "Alpha", "url": "https://a.example", "status": "active", "last_checked": now.isoformat()},
+        {"id": "b", "name": "Beta", "url": "https://b.example", "status": "broken", "last_checked": now.isoformat()},
+        {"id": "c", "name": "Gamma", "url": "https://c.example", "status": "unknown", "last_checked": ""},
+        {"id": "d", "name": "Delta", "url": "https://d.example", "status": "active",
+         "last_checked": (now - timedelta(hours=10)).isoformat()},
+    ]))
+    _nav(at, "monitoring")
+    html = _html(at)
+    for label in ("Healthy", "Failing", "Pending", "Delayed"):
+        assert f"<i></i>{label}</span>" in html
+    assert "1 portal failing" in html and "Last scan failed" in html and "Not scanned yet" in html
+    assert "Disabled" not in html                          # no invented states
+    _nav(at, "companies")
+    at.pills(key="co_status").set_value("failing").run()
+    assert "Beta" in _html(at) and "Alpha" not in _html(at)
+
+
+# ── scans ────────────────────────────────────────────────────────────────────
 
 def test_refresh_reloads_data_without_restart(app):
     at = app([OLD_RECORD])
-    assert "1 posting " in _html(at)
-    # the scraper commits new data while the app is running
+    assert "Graduate Software Engineer" not in _html(at)
     (at.tmp_path / "seen_jobs.json").write_text(json.dumps([OLD_RECORD, NEW_RECORD]))
     at.button(key="btn_refresh").click().run()
     assert not at.exception
-    assert "2 postings" in _html(at)
+    assert "Graduate Software Engineer" in _html(at)
     assert "Showing the latest data" in _html(at)
 
 
 def test_run_check_without_token_is_friendly(app):
-    at = app([])
+    at = app([], page="monitoring")
     at.button(key="btn_run_check").click().run()
     assert not at.exception
     assert "no GitHub token is configured" in _html(at)
 
 
+def test_metrics_are_computed_from_real_data(app):
+    at = app([OLD_RECORD, NEW_RECORD])
+    n = len(json.loads((REPO / "companies.json").read_text("utf-8")))
+    html = _html(at)
+    assert "Companies monitored" in html and f'<div class="v">{n}</div>' in html
+    assert "Verified" not in html                          # no verification concept exists
+    assert "99.8" not in html and "712" not in html and "candidates clicked" not in html
+
+
+# ── email & notifications ────────────────────────────────────────────────────
+
 def test_test_mail_errors_are_friendly(app):
-    at = app([])
+    at = app([], page="email")
     assert "Not sent this session" in _html(at)
     at.button(key="btn_test").click().run()
     assert not at.exception
     html = _html(at)
     assert "Email isn't configured for this app" in html
     assert "GMAIL_APP_PASSWORD" not in html and "RuntimeError" not in html
-    assert "Failed " in html                              # delivery status reflects the real outcome
+    assert "Failed at" in html
 
 
 def test_toast_is_shown_once_without_blocking(app):
-    at = app([])
+    at = app([], page="email")
     at.text_input(key="email_input").set_value("not-an-email").run()
     at.button(key="btn_save_email").click().run()
     assert "Enter a valid email address" in _html(at)
@@ -188,64 +428,34 @@ def test_toast_is_shown_once_without_blocking(app):
 
 
 def test_save_email_without_token_saves_locally(app):
-    at = app([])
+    at = app([], page="email")
+    assert "Alerts on" in _html(at) and "me@example.com" in _html(at)
     at.text_input(key="email_input").set_value("new@example.com").run()
     at.button(key="btn_save_email").click().run()
     assert not at.exception
     assert json.loads((at.tmp_path / "settings.json").read_text("utf-8"))["recipient_email"] == "new@example.com"
     assert "not saved permanently" in _html(at)
-    assert "No GitHub token" in _html(at)                # honest sync status, no secrets shown
+    assert "No GitHub token" in _html(at)
 
 
-def test_add_and_remove_company(app):
-    at = app([])
-    at.text_input(key="new_name").set_value("Infosys & Co <x>").run()
-    at.text_input(key="new_url").set_value("javascript:alert(1)").run()
-    at.button(key="btn_add").click().run()
-    assert "starting with https://" in _html(at)
-    # the form keeps its values after a validation error; fix the URL and retry
-    assert at.text_input(key="new_name").value == "Infosys & Co <x>"
-    at.text_input(key="new_url").set_value("https://careers.infosys.com").run()
-    at.button(key="btn_add").click().run()
-    assert not at.exception
-    companies = json.loads((at.tmp_path / "companies.json").read_text("utf-8"))
-    assert companies[-1]["name"] == "Infosys & Co <x>"
-    assert companies[-1]["url"] == "https://careers.infosys.com" and companies[-1]["status"] == "unknown"
+def test_delivery_summary_uses_notified_flags(app):
+    at = app([OLD_RECORD, NEW_RECORD], page="email")
     html = _html(at)
-    assert "Infosys &amp; Co &lt;x&gt;" in html
-    assert 'href="https://careers.infosys.com"' in html   # portal links to the real career page
-    assert "Waiting" in html                              # not checked yet
-    assert at.text_input(key="new_name").value == ""      # form cleared after adding
-
-    at.button(key="btn_toggle_remove").click().run()
-    at.checkbox(key=f"rm_{companies[-1]['id']}").check().run()
-    at.button(key="btn_remove").click().run()
-    assert not at.exception
-    after = json.loads((at.tmp_path / "companies.json").read_text("utf-8"))
-    assert [c["name"] for c in after] == [c["name"] for c in companies[:-1]]
+    assert "Covered a job found Jul 15, 13:45 UTC" in html   # only OLD_RECORD was emailed
+    assert "1 — sent after the next check" in html           # NEW_RECORD is still pending
 
 
-def test_company_with_empty_name_does_not_crash(app, tmp_path):
-    at = app([])
-    (at.tmp_path / "companies.json").write_text(json.dumps([{"id": "x", "name": "", "url": "ftp://bad"}]))
-    at.run()
-    assert not at.exception
-    assert "Unnamed" in _html(at)
-    assert "Invalid career page URL" in _html(at)
+# ── settings ─────────────────────────────────────────────────────────────────
+
+def test_theme_toggle_and_engine_facts(app):
+    at = app([], page="settings")
+    assert "Workday API for Sanofi" in _html(at)              # read-only facts from scraper.py
+    at.button(key="btn_theme").click().run()
+    assert not at.exception and at.session_state.dark_mode is True
+    assert "#0b1020" in _html(at)
 
 
-def test_company_states_come_from_scraper_status(app):
-    at = app([])
-    (at.tmp_path / "companies.json").write_text(json.dumps([
-        {"id": "a", "name": "Alpha", "url": "https://a.example", "status": "active"},
-        {"id": "b", "name": "Beta", "url": "https://b.example", "status": "broken"},
-        {"id": "c", "name": "Gamma", "url": "https://c.example", "status": "unknown"},
-    ]))
-    at.run()
-    html = _html(at)
-    assert ">Active<" in html.replace("</span>Active<", ">Active<") and "Error" in html and "Waiting" in html
-    assert "2 of 3 career pages responding" in html and "67%" in html and "Degraded" in html
-
+# ── GitHub sync ──────────────────────────────────────────────────────────────
 
 def test_stale_local_copy_is_refreshed_from_github_and_merged_on_dismiss(app, monkeypatch):
     """The production bug: the app's checkout is hours old. It must show the
@@ -263,96 +473,16 @@ def test_stale_local_copy_is_refreshed_from_github_and_merged_on_dismiss(app, mo
 
     at = app([OLD_RECORD])                                  # local copy is stale
     assert not at.exception
-    assert "2 postings" in _html(at)                        # remote data shown
+    assert "Graduate Software Engineer" in _html(at)        # remote data shown
     # displaying doesn't rewrite the deployed checkout
     assert json.loads((at.tmp_path / "seen_jobs.json").read_text("utf-8")) == [OLD_RECORD]
 
-    at.button(key=_dismiss_key(OLD_RECORD)).click().run()   # the old record (listed second)
+    at.button(key=_key("dismiss", OLD_RECORD)).click().run()
     assert not at.exception
     remote = repo.data("seen_jobs.json")
     assert [j["title"] for j in remote] == [OLD_RECORD["title"], NEW_RECORD["title"]]
     assert [j.get("dismissed", False) for j in remote] == [True, False]
     assert repo.commits == ["chore: dismiss 1 alert(s)"]
-    assert "Removed 1 alert(s)" in _html(at) and "1 posting " in _html(at)
+    assert "Removed 1 alert(s)" in _html(at)
     # a successful save brings the local copy up to date with GitHub
     assert json.loads((at.tmp_path / "seen_jobs.json").read_text("utf-8")) == remote
-
-
-def test_search_and_category_filters(app):
-    at = app([OLD_RECORD, NEW_RECORD, FRESHER_RECORD])
-    assert not at.exception
-    assert at.pills(key="job_filter").value == "all"
-    at.pills(key="job_filter").set_value("FRESHER").run()
-    html = _html(at)
-    assert "Trainee Analyst" in html and "Graduate Software Engineer" not in html
-    assert "1–1 of 1" in html
-    at.pills(key="job_filter").set_value("Sanofi").run()              # company chip
-    html = _html(at)
-    assert "Junior Associate - Evidence Synthesis" in html and "Trainee Analyst" not in html
-    at.pills(key="job_filter").set_value("all").run()
-    at.text_input(key="job_search").set_value("pune").run()           # matches location
-    html = _html(at)
-    assert "Graduate Software Engineer" in html and "Trainee Analyst" not in html
-    at.text_input(key="job_search").set_value("no such role").run()
-    assert "No matching jobs in this view" in _html(at)
-    at.button(key="btn_reset_filters").click().run()
-    assert not at.exception
-    assert at.text_input(key="job_search").value == ""
-    assert "Trainee Analyst" in _html(at) and "Graduate Software Engineer" in _html(at)
-
-
-def test_filter_chip_counts_use_real_categories(app):
-    at = app([OLD_RECORD, NEW_RECORD, FRESHER_RECORD])
-    labels = " | ".join(at.pills(key="job_filter").proto.options[i].content
-                        for i in range(len(at.pills(key="job_filter").proto.options)))
-    assert "All (3)" in labels and "Fresher only (1)" in labels and "Entry level (1)" in labels
-    assert "Sanofi (1)" in labels and "PwC (1)" in labels
-
-
-def test_reason_and_badges(app):
-    at = app([OLD_RECORD, FRESHER_RECORD])
-    html = _html(at)
-    assert "Freshers welcome" in html                     # classifier reason shown
-    assert "Hyderabad · India" in html
-    # legacy record: no invented reason, just where it was posted
-    assert "Direct posting on sanofi.example" in html
-    assert "Emailed" in html and "Email pending" in html  # real notified flag
-
-
-def test_view_criteria_dialog(app):
-    at = app([FRESHER_RECORD, OLD_RECORD])
-    crit = _crit_buttons(at)
-    assert len(crit) == 2
-    crit[0].click().run()                                 # newest first -> OLD_RECORD
-    assert not at.exception
-    assert "no eligibility trace is available" in _html(at)
-
-    at = app([FRESHER_RECORD])
-    _crit_buttons(at)[0].click().run()
-    assert not at.exception
-    html = _html(at)
-    assert "Classifier reason trace" in html and "fresher signal: &#x27;Freshers welcome&#x27;" in html
-
-
-def test_metrics_are_computed_from_real_data(app):
-    at = app([OLD_RECORD, NEW_RECORD])
-    html = _html(at)
-    n = len(json.loads((REPO / "companies.json").read_text("utf-8")))
-    assert f"{n} Portals Tracked" in html
-    assert "career pages responding" in html
-    # no placeholder numbers from the design mock-up
-    assert "99.8" not in html and "712" not in html and "candidates clicked" not in html
-
-
-def test_duplicate_company_rejected_and_theme_toggle(app):
-    at = app([])
-    first = json.loads((REPO / "companies.json").read_text("utf-8"))[0]["name"]
-    at.text_input(key="new_name").set_value(first.upper()).run()
-    at.text_input(key="new_url").set_value("https://example.com/careers").run()
-    at.button(key="btn_add").click().run()
-    assert "is already tracked" in _html(at)
-    assert len(json.loads((at.tmp_path / "companies.json").read_text("utf-8"))) == \
-        len(json.loads((REPO / "companies.json").read_text("utf-8")))
-    at.button(key="btn_theme").click().run()
-    assert not at.exception and at.session_state.dark_mode is True
-    assert "#0e1220" in _html(at)                         # dark tokens applied
