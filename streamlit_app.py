@@ -340,7 +340,8 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .brand img { width: 32px; height: 32px; border-radius: 9px; display: block; }
 .brand .n { font-size: 15px; line-height: 20px; font-weight: 650; letter-spacing: -0.01em; color: var(--text); }
 .brand .s { font-size: 12px; line-height: 16px; color: var(--muted); }
-.nav-group { font-size: 11.5px; line-height: 16px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 16px 12px 6px; }
+.nav-group { font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); padding: 16px 12px 6px; }
+.nav-group.first { padding-top: 4px; }
 [class*="st-key-nav_"] [data-testid^="stBaseButton"] {
   width: 100% !important; justify-content: flex-start !important; min-height: 38px !important; padding: 0 12px !important;
   border-radius: 8px !important; color: var(--text-2) !important; background: transparent !important; border: none !important; gap: 10px;
@@ -383,6 +384,7 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   :root { --sidebar-w: 72px; }
   .brand { justify-content: center; padding: 0 0 16px; } .brand > div { display: none; }
   .nav-group { font-size: 0; padding: 10px 0 4px; border-top: 1px solid var(--border); margin: 8px 8px 0; }
+  .nav-group.first { display: none; }
   [class*="st-key-nav_"] [data-testid^="stBaseButton"] { justify-content: center !important; padding: 0 !important; }
   [class*="st-key-nav_"] [data-testid^="stBaseButton"] > div { justify-content: center !important; }
   [class*="st-key-nav_"] p { display: none !important; }
@@ -721,8 +723,7 @@ with st.sidebar:
     st.html(f"""<div class="brand">{f'<img src="{logo}" alt="">' if logo else ''}
       <div><div class="n">Fresher Job Tracker</div><div class="s">Entry-level job radar</div></div></div>""")
     for gi, (group, items) in enumerate(NAV_GROUPS):
-        if gi:
-            st.html(f'<div class="nav-group">{group}</div>')
+        st.html(f'<div class="nav-group{" first" if gi == 0 else ""}">{group}</div>')
         for key in items:
             label, icon = PAGES[key]
             st.button(label, key=f"nav_{key}", icon=icon, type="tertiary", use_container_width=True,
