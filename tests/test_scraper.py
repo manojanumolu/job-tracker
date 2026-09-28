@@ -229,10 +229,31 @@ def test_jsonld_location_malformed_does_not_crash(posting):
 def test_pick_posting_prefers_matching_title():
     postings = [{"title": "Senior Engineer"}, {"title": "Graduate Engineer"}, "junk"]
     assert scraper._pick_posting(postings, "Graduate Engineer")["title"] == "Graduate Engineer"
-    assert scraper._pick_posting(postings, "Other")["title"] == "Senior Engineer"
+    # several postings, none ours: don't guess
+    assert scraper._pick_posting(postings, "Other") is None
+    assert scraper._pick_posting([{"title": "X"}], "Other")["title"] == "X"
     assert scraper._pick_posting(["junk"], "x") is None
 
 
 def test_same_page_ignores_fragment_and_trailing_slash():
     assert scraper._same_page("https://a.com/careers#top", "https://a.com/careers/")
     assert not scraper._same_page("https://a.com/careers/job/1", "https://a.com/careers")
+
+
+def test_workday_ambiguous_titles_decided_by_description(monkeypatch):
+    postings = [
+        {"title": "Associate Software Engineer", "locationsText": "Hyderabad", "externalPath": "/job/fresh"},
+        {"title": "Associate Analyst", "locationsText": "Hyderabad", "externalPath": "/job/mentor"},
+        {"title": "Software Engineer I", "locationsText": "Pune", "externalPath": "/job/exp"},
+        {"title": "Intern", "locationsText": "Pune", "externalPath": "/job/none"},
+    ]
+    info = lambda desc: {"jobPostingInfo": {"jobDescription": desc, "location": "Hyderabad",
+                                            "country": {"descriptor": "India"}}}
+    details = {
+        "/job/fresh": info("<p>Fresh graduates are encouraged to apply.</p><p>No prior professional experience required.</p>"),
+        "/job/mentor": info("<ul><li>Mentor recent graduates joining the team</li></ul>"),
+        "/job/exp": info("<p>Open to recent graduates.</p><p>Requires 2 years of professional experience.</p>"),
+        "/job/none": info("<p>Work on exciting projects.</p>"),
+    }
+    jobs = _run_workday(monkeypatch, postings, details)
+    assert [(j["title"], j["category"]) for j in jobs] == [("Associate Software Engineer", "FRESHER")]

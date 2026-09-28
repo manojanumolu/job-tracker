@@ -28,6 +28,10 @@ LISTING = """<html><body>
 <a href="jobs/noise.html"><h3>Data Analyst</h3><p>Noida, India</p></a>
 <a href="jobs/redirect.html"><h3>Graduate Consultant</h3><p>Mumbai, India</p></a>
 <a href="#"><h3>Trainee Associate</h3><p>Delhi, India</p></a>
+<a href="jobs/gradexp.html"><h3>Graduate Engineer</h3><p>Kochi, India</p></a>
+<a href="jobs/cardexp.html"><h3>Associate Engineer</h3><p>Pune, India</p><p>2-5 Yrs</p></a>
+<a href="jobs/assoc.html"><h3>Associate Developer</h3><p>Indore, India</p></a>
+<a href="jobs/related.html"><h3>Associate Tester</h3><p>Jaipur, India</p></a>
 <a href="jobs/london.html"><h3>Graduate Analyst London</h3><p>London</p></a>
 <a href="/blog/meet-priya"><h3>Meet Priya: Associate in Pune</h3></a>
 </body></html>"""
@@ -56,6 +60,20 @@ PAGES = {
     # generic <main> with a related-jobs widget: must not be used as description
     "jobs/noise.html": """<main><h1>Data Analyst</h1><aside>Similar: Graduate Trainee, freshers welcome</aside>
         """ + LONG + """</main>""",
+    # card says Graduate, detail says 2 years: detail wins
+    "jobs/gradexp.html": """<script type="application/ld+json">{"@type":"JobPosting","title":"Graduate Engineer",
+        "description":"<p>Minimum 2 years of experience in embedded C.</p>",
+        "jobLocation":{"address":{"addressLocality":"Kochi","addressCountry":"IN"}}}</script>""",
+    # experience on the card itself: rejected without fetching the detail page
+    "jobs/cardexp.html": "<p>unused</p>",
+    # ambiguous title, evidence only in the (header-then-body) description container
+    "jobs/assoc.html": f"""<div class="job-description-header">Job description</div>
+        <div class="job-description-body">Fresh graduates are encouraged to apply.
+        No prior professional experience required.{LONG}</div>""",
+    # two unrelated JSON-LD postings, neither ours: must not borrow their text
+    "jobs/related.html": """<script type="application/ld+json">[{"@type":"JobPosting","title":"Graduate Trainee",
+        "description":"Freshers welcome"},{"@type":"JobPosting","title":"Graduate Analyst",
+        "description":"New grads welcome"}]</script>""",
     # expired posting bouncing back to the listing
     "jobs/redirect.html": """<script>location.replace('/index.html')</script>""",
 }
@@ -108,7 +126,12 @@ def test_playwright_end_to_end(site):
     # No readable detail -> judged on the card title: "#" link, malformed
     # JSON-LD, redirect back to the listing.
     assert set(by_title) == {"Associate Analyst", "Graduate Engineer Trainee", "Graduate Analyst",
-                             "Trainee Associate", "Graduate Consultant"}
+                             "Trainee Associate", "Graduate Consultant", "Associate Developer"}
+    # detail requirement overrides the card's "Graduate"; card "2-5 Yrs" is final;
+    # unrelated JSON-LD postings are not used as this job's description
+    assert "Graduate Engineer" not in by_title
+    assert "Associate Engineer" not in by_title and "/jobs/cardexp.html" not in _Handler.requested
+    assert "Associate Tester" not in by_title and "/jobs/related.html" in _Handler.requested
     assert by_title["Associate Analyst"]["category"] == "FRESHER"
     # relative URLs resolved, fragments preserved on the stored link
     assert by_title["Associate Analyst"]["url"].endswith("/jobs/fresher.html")

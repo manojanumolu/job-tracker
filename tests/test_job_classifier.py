@@ -369,5 +369,134 @@ def test_audit_parse_ignores_unrelated_numbers(text):
 def test_bare_years_count_in_titles(title, expected):
     reqs = parse_experience_requirements(title, title=True)
     assert [r.min_years for r in reqs] == [expected]
-    # ...but not in descriptions, where they're often durations
-    assert parse_experience_requirements(title) == []
+    quantity = title.split(" - ")[-1]
+    # a line that is only the quantity (card field "2 yrs") is experience too
+    assert [r.min_years for r in parse_experience_requirements(quantity)] == [expected]
+    # ...but inside a description sentence a bare number is often a duration
+    assert parse_experience_requirements(f"You will spend {quantity} on the team.") == []
+
+
+# ---------------------------------------------------------------------------
+# Adversarial experience-format audit: every phrasing must reject even when
+# the posting also carries an entry-level word.
+# ---------------------------------------------------------------------------
+
+EXPERIENCE_PHRASES = [
+    "2 years", "2+ years", "2-3 years", "2–3 years", "2 to 3 years", "two years",
+    "two to three years", "2 yrs", "2 yr", "24 months of experience", "18+ months",
+    "minimum of two years", "minimum 2 years", "at least two years", "2 years minimum",
+    "experience of 2 years", "experience required: 2 years", "required experience: 2 years",
+    "relevant experience: 2 years", "professional experience: 2 years",
+    "hands-on experience: 2 years", "2 years relevant experience", "2 years of relevant experience",
+    "2 years' experience", "2 year's experience", "2-year experience",
+    "2+ years of professional experience", "2+ years in software development",
+    "2 years in a similar role", "candidates with 2 years experience",
+    "one year of experience", "two years of experience", "three years of experience",
+    "four years of experience", "five years of experience",
+    "2 years Java experience", "3 years Python/C++ experience", "2+ years React experience",
+    "2 years of software development experience",
+    "2 or more years of experience", "more than 2 years of experience", "2 years and above",
+    "two plus years of experience", "2Y+ experience", "Experience: Min 2 Yrs", "Exp: 2 Yrs",
+    "Work Experience: 1 Year", "1 yr exp", "Experience Range: 2 - 5 Years", "2-5 Yrs.",
+    "A minimum of one (1) year of experience", "At least 1 (one) year of experience",
+    "Experience (Years): 2", "Experience in years: 3", "Minimum Experience 2 Years",
+    "You bring 3 years in backend engineering", "You should have 2 years working in a similar role",
+    "6 months of experience required", "12+ months of experience", "1.5+ years",
+]
+ENTRY_WORDS = ["Graduate", "Fresher", "Entry-Level", "Trainee", "New Grad", "Associate", "Junior"]
+
+
+@pytest.mark.parametrize("phrase", EXPERIENCE_PHRASES)
+@pytest.mark.parametrize("word", ENTRY_WORDS)
+def test_experience_phrases_override_entry_words(phrase, word):
+    in_description = classify_job(f"{word} Software Engineer", phrase)
+    in_title = classify_job(f"{word} Software Engineer — {phrase}")
+    assert in_description.category == Category.EXPERIENCED, in_description
+    assert in_title.category == Category.EXPERIENCED, in_title
+
+
+def test_experience_overrides_fresher_wording_elsewhere_in_description():
+    result = classify_job(
+        "Graduate Software Engineer",
+        "Recent graduates are encouraged to apply.\nMinimum 2 years of experience in audit.",
+    )
+    assert result.category == Category.EXPERIENCED
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["2026 graduate", "2025 batch", "2-year contract", "6-month internship",
+     "10-year company anniversary", "company has 20 years of experience",
+     "The company has 5 years of experience in fintech", "Our team has 8 years of experience",
+     "celebrating 10 years", "2 years of free training", "a 2 year MBA",
+     "Graduates of 2024 and 2025", "Age 18-25 years", "Probation period of 6 months",
+     "This 2-year program", "Duration: 6 months", "Duration: 2 years",
+     "Internship duration: 3-6 months", "Bond: 2 years", "Service agreement: 2 years",
+     "founded 25 years ago", "In the past 3 years, we have grown",
+     "for the next 2 years you will rotate", "After 1 year you will be converted",
+     "You will spend 2 years in our rotation programme", "6 months", "24 months"],
+)
+def test_unrelated_numbers_stay_safe(text):
+    assert parse_experience_requirements(text) == []
+
+
+# ---------------------------------------------------------------------------
+# Ambiguous titles decided by the description
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "title, description",
+    [
+        ("Associate Software Engineer",
+         "Fresh graduates are encouraged to apply. No prior professional experience required."),
+        ("Intern", "Students and recent graduates welcome. No experience required."),
+        ("Software Engineer I", "Open to recent graduates / 0-1 years."),
+        ("Junior Developer", "Fresh graduates welcome."),
+        ("Associate", "This role does not require prior experience."),
+        ("Associate", "No experience necessary."),
+        ("Associate Analyst", "Open to graduates from any discipline."),
+        ("Associate", "Graduates are welcome to apply."),
+        ("Associate", "Recent graduates are encouraged to apply."),
+        ("Associate", "We are hiring freshers for this role."),
+        ("Associate", "We are hiring through campus hiring for this role."),
+        ("Associate", "Open to university graduates."),
+        ("Associate", "Eligible: 2025/2026 batch B.Tech students."),
+        ("Associate", "Part of our Early Careers Programme."),
+        ("Associate", "Join our graduate programme."),
+        ("Associate", "Join our trainee programme."),
+        ("Associate", "This is an apprenticeship."),
+        ("Associate", "This is an entry-level position."),
+        ("Associate", "Experience: 0-1 years"),
+        ("Associate", "Experience: 0-2 years"),
+        # a staff verb on the previous bullet doesn't cancel the signal
+        ("Associate", "Responsibilities: support the team\nFresh graduates welcome"),
+    ],
+)
+def test_ambiguous_title_accepted_on_description_evidence(title, description):
+    assert classify_job(title, description).accepted
+
+
+@pytest.mark.parametrize(
+    "title, description, expected",
+    [
+        ("Associate Software Engineer", "Candidates with 2+ years of experience required.", Category.EXPERIENCED),
+        ("Intern", "Must have 1 year of software development experience.", Category.EXPERIENCED),
+        ("Software Engineer I", "Requires 2 years of professional experience.", Category.EXPERIENCED),
+        ("Associate Software Engineer", "", Category.UNKNOWN),
+        ("Intern", "", Category.UNKNOWN),
+        ("Software Engineer I", "", Category.UNKNOWN),
+        ("Junior Developer", "", Category.UNKNOWN),
+        # entry-level words about colleagues, not the applicant
+        ("Associate", "Mentor recent graduates joining the team.", Category.UNKNOWN),
+        ("Associate", "You will support our apprenticeship scheme administration", Category.UNKNOWN),
+        ("Associate", "Onboard campus hires and coordinate the graduate programme.", Category.UNKNOWN),
+        ("Associate", "Manage freshers joining the team.", Category.UNKNOWN),
+        ("Associate", "Supervise a team of trainees in our trainee programme", Category.UNKNOWN),
+        ("Associate", "Our graduates programme alumni now lead teams.", Category.UNKNOWN),
+        ("Associate", "Work alongside graduates and interns.", Category.UNKNOWN),
+        ("Associate", "Degree: graduate in any discipline.", Category.UNKNOWN),
+        ("Associate", "Bachelor's degree; graduate degree preferred.", Category.UNKNOWN),
+    ],
+)
+def test_ambiguous_title_rejected_without_applicant_evidence(title, description, expected):
+    assert classify_job(title, description).category == expected

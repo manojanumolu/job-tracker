@@ -251,14 +251,15 @@ def _jsonld_location(posting: dict) -> str:
 
 
 def _pick_posting(postings: list, title: str) -> dict | None:
-    """Pages sometimes embed several JobPostings (e.g. related jobs) — use the
-    one whose title matches the card, else the first."""
+    """Pages sometimes embed several JobPostings (e.g. related jobs). Use the
+    one whose title matches the card; with several and no match we can't tell
+    which is ours, so use none rather than risk another job's description."""
     postings = [x for x in postings if isinstance(x, dict)]
     want = title.strip().lower()
     for posting in postings:
         if str(posting.get("title", "")).strip().lower() == want:
             return posting
-    return postings[0] if postings else None
+    return postings[0] if len(postings) == 1 else None
 
 
 def _same_page(a: str, b: str) -> bool:
@@ -294,8 +295,8 @@ def _playwright_detail(page, url: str, title: str, listing_url: str) -> tuple[st
                     description += f"\nExperience: {months} months"
             return description, _jsonld_location(posting)
         for selector in _DESCRIPTION_SELECTORS:
-            el = page.query_selector(selector)
-            if el:
+            # e.g. a short "job-description-header" can precede the real block
+            for el in page.query_selector_all(selector):
                 text = (el.inner_text() or "").strip()
                 if len(text) >= _MIN_DESCRIPTION_CHARS:
                     return text, ""
