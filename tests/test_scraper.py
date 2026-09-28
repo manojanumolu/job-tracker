@@ -257,3 +257,29 @@ def test_workday_ambiguous_titles_decided_by_description(monkeypatch):
     }
     jobs = _run_workday(monkeypatch, postings, details)
     assert [(j["title"], j["category"]) for j in jobs] == [("Associate Software Engineer", "FRESHER")]
+
+
+# ---------------------------------------------------------------------------
+# Location stored on alerted jobs (shown in the email / UI)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("raw, expected", [
+    ("Hyderabad | India", "Hyderabad · India"),
+    ("Hyderabad | Pune | India | Hyderabad", "Hyderabad · Pune · India"),
+    ("A | B | C | D | E", "A · B · C +2 more"),
+    ("", ""),
+    ("Bengaluru, India", "Bengaluru, India"),
+])
+def test_display_location(raw, expected):
+    assert scraper._display_location(raw) == expected
+
+
+def test_card_location_picks_the_india_line():
+    assert scraper._card_location("Full time\nHyderabad, India\nPosted today") == "Hyderabad, India"
+    assert scraper._card_location("Full time\nRemote") == ""
+
+
+def test_workday_jobs_carry_location(mock_workday):
+    jobs = scraper._scrape_api({"id": "sanofi", "name": "Sanofi", "url": "https://jobs.sanofi.com/en"})
+    assert jobs[0]["location"] == "Hyderabad · Pune · India"
+    assert set(jobs[0]) == {"title", "url", "company", "location", "category", "reason"}

@@ -1,12 +1,27 @@
+import hashlib
 import json
+import logging
 import os
 import re
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from html import escape
 from pathlib import Path
 from urllib.parse import urlparse
 
 import streamlit as st
+
+from config_store import (
+    dismiss_jobs,
+    fetch_remote_json,
+    friendly_github_error,
+    job_key,
+    update_json,
+    visible_jobs,
+)
+from notifier import category_label, safe_url
+
+log = logging.getLogger("streamlit_app")
 
 st.set_page_config(
     page_title="Fresher Job Tracker",
@@ -222,6 +237,22 @@ section[data-testid="stSidebar"] { display: none !important; }
 }
 /* keep the whole right-hand cluster on one tidy row */
 .st-key-app_header .element-container { display: flex; justify-content: flex-end; }
+/* phones: Streamlit stacks every column full-width, which put each icon
+   button on its own row and pushed the status pills off the left edge */
+@media (max-width: 640px) {
+  .st-key-app_header [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; }
+  .st-key-app_header [data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
+  .st-key-app_header [data-testid="stColumn"]:nth-child(-n+2) { flex: 1 1 100% !important; width: 100% !important; }
+  .st-key-app_header .element-container { justify-content: flex-start; }
+  .hdr-pills { justify-content: flex-start !important; flex-wrap: wrap; }
+  .st-key-page_wrap { padding: 16px 12px 32px; }
+  /* one line per alert: checkbox · details · Apply */
+  [class*="st-key-alert_row_"] [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 6px !important; }
+  [class*="st-key-alert_row_"] [data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
+  [class*="st-key-alert_row_"] [data-testid="stColumn"]:nth-child(2) { flex: 1 1 auto !important; }
+  [class*="st-key-alert_row_"] .stCheckbox { padding-left: 12px !important; }
+  .alert-icon { display: none !important; }
+}
 
 /* ── Tracked Companies card ── */
 .st-key-tc_card {
@@ -294,6 +325,7 @@ section[data-testid="stSidebar"] { display: none !important; }
    fallback stack so it always paints regardless of that override. */
 .icon-emoji,
 .st-key-btn_refresh [data-testid^="stBaseButton"] p,
+.st-key-btn_run_check [data-testid^="stBaseButton"] p,
 .st-key-btn_theme [data-testid^="stBaseButton"] p {
   font-family: "Segoe UI Symbol", "Segoe UI Emoji", "Noto Color Emoji", "Noto Sans Symbols", "Apple Color Emoji", sans-serif !important;
 }
@@ -337,78 +369,73 @@ def _rel_time(iso: str) -> str:
             return f"{diff // 3600}h ago"
         return f"{diff // 86400}d ago"
     except Exception:
-        return iso
+        return "—"
 
 
-def _friendly_github_error(e: Exception) -> str:
-    status = getattr(e, "status", None)
-    if status == 403:
-        return "GitHub rejected this token's permissions (403). It needs 'repo' scope (classic PAT) or 'Contents: write' (fine-grained PAT)."
-    if status == 404:
-        return "GitHub couldn't find the repository with this token (404) — check the token has access to it."
-    if status == 401:
-        return "GitHub rejected this token as invalid or expired (401)."
-    return str(e)
-
-
-def _commit(path: Path, repo_path: str, msg: str) -> tuple[bool, str]:
-    """Push a local file change to GitHub so it survives the next Streamlit
-    Cloud restart. Returns (ok, error) — callers MUST check this and tell the
-    user when it fails, since a change that only lives on local disk here is
-    not actually saved and will silently revert on the next redeploy/restart."""
-    token = os.environ.get("GITHUB_TOKEN")
-    if not token:
-        return False, "no GITHUB_TOKEN configured for this app — the change only applies until this app restarts."
-    try:
-        from github import Github, GithubException
-        repo = Github(token).get_repo(GITHUB_REPO)
-        content = path.read_text("utf-8")
-        try:
-            existing = repo.get_contents(repo_path)
-            repo.update_file(repo_path, msg, content, existing.sha)
-        except GithubException as ge:
-            if ge.status == 404:
-                repo.create_file(repo_path, msg, content)
-            else:
-                raise
-        return True, ""
-    except Exception as e:
-        return False, _friendly_github_error(e)
+def _next_check_str() -> str:
+    """check_jobs.yml runs at minute 0 of every 3rd UTC hour (0, 3, 6, …)."""
+    now = datetime.now(timezone.utc)
+    nxt = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=3 - now.hour % 3)
+    mins = int((nxt - now).total_seconds() // 60)
+    return f"in {mins} min" if mins < 60 else f"in {mins // 60}h {mins % 60:02d}m"
 
 
 def _trigger_scrape() -> tuple[bool, str]:
     """Ask GitHub Actions to run check_jobs.yml right now (workflow_dispatch)."""
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
-        return False, "Can't trigger a live check — no GITHUB_TOKEN configured for this app."
+        return False, "Can't start a check — no GitHub token is configured for this app."
     try:
         from github import Github
         repo = Github(token).get_repo(GITHUB_REPO)
         workflow = repo.get_workflow("check_jobs.yml")
-        ok = workflow.create_dispatch(ref="main")
-        if ok:
-            return True, "Triggered a fresh check — it takes 1–2 minutes to run, then refresh again."
+        if workflow.create_dispatch(ref="main"):
+            return True, "Check started — it takes a few minutes. Use Reload afterwards to see new jobs."
         return False, "GitHub declined to start a new check."
     except Exception as e:
-        status = getattr(e, "status", None)
-        if status == 403:
-            return False, "This token can't trigger workflows (403). It needs 'workflow' scope (classic PAT) or 'Actions: write' (fine-grained PAT)."
-        return False, f"Couldn't trigger a check: {_friendly_github_error(e)}"
+        log.warning("workflow dispatch failed: %s", e)
+        if getattr(e, "status", None) == 403:
+            return False, "The app's GitHub token isn't allowed to start checks (needs Actions: write)."
+        return False, f"Couldn't start a check. {friendly_github_error(e)}"
+
+
+# Latest data straight from GitHub, shared by all sessions and refreshed at
+# most every 5 minutes (or on Reload) — the local checkout can be hours old.
+@st.cache_data(ttl=300, show_spinner=False)
+def _remote_snapshot() -> dict:
+    return fetch_remote_json(["companies.json", "settings.json", "seen_jobs.json"])
+
+
+def _load_synced(name: str, default):
+    """Prefer the GitHub copy (read-only here — saves go through
+    _save_change); fall back to the local checkout."""
+    remote = _remote_snapshot().get(name)
+    if remote is not None and isinstance(remote, type(default)):
+        return remote
+    return _load(BASE / name, default)
+
+
+def _save_change(name: str, mutate, default, message: str):
+    """Apply one change to the latest copy of ``name`` (merge-safe)."""
+    data, saved, err = update_json(BASE / name, name, mutate, default, message)
+    _remote_snapshot.clear()
+    return data, saved, err
 
 
 # ── load data ─────────────────────────────────────────────────────────────────
-companies: list[dict] = _load(BASE / "companies.json", [])
-settings: dict = _load(BASE / "settings.json", {"recipient_email": ""})
-# oldest-first, exactly as stored — this is the copy any save/remove operation
-# must filter, so notification cleanup never silently truncates scraper dedup history
-seen_jobs_raw: list[dict] = _load(BASE / "seen_jobs.json", [])
-seen_jobs: list[dict] = list(reversed(seen_jobs_raw))  # newest-first, for display
+companies: list[dict] = [c for c in _load_synced("companies.json", []) if isinstance(c, dict)]
+settings: dict = _load_synced("settings.json", {"recipient_email": ""})
+# seen_jobs.json is also the scraper's dedup history: alerts are dismissed
+# (hidden), never deleted, or the scraper would email them again
+seen_jobs: list[dict] = visible_jobs(_load_synced("seen_jobs.json", []))  # newest-first
 
 ALERTS_PAGE_SIZE = 10
+_EMAIL_RE = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+$")
+_CHECK_COOLDOWN_S = 300
 
 
-def _job_key(j: dict) -> str:
-    return j.get("id") or f"{j.get('company','')}_{j.get('title','')}"
+def _widget_key(prefix: str, key: str) -> str:
+    return f"{prefix}_{hashlib.sha1(key.encode('utf-8')).hexdigest()[:16]}"
 
 
 # ── session state ──────────────────────────────────────────────────────────────
@@ -435,7 +462,7 @@ last_checked_str = _rel_time(max(last_checked_times)) if last_checked_times else
 active_count = sum(1 for c in companies if c.get("status") not in ("broken",))
 
 with st.container(key="app_header"):
-    lc, pc, bc1, bc2, bc3 = st.columns([5.2, 4.4, 0.42, 0.42, 0.42], vertical_alignment="center")
+    lc, pc, bc0, bc1, bc2, bc3 = st.columns([5.2, 4.4, 0.42, 0.42, 0.42, 0.42], vertical_alignment="center")
     with lc:
         st.html("""
         <div style="display:flex;align-items:center;gap:10px;margin-right:auto;">
@@ -448,21 +475,32 @@ with st.container(key="app_header"):
         """)
     with pc:
         st.html(f"""
-        <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
+        <div class="hdr-pills" style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
           <div class="hdr-pill" title="Time since the scraper last ran and refreshed this data">
             <span style="color:var(--good);font-weight:700;">✓</span>
             <span class="muted">Last checked</span>
             <b>{last_checked_str}</b>
           </div>
           <div class="hdr-pill" title="The scraper runs automatically every 3 hours">
-            <span class="icon-emoji">🕐</span> <span class="muted">Next check</span> <b>in ~3 h</b>
+            <span class="icon-emoji">🕐</span> <span class="muted">Next check</span> <b>{_next_check_str()}</b>
           </div>
         </div>
         """)
+    with bc0:
+        if st.button("⟳", key="btn_refresh", help="Reload the latest jobs and company status"):
+            _remote_snapshot.clear()
+            toast("Showing the latest data", "success")
+            st.rerun()
     with bc1:
-        if st.button("⟳", key="btn_refresh", help="Trigger a fresh check now (takes 1–2 min)"):
-            ok, msg = _trigger_scrape()
-            toast(msg, "success" if ok else "error")
+        if st.button("▷", key="btn_run_check", help="Run a fresh check now (takes a few minutes)"):
+            since = time.time() - st.session_state.get("last_check_trigger", 0)
+            if since < _CHECK_COOLDOWN_S:
+                toast(f"A check was just started — try again in {int((_CHECK_COOLDOWN_S - since) // 60) + 1} min", "error")
+            else:
+                ok, msg = _trigger_scrape()
+                if ok:
+                    st.session_state.last_check_trigger = time.time()
+                toast(msg, "success" if ok else "error")
             st.rerun()
     with bc2:
         theme_icon = "☀" if st.session_state.dark_mode else "☾"
@@ -488,9 +526,11 @@ with st.container(key="page_wrap"):
         status_label = "Broken" if is_broken else ("Active" if is_active else "Pending")
         status_color = "var(--bad)" if is_broken else ("var(--good)" if is_active else "var(--faint)")
         status_bg = "var(--bad-soft)" if is_broken else ("var(--good-soft)" if is_active else "var(--accent-soft)")
-        initial = c.get("name", "?")[0].upper()
-        host = _host(c.get("url", ""))
-        last_job = c.get("last_job", "") or "—"
+        name = escape((c.get("name") or "").strip() or "Unnamed")
+        initial = name[0].upper() if name[0].isalnum() else "?"
+        page_url = safe_url(c.get("url", ""))
+        host = escape(_host(page_url) or "invalid URL")
+        last_job = escape(c.get("last_job", "") or "—")
         last_checked = _rel_time(c.get("last_checked", ""))
         core_badge = '<span style="font-size:10px;color:var(--faint);border:1px solid var(--border);padding:1px 6px;border-radius:5px;letter-spacing:0.03em;margin-left:6px;">CORE</span>' if c.get("locked") else ""
         rows_html += f"""
@@ -498,11 +538,11 @@ with st.container(key="page_wrap"):
   <td style="padding:14px 22px;">
     <div style="display:flex;align-items:center;gap:10px;">
       <span style="width:26px;height:26px;border-radius:7px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-size:12px;font-weight:700;flex-shrink:0;">{initial}</span>
-      <span style="font-weight:600;font-size:13.5px;color:var(--text);">{c.get('name','')}</span>{core_badge}
+      <span style="font-weight:600;font-size:13.5px;color:var(--text);">{name}</span>{core_badge}
     </div>
   </td>
   <td style="padding:14px 16px;">
-    <a href="{c.get('url','')}" target="_blank" rel="noopener"
+    <a href="{escape(page_url, quote=True) or '#'}" target="_blank" rel="noopener"
        style="display:inline-flex;align-items:center;gap:5px;color:var(--muted);text-decoration:none;font-family:'Geist Mono',monospace;font-size:12px;">
       {host} ↗
     </a>
@@ -513,7 +553,7 @@ with st.container(key="page_wrap"):
       {status_label}
     </span>
   </td>
-  <td style="padding:14px 16px;color:var(--text);font-size:13.5px;">{last_job}</td>
+  <td style="padding:14px 16px;color:var(--text);font-size:13.5px;min-width:220px;max-width:320px;overflow-wrap:break-word;">{last_job}</td>
   <td style="padding:14px 16px;color:var(--muted);font-family:'Geist Mono',monospace;font-size:12px;">{last_checked}</td>
   <td style="padding:14px 22px;"></td>
 </tr>"""
@@ -564,22 +604,27 @@ with st.container(key="page_wrap"):
                 url = new_url.strip()
                 if not name:
                     toast("Company name is required", "error")
-                elif not url.startswith("http"):
-                    toast("URL must start with https://", "error")
+                elif not safe_url(url):
+                    toast("Enter the full career page URL, starting with https://", "error")
                 elif any(c.get("name", "").lower() == name.lower() for c in companies):
                     toast(f"{name} is already tracked", "error")
                 else:
-                    companies.append({
+                    new_company = {
                         "id": f"c{int(time.time())}",
                         "name": name, "url": url, "locked": False,
                         "status": "unknown", "last_job": "", "last_checked": "",
-                    })
-                    _save(BASE / "companies.json", companies)
-                    ok, err = _commit(BASE / "companies.json", "companies.json", f"chore: add {name}")
-                    if ok:
+                    }
+
+                    def _add(latest: list) -> list:
+                        if not any(c.get("name", "").lower() == name.lower() for c in latest):
+                            latest.append(new_company)
+                        return latest
+
+                    _, saved, err = _save_change("companies.json", _add, [], f"chore: add {name}")
+                    if saved:
                         toast(f"{name} added", "success")
                     else:
-                        toast(f"{name} added, but didn't save permanently: {err}", "error")
+                        toast(f"{name} added, but not saved permanently. {err}", "error")
                     st.session_state.show_add_form = False
                     st.rerun()
 
@@ -608,8 +653,8 @@ with st.container(key="page_wrap"):
                 grid = st.columns(3)
                 for i, c in enumerate(companies):
                     with grid[i % 3]:
-                        st.checkbox(c["name"], key=f"rm_{c['id']}")
-                to_remove = [c for c in companies if st.session_state.get(f"rm_{c['id']}")]
+                        st.checkbox(c.get("name") or "Unnamed", key=f"rm_{c.get('id')}")
+                to_remove = [c for c in companies if st.session_state.get(f"rm_{c.get('id')}")]
                 rb1, rb2, _sp = st.columns([1, 1.4, 2.6])
                 with rb1:
                     if st.button("Cancel", key="btn_cancel_remove", use_container_width=True):
@@ -618,15 +663,19 @@ with st.container(key="page_wrap"):
                 with rb2:
                     if st.button(f"Remove selected ({len(to_remove)})", key="btn_remove",
                                  disabled=(len(to_remove) == 0), use_container_width=True):
-                        removed_names = ", ".join(c["name"] for c in to_remove)
-                        removed_ids = {c["id"] for c in to_remove}
-                        companies = [c for c in companies if c["id"] not in removed_ids]
-                        _save(BASE / "companies.json", companies)
-                        ok, err = _commit(BASE / "companies.json", "companies.json", f"chore: remove {removed_names}")
-                        if ok:
+                        removed_names = ", ".join(c.get("name", "") for c in to_remove)
+                        removed_ids = {c.get("id") for c in to_remove}
+                        _, saved, err = _save_change(
+                            "companies.json",
+                            lambda latest: [c for c in latest if c.get("id") not in removed_ids],
+                            [], f"chore: remove {removed_names}",
+                        )
+                        for cid in removed_ids:
+                            st.session_state.pop(f"rm_{cid}", None)
+                        if saved:
                             toast(f"Removed {removed_names}", "success")
                         else:
-                            toast(f"Removed {removed_names}, but didn't save permanently: {err}", "error")
+                            toast(f"Removed {removed_names}, but not saved permanently. {err}", "error")
                         st.session_state.show_remove_form = False
                         st.rerun()
 
@@ -638,23 +687,45 @@ with st.container(key="page_wrap"):
     col_alerts, col_settings = st.columns([2, 1], gap="medium")
 
     # ── Recent Alerts ────────────────────────────────────────────────────────
+    _BADGE_COLORS = {"FRESHER": ("var(--good)", "var(--good-soft)"),
+                     "ENTRY_LEVEL": ("var(--accent)", "var(--accent-soft)")}
+
     def _alert_info_html(j: dict) -> str:
-        raw_title = j.get('title', '')
-        title = raw_title[:50] + ('…' if len(raw_title) > 50 else '')
+        raw_title = (j.get("title") or "Untitled posting").strip()
+        title = raw_title[:80] + ("…" if len(raw_title) > 80 else "")
+        meta = " &middot; ".join(
+            x for x in (
+                escape(j.get("company") or ""),
+                escape(j.get("location") or ""),
+                f'<span style="font-family:\'Geist Mono\',monospace;">{escape(j.get("date") or "")}</span>' if j.get("date") else "",
+            ) if x
+        )
+        # records written before the classifier existed have no category
+        badge = ""
+        if j.get("category") in _BADGE_COLORS:
+            fg, bg = _BADGE_COLORS[j["category"]]
+            badge = (f'<span style="flex-shrink:0;font-size:10.5px;font-weight:700;letter-spacing:.03em;'
+                     f'text-transform:uppercase;color:{fg};background:{bg};padding:2px 7px;border-radius:999px;">'
+                     f'{escape(category_label(j))}</span>')
         return f"""
         <div style="display:flex;align-items:center;gap:12px;min-width:0;padding:12px 4px;">
-          <span class="icon-emoji" style="width:32px;height:32px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;">💼</span>
-          <div style="min-width:0;">
-            <div style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);">{title}</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:2px;">{j.get('company','')} &middot; <span style="font-family:'Geist Mono',monospace;">{j.get('date','')}</span></div>
+          <span class="icon-emoji alert-icon" style="width:32px;height:32px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;">💼</span>
+          <div style="min-width:0;flex:1;">
+            <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+              <span title="{escape(raw_title, quote=True)}" style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);min-width:0;">{escape(title)}</span>{badge}
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{meta or "&nbsp;"}</div>
           </div>
         </div>"""
 
 
     def _alert_apply_html(j: dict) -> str:
+        url = safe_url(j.get("url", ""))
+        if not url:
+            return '<div style="padding:12px 20px 12px 0;text-align:right;font-size:12px;color:var(--faint);">No link</div>'
         return f"""
         <div style="padding:12px 20px 12px 0;text-align:right;">
-          <a href="{j.get('url','#')}" target="_blank" rel="noopener"
+          <a href="{escape(url, quote=True)}" target="_blank" rel="noopener"
              style="display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--border-strong);background:var(--card-2);color:var(--text);border-radius:8px;text-decoration:none;font-size:12.5px;font-weight:600;white-space:nowrap;">
             Apply ↗
           </a>
@@ -694,23 +765,25 @@ with st.container(key="page_wrap"):
             if not page_jobs:
                 st.html(_EMPTY_ALERTS_HTML)
             else:
-                page_ids = []
+                page_keys = {}
                 for i, j in enumerate(page_jobs):
-                    jid = _job_key(j)
-                    page_ids.append(jid)
+                    jkey = job_key(j)
+                    wkey = _widget_key("chk", jkey)
+                    page_keys[wkey] = jkey
                     if i > 0:
                         st.html('<div style="border-top:1px solid var(--border);"></div>')
-                    rc1, rc2, rc3 = st.columns([0.5, 5, 1.2], vertical_alignment="center")
-                    with rc1:
-                        st.checkbox(f"Select {j.get('title','')}", key=f"chk_{jid}", label_visibility="collapsed")
-                    with rc2:
-                        st.html(_alert_info_html(j))
-                    with rc3:
-                        st.html(_alert_apply_html(j))
+                    with st.container(key=f"alert_row_{i}"):
+                        rc1, rc2, rc3 = st.columns([0.5, 5, 1.2], vertical_alignment="center")
+                        with rc1:
+                            st.checkbox(f"Select {j.get('title', '')}", key=wkey, label_visibility="collapsed")
+                        with rc2:
+                            st.html(_alert_info_html(j))
+                        with rc3:
+                            st.html(_alert_apply_html(j))
 
                 with st.container(key="alerts_footer_row"):
-                    selected_ids = [jid for jid in page_ids if st.session_state.get(f"chk_{jid}")]
-                    fc1, fc2, fc3, fc4, fc5 = st.columns([1.1, 1.3, 1.6, 1.1, 1.1], vertical_alignment="center")
+                    selected = {jkey for wkey, jkey in page_keys.items() if st.session_state.get(wkey)}
+                    fc1, fc2, fc3, fc4, fc5 = st.columns([1.15, 1.0, 1.15, 1.35, 1.1], vertical_alignment="center")
                     with fc1:
                         if st.button("← Previous", key="alerts_prev", disabled=(page == 0), use_container_width=True):
                             st.session_state.alerts_page = page - 1
@@ -722,27 +795,31 @@ with st.container(key="page_wrap"):
                             st.session_state.alerts_page = page + 1
                             st.rerun()
                     with fc4:
-                        if st.button(f"Remove ({len(selected_ids)})", key="btn_remove_selected",
-                                     disabled=(len(selected_ids) == 0), use_container_width=True,
-                                     help="Remove the checked alerts only"):
-                            remaining = [j for j in seen_jobs_raw if _job_key(j) not in selected_ids]
-                            _save(BASE / "seen_jobs.json", remaining)
-                            ok, err = _commit(BASE / "seen_jobs.json", "seen_jobs.json", f"chore: remove {len(selected_ids)} notification(s)")
-                            if ok:
-                                toast(f"Removed {len(selected_ids)} notification(s)", "success")
+                        if st.button(f"Remove ({len(selected)})", key="btn_remove_selected",
+                                     disabled=(len(selected) == 0), use_container_width=True,
+                                     help="Hide the checked alerts (they won't be emailed again)"):
+                            _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(selected), [],
+                                                         f"chore: dismiss {len(selected)} alert(s)")
+                            for wkey in page_keys:
+                                st.session_state.pop(wkey, None)
+                            if saved:
+                                toast(f"Removed {len(selected)} alert(s)", "success")
                             else:
-                                toast(f"Removed locally, but didn't save permanently: {err}", "error")
+                                toast(f"Removed here, but not saved permanently. {err}", "error")
                             st.rerun()
                     with fc5:
                         if st.button("Clear all", key="btn_clear_all", use_container_width=True,
-                                     disabled=(total == 0), help="Remove every stored notification"):
-                            _save(BASE / "seen_jobs.json", [])
-                            ok, err = _commit(BASE / "seen_jobs.json", "seen_jobs.json", "chore: clear all notifications")
+                                     disabled=(total == 0),
+                                     help="Hide every alert (already-seen jobs won't be emailed again)"):
+                            _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(None), [],
+                                                         "chore: dismiss all alerts")
+                            for wkey in page_keys:
+                                st.session_state.pop(wkey, None)
                             st.session_state.alerts_page = 0
-                            if ok:
-                                toast("All notifications cleared", "success")
+                            if saved:
+                                toast("All alerts cleared", "success")
                             else:
-                                toast(f"Cleared locally, but didn't save permanently: {err}", "error")
+                                toast(f"Cleared here, but not saved permanently. {err}", "error")
                             st.rerun()
 
     # ── Notification Settings ───────────────────────────────────────────────
@@ -768,18 +845,25 @@ with st.container(key="page_wrap"):
             with save_col:
                 save_clicked = st.button("Save", key="btn_save_email", use_container_width=True)
 
+            def _set_recipient(addr: str) -> tuple[bool, str]:
+                def _mutate(latest: dict) -> dict:
+                    latest = latest if isinstance(latest, dict) else {}
+                    latest["recipient_email"] = addr
+                    return latest
+                data, saved, err = _save_change("settings.json", _mutate, {}, "chore: update recipient email")
+                settings.update(data)
+                return saved, err
+
             if save_clicked:
                 e = email_val.strip()
-                if not re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", e):
+                if not _EMAIL_RE.match(e):
                     toast("Enter a valid email address", "error")
                 else:
-                    settings["recipient_email"] = e
-                    _save(BASE / "settings.json", settings)
-                    ok, err = _commit(BASE / "settings.json", "settings.json", "chore: update recipient email")
-                    if ok:
+                    saved, err = _set_recipient(e)
+                    if saved:
                         toast(f"Saved — alerts go to {e}", "success")
                     else:
-                        toast(f"Saved locally, but didn't save permanently: {err}", "error")
+                        toast(f"Saved here, but not saved permanently. {err}", "error")
 
             st.html("""
             <div style="height:1px;background:var(--border);margin:8px 0 4px;"></div>
@@ -790,25 +874,26 @@ with st.container(key="page_wrap"):
             with st.container(key="test_mail_btn"):
                 if st.button("✈  Send Test Mail", key="btn_test", use_container_width=True):
                     recipient = email_val.strip()
-                    if not recipient or not re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", recipient):
+                    if not _EMAIL_RE.match(recipient):
                         toast("Enter a valid recipient email first", "error")
                     else:
+                        persist_err = ""
+                        if settings.get("recipient_email", "") != recipient:
+                            saved, persist_err = _set_recipient(recipient)
                         try:
-                            persist_err = ""
-                            if settings.get("recipient_email", "") != recipient:
-                                settings["recipient_email"] = recipient
-                                _save(BASE / "settings.json", settings)
-                                _, persist_err = _commit(BASE / "settings.json", "settings.json", "chore: update recipient email")
-                            import sys
-                            sys.path.insert(0, str(BASE))
                             from notifier import test_mail
                             test_mail(recipient)
+                        except Exception as ex:
+                            log.warning("test mail failed: %s", ex)
+                            if "GMAIL_" in str(ex):
+                                toast("Email isn't configured for this app (Gmail address / app password missing).", "error")
+                            else:
+                                toast("Couldn't send the test email. Check the Gmail app password and try again.", "error")
+                        else:
                             if persist_err:
-                                toast(f"Test email sent, but the address wasn't saved permanently: {persist_err}", "error")
+                                toast(f"Test email sent, but the address wasn't saved permanently. {persist_err}", "error")
                             else:
                                 toast(f"Test email sent — check {recipient}", "success")
-                        except Exception as ex:
-                            toast(f"Failed: {ex}", "error")
 
     # ── Footer ───────────────────────────────────────────────────────────────
     st.html(f"""
@@ -822,18 +907,23 @@ with st.container(key="page_wrap"):
     """)
 
 # ── Toast ──────────────────────────────────────────────────────────────────────
+# Shown once and faded out with CSS; the old sleep(3)+rerun froze the whole
+# app for 3 s after every action, swallowing clicks made in the meantime.
 if st.session_state.toast:
-    msg = st.session_state.toast
+    msg = escape(st.session_state.toast, quote=False)
     kind = st.session_state.toast_kind
+    st.session_state.toast = None
     icon_bg = "var(--good-soft)" if kind == "success" else "var(--bad-soft)"
     icon_color = "var(--good)" if kind == "success" else "var(--bad)"
     icon = "✅" if kind == "success" else "⚠️"
     st.html(f"""
-<div style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;align-items:center;gap:11px;padding:13px 16px;border-radius:12px;background:var(--card);border:1px solid var(--border-strong);box-shadow:0 10px 30px rgba(0,0,0,.15);max-width:340px;font-family:'Geist',sans-serif;">
+<style>
+@keyframes jt-toast {{ 0%, 85% {{ opacity: 1; }} 100% {{ opacity: 0; visibility: hidden; }} }}
+.jt-toast {{ animation: jt-toast {6 if kind == "error" else 4}s ease-in forwards; }}
+@media (max-width: 640px) {{ .jt-toast {{ left: 16px; right: 16px; bottom: 16px; max-width: none !important; }} }}
+</style>
+<div class="jt-toast" role="status" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;align-items:center;gap:11px;padding:13px 16px;border-radius:12px;background:var(--card);border:1px solid var(--border-strong);box-shadow:0 10px 30px rgba(0,0,0,.15);max-width:340px;font-family:'Geist',sans-serif;">
   <span class="icon-emoji" style="width:26px;height:26px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:{icon_bg};color:{icon_color};font-size:14px;">{icon}</span>
   <div style="font-size:13px;font-weight:500;color:var(--text);line-height:1.4;">{msg}</div>
 </div>
 """)
-    time.sleep(3)
-    st.session_state.toast = None
-    st.rerun()

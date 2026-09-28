@@ -151,3 +151,9 @@ def test_playwright_detail_budget(site, monkeypatch):
     assert len(detail_hits) == 2
     # card-accepted jobs are verified first
     assert "/jobs/grad.html" in detail_hits
+
+
+def test_playwright_jobs_carry_location(site):
+    jobs = {j["title"]: j for j in scraper._scrape_playwright({"id": "t", "name": "Test", "url": site})}
+    assert jobs["Graduate Engineer Trainee"]["location"] == "Pune · India"    # JSON-LD
+    assert jobs["Associate Analyst"]["location"] == "Hyderabad, India"         # card fallback

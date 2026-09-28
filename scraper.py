@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import re
 import time
 import logging
@@ -39,13 +38,6 @@ HEADERS = {
     "Accept": "application/json, text/html, */*",
 }
 
-# Known JSON/API endpoints for each company id
-API_ENDPOINTS: dict[str, str] = {
-    "workday": "https://{domain}/wday/cxs/{tenant}/jobs",
-    "greenhouse": "https://boards-api.greenhouse.io/v1/boards/{tenant}/jobs",
-    "lever": "https://api.lever.co/v0/postings/{tenant}?mode=json",
-}
-
 # Per-company API config (id -> dict)
 # NOTE: Avalara runs on a custom ATS (not Workday) and Accenture has no public
 # careers API — both previously pointed at guessed endpoints that returned
@@ -78,11 +70,32 @@ def _log_decision(company: str, title: str, result: Classification) -> None:
     log.info("  %s: %s — %s", company, title, result)
 
 
-def _job(title: str, url: str, company: str, result: Classification) -> dict:
+def _display_location(text: str, limit: int = 3) -> str:
+    """"Hyderabad | Pune | India" -> "Hyderabad · Pune · India" (deduplicated,
+    at most ``limit`` places) for the alert email / UI."""
+    parts: list[str] = []
+    for part in re.split(r"\s*(?:\||\n)\s*", text or ""):
+        part = part.strip(" ,")
+        if part and part.lower() not in (p.lower() for p in parts):
+            parts.append(part)
+    shown = " · ".join(parts[:limit])
+    return shown + (f" +{len(parts) - limit} more" if len(parts) > limit else "")
+
+
+def _card_location(card_rest: str) -> str:
+    """The line of a job card that names the India location, if any."""
+    for line in (card_rest or "").splitlines():
+        if _is_india(line) and len(line) <= 120:
+            return line.strip()
+    return ""
+
+
+def _job(title: str, url: str, company: str, result: Classification, location: str = "") -> dict:
     return {
         "title": title,
         "url": url,
         "company": company,
+        "location": _display_location(location),
         "category": result.category.value,
         "reason": result.reason,
     }
@@ -141,7 +154,8 @@ def _workday_posting(client: httpx.Client, p: dict, base: str, cxs_base: str, na
         return None
     result = classify_job(title, description, url=ext)
     _log_decision(name, title, result)
-    return _job(title, base + ext, name, result) if result.accepted else None
+    shown_location = location_text if _is_india(location_text) and location_text != title else location
+    return _job(title, base + ext, name, result, shown_location) if result.accepted else None
 
 
 def _scrape_api(company: dict) -> list[dict]:
@@ -389,16 +403,18 @@ def _scrape_playwright(company: dict) -> list[dict]:
                         log.warning("%s: detail-page budget (%d) reached; remaining cards judged on card text",
                                     name, MAX_DETAIL_FETCHES)
                 description = card_rest
+                location = _card_location(card_rest)
                 if detail:
                     detail_text, detail_location = detail
                     if detail_location and not _is_india(detail_location):
                         log.info("  %s: %s — skipped, detail location %r", name, title, detail_location)
                         continue
                     description = f"{card_rest}\n{detail_text}"
+                    location = detail_location or location
                 result = classify_job(title, description, url=href)
                 _log_decision(name, title, result)
                 if result.accepted:
-                    jobs.append(_job(title, href, name, result))
+                    jobs.append(_job(title, href, name, result, location))
         except Exception as e:
             log.warning("Playwright error for %s: %s", name, e)
         finally:
