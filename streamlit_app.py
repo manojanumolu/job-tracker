@@ -251,13 +251,13 @@ _CSS = """
 [class*="st-key-cr_"] > [data-testid="stHorizontalBlock"] { gap: 16px !important; align-items: center !important; flex-wrap: nowrap !important; }
 [class*="st-key-cr_"] [data-testid="stColumn"] { width: auto !important; min-width: 0 !important; flex: 0 0 auto !important; }
 [class*="st-key-cr_"] [data-testid="stColumn"]:first-child { flex: 1 1 auto !important; }
-.co-row { display: grid; grid-template-columns: minmax(0, 1.6fr) 110px 100px 110px; gap: 16px; align-items: center; min-width: 0; }
+.co-row { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 110px 90px 100px; gap: 16px; align-items: center; min-width: 0; }
 .co-name { display: flex; gap: 12px; align-items: center; min-width: 0; }
 .co-name .t { font-size: 15px; line-height: 20px; font-weight: 600; color: var(--text); display: flex; gap: 8px; align-items: center; }
 .co-name .h { font-size: 13px; line-height: 18px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .co-cell { font-size: 14px; color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .co-cell .l { display: none; }
-.list-head { display: grid; grid-template-columns: minmax(0, 1.6fr) 110px 100px 110px 88px; gap: 16px; padding: 10px 20px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--border); background: var(--surface-2); }
+.list-head { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 110px 90px 100px 88px; gap: 16px; padding: 10px 20px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--border); background: var(--surface-2); }
 .tag { font-size: 12px; line-height: 18px; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 0 6px; font-weight: 500; }
 
 /* ── monitoring table ── */
@@ -375,8 +375,8 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   [data-testid="stMainBlockContainer"], .block-container { padding: 28px 28px 40px !important; }
 }
 @media (max-width: 1100px) {
-  .co-row { grid-template-columns: minmax(0, 1fr) 100px 90px; } .list-head { grid-template-columns: minmax(0, 1fr) 100px 90px 88px; }
-  .co-row > :nth-child(4), .list-head > :nth-child(4) { display: none; }
+  .co-row { grid-template-columns: minmax(0, 1fr) 110px 90px; } .list-head { grid-template-columns: minmax(0, 1fr) 110px 90px 88px; }
+  .co-row > :nth-child(2), .co-row > :nth-child(5), .list-head > :nth-child(2), .list-head > :nth-child(5) { display: none; }
 }
 /* tablet: icon rail */
 @media (max-width: 1023px) {
@@ -417,7 +417,7 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   [class*="st-key-jr_"] [data-testid="stColumn"]:last-child { margin-left: 54px; }
   .job-why { display: none; }
   .co-row { grid-template-columns: minmax(0, 1fr) auto; }
-  .co-row > :nth-child(3), .co-row > :nth-child(4), .list-head { display: none; }
+  .co-row > :nth-child(2), .co-row > :nth-child(4), .co-row > :nth-child(5), .list-head { display: none; }
   [class*="st-key-cr_"] { padding: 12px 16px !important; }
   .kv { grid-template-columns: minmax(0, 1fr); gap: 2px; } .kv dd { margin-bottom: 10px; }
   .mon thead { display: none; }
@@ -729,8 +729,9 @@ with st.sidebar:
                       on_click=go, args=(key,))
     with st.container(key="side_foot_wrap"):
         st.html(f"""<div class="side-foot">
-          <div class="st"><span class="dot {overall[0]}"></span><span class="txt">{escape(overall[1])}</span></div>
-          <div class="txt num" style="margin-top:4px;">Last scan {_ago(last_scan, NOW)}</div>
+          <div class="st" title="{escape(overall[1], quote=True)}"><span class="dot {overall[0]}"></span><span class="txt">{_plural(len(companies), 'company', 'companies')} monitored</span></div>
+          <div class="txt" style="margin-top:4px;">{escape(overall[1])}</div>
+          <div class="txt num" style="margin-top:2px;">Last scan {_ago(last_scan, NOW)}</div>
           <div class="txt" style="margin-top:10px;"><a href="https://github.com/{GITHUB_REPO}" target="_blank" rel="noopener">Source on GitHub</a></div>
         </div>""")
 
@@ -1119,10 +1120,11 @@ def page_companies():
         empty_state("search_off", "No companies match", "Try another name or status.")
         return
     with st.container(key="company_list"):
-        st.html('<div class="list-head"><span>Company</span><span>Status</span><span>Jobs found</span><span>Last checked</span><span></span></div>')
+        st.html('<div class="list-head"><span>Company · career portal</span><span>Website</span><span>Status</span><span>Jobs found</span><span>Last checked</span><span></span></div>')
         for c in rows:
             name = (c.get("name") or "").strip() or "Unnamed"
             curl = safe_url(c.get("url", ""))
+            site = safe_url(c.get("website", ""))
             k, lbl = statuses[c.get("id")]
             is_new = c.get("id") == st.session_state.just_added
             tags = ('<span class="tag" title="Built-in company">Core</span>' if c.get("locked") else "") + \
@@ -1134,6 +1136,7 @@ def page_companies():
                       <div class="co-name"><div class="logo">{_initial(name)}</div>
                         <div style="min-width:0;"><div class="t">{escape(name)}{tags}</div>
                         <div class="h">{escape(_short_url(curl)) if curl else '<span style="color:var(--red)">Invalid career page URL</span>'}</div></div></div>
+                      <div class="co-cell" style="overflow:hidden;text-overflow:ellipsis;">{f'<a class="link" href="{escape(site, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(site, 28))}</a>' if site else '<span class="muted">Not set</span>'}</div>
                       <div><span class="pill {k}"><i></i>{lbl}</span></div>
                       <div class="co-cell">{len(company_jobs(c))}<span class="l"> jobs</span></div>
                       <div class="co-cell muted">{_ago(_parse_iso(c.get("last_checked", "")), NOW)}</div>

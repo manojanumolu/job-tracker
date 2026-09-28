@@ -309,6 +309,7 @@ def test_add_and_remove_company(app):
     html = _html(at)
     assert '<h1 class="page-title">Companies</h1>' in html          # returned to the list
     assert "Infosys &amp; Co &lt;x&gt;" in html and "New</span>" in html and "Pending" in html
+    assert 'href="https://www.infosys.com"' in html and "Not set" in html   # website column
 
     view_key = "view_c_" + hashlib.sha1(added["id"].encode()).hexdigest()[:16]
     at.button(key=view_key).click().run()
