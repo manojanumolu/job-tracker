@@ -1,0 +1,8 @@
+[theme]
+# Stitch "Fresher Job Tracker Redesign" primary; the page's own light/dark
+# toggle is applied with CSS tokens in streamlit_app.py.
+base = "light"
+primaryColor = "#3525cd"
+backgroundColor = "#faf8ff"
+secondaryBackgroundColor = "#f2f3ff"
+textColor = "#131b2e"
