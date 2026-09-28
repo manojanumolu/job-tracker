@@ -6,7 +6,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-09-28T13:11:14.632213+00:00"
+    "last_checked": "2026-09-28T21:07:54.921732+00:00"
   },
   {
     "id": "avalara",
@@ -15,7 +15,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-09-28T13:11:16.888602+00:00"
+    "last_checked": "2026-09-28T21:07:57.052747+00:00"
   },
   {
     "id": "pokerstars",
@@ -24,7 +24,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-09-28T13:11:20.623154+00:00"
+    "last_checked": "2026-09-28T21:08:02.129890+00:00"
   },
   {
     "id": "sanofi",
@@ -32,8 +32,8 @@
     "url": "https://jobs.sanofi.com/en",
     "locked": true,
     "status": "active",
-    "last_job": "Associate Project Specialist – Medical Communications",
-    "last_checked": "2026-09-28T13:11:22.884354+00:00"
+    "last_job": "",
+    "last_checked": "2026-09-28T21:08:16.563704+00:00"
   },
   {
     "id": "pwc",
@@ -42,7 +42,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-09-28T13:11:35.981904+00:00"
+    "last_checked": "2026-09-28T21:08:32.559888+00:00"
   },
   {
     "id": "accenture",
@@ -51,7 +51,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-09-28T13:11:47.094349+00:00"
+    "last_checked": "2026-09-28T21:08:41.500411+00:00"
   },
   {
     "id": "c1783687965",
@@ -60,6 +60,6 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-09-28T13:11:56.162257+00:00"
+    "last_checked": "2026-09-28T21:08:50.226032+00:00"
   }
 ]
