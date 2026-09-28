@@ -5,23 +5,26 @@
     "company": "Sanofi",
     "date": "Jul 15, 13:45",
     "id": "Sanofi_Junior_Associate_-_Evidence_Synthesis,_C",
-    "notified": true
+    "notified": true,
+    "dismissed": true
   },
   {
-    "title": "Associate \u2013 Evidence Synthesis",
+    "title": "Associate – Evidence Synthesis",
     "url": "https://sanofi.wd3.myworkdayjobs.com/SanofiCareers/job/Hyderabad/Associate---Evidence-Synthesis_R2849882-1",
     "company": "Sanofi",
     "date": "Jul 16, 05:43",
-    "id": "Sanofi_Associate_\u2013_Evidence_Synthesis",
-    "notified": true
+    "id": "Sanofi_Associate_–_Evidence_Synthesis",
+    "notified": true,
+    "dismissed": true
   },
   {
-    "title": "Associate \u2013 HEVA (Evidence Synthesis)",
+    "title": "Associate – HEVA (Evidence Synthesis)",
     "url": "https://sanofi.wd3.myworkdayjobs.com/SanofiCareers/job/Hyderabad/Associate---HEVA--Evidence-Synthesis-_R2852866",
     "company": "Sanofi",
     "date": "Jul 23, 05:57",
-    "id": "Sanofi_Associate_\u2013_HEVA_(Evidence_Synthesis)",
-    "notified": true
+    "id": "Sanofi_Associate_–_HEVA_(Evidence_Synthesis)",
+    "notified": true,
+    "dismissed": true
   },
   {
     "title": "Central Clinical Research Associate (CRA)",
@@ -29,7 +32,8 @@
     "company": "Sanofi",
     "date": "Jul 29, 11:28",
     "id": "Sanofi_Central_Clinical_Research_Associate_(CRA",
-    "notified": true
+    "notified": true,
+    "dismissed": true
   },
   {
     "title": "S2P Solution Associate Specialist",
@@ -37,7 +41,8 @@
     "company": "Sanofi",
     "date": "Aug 6, 14:13",
     "id": "Sanofi_S2P_Solution_Associate_Specialist",
-    "notified": true
+    "notified": true,
+    "dismissed": true
   },
   {
     "title": "Associate Container Platform Engineer",
@@ -45,7 +50,8 @@
     "company": "Sanofi",
     "date": "Aug 7, 13:07",
     "id": "Sanofi_Associate_Container_Platform_Engineer",
-    "notified": true
+    "notified": true,
+    "dismissed": true
   },
   {
     "title": "Source-to-Pay Strategic Support Associate",
@@ -53,14 +59,16 @@
     "company": "Sanofi",
     "date": "Sep 24, 11:17",
     "id": "Sanofi_Source-to-Pay_Strategic_Support_Associat",
-    "notified": true
+    "notified": true,
+    "dismissed": true
   },
   {
-    "title": "Associate Project Specialist \u2013 Medical Communications",
+    "title": "Associate Project Specialist – Medical Communications",
     "url": "https://sanofi.wd3.myworkdayjobs.com/SanofiCareers/job/Hyderabad/Associate-Project-Specialist---Medical-Communications_R2868429",
     "company": "Sanofi",
     "date": "Sep 28, 13:11",
-    "id": "Sanofi_Associate_Project_Specialist_\u2013_Medical_C",
-    "notified": true
+    "id": "Sanofi_Associate_Project_Specialist_–_Medical_C",
+    "notified": true,
+    "dismissed": true
   }
 ]
