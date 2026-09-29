@@ -192,6 +192,22 @@ def job_key(job: dict) -> str:
     return f"{base}|{job.get('url', '')}"
 
 
+ALERT_CATEGORIES = ("FRESHER", "ENTRY_LEVEL")
+
+
+def alert_pending(job: dict) -> bool:
+    """Should this record still be emailed? Only accepted jobs that were
+    never sent, never claimed by a run and not dismissed. Records without a
+    category (pre-classifier) are never emailed."""
+    return (
+        isinstance(job, dict)
+        and job.get("category") in ALERT_CATEGORIES
+        and not job.get("dismissed")
+        and not job.get("notified")
+        and job.get("notify_state") not in ("claimed", "sent", "skipped")
+    )
+
+
 def visible_jobs(seen: list[dict]) -> list[dict]:
     """Alerts to show, newest first (records are appended oldest-first)."""
     return [j for j in reversed(seen) if isinstance(j, dict) and not j.get("dismissed")]

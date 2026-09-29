@@ -244,7 +244,9 @@ def test_seniority_words_in_description_do_not_reject():
 
 def test_seniority_word_boundaries():
     # substrings of senior words must not trigger a rejection
-    assert classify_job("Leadership Development Programme - Graduate").accepted
+    # (a programme title needs real job-posting evidence to count as a job —
+    # see test_adversarial_classifier.test_programme_posting_*)
+    assert classify_job("Leadership Development Programme - Graduate", posting_evidence=True).accepted
     assert classify_job("Management Trainee").accepted
 
 
@@ -317,7 +319,9 @@ def test_audit_no_false_fresher_signal(title, description):
         ("Software Engineer", "Years of Experience: 0-1"),
         ("Executive - Operations", "Freshers welcome"),
         ("Software Engineering Intern", "Open to 2026 graduates"),
-        ("Graduate Programme 2026 – Technology", ""),
+        # a programme *posting* (ATS / JSON-LD JobPosting) — the bare title is a
+        # landing page, see test_adversarial_classifier.test_programme_posting_*
+        ("Graduate Programme 2026 – Technology Analyst", ""),
         ("Lead Generation Executive", "Freshers can apply"),
         ("Graduate Software Engineer",
          "Minimum qualifications:\nBachelor's degree.\nPreferred qualifications:\n2 years of experience with Java."),

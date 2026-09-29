@@ -20,7 +20,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # full history so the pre-push rebase below has a merge base
+          fetch-depth: 0   # full history so alerts.py can fetch and build on the latest branch tip
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -39,61 +39,18 @@ jobs:
         run: python scraper.py
         working-directory: .
 
-      - name: Send email alerts if new jobs found
+      # Publish the scrape results and email new alerts — at most once per job.
+      # alerts.py pushes the data (merged record-by-record with any change the
+      # Streamlit app made meanwhile) and marks the jobs "claimed" BEFORE the
+      # email goes out, then records "sent". A failed push therefore never
+      # re-sends an alert, and if the first push fails nothing is emailed.
+      - name: Publish results and send email alerts
+        if: ${{ !cancelled() && steps.scrape.outcome == 'success' }}
         env:
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          python - <<'EOF'
-          import json, sys
-          from pathlib import Path
-
-          seen = json.loads(Path("seen_jobs.json").read_text())
-          # jobs marked "new" this run have no "notified" flag
-          new_jobs = [j for j in seen if not j.get("notified")]
-          if not new_jobs:
-              print("No new jobs — skipping email")
-              sys.exit(0)
-
-          from config_store import load_settings
-          recipient = load_settings().get("recipient_email", "").strip()
-          if not recipient:
-              print("No recipient email configured — skipping email")
-              sys.exit(0)
-
-          from notifier import send_alerts
-          send_alerts(new_jobs, recipient)
-
-          # mark as notified and save
-          for j in seen:
-              j["notified"] = True
-          Path("seen_jobs.json").write_text(json.dumps(seen, indent=2))
-          print(f"Sent {len(new_jobs)} job alert(s) to {recipient}")
-          EOF
-
-      - name: Commit updated JSON files
-        # Run even if the email step failed, so freshly scraped jobs are not
-        # lost — they stay un-notified in seen_jobs.json and the next run
-        # retries the email. The job itself still reports failure.
-        if: ${{ !cancelled() && steps.scrape.outcome == 'success' }}
+          PUBLISH_BRANCH: ${{ github.ref_name }}
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add seen_jobs.json companies.json
-          if git diff --cached --quiet; then
-            echo "No data changes to commit"
-            exit 0
-          fi
-          git commit -m "chore: update seen_jobs + companies [skip ci]"
-          # main may have moved while this run executed (another run, the
-          # Streamlit app saving settings, or a manual push). Rebase our data
-          # commit on top and retry; -X theirs keeps THIS run's freshly
-          # scraped JSON if the same files changed on both sides.
-          for attempt in 1 2 3; do
-            git pull --rebase -X theirs origin main && git push && exit 0
-            echo "push attempt $attempt failed, retrying..."
-            sleep 5
-          done
-          echo "Could not push after 3 attempts"
-          exit 1
+          python alerts.py

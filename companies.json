@@ -2,7 +2,7 @@
   {
     "id": "metlife",
     "name": "MetLife",
-    "url": "https://jobs.metlife.com",
+    "url": "https://www.metlifecareers.com/en_US/ml/SearchJobs",
     "locked": true,
     "status": "active",
     "last_job": "",
@@ -11,7 +11,7 @@
   {
     "id": "avalara",
     "name": "Avalara",
-    "url": "https://careers.avalara.com",
+    "url": "https://careers.avalara.com/careers-home/jobs",
     "locked": true,
     "status": "active",
     "last_job": "",
@@ -20,7 +20,7 @@
   {
     "id": "pokerstars",
     "name": "PokerStars",
-    "url": "https://careers.flutterinternational.com/our-brands/pokerstars/",
+    "url": "https://flutterbe.wd3.myworkdayjobs.com/FlutterInt_External",
     "locked": true,
     "status": "active",
     "last_job": "",
@@ -29,7 +29,7 @@
   {
     "id": "sanofi",
     "name": "Sanofi",
-    "url": "https://jobs.sanofi.com/en",
+    "url": "https://sanofi.wd3.myworkdayjobs.com/SanofiCareers",
     "locked": true,
     "status": "active",
     "last_job": "",
@@ -38,7 +38,7 @@
   {
     "id": "pwc",
     "name": "PwC",
-    "url": "https://www.pwc.com/gx/en/careers.html",
+    "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers",
     "locked": true,
     "status": "active",
     "last_job": "",
@@ -47,7 +47,7 @@
   {
     "id": "accenture",
     "name": "Accenture",
-    "url": "https://www.accenture.com/us-en/careers",
+    "url": "https://www.accenture.com/in-en/careers/jobsearch",
     "locked": true,
     "status": "active",
     "last_job": "",
@@ -55,8 +55,8 @@
   },
   {
     "id": "c1783687965",
-    "name": "npcl",
-    "url": "https://www.npci.org.in/careers",
+    "name": "NPCI",
+    "url": "https://careers.npci.org.in/jobs/Careers",
     "locked": false,
     "status": "active",
     "last_job": "",

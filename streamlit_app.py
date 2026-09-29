@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 import streamlit as st
 
 from config_store import (
+    alert_pending,
     dismiss_jobs,
     fetch_remote_json,
     friendly_github_error,
@@ -522,14 +523,13 @@ def _logo_data_uri() -> str:
 
 
 @st.cache_resource(show_spinner=False)
-def _api_scrapers() -> dict:
-    """Company ids the scraper reads through a dedicated API (currently
-    Workday); every other portal is read with Playwright."""
+def _source_label(c: dict) -> str:
+    """How the scraper reads this company ("Workday API", "Accenture job-search API", ...)."""
     try:
-        from scraper import COMPANY_API
-        return {cid: (cfg.get("type") or "api") for cid, cfg in COMPANY_API.items()}
+        from scraper import source_label
+        return source_label(c)
     except Exception:
-        return {}
+        return "Playwright (headless browser)"
 
 
 def _trigger_scrape() -> tuple[bool, str]:
@@ -642,14 +642,18 @@ last_scan = max((d for d in (_parse_iso(c.get("last_checked", "")) for c in comp
 scan_stale = last_scan is None or NOW - last_scan > timedelta(hours=_STALE_H)
 
 
+# scraper status -> label; all of them use the red "failing" style/counts
+_UNHEALTHY = {"failing": "Failing", "broken": "Broken", "needs_config": "Needs configuration"}
+
+
 def portal_status(c: dict) -> tuple[str, str]:
     """(css key, label) from the scraper's own status + last_checked."""
     checked = _parse_iso(c.get("last_checked", ""))
-    if (_check_trigger and time.time() - _check_trigger < 1200 and c.get("status") != "broken"
+    if (_check_trigger and time.time() - _check_trigger < 1200 and c.get("status") not in _UNHEALTHY
             and (checked is None or checked.timestamp() < _check_trigger)):
         return "checking", "Checking"
-    if c.get("status") == "broken":
-        return "failing", "Failing"
+    if c.get("status") in _UNHEALTHY:
+        return "failing", _UNHEALTHY[c["status"]]
     if checked is None or c.get("status") not in ("active",):
         return "pending", "Pending"
     if NOW - checked > timedelta(hours=_STALE_H):
@@ -1079,7 +1083,11 @@ def page_job_detail(j: dict):
             src = [("Portal", escape(_host(url)) if url else "—"),
                    ("Platform", "Workday" if "myworkdayjobs.com" in url else "Company career site"),
                    ("Posting", f'<a class="link" href="{escape(url, quote=True)}" target="_blank" rel="noopener">Open posting {_ms("open_in_new", "s16")}</a>' if url else "No link"),
-                   ("Email alert", "Sent" if j.get("notified") else "Pending — goes out after the next check")]
+                   ("Email alert", "Sent" if j.get("notified")
+                    else "Sending — delivery not yet confirmed" if j.get("notify_state") == "claimed"
+                    else "Not sent (dismissed)" if j.get("dismissed")
+                    else "Pending — goes out after the next check" if alert_pending(j)
+                    else "Not emailed")]
             st.html('<h2 class="section-title">Source</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
                     + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in src) + "</dl>")
             st.html('<div class="divider"></div>')
@@ -1157,11 +1165,11 @@ def page_add_company():
                             help="The page that lists open jobs — not the company's home page.")
         site = st.text_input("Company website (optional)", placeholder="https://www.example.com", key="new_website")
         st.html(f"""<div class="note" style="display:flex;gap:10px;align-items:flex-start;">
-          {_ms("info", "s20")}<div>The scraper opens this page with a headless browser (Playwright) on every scan,
-          follows each job link, and keeps roles in India that the classifier marks as fresher or entry level.
-          A dedicated Workday API is only used for companies already configured for it (currently
-          {escape(", ".join(sorted(n.title() for n in _api_scrapers())) or "none")}). There's no per-company
-          scraper choice — it's automatic.</div></div>""")
+          {_ms("info", "s20")}<div>Use the page that lists individual job postings (its job search), not a careers
+          landing page. Workday URLs (<span class="num">*.myworkdayjobs.com</span>) are read through Workday's API;
+          other pages are opened with a headless browser (Playwright), each job link is followed, and roles in India
+          that the classifier marks as fresher or entry level are kept. If the page shows no job postings the
+          company is marked <b>Needs configuration</b> rather than healthy.</div></div>""")
         b1, b2 = st.columns([1, 4])
         with b1:
             submit = st.button("Start tracking", key="btn_add", type="primary", use_container_width=True)
@@ -1248,14 +1256,14 @@ def page_company_detail(c: dict):
         main, side = st.columns([3, 2])
     with side:
         with st.container(key="co_side"):
-            driver = _api_scrapers().get(c.get("id"))
             checked = _parse_iso(c.get("last_checked", ""))
             health = [("Status", f'<span class="pill {k}"><i></i>{lbl}</span>'),
                       ("Last checked", f'<span class="num">{_ago(checked, NOW)}</span>' + (f' <span class="muted num">({checked:%b %d, %H:%M} UTC)</span>' if checked else "")),
-                      ("Scraper", f"{driver.title()} API, Playwright fallback" if driver else "Playwright (headless browser)"),
+                      ("Scraper", escape(_source_label(c))),
                       ("Latest scan", escape(c.get("last_job") or "No matching job on the last scan"))]
             if k == "failing":
-                health.append(("Error", f'The last scan failed. <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">See the Actions log</a>'))
+                why = escape(c.get("status_reason") or "The last scan failed.")
+                health.append(("Problem", f'{why} <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">See the Actions log</a>'))
             st.html('<h2 class="section-title">Portal health</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
                     + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in health) + "</dl>")
             st.html('<div class="divider"></div>')
@@ -1300,31 +1308,33 @@ def page_monitoring():
         k, lbl = statuses[c.get("id")]
         curl = safe_url(c.get("url", ""))
         checked = _parse_iso(c.get("last_checked", ""))
-        note = {"failing": f'Last scan failed — <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">see log</a>',
+        reason = escape(c.get("status_reason") or "")
+        note = {"failing": f'{reason or "Last scan failed"} — <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">see log</a>',
                 "delayed": f"No scan for over {_STALE_H} hours",
                 "pending": "Not scanned yet — added since the last run",
-                "checking": "Check requested"}.get(k, "—")
-        driver = _api_scrapers().get(c.get("id"))
+                "checking": "Check requested"}.get(k, reason or "—")
         rows.append(f"""<tr>
           <td class="c">{escape((c.get('name') or '').strip() or 'Unnamed')}
             <div class="sub">{f'<a class="link" href="{escape(curl, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(curl, 34))}</a>' if curl else 'Invalid URL'}</div></td>
           <td data-l="Status"><span class="pill {k}"><i></i>{lbl}</span></td>
           <td class="num" data-l="Last checked">{_ago(checked, NOW)}</td>
           <td class="num" data-l="Jobs found">{len(company_jobs(c))}</td>
-          <td data-l="Scraper">{f"{driver.title()} API" if driver else "Playwright"}</td>
+          <td data-l="Scraper">{escape(_source_label(c))}</td>
           <td data-l="Notes">{note}</td></tr>""")
     with st.container(key="mon_table"):
         st.html('<table class="mon"><thead><tr><th>Company</th><th>Status</th><th>Last checked</th><th>Jobs found</th>'
                 '<th>Scraper</th><th>Notes</th></tr></thead><tbody>' + "".join(rows) + "</tbody></table>")
     st.html(f'<p class="note">Statuses come from the scraper: <b>Healthy</b> = scanned successfully in the last {_STALE_H} hours · '
-            f'<b>Delayed</b> = no successful scan for {_STALE_H}+ hours · <b>Failing</b> = the last scan errored · '
+            f'<b>Delayed</b> = no successful scan for {_STALE_H}+ hours · <b>Failing</b> = the last scan partly failed '
+            f'(errors, rate limits or unreadable job pages) · <b>Broken</b> = the job list could not be read (blocked, HTTP error, '
+            f'site changed) · <b>Needs configuration</b> = the URL shows no job postings · '
             f'<b>Pending</b> = not scanned yet. Full run logs: <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">GitHub Actions</a>.</p>')
 
 
 def page_email():
     notified = [j for j in all_records if j.get("notified")]
     last_mail = max((found[id(j)] for j in notified if found[id(j)]), default=None)
-    pending = [j for j in all_records if not j.get("notified")]
+    pending = [j for j in all_records if alert_pending(j)]
     page_header("Email & Notifications", (
         f'<span class="pill {"on" if recipient else "off"}"><i></i>{"Alerts on" if recipient else "Alerts off"}</span>'
         + (f'<span>Sending to {escape(recipient)}</span>' if recipient else '<span>Add a recipient to turn alerts on</span>')))
@@ -1405,8 +1415,9 @@ def page_email():
         st.html("""<div class="divider"></div><div><h2 class="section-title">How alerts work</h2></div>
           <ul class="note" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;">
             <li>After every scheduled check (every 3 hours), jobs found for the first time are sent in one email.</li>
-            <li>Each job is emailed once. Dismissed jobs stay in the history so they're never sent again.</li>
-            <li>If sending fails, the jobs stay unsent and the next check retries.</li>
+            <li>Only fresher and entry-level jobs in India whose own posting was read are emailed — never a guess from a title.</li>
+            <li>Each job is emailed at most once. Dismissed jobs are never emailed, and stay in the history so they're never sent again.</li>
+            <li>If sending fails, the jobs stay unsent and the next check retries. A job is recorded before its email goes out, so a failed save can't cause a duplicate.</li>
             <li>Mail is sent through the Gmail account configured in the repository's GitHub Actions secrets — credentials are never shown here.</li>
           </ul>""")
 
@@ -1438,12 +1449,15 @@ def page_settings():
                 toast("Showing the latest data", "success")
                 st.rerun()
     with st.container(key="set_engine"):
-        api = _api_scrapers()
+        by_source: dict[str, list[str]] = {}
+        for c in companies:
+            by_source.setdefault(_source_label(c), []).append((c.get("name") or "").strip() or "Unnamed")
         rows = [("Schedule", 'Every 3 hours (cron <span class="num">0 */3 * * *</span>) — set in .github/workflows/check_jobs.yml'),
                 ("Roles kept", "Fresher and entry-level roles located in India"),
-                ("Scrapers", f"Workday API for {escape(', '.join(sorted(n.title() for n in api)))}; Playwright for every other portal"
-                             if api else "Playwright for every portal"),
-                ("Detail pages", "Each candidate job's own page is read before it is classified")]
+                ("Scrapers", "; ".join(f"{escape(src)} for {escape(', '.join(sorted(names)))}"
+                                       for src, names in sorted(by_source.items())) or "No portals yet"),
+                ("Detail pages", "Each candidate job's own posting is read before it is classified; "
+                                 "if it can't be read the job is not emailed and is retried next scan")]
         st.html('<div><h2 class="section-title">Scanning</h2><p class="section-sub">Defined in the repository; change them there.</p></div>'
                 '<dl class="kv">' + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in rows) + "</dl>")
     with st.container(key="set_maint"):

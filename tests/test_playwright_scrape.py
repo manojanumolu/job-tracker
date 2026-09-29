@@ -34,6 +34,25 @@ LISTING = """<html><body>
 <a href="jobs/related.html"><h3>Associate Tester</h3><p>Jaipur, India</p></a>
 <a href="jobs/london.html"><h3>Graduate Analyst London</h3><p>London</p></a>
 <a href="/blog/meet-priya"><h3>Meet Priya: Associate in Pune</h3></a>
+<!-- Accenture's real card structure: the <a> is an empty overlay; title, location
+     and experience sit elsewhere in the card -->
+<div class="rad-filters-vertical__job-card">
+  <div class="rad-filters-vertical__job-card-header">
+    <h3 class="rad-filters-vertical__job-card-title">Trust &amp; Safety New Associate</h3>
+    <div class="rad-filters-vertical__job-card-details"><span>Various locations</span><span>Full time</span>
+      <span>Experience: 0-2 years</span></div></div>
+  <div class="rad-filters-vertical__job-card-content"><div>Location: Hyderabad</div>
+    <div class="rad-filters-vertical__job-card-content-buttons">
+      <a class="rad-button" href="jobs/accfresh.html?id=AIOC-S0001_en&amp;title=Trust"></a></div></div>
+</div>
+<div class="rad-filters-vertical__job-card">
+  <div class="rad-filters-vertical__job-card-header">
+    <h3 class="rad-filters-vertical__job-card-title">Custom Software Engineer</h3>
+    <div class="rad-filters-vertical__job-card-details"><span>Bengaluru</span><span>Full time</span>
+      <span>Experience: 2-5 years</span></div></div>
+  <div class="rad-filters-vertical__job-card-content-buttons">
+    <a class="rad-button" href="jobs/accexp.html?id=ATCI-1_en&amp;title=Custom"></a></div>
+</div>
 </body></html>"""
 
 LONG = " Lorem ipsum dolor sit amet, consectetur adipiscing elit." * 5
@@ -76,6 +95,11 @@ PAGES = {
         "description":"New grads welcome"}]</script>""",
     # expired posting bouncing back to the listing
     "jobs/redirect.html": """<script>location.replace('/index.html')</script>""",
+    # Accenture-style detail: no JSON-LD, a job-description block
+    "jobs/accfresh.html": f"""<h1>Trust &amp; Safety New Associate</h1><div class="job-description">
+        Designation: Trust &amp; Safety New Associate. Qualifications: Any Graduation.
+        Years of Experience: 0 to 1 years.{LONG}</div>""",
+    "jobs/accexp.html": "<p>unused</p>",
 }
 
 
@@ -123,10 +147,19 @@ def test_playwright_end_to_end(site):
     by_title = {j["title"]: j for j in jobs}
     # exp.html (2-4 yrs in JSON-LD), abroad.html (Dublin), noise.html (related-jobs
     # text in <main>), Senior, London card, blog and nav links are all excluded.
-    # No readable detail -> judged on the card title: "#" link, malformed
-    # JSON-LD, redirect back to the listing.
-    assert set(by_title) == {"Associate Analyst", "Graduate Engineer Trainee", "Graduate Analyst",
-                             "Trainee Associate", "Graduate Consultant", "Associate Developer"}
+    # P0: no readable detail -> never alerted on the card title alone: "#" link
+    # (Trainee Associate), malformed JSON-LD (Graduate Analyst), redirect back
+    # to the listing (Graduate Consultant).
+    assert set(by_title) == {"Associate Analyst", "Graduate Engineer Trainee", "Associate Developer",
+                             "Trust & Safety New Associate"}
+    for title in ("Graduate Analyst", "Trainee Associate", "Graduate Consultant"):
+        assert title not in by_title
+    # Accenture-style card: empty <a>, title from the card heading, India from the card
+    assert by_title["Trust & Safety New Associate"]["category"] == "FRESHER"
+    assert by_title["Trust & Safety New Associate"]["url"].endswith("jobs/accfresh.html?id=AIOC-S0001_en&title=Trust")
+    assert by_title["Trust & Safety New Associate"]["location"] == "Location: Hyderabad"
+    # its experienced sibling is rejected from the card ("Experience: 2-5 years") without a fetch
+    assert "Custom Software Engineer" not in by_title and "/jobs/accexp.html" not in " ".join(_Handler.requested)
     # detail requirement overrides the card's "Graduate"; card "2-5 Yrs" is final;
     # unrelated JSON-LD postings are not used as this job's description
     assert "Graduate Engineer" not in by_title

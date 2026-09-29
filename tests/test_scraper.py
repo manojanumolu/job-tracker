@@ -73,16 +73,45 @@ def test_workday_uses_detail_page(mock_workday):
     assert DETAIL_BASE + "/job/Boston/NG_R6" in mock_workday
 
 
-def test_workday_detail_failure_falls_back_to_title(monkeypatch, mock_workday):
-    monkeypatch.setattr(scraper, "_workday_detail", lambda client, url: None)
-    jobs = scraper._scrape_api({"id": "sanofi", "name": "Sanofi", "url": "https://jobs.sanofi.com/en"})
-    # without descriptions: ambiguous "Associate" is not alerted; the graduate
-    # role's list location is "2 Locations" so India can't be confirmed
-    assert [j["title"] for j in jobs] == ["Entry Level Analyst"]
+@pytest.mark.parametrize("failure", [
+    429, 403, 500, 502, 404,
+    httpx.ReadTimeout("timed out"), httpx.ConnectError("refused"),
+    "cloudflare", "not-json", "empty-info", "empty-description", "other-job",
+])
+def test_workday_detail_failure_never_emails(monkeypatch, failure):
+    """P0: when the posting's own detail can't be read, the job is never
+    alerted on its title alone ("Graduate Analyst" here really needs 3 years)."""
+    postings = [{"title": "Graduate Analyst", "locationsText": "Hyderabad", "externalPath": "/job/x"},
+                {"title": "Entry Level Analyst", "locationsText": "Pune", "externalPath": "/job/y"}]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST":
+            return httpx.Response(200, json={"jobPostings": postings})
+        if isinstance(failure, Exception):
+            raise failure
+        if isinstance(failure, int):
+            return httpx.Response(failure)
+        if failure == "cloudflare":
+            return httpx.Response(403, text="<html><title>Just a moment...</title></html>")
+        if failure == "not-json":
+            return httpx.Response(200, text="<html><title>Just a moment...</title></html>")
+        if failure == "empty-info":
+            return httpx.Response(200, json={"jobPostingInfo": {}})
+        if failure == "empty-description":
+            return httpx.Response(200, json={"jobPostingInfo": {"jobDescription": "", "location": "Hyderabad"}})
+        # Workday served a different posting than the one we asked for
+        return httpx.Response(200, json={"jobPostingInfo": {
+            "title": "Graduate Trainee - Operations", "jobDescription": "<p>Freshers welcome. No prior experience required.</p>",
+            "location": "Hyderabad", "country": {"descriptor": "India"}}})
+
+    real_client = httpx.Client
+    monkeypatch.setattr(scraper.httpx, "Client",
+                        lambda *a, **kw: real_client(*a, **{**kw, "transport": httpx.MockTransport(handler)}))
+    assert scraper._scrape_api({"id": "sanofi", "name": "Sanofi", "url": "x"}) == []
 
 
 def test_unknown_company_has_no_api():
-    assert scraper._scrape_api({"id": "metlife", "name": "MetLife", "url": "x"}) == []
+    assert scraper._scrape_api({"id": "some-new-company", "name": "X", "url": "https://example.com/careers"}) == []
 
 
 def test_html_to_text_keeps_block_boundaries():
@@ -170,13 +199,84 @@ def test_workday_malformed_postings_do_not_abort_company(monkeypatch):
     }
     jobs = _run_workday(monkeypatch, postings, details)
     titles = {j["title"] for j in jobs}
-    # every well-formed or recoverable posting survives; failed detail fetches
-    # fall back to the list-view title + location
-    assert titles == {"Graduate Trainee", "Graduate Analyst", "Graduate Engineer",
-                      "Graduate Developer", "Graduate Designer"}
+    # malformed postings and failed detail fetches never abort the company —
+    # and a posting whose own detail couldn't be read is never alerted
+    # (it stays pending and is retried next run)
+    assert titles == {"Graduate Trainee"}
 
 
-def test_workday_list_request_unchanged(monkeypatch):
+def _workday_pages(monkeypatch, pages_by_facet, facets=None):
+    """Mock a paginated Workday list API. ``pages_by_facet`` maps
+    json.dumps(appliedFacets) -> full posting list; returns request log."""
+    import json as _json
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method != "POST":
+            return httpx.Response(200, json={"jobPostingInfo": {
+                "jobDescription": "<p>Open to 2025 graduates. Experience: 0-1 years.</p>",
+                "location": "Hyderabad", "country": {"descriptor": "India"}}})
+        body = _json.loads(request.content)
+        calls.append(body)
+        allp = pages_by_facet.get(_json.dumps(body.get("appliedFacets", {}), sort_keys=True), [])
+        page = allp[body["offset"]:body["offset"] + body["limit"]]
+        out = {"jobPostings": page, "total": len(allp)}
+        if facets is not None:
+            out["facets"] = facets
+        return httpx.Response(200, json=out)
+
+    real_client = httpx.Client
+    monkeypatch.setattr(scraper.httpx, "Client",
+                        lambda *a, **kw: real_client(*a, **{**kw, "transport": httpx.MockTransport(handler)}))
+    return calls
+
+
+def test_workday_paginates_and_uses_india_country_facet(monkeypatch):
+    import json as _json
+    facets = [{"facetParameter": "locationCountry", "values": [
+        {"descriptor": "France", "id": "fr1", "count": 500}, {"descriptor": "India", "id": "in1", "count": 45}]}]
+    india = [{"title": f"Graduate Trainee {i}", "locationsText": "Hyderabad",
+              "externalPath": f"/job/Hyderabad/Graduate-Trainee-{i}_R{1000 + i}"} for i in range(45)]
+    everything = [{"title": f"Other {i}", "locationsText": "Paris", "externalPath": f"/job/p{i}"} for i in range(799)]
+    calls = _workday_pages(monkeypatch, {
+        _json.dumps({}, sort_keys=True): everything,
+        _json.dumps({"locationCountry": ["in1"]}, sort_keys=True): india,
+    }, facets=facets)
+    jobs = scraper._scrape_api({"id": "sanofi", "name": "Sanofi", "url": "x"})
+    # all 45 India postings, across 3 pages — not just the first 20
+    assert len(jobs) == 45
+    assert {c["offset"] for c in calls if c.get("appliedFacets")} == {0, 20, 40}
+    assert all(c["limit"] == 20 for c in calls)
+    assert calls[0]["appliedFacets"] == {}
+
+
+def test_workday_india_location_facet_values(monkeypatch):
+    """PwC-style tenants have no country facet — only city values."""
+    import json as _json
+    facets = [{"facetParameter": "locationMainGroup", "values": [{"facetParameter": "locations", "values": [
+        {"descriptor": "Bengaluru Millenia", "id": "b1"}, {"descriptor": "Kolkata DN 57", "id": "k1"},
+        {"descriptor": "Dublin - One Spencer Dock", "id": "d1"}, {"descriptor": "Hyderabad, Pakistan", "id": "x1"}]}]}]
+    india = [{"title": "Graduate Associate", "locationsText": "Kolkata DN 57",
+              "externalPath": "/job/Kolkata/Graduate-Associate_R9"}]
+    calls = _workday_pages(monkeypatch, {
+        _json.dumps({"locations": ["b1", "k1"]}, sort_keys=True): india}, facets=facets)
+    jobs = scraper._scrape_api({"id": "sanofi", "name": "Sanofi", "url": "x"})
+    assert [j["title"] for j in jobs] == ["Graduate Associate"]
+    assert calls[1]["appliedFacets"] == {"locations": ["b1", "k1"]}
+
+
+def test_workday_without_facets_paginates_everything(monkeypatch):
+    import json as _json
+    postings = ([{"title": f"Other {i}", "locationsText": "Paris", "externalPath": f"/job/p{i}"} for i in range(60)]
+                + [{"title": "Graduate Trainee X", "locationsText": "Pune", "externalPath": "/job/Pune/Graduate-Trainee-X_R77"}])
+    calls = _workday_pages(monkeypatch, {_json.dumps({}, sort_keys=True): postings})
+    jobs = scraper._scrape_api({"id": "sanofi", "name": "Sanofi", "url": "x"})
+    # the only India posting sits on page 4 (offset 60)
+    assert [j["title"] for j in jobs] == ["Graduate Trainee X"]
+    assert [c["offset"] for c in calls] == [0, 20, 40, 60]
+
+
+def test_workday_list_request(monkeypatch):
     seen = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -193,15 +293,32 @@ def test_workday_list_request_unchanged(monkeypatch):
     )
     assert scraper._scrape_api({"id": "sanofi", "name": "Sanofi", "url": "x"}) == []
     assert seen["url"] == LIST_URL
-    assert seen["payload"] == {"limit": 20, "offset": 0, "searchText": "", "locations": []}
+    assert seen["payload"] == {"limit": 20, "offset": 0, "searchText": "", "appliedFacets": {}}
 
 
 def test_workday_india_in_additional_locations(monkeypatch):
     postings = [{"title": "Graduate Trainee", "locationsText": "2 Locations", "externalPath": "/job/multi"}]
     details = {"/job/multi": {"jobPostingInfo": {
-        "jobDescription": "", "location": "Singapore", "additionalLocations": ["Hyderabad"],
-        "country": {"descriptor": "Singapore"}}}}
-    assert [j["title"] for j in _run_workday(monkeypatch, postings, details)] == ["Graduate Trainee"]
+        "jobDescription": "<p>A graduate programme role for the 2025 batch.</p>", "location": "Singapore",
+        "additionalLocations": ["Hyderabad"], "country": {"descriptor": "Singapore"}}}}
+    jobs = _run_workday(monkeypatch, postings, details)
+    assert [j["title"] for j in jobs] == ["Graduate Trainee"]
+    # the alert shows the India location(s), not Singapore
+    assert jobs[0]["location"] == "Hyderabad"
+
+
+def test_workday_empty_description_is_not_readable(monkeypatch):
+    postings = [{"title": "Graduate Trainee", "locationsText": "Hyderabad", "externalPath": "/job/empty"}]
+    details = {"/job/empty": {"jobPostingInfo": {"jobDescription": "", "location": "Hyderabad",
+                                                 "country": {"descriptor": "India"}}}}
+    assert _run_workday(monkeypatch, postings, details) == []
+
+
+def test_workday_list_without_location_needs_detail_location(monkeypatch):
+    """No India location evidence -> never assume India (the old code used the title)."""
+    postings = [{"title": "Graduate Trainee India", "locationsText": "2 Locations", "externalPath": "/job/noloc"}]
+    details = {"/job/noloc": {"jobPostingInfo": {"jobDescription": "<p>Open to 2025 graduates, freshers welcome.</p>"}}}
+    assert _run_workday(monkeypatch, postings, details) == []
 
 
 # ---------------------------------------------------------------------------
@@ -231,8 +348,39 @@ def test_pick_posting_prefers_matching_title():
     assert scraper._pick_posting(postings, "Graduate Engineer")["title"] == "Graduate Engineer"
     # several postings, none ours: don't guess
     assert scraper._pick_posting(postings, "Other") is None
-    assert scraper._pick_posting([{"title": "X"}], "Other")["title"] == "X"
+    # P0: a single posting that is a *different* job is never borrowed
+    assert scraper._pick_posting([{"title": "X"}], "Other") is None
+    assert scraper._pick_posting([{"title": "Graduate Trainee - Operations"}], "Associate Analyst") is None
     assert scraper._pick_posting(["junk"], "x") is None
+
+
+@pytest.mark.parametrize("posted, card", [
+    ("Associate – Evidence Synthesis", "Associate - Evidence Synthesis"),
+    ("ASSOCIATE — EVIDENCE  SYNTHESIS", "Associate – Evidence Synthesis"),
+    ("Software Engineer (Java)", "Software Engineer - Java"),
+])
+def test_pick_posting_normalises_titles(posted, card):
+    assert scraper._pick_posting([{"title": posted}, {"title": "Other"}], card)["title"] == posted
+
+
+def test_pick_posting_by_job_id():
+    postings = [{"title": "Different display title", "identifier": {"value": "JR141427"}}, {"title": "Other"}]
+    assert scraper._pick_posting(postings, "Store Specialist", "JR141427") is postings[0]
+    assert scraper._pick_posting(postings, "Store Specialist", "JR999999") is None
+
+
+@pytest.mark.parametrize("requested, final, readable", [
+    ("https://a.com/jobs/1", "https://a.com/jobs/1", True),
+    ("https://a.com/jobs/1#apply", "https://a.com/jobs/1/", True),
+    ("http://www.a.com/jobs/1?utm_source=x", "https://a.com/jobs/1", True),
+    ("https://a.com/jobs/1", "https://a.com/jobs/2", False),              # different path
+    ("https://a.com/job?id=1", "https://a.com/job?id=2", False),          # different job id
+    ("https://a.com/jobs/1", "https://a.com/careers", False),             # redirect to a landing page
+])
+def test_jsonld_detail_rejects_redirects(requested, final, readable):
+    posting = {"title": "Graduate Analyst", "description": "Open to 2025 graduates and freshers."}
+    detail = scraper.jsonld_detail([posting], "Graduate Analyst", final_url=final, requested_url=requested)
+    assert detail.ok is readable
 
 
 def test_same_page_ignores_fragment_and_trailing_slash():
