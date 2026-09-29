@@ -1,69 +1,95 @@
 from __future__ import annotations
 
+import random
 import re
 import time
 import logging
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from html import unescape
-from urllib.parse import urldefrag, urlparse, urljoin
+from urllib.parse import urldefrag, urljoin, urlparse
 
 import httpx
 
-from job_classifier import Category, Classification, classify_job, is_real_job
-
-logging.basicConfig(level=logging.INFO, format="[scraper] %(message)s")
-log = logging.getLogger(__name__)
-
-# Fresher/entry-level classification lives in job_classifier.py (pure text
-# logic, unit tested in tests/). The old keyword list treated words such as
-# "associate", "junior" and "internship" as proof of a fresher role and missed
-# most experience requirements ("2-4 years", "minimum 2 yrs", ...).
-MAX_DETAIL_FETCHES = 30  # per company, bounds run time on pages with many cards
-
-INDIA_KEYWORDS = [
-    "india", "bengaluru", "bangalore", "hyderabad", "pune", "chennai",
-    "mumbai", "gurgaon", "gurugram", "noida", "delhi", "kolkata",
-    "ahmedabad", "kochi", "coimbatore", "indore", "navi mumbai",
-    "thiruvananthapuram", "trivandrum", "mysuru", "mysore", "jaipur",
-    "chandigarh", "mohali", "vadodara", "nagpur", "visakhapatnam",
-    "bhubaneswar", "gandhinagar",
-]
-_INDIA_RE = re.compile(
-    r"\b(?:" + "|".join(re.escape(k) for k in INDIA_KEYWORDS) + r")\b",
-    re.IGNORECASE,
+from identity import ats_job_id, canonical_url, job_uid, same_page
+from job_classifier import (
+    Category, Classification, classify_job, evidence_is_applicant_directed, evidence_quote, experience_conflict,
+    normalize_title, not_a_job_reason, parse_experience_requirements,
+)
+from locations import india_segments, is_india
+from sources import (
+    HEADERS, Detail, Listing, SourceError, html_to_text, read_source, workday_api_from_url, workday_detail,
+    workday_listings,
 )
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; FresherJobTracker/1.0)",
-    "Accept": "application/json, text/html, */*",
-}
+logging.basicConfig(level=logging.INFO, format="[scraper] %(message)s")
+log = logging.getLogger("scraper")
 
-# Per-company API config (id -> dict)
-# NOTE: Avalara runs on a custom ATS (not Workday) and Accenture has no public
-# careers API — both previously pointed at guessed endpoints that returned
-# 401/404 on every run. They now fall back to the Playwright scraper below.
-COMPANY_API: dict[str, dict] = {
-    "sanofi": {
-        "type": "workday",
-        "url": "https://sanofi.wd3.myworkdayjobs.com/wday/cxs/sanofi/SanofiCareers/jobs",
-    },
+# Fresher/entry-level classification lives in job_classifier.py (pure text
+# logic, unit tested in tests/).
+#
+# The core safety rule of this module: a job is only ever alerted when its
+# own posting was read. If the detail page/record can't be read (HTTP error,
+# rate limit, bot challenge, redirect to another page, a different job's
+# data, empty description, detail budget exhausted) the job is UNKNOWN — not
+# emailed, not saved, retried on the next run. The only card-level evidence
+# strong enough on its own is an explicit 0-year experience range.
+MAX_DETAIL_FETCHES = 30        # browser detail pages per company (slow)
+MAX_API_DETAIL_FETCHES = 400   # HTTP detail requests per company (PwC India needs ~200)
+_FAILING_DETAIL_RATIO = 0.5    # more unreadable job pages than this -> "failing"
+
+# ---------------------------------------------------------------------------
+# Company -> real job source. Every endpoint below was verified against the
+# live site; companies without an entry use their configured URL (Workday
+# URLs are recognised automatically, anything else is read with Playwright).
+# ---------------------------------------------------------------------------
+COMPANY_SOURCES: dict[str, list[dict]] = {
+    "sanofi": [{"type": "workday", "api": "https://sanofi.wd3.myworkdayjobs.com/wday/cxs/sanofi/SanofiCareers/jobs"}],
+    "pwc": [
+        {"type": "workday", "api": "https://pwc.wd3.myworkdayjobs.com/wday/cxs/pwc/Global_Experienced_Careers/jobs"},
+        {"type": "workday", "api": "https://pwc.wd3.myworkdayjobs.com/wday/cxs/pwc/Global_Campus_Careers/jobs"},
+    ],
+    # PokerStars is a Flutter International brand; its jobs live on Flutter's
+    # Workday site (named in the careers site's own JobPosting data)
+    "pokerstars": [{"type": "workday", "api": "https://flutterbe.wd3.myworkdayjobs.com/wday/cxs/flutterbe/FlutterInt_External/jobs"}],
+    "accenture": [{"type": "accenture", "site": "in-en", "country": "India"}],
+    "avalara": [{"type": "jibe", "host": "https://careers.avalara.com"}],
+    "metlife": [{"type": "avature", "search": "https://www.metlifecareers.com/en_US/ml/SearchJobs"}],
+    # NPCI (added from the app as "npcl")
+    "c1783687965": [{"type": "zoho", "page": "https://careers.npci.org.in/jobs/Careers"}],
 }
+# kept for callers that only need "which companies use an API"
+COMPANY_API = {cid: {"type": cfgs[0]["type"], **cfgs[0]} for cid, cfgs in COMPANY_SOURCES.items()}
+
+_SOURCE_LABELS = {"workday": "Workday API", "accenture": "Accenture job-search API", "jibe": "Jibe/iCIMS API",
+                  "avature": "Avature job search", "zoho": "Zoho Recruit career site"}
+
+
+def sources_for(company: dict) -> list[dict]:
+    if isinstance(company.get("sources"), list) and company["sources"]:
+        return company["sources"]
+    if company.get("id") in COMPANY_SOURCES:
+        return COMPANY_SOURCES[company["id"]]
+    api = workday_api_from_url(company.get("url", ""))
+    return [{"type": "workday", "api": api}] if api else []
+
+
+def source_label(company: dict) -> str:
+    srcs = sources_for(company)
+    if not srcs:
+        return "Playwright (headless browser)"
+    return " + ".join(dict.fromkeys(_SOURCE_LABELS.get(s.get("type"), s.get("type", "API")) for s in srcs))
+
+
+def _plural(n: int, word: str) -> str:
+    return f"{n} {word if n == 1 else word + 's'}"
 
 
 def _is_india(text: str) -> bool:
-    return bool(_INDIA_RE.search(text or ""))
-
-
-_BLOCK_TAG_RE = re.compile(r"<\s*(?:br|/p|/li|/div|/h[1-6]|/tr|li)\b[^>]*>", re.IGNORECASE)
-_TAG_RE = re.compile(r"<[^>]+>")
+    return is_india(text)
 
 
 def _html_to_text(html: str) -> str:
-    """Strip tags but keep block boundaries as newlines, so the classifier can
-    tell bullet points / sentences apart."""
-    text = _BLOCK_TAG_RE.sub("\n", html or "")
-    text = unescape(_TAG_RE.sub(" ", text))
-    return "\n".join(line.strip() for line in text.splitlines() if line.strip())
+    return html_to_text(html)
 
 
 def _log_decision(company: str, title: str, result: Classification) -> None:
@@ -109,100 +135,248 @@ def _now_iso() -> str:
 # fetching a detail page for them.
 _HARD_REJECT = {Category.NOT_A_JOB, Category.SENIOR, Category.EXPERIENCED}
 
-# Workday's list API reports multi-location postings as "3 Locations"
-_WORKDAY_MULTI_LOC_RE = re.compile(r"^\s*\d+\s+locations?\s*$", re.IGNORECASE)
+
+def _unknown(reason: str) -> Classification:
+    return Classification(Category.UNKNOWN, reason)
 
 
-def _workday_detail(client: httpx.Client, url: str) -> tuple[str, str] | None:
-    """Fetch a Workday posting's description and its full location list."""
-    try:
-        r = client.get(url)
-        r.raise_for_status()
-        info = r.json().get("jobPostingInfo") or {}
-    except Exception as e:
-        log.warning("Workday detail fetch failed for %s: %s", url, e)
-        return None
-    if not isinstance(info, dict) or not info:
-        log.warning("Workday detail for %s has no jobPostingInfo", url)
-        return None
-    locations = [info.get("location")] + list(info.get("additionalLocations") or [])
-    country = info.get("country")
-    if isinstance(country, dict):
-        country = country.get("descriptor")
-    location_text = " | ".join(str(x) for x in locations + [country] if x)
-    return _html_to_text(str(info.get("jobDescription") or "")), location_text
+# ---------------------------------------------------------------------------
+# Per-company scan bookkeeping and health
+# ---------------------------------------------------------------------------
+
+@dataclass
+class Scan:
+    name: str
+    jobs: list[dict] = field(default_factory=list)
+    errors: list[tuple[str, str]] = field(default_factory=list)   # (status, message)
+    sources_ok: int = 0
+    seen: int = 0
+    candidates: int = 0
+    details_ok: int = 0
+    details_failed: int = 0
+    last_detail_error: str = ""
+    pending: int = 0
+    rejected: int = 0
+    unknown: int = 0
+    notes: list[str] = field(default_factory=list)
+
+    def fail(self, status: str, message: str) -> None:
+        log.warning("%s: %s (%s)", self.name, message, status)
+        self.errors.append((status, message))
+
+    def record_detail(self, detail: Detail) -> None:
+        if detail.ok:
+            self.details_ok += 1
+        else:
+            self.details_failed += 1
+            self.last_detail_error = detail.reason
+
+    @property
+    def status(self) -> str:
+        if self.errors and not self.sources_ok:
+            order = ["needs_config", "broken", "failing"]
+            return min((s for s, _ in self.errors), key=lambda s: order.index(s) if s in order else 9)
+        if self.errors:
+            return "failing"
+        attempted = self.details_ok + self.details_failed
+        if attempted >= 3 and self.details_failed / attempted > _FAILING_DETAIL_RATIO:
+            return "failing"
+        return "active"
+
+    @property
+    def reason(self) -> str:
+        if self.errors:
+            return "; ".join(m for _, m in self.errors)
+        attempted = self.details_ok + self.details_failed
+        if attempted >= 3 and self.details_failed / attempted > _FAILING_DETAIL_RATIO:
+            return f"{self.details_failed} of {attempted} job pages could not be read (last: {self.last_detail_error})"
+        return ""
+
+    @property
+    def user_note(self) -> str:
+        """Plain-language note for a healthy scan (shown in Monitoring)."""
+        return f"{_plural(self.pending, 'posting')} left for the next scan (detail-page budget)" if self.pending else ""
+
+    def summary(self) -> dict:
+        return {"postings_seen": self.seen, "candidates": self.candidates, "details_read": self.details_ok,
+                "details_unreadable": self.details_failed, "pending": self.pending, "accepted": len(self.jobs)}
 
 
-def _workday_posting(client: httpx.Client, p: dict, base: str, cxs_base: str, name: str) -> dict | None:
-    title = p.get("title") or ""
-    location = p.get("locationsText") or ""
-    ext = p.get("externalPath") or ""
-    pre = classify_job(title, url=ext)
+# ---------------------------------------------------------------------------
+# The decision: listing + (maybe) detail -> classification
+# ---------------------------------------------------------------------------
+
+# lines about experience / eligibility ("each year" or "100 years of history" are not)
+_EXPERIENCE_LINE_RE = re.compile(
+    r"experience|\bexp\b|fresher|graduat|\d\s*(?:\+\s*)?(?:years?|yrs?|months?)\b", re.IGNORECASE)
+
+
+def safety_gate(listing: Listing, detail: Detail | None, result: Classification, location: str) -> dict[str, bool]:
+    """The final checks every alert must pass (checks 9-10 — not previously
+    notified, not dismissed — are enforced when the record is merged and
+    when the email queue is built: merge_new_jobs / alert_pending)."""
+    title, url = listing.title, listing.url
+    description = f"{listing.card_text}\n{detail.description}".strip() if detail else listing.card_text
+    posting = bool(detail and (detail.posting_evidence or listing.posting_evidence))
+    reason = not_a_job_reason(title, url, posting_evidence=posting)
+    return {
+        "real_job_posting": not reason and (posting or bool(_JOB_URL_RE.search(url))),
+        "india_location": is_india(location),
+        "detail_read": bool(detail and detail.ok),
+        "detail_is_this_job": bool(detail and detail.ok and detail.matched),
+        "no_conflicting_experience": not experience_conflict(title, description, detail.strict_text if detail else ""),
+        "not_programme_story_talent_recruiter": not reason,
+        "evidence_not_staff_context": evidence_is_applicant_directed(result, title, description),
+        "fresher_or_entry_evidence": result.accepted and bool(evidence_quote(result)),
+    }
+
+
+def _evidence(listing: Listing, detail: Detail, result: Classification, checks: dict) -> dict:
+    description = f"{listing.card_text}\n{detail.description}"
+    reqs = parse_experience_requirements(description) + parse_experience_requirements(detail.strict_text)
+    # the lines that decided it (requirement / fresher quote) first, then other
+    # experience-related lines; each line once
+    decisive = [r.text.lower() for r in reqs] + [evidence_quote(result).lower()]
+    lines: list[str] = []
+    for ln in description.splitlines():
+        ln = ln.strip(" \t·•*-")[:160]
+        if ln and _EXPERIENCE_LINE_RE.search(ln) and ln not in lines:
+            lines.append(ln)
+    lines.sort(key=lambda ln: not any(q and q in ln.lower() for q in decisive))
+    return {
+        "experience": [r.text.rstrip(" .,;") for r in reqs] or ["no experience requirement stated"],
+        "experience_lines": lines[:4],
+        "fresher_evidence": evidence_quote(result),
+        "detail_read": detail.ok,
+        "detail_match": detail.matched,
+        "job_id": ats_job_id(listing.url) or (f"id:{listing.job_id}" if listing.job_id else ""),
+        "canonical_url": canonical_url(listing.url),
+        "checks": checks,
+    }
+
+
+def decide(company: str, listing: Listing, detail: Detail | None) -> tuple[Classification, dict | None]:
+    """Final verdict for one posting. Never accepts without the posting's own
+    detail (the safety gate requires it), and every alert must pass all
+    safety-gate checks; its evidence is stored on the record."""
+    title, card = listing.title, listing.card_text
+    if detail is None or not detail.ok:
+        why = detail.reason if detail else "no job page"
+        return _unknown(f"job page unreadable ({why}) — not alerted, retried next run"), None
+
+    if detail.location and not is_india(detail.location):
+        return _unknown(f"not in India (posting location: {detail.location[:80]})"), None
+    location = detail.location if is_india(detail.location) else listing.location
+    if not is_india(location):
+        return _unknown("no India location evidence — not alerted"), None
+    description = f"{card}\n{detail.description}".strip()
+    result = classify_job(title, description, url=listing.url, strict_text=detail.strict_text,
+                          posting_evidence=detail.posting_evidence or listing.posting_evidence)
+    if not result.accepted:
+        return result, None
+    checks = safety_gate(listing, detail, result, location)
+    failed = [k for k, ok in checks.items() if not ok]
+    if failed:
+        return _unknown(f"safety gate failed ({', '.join(failed)}) after '{result.reason}' — not alerted"), None
+    shown = " | ".join(india_segments(location)) or location
+    job = _job(title, listing.url, company, result, shown if is_india(detail.location) else location)
+    job["evidence"] = _evidence(listing, detail, result, checks)
+    return result, job
+
+
+def _evaluate(scan: Scan, listing: Listing, budget: list[int]) -> None:
+    scan.candidates += 1
+    # judged as a posting here only to avoid dropping programme titles before
+    # their JobPosting evidence has been read; the final verdict uses the real evidence
+    pre = classify_job(listing.title, listing.card_text, url=listing.url, posting_evidence=True)
     if pre.category in _HARD_REJECT:
-        _log_decision(name, title, pre)
-        return None
-    # a concrete non-India location in the list view is final;
-    # "N Locations" needs the detail page to know
-    if location and not _WORKDAY_MULTI_LOC_RE.match(location) and not _is_india(location):
-        return None
-    detail = _workday_detail(client, cxs_base + ext) if ext else None
-    description, location_text = detail or ("", "")
-    # detail without location data: fall back to the list view (and, as
-    # before, the title when the list view has no location either)
-    location_text = location_text or location or title
-    if not _is_india(location_text):
-        return None
-    result = classify_job(title, description, url=ext)
-    _log_decision(name, title, result)
-    shown_location = location_text if _is_india(location_text) and location_text != title else location
-    return _job(title, base + ext, name, result, shown_location) if result.accepted else None
+        scan.rejected += 1
+        _log_decision(scan.name, listing.title, pre)
+        return
+    detail = listing.detail
+    if detail is None and listing.fetch_detail is not None:
+        if budget[0] > 0:
+            budget[0] -= 1
+            try:
+                detail = listing.fetch_detail()
+            except Exception as e:  # one broken posting never aborts the company
+                detail = Detail.unreadable(f"{type(e).__name__}: {e}")
+            scan.record_detail(detail)
+        else:
+            detail = Detail.unreadable("detail budget reached this run")
+            scan.pending += 1
+    result, job = decide(scan.name, listing, detail)
+    _log_decision(scan.name, listing.title, result)
+    if job:
+        scan.jobs.append(job)
+    elif result.category == Category.UNKNOWN:
+        scan.unknown += 1
+    else:
+        scan.rejected += 1
+
+
+# ---------------------------------------------------------------------------
+# HTTP sources (Workday, Accenture, Jibe, Avature, Zoho)
+# ---------------------------------------------------------------------------
+
+def _scan_sources(company: dict, sources: list[dict]) -> Scan:
+    scan = Scan(company["name"])
+    budget = [MAX_API_DETAIL_FETCHES]
+    with httpx.Client(headers=HEADERS, timeout=25, follow_redirects=True) as client:
+        listings: list[Listing] = []
+        for cfg in sources:
+            try:
+                result = read_source(client, cfg)
+            except SourceError as e:
+                scan.fail(e.status, str(e))
+                continue
+            except Exception as e:
+                scan.fail("failing", f"{type(e).__name__}: {e}")
+                continue
+            scan.sources_ok += 1
+            scan.seen += result.seen
+            if result.note:
+                scan.notes.append(result.note)   # technical detail: logged, not shown to users
+            listings += result.listings
+        # more detail pages than the budget: vary the order between runs so
+        # the same postings are never the ones left pending every time
+        if sum(1 for x in listings if x.detail is None and x.fetch_detail) > budget[0]:
+            random.shuffle(listings)
+        for listing in listings:
+            try:
+                _evaluate(scan, listing, budget)
+            except Exception as e:
+                log.warning("Skipping malformed posting for %s: %s", scan.name, e)
+    return scan
 
 
 def _scrape_api(company: dict) -> list[dict]:
-    cid = company["id"]
-    cfg = COMPANY_API.get(cid)
-    if not cfg:
-        return []
-    url = cfg["url"]
-    name = company["name"]
-    with httpx.Client(headers=HEADERS, timeout=20, follow_redirects=True) as client:
-        if cfg.get("type") == "workday":
-            payload = {"limit": 20, "offset": 0, "searchText": "", "locations": []}
-            r = client.post(url, json=payload)
-            r.raise_for_status()
-            data = r.json()
-            postings = data.get("jobPostings", [])
-            # https://{host}/wday/cxs/{tenant}/{site}/jobs -> https://{host}/{site}
-            parsed = urlparse(url)
-            site = parsed.path.rstrip("/").split("/")[-2]
-            base = f"{parsed.scheme}://{parsed.netloc}/{site}"
-            # detail API: https://{host}/wday/cxs/{tenant}/{site}{externalPath}
-            cxs_base = url.rstrip("/").rsplit("/", 1)[0]
-            jobs = []
-            for p in postings:
-                # one malformed posting must not abort the rest of the company
-                try:
-                    job = _workday_posting(client, p, base, cxs_base, name)
-                except Exception as e:
-                    log.warning("Skipping malformed Workday posting for %s: %s", name, e)
-                    continue
-                if job:
-                    jobs.append(job)
-            return jobs
-    return []
+    """Jobs from a company's API sources ([] when it has none)."""
+    sources = sources_for(company)
+    return _scan_sources(company, sources).jobs if sources else []
 
 
-# Pulls schema.org JobPosting data (description + location) out of a detail
-# page's JSON-LD — most ATSs emit it for Google Jobs, JS-rendered or not.
-# Malformed blocks are skipped.
+# backwards-compatible helpers (tests / callers)
+def _workday_detail(client: httpx.Client, url: str, title: str = "") -> Detail:
+    return workday_detail(client, url, title)
+
+
+# ---------------------------------------------------------------------------
+# Generic browser path (companies without a known job source)
+# ---------------------------------------------------------------------------
+
+# Pulls schema.org JobPosting data out of a detail page's JSON-LD — most ATSs
+# emit it for Google Jobs. "@type" may be "JobPosting", "schema:JobPosting"
+# or "http://schema.org/JobPosting". Malformed blocks are skipped.
 _JSONLD_JS = """
 () => {
   const out = [];
+  const isJob = (t) => (Array.isArray(t) ? t : [t]).some(
+    x => typeof x === 'string' && x.split('/').pop().split(':').pop() === 'JobPosting');
   const visit = (o) => {
     if (!o || typeof o !== 'object') return;
     if (Array.isArray(o)) { o.forEach(visit); return; }
-    const t = o['@type'];
-    if (t === 'JobPosting' || (Array.isArray(t) && t.includes('JobPosting'))) out.push(o);
+    if (isJob(o['@type'])) out.push(o);
     if (o['@graph']) visit(o['@graph']);
   };
   document.querySelectorAll('script[type="application/ld+json"]').forEach(s => {
@@ -212,10 +386,67 @@ _JSONLD_JS = """
 }
 """
 
+# Visible experience / level fields outside the description ("Experience:
+# 2-5 years", "Seniority level: Mid-Senior", "Senior Analyst | Full time |
+# Experience: 2-5 years"). Skips links and similar/related-job widgets.
+# Used as reject-only evidence.
+_PAGE_FIELDS_JS = """
+() => {
+  const LABEL = /^\\s*(?:years?\\s+of\\s+experience|(?:work\\s+|total\\s+|required\\s+)?experience(?:\\s+(?:required|level|range))?|exp\\.?|seniority\\s+level|career\\s+level|management\\s+level|job\\s+level|experience\\s+level)\\s*[:|\\-]/i;
+  const INLINE = /\\|\\s*experience\\s*:/i;
+  const BAD = /similar|related|recommend|other-?jobs|more-?jobs|carousel|suggest|also|nearby/i;
+  const out = [];
+  for (const el of document.querySelectorAll('body *')) {
+    if (el.children.length > 4 || ['SCRIPT', 'STYLE', 'NOSCRIPT'].includes(el.tagName)) continue;
+    const t = (el.innerText || '').trim();
+    if (!t || t.length > 200 || !(LABEL.test(t) || INLINE.test(t))) continue;
+    let bad = false;
+    for (let e = el; e && e !== document.body; e = e.parentElement) {
+      const cls = typeof e.className === 'string' ? e.className : '';
+      if (e.tagName === 'A' || BAD.test(cls + ' ' + (e.id || ''))) { bad = true; break; }
+    }
+    if (!bad && !out.includes(t)) out.push(t);
+    if (out.length >= 20) break;
+  }
+  return out.join('\\n');
+}
+"""
+
+# Job links on a listing page. The title comes from the link text, or — for
+# cards whose <a> is an empty overlay (Accenture) — from the link's label or
+# the card's heading; the card's own text is the extra evidence/location.
+_CANDIDATES_JS = """
+() => {
+  const GENERIC = /^(apply|apply now|view|view job|details|view details|read more|learn more|save|share|more)$/i;
+  const HEADING = 'h1,h2,h3,h4,[class*="title" i]';
+  const out = [];
+  for (const a of document.querySelectorAll('a')) {
+    const href = a.getAttribute('href') || '';
+    const text = (a.innerText || '').trim();
+    // the job card: the nearest ancestor holding a heading, small enough to be one card
+    let card = null;
+    for (let e = a.parentElement, i = 0; e && e !== document.body && i < 8; e = e.parentElement, i++) {
+      if ((e.innerText || '').length > 2000) break;
+      if (e.querySelector(HEADING) && e.querySelectorAll('a[href]').length <= 6) { card = e; break; }
+    }
+    let title = text.split('\\n')[0].trim();
+    if (!title || GENERIC.test(title)) {
+      title = (a.getAttribute('aria-label') || a.getAttribute('title') || a.dataset.jobtitle || '').trim();
+      if (!title && card) {
+        const h = card.querySelector(HEADING);
+        if (h) title = (h.innerText || '').trim().split('\\n')[0];
+      }
+    }
+    const cardText = card && (card.innerText || '').length > text.length ? card.innerText : text;
+    out.push({href, title, text, cardText: cardText || ''});
+  }
+  return out;
+}
+"""
+
 # Fallback description containers when a page has no JSON-LD. Only
 # job-description-specific ones: generic <main>/<article> wrappers also hold
-# navigation, cookie banners and "similar jobs" widgets whose text would
-# wrongly accept or reject the posting.
+# navigation, cookie banners and "similar jobs" widgets.
 _DESCRIPTION_SELECTORS = [
     '[data-automation-id="jobPostingDescription"]',
     '[itemprop="description"]',
@@ -226,12 +457,27 @@ _DESCRIPTION_SELECTORS = [
 ]
 _MIN_DESCRIPTION_CHARS = 200
 
-# schema.org addressCountry is often an ISO code
+# schema.org addressCountry is often an ISO code (or a subdivision code "IN-KA")
 _INDIA_COUNTRY_CODES = {"IN", "IND"}
 
 # Detail pages only need their DOM text; skipping heavy assets keeps the
 # per-page cost down.
 _BLOCKED_RESOURCES = {"image", "media", "font"}
+
+# URLs that look like an individual posting (anything else needs a real
+# JobPosting on its page before it can be accepted)
+_JOB_URL_RE = re.compile(
+    r"/jobs?/|/job[-_]?details?|/jobdetail|/positions?/|/requisitions?/|/openings?/|/vacanc|/careers?/[^?#]*\d{3,}"
+    r"|[?&](?:job|jobid|job_id|id|req|reqid|requisitionid|gh_jid|pid)=|myworkdayjobs\.com|greenhouse\.io"
+    r"|lever\.co|smartrecruiters\.com|icims\.com|/jr\d+|_r\d{5,}",
+    re.IGNORECASE,
+)
+_CHALLENGE_TITLE_RE = re.compile(r"just a moment|attention required|access denied|checking your browser|verify you are human|403 forbidden", re.IGNORECASE)
+
+
+def _india_code(val: str) -> bool:
+    val = val.strip().upper()
+    return val in _INDIA_COUNTRY_CODES or bool(re.fullmatch(r"IN-[A-Z]{2,3}", val))
 
 
 def _jsonld_location(posting: dict) -> str:
@@ -240,55 +486,108 @@ def _jsonld_location(posting: dict) -> str:
         locs = [locs]
     parts: list[str] = []
     for loc in locs if isinstance(locs, list) else []:
-        addr = loc.get("address") if isinstance(loc, dict) else None
+        if not isinstance(loc, dict):
+            continue
+        addr = loc.get("address")
         if isinstance(addr, str):
             parts.append(addr)
             continue
-        if not isinstance(addr, dict):
-            continue
-        for key in ("addressLocality", "addressRegion", "addressCountry"):
-            val = addr.get(key)
-            if isinstance(val, dict):
-                val = val.get("name", "")
-            if not val:
-                continue
-            val = str(val)
-            parts.append("India" if val.strip().upper() in _INDIA_COUNTRY_CODES else val)
+        if isinstance(addr, dict):
+            for key in ("addressLocality", "addressRegion", "addressCountry"):
+                val = addr.get(key)
+                if isinstance(val, dict):
+                    val = val.get("name", "")
+                if not val:
+                    continue
+                val = str(val)
+                parts.append("India" if _india_code(val) else val)
+        elif loc.get("name"):
+            # {"@type": "Place", "name": "Hyderabad"}
+            parts.append(str(loc["name"]))
     # remote postings: "applicantLocationRequirements": {"@type": "Country", "name": "India"}
     reqs = posting.get("applicantLocationRequirements") or []
     for req in [reqs] if isinstance(reqs, dict) else reqs if isinstance(reqs, list) else []:
         name = req.get("name") if isinstance(req, dict) else None
         if name:
             name = str(name)
-            parts.append("India" if name.strip().upper() in _INDIA_COUNTRY_CODES else name)
+            parts.append("India" if _india_code(name) else name)
     return " | ".join(parts)
 
 
-def _pick_posting(postings: list, title: str) -> dict | None:
-    """Pages sometimes embed several JobPostings (e.g. related jobs). Use the
-    one whose title matches the card; with several and no match we can't tell
-    which is ours, so use none rather than risk another job's description."""
+def _posting_id(posting: dict) -> str:
+    ident = posting.get("identifier")
+    if isinstance(ident, dict):
+        ident = ident.get("value")
+    return str(ident or "")
+
+
+def _pick_posting(postings: list, title: str, job_id: str = "") -> dict | None:
+    """The JobPosting that is *this* job: same normalised title, or the same
+    job ID. Pages often embed related jobs; a posting that is not ours is
+    never used — not even when it is the only one on the page."""
     postings = [x for x in postings if isinstance(x, dict)]
-    want = title.strip().lower()
+    want = normalize_title(title)
     for posting in postings:
-        if str(posting.get("title", "")).strip().lower() == want:
+        if want and normalize_title(str(posting.get("title", ""))) == want:
             return posting
-    return postings[0] if len(postings) == 1 else None
+    if job_id:
+        jid = job_id.lower()
+        for posting in postings:
+            pid = _posting_id(posting).lower()
+            if pid and (pid == jid or pid.endswith(jid) or jid.endswith(pid)):
+                return posting
+    return None
+
+
+def jsonld_detail(postings: list, title: str, job_id: str = "", *, final_url: str = "", requested_url: str = "",
+                  extra_strict: str = "") -> Detail:
+    if requested_url and final_url and not same_page(final_url, requested_url):
+        return Detail.unreadable(f"redirected to {final_url}")
+    posting = _pick_posting(postings, title, job_id)
+    if posting is None:
+        return Detail.unreadable("structured data is for a different job" if postings else "no structured job data")
+    description = _html_to_text(str(posting.get("description") or ""))
+    extra = posting.get("experienceRequirements")
+    if isinstance(extra, str):
+        description += "\n" + extra
+    elif isinstance(extra, dict):
+        months = extra.get("monthsOfExperience")
+        if months is not None:
+            description += f"\nExperience: {months} months"
+        elif extra.get("description"):
+            description += "\n" + str(extra["description"])
+    if len(description.strip()) < 20:
+        return Detail.unreadable("posting has no description")
+    same_title = normalize_title(str(posting.get("title", ""))) == normalize_title(title)
+    return Detail(ok=True, description=description.strip(), location=_jsonld_location(posting),
+                  strict_text=extra_strict, posting_evidence=True,
+                  matched="JobPosting with the same title" if same_title else "JobPosting with the same job ID")
 
 
 def _same_page(a: str, b: str) -> bool:
     return urldefrag(a)[0].rstrip("/") == urldefrag(b)[0].rstrip("/")
 
 
-def _playwright_detail(page, url: str, title: str, listing_url: str) -> tuple[str, str] | None:
-    """Open a job detail page; return (description, location). ``location``
-    is "" when the page has no structured location data. Returns None when
-    nothing trustworthy could be read (the caller then relies on the card)."""
+def _is_challenge(page) -> bool:
     try:
-        page.goto(url, timeout=20000, wait_until="domcontentloaded")
-        # redirected back to the listing (expired posting, login wall)
-        if _same_page(page.url, listing_url):
-            return None
+        if _CHALLENGE_TITLE_RE.search(page.title() or ""):
+            return True
+        return bool(page.evaluate(
+            "() => !!document.querySelector('#challenge-form, #cf-challenge-running, [name=\"cf-turnstile-response\"], script[src*=\"challenge-platform\"]')"
+        ))
+    except Exception:
+        return False
+
+
+def _playwright_detail(page, url: str, title: str, listing_url: str) -> Detail:
+    """Open a job detail page and read *this* job's description/location.
+    Anything untrustworthy yields an unreadable Detail (never accepted)."""
+    try:
+        response = page.goto(url, timeout=20000, wait_until="domcontentloaded")
+        if response is not None and response.status >= 400:
+            return Detail.unreadable(f"HTTP {response.status}")
+        if _is_challenge(page):
+            return Detail.unreadable("bot challenge page")
         postings = page.evaluate(_JSONLD_JS) or []
         if not postings:
             # JS-rendered ATS — give it a moment to inject content
@@ -297,89 +596,99 @@ def _playwright_detail(page, url: str, title: str, listing_url: str) -> tuple[st
             except Exception:
                 pass
             postings = page.evaluate(_JSONLD_JS) or []
-        posting = _pick_posting(postings, title)
-        if posting:
-            description = _html_to_text(str(posting.get("description") or ""))
-            extra = posting.get("experienceRequirements")
-            if isinstance(extra, str):
-                description += "\n" + extra
-            elif isinstance(extra, dict):
-                months = extra.get("monthsOfExperience")
-                if months is not None:
-                    description += f"\nExperience: {months} months"
-            return description, _jsonld_location(posting)
+        # redirected (expired posting, login wall, a different job)
+        if _same_page(page.url, listing_url) or not same_page(page.url, url):
+            return Detail.unreadable(f"redirected to {page.url}")
+        fields = page.evaluate(_PAGE_FIELDS_JS) or ""
+        job_id = ats_job_id(url).split(":", 1)[-1]
+        if postings:
+            return jsonld_detail(postings, title, job_id, final_url=page.url, requested_url=url, extra_strict=fields)
         for selector in _DESCRIPTION_SELECTORS:
             # e.g. a short "job-description-header" can precede the real block
             for el in page.query_selector_all(selector):
                 text = (el.inner_text() or "").strip()
                 if len(text) >= _MIN_DESCRIPTION_CHARS:
-                    return text, ""
-        return None
+                    hidden = el.evaluate("e => e.textContent") or ""
+                    return Detail(ok=True, description=text, strict_text=f"{hidden}\n{fields}",
+                                  matched="the posting's own URL (no redirect)")
+        return Detail.unreadable("no job description found on the page")
     except Exception as e:
         log.warning("Detail page failed for %s: %s", url, e)
-        return None
+        return Detail.unreadable(f"{type(e).__name__}")
 
 
-def _collect_candidates(page, listing_url: str, name: str) -> list[tuple[str, str, str, Classification]]:
+def _collect_candidates(page, listing_url: str, name: str) -> tuple[list[tuple[str, str, str, Classification]], int]:
     """Job-card links on the listing page that are in India and not already
-    rejectable from the card alone, deduplicated by URL."""
+    rejectable from the card alone, deduplicated by URL. Also returns how
+    many links look like individual postings (0 -> not a job listing page)."""
     candidates = []
     seen: set[str] = set()
-    for link in page.query_selector_all("a"):
-        try:
-            raw = (link.inner_text() or "").strip()
-            href = link.get_attribute("href") or ""
-        except Exception as e:  # element detached by a re-render
-            log.debug("Skipping unreadable link on %s: %s", listing_url, e)
-            continue
-        # card-style links wrap a heading + description (and often the
-        # location) in one <a>; the first line is the display title,
-        # the rest of the card is extra evidence for the classifier
-        title, _, card_rest = raw.partition("\n")
-        title = title.strip()
+    job_links = 0
+    try:
+        links = page.evaluate(_CANDIDATES_JS) or []
+    except Exception as e:
+        log.warning("Could not read links on %s: %s", listing_url, e)
+        return [], 0
+    for link in links:
+        href = link.get("href") or ""
+        title = (link.get("title") or "").strip()
+        text = link.get("text") or ""
+        card = link.get("cardText") or text
+        abs_href = urljoin(listing_url, href) if href else listing_url
+        if _JOB_URL_RE.search(abs_href) and not _same_page(abs_href, listing_url):
+            job_links += 1
+        # the rest of the card (everything but the title line) is extra evidence
+        card_rest = "\n".join(line for line in card.splitlines() if line.strip() and line.strip() != title)
         # India must come from the job's own card, never from the
         # surrounding career page (nav links, country pickers)
-        if not title or not is_real_job(title, href) or not _is_india(raw):
+        if not title or not_a_job_reason(title, abs_href, posting_evidence=True) or not _is_india(card):
             continue
-        # urljoin resolves every relative form correctly (root-relative,
-        # page-relative, absolute) — the previous manual check fell back
-        # to the generic career-page URL for plain "job/123"-style relative
-        # hrefs, which is why "Apply" sometimes opened the homepage instead
-        # of the specific job posting.
-        href = urljoin(listing_url, href) if href else listing_url
         # links without their own page (href="#…", or none) are keyed by title
-        key = f"title:{title}" if _same_page(href, listing_url) else urldefrag(href)[0]
+        key = f"title:{title}" if _same_page(abs_href, listing_url) else urldefrag(abs_href)[0]
         if key in seen:
             continue
         seen.add(key)
-        pre = classify_job(title, card_rest, url=href)
+        pre = classify_job(title, card_rest, url=abs_href, posting_evidence=True)
         if pre.category in _HARD_REJECT:
             _log_decision(name, title, pre)
             continue
-        candidates.append((title, card_rest, href, pre))
-    return candidates
+        candidates.append((title, card_rest, abs_href, pre))
+    return candidates, job_links
 
 
-def _scrape_playwright(company: dict) -> list[dict]:
+def _scan_playwright(company: dict) -> Scan:
+    scan = Scan(company["name"])
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
-        log.warning("Playwright not installed — skipping JS scrape for %s", company["name"])
-        return []
+        scan.fail("failing", "Playwright not installed")
+        return scan
 
-    name = company["name"]
     listing_url = company["url"]
-    jobs = []
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         try:
             page = browser.new_page(extra_http_headers={"User-Agent": HEADERS["User-Agent"]})
-            page.goto(listing_url, timeout=30000)
+            try:
+                response = page.goto(listing_url, timeout=30000)
+            except Exception as e:
+                scan.fail("failing", f"career page did not load ({type(e).__name__})")
+                return scan
             try:
                 page.wait_for_load_state("networkidle", timeout=8000)
             except Exception:
                 pass  # page may keep background network activity forever; DOM is usable regardless
-            candidates = _collect_candidates(page, listing_url, name)
+            if response is not None and response.status >= 400:
+                scan.fail("broken", f"career page returned HTTP {response.status}")
+                return scan
+            if _is_challenge(page):
+                scan.fail("broken", "career page shows a bot challenge (e.g. Cloudflare)")
+                return scan
+            candidates, job_links = _collect_candidates(page, listing_url, scan.name)
+            if job_links == 0 and not candidates:
+                scan.fail("needs_config", "no job postings found on this page — set the company's job search page URL")
+                return scan
+            scan.sources_ok += 1
             # verify the would-be alerts first, so the detail budget is never
             # spent on UNKNOWN cards while a card-accepted job goes unchecked
             candidates.sort(key=lambda c: not c[3].accepted)
@@ -391,49 +700,115 @@ def _scrape_playwright(company: dict) -> list[dict]:
                 if route.request.resource_type in _BLOCKED_RESOURCES
                 else route.continue_(),
             )
-            fetched = 0
+            budget = [MAX_DETAIL_FETCHES]
             for title, card_rest, href, _pre in candidates:
-                detail = None
-                if href.startswith("http") and not _same_page(href, listing_url):
-                    if fetched < MAX_DETAIL_FETCHES:
-                        fetched += 1
-                        detail = _playwright_detail(detail_page, href, title, listing_url)
-                    elif fetched == MAX_DETAIL_FETCHES:
-                        fetched += 1  # warn once
-                        log.warning("%s: detail-page budget (%d) reached; remaining cards judged on card text",
-                                    name, MAX_DETAIL_FETCHES)
-                description = card_rest
-                location = _card_location(card_rest)
-                if detail:
-                    detail_text, detail_location = detail
-                    if detail_location and not _is_india(detail_location):
-                        log.info("  %s: %s — skipped, detail location %r", name, title, detail_location)
-                        continue
-                    description = f"{card_rest}\n{detail_text}"
-                    location = detail_location or location
-                result = classify_job(title, description, url=href)
-                _log_decision(name, title, result)
-                if result.accepted:
-                    jobs.append(_job(title, href, name, result, location))
+                has_page = href.startswith("http") and not _same_page(href, listing_url)
+                listing = Listing(title=title, url=href, location=_card_location(card_rest), card_text=card_rest,
+                                  fetch_detail=(lambda h=href, t=title: _playwright_detail(detail_page, h, t, listing_url))
+                                  if has_page else None)
+                # a link that doesn't look like a posting must prove it with a JobPosting
+                if has_page and not _JOB_URL_RE.search(href):
+                    listing.fetch_detail = (lambda h=href, t=title: _require_posting(
+                        _playwright_detail(detail_page, h, t, listing_url)))
+                _evaluate(scan, listing, budget)
         except Exception as e:
-            log.warning("Playwright error for %s: %s", name, e)
+            scan.fail("failing", f"browser error: {type(e).__name__}: {e}")
         finally:
             browser.close()
-    return jobs
+    return scan
+
+
+def _require_posting(detail: Detail) -> Detail:
+    if detail.ok and not detail.posting_evidence:
+        return Detail.unreadable("not a job-posting URL and no JobPosting data on the page")
+    return detail
+
+
+def _scrape_playwright(company: dict) -> list[dict]:
+    return _scan_playwright(company).jobs
+
+
+# ---------------------------------------------------------------------------
+# Orchestration
+# ---------------------------------------------------------------------------
+
+def scan_company(company: dict) -> Scan:
+    """Scan one company. A company with a known job source is read only
+    through it — its marketing/landing page is never scraped as a fallback
+    (API success with zero matches is a normal, healthy result)."""
+    try:
+        sources = sources_for(company)
+        scan = _scan_sources(company, sources) if sources else _scan_playwright(company)
+    except Exception as e:
+        scan = Scan(company.get("name", "?"))
+        scan.fail("failing", f"{type(e).__name__}: {e}")
+    log.info("%s → %d fresher job(s) found [%s%s]%s", scan.name, len(scan.jobs), scan.status,
+             f": {scan.reason}" if scan.reason else "", f" ({'; '.join(scan.notes)})" if scan.notes else "")
+    return scan
 
 
 def scrape_company(company: dict) -> tuple[list[dict], str]:
-    """Returns (jobs, status) where status is 'active' or 'broken'."""
-    name = company["name"]
-    try:
-        jobs = _scrape_api(company)
-        if not jobs:
-            jobs = _scrape_playwright(company)
-        log.info("%s → %d fresher job(s) found", name, len(jobs))
-        return jobs, "active"
-    except Exception as e:
-        log.error("FAILED %s: %s", name, e)
-        return [], "broken"
+    """Returns (jobs, status) — status is 'active', 'failing', 'broken' or 'needs_config'."""
+    scan = scan_company(company)
+    return scan.jobs, scan.status
+
+
+def record_uid(job: dict) -> str:
+    return job.get("uid") or job_uid(job.get("company", ""), job.get("url", ""))
+
+
+def _repost_key(job: dict) -> tuple | None:
+    location = (job.get("location") or "").strip().lower()
+    if not location:
+        return None
+    return ((job.get("company") or "").lower(), normalize_title(job.get("title", "")), location)
+
+
+def _posting_key(url: str) -> str:
+    """Company-independent identity: the posting's host + ATS job ID. It keeps
+    a renamed company ("npcl" -> "NPCI") from re-alerting its old jobs."""
+    ident = ats_job_id(url)
+    return f"{urlparse(url).netloc.lower().removeprefix('www.')}|{ident}" if ident else ""
+
+
+def merge_new_jobs(seen: list[dict], found: list[dict], now: datetime | None = None,
+                   company_id: str | None = None) -> list[dict]:
+    """New records for ``found`` jobs that aren't already known. Identity is
+    the ATS job ID / canonical URL, so two different jobs with the same title
+    both get through; the same title *and* location under a new ID is treated
+    as a repost of a job already alerted. ``company_id`` (the company's
+    immutable id) is stored on new records."""
+    now = now or datetime.now(timezone.utc)
+    known = {record_uid(j) for j in seen if isinstance(j, dict)}
+    known_postings = {k for k in (_posting_key(j.get("url", "")) for j in seen if isinstance(j, dict)) if k}
+    reposts = {k for k in (_repost_key(j) for j in seen if isinstance(j, dict)) if k}
+    new: list[dict] = []
+    for job in found:
+        uid = job_uid(job["company"], job["url"])
+        rp = _repost_key(job)
+        pk = _posting_key(job["url"])
+        if uid in known or (pk and pk in known_postings):
+            continue
+        if rp and rp in reposts:
+            log.info("  %s: %s — repost of a job already alerted (same title and location)", job["company"], job["title"])
+            continue
+        record = dict(job)
+        record.update({
+            "uid": uid,
+            "date": f"{now:%b} {now.day}, {now:%H:%M}",
+            "first_seen": now.isoformat(),
+            "id": f"{job['company']}_{job['title'][:40]}".replace(" ", "_"),
+            "notified": False,
+        })
+        if company_id:
+            record["company_id"] = company_id
+        new.append(record)
+        known.add(uid)
+        if pk:
+            known_postings.add(pk)
+        if rp:
+            reposts.add(rp)
+    return new
 
 
 def run_all() -> list[dict]:
@@ -441,33 +816,23 @@ def run_all() -> list[dict]:
 
     companies = load_companies()
     seen = load_seen_jobs()
-    seen_keys = {(j["company"], j["title"]) for j in seen}
-
     new_jobs: list[dict] = []
 
     for company in companies:
-        jobs, status = scrape_company(company)
-        company["status"] = status
+        scan = scan_company(company)
+        company["status"] = scan.status
+        company["status_reason"] = scan.reason      # problems only ("" when healthy)
+        company["scan_note"] = scan.user_note
         company["last_checked"] = _now_iso()
-        # reflect what this scrape actually sees — only updating when jobs
-        # were found left titles from removed postings (and pre-filter junk)
-        # stuck in the UI forever
-        company["last_job"] = jobs[0]["title"] if jobs else ""
-        for job in jobs:
-            key = (job["company"], job["title"])
-            if key not in seen_keys:
-                now = datetime.now(timezone.utc)
-                job["date"] = f"{now:%b} {now.day}, {now:%H:%M}"
-                job["id"] = f"{job['company']}_{job['title'][:40]}".replace(" ", "_")
-                new_jobs.append(job)
-                seen_keys.add(key)
+        company["scan"] = scan.summary()
+        company["source"] = source_label(company)
+        # reflect what this scrape actually sees
+        company["last_job"] = scan.jobs[0]["title"] if scan.jobs else ""
+        new_jobs += merge_new_jobs(seen + new_jobs, scan.jobs, company_id=company.get("id"))
         time.sleep(1)
 
-    # commit=False: the GitHub Actions workflow itself does one git commit+push
-    # at the end of the run. Letting this also push via the API caused a second,
-    # independent commit on every run — the workflow's later `git push` would
-    # then be rejected as non-fast-forward (remote had already moved), failing
-    # the job even though the scrape itself succeeded.
+    # commit=False: alerts.py publishes the data (merge-safe) before and
+    # after emailing — see alerts.py
     save_companies(companies, commit=False)
     if new_jobs:
         save_seen_jobs(seen + new_jobs, commit=False)

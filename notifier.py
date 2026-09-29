@@ -82,6 +82,11 @@ _NO_EXPERIENCE_QUOTE_RE = re.compile(
     re.IGNORECASE,
 )
 _RANGE_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(?:-|to)\s*(\d+(?:\.\d+)?)", re.IGNORECASE)
+# "Up to 2 years", "Maximum 6 months" — a 0..N range, not "no experience"
+_UP_TO_QUOTE_RE = re.compile(
+    r"^\s*(?:up\s*to|upto|maximum(?:\s+of)?|max\.?|not\s+more\s+than|less\s+than)\s*(\d+(?:\.\d+)?)\s*"
+    r"(years?|yrs?|months?|mos?)\b", re.IGNORECASE)
+_MONTHS_RE = re.compile(r"\bmo(?:nth)?s?\b", re.IGNORECASE)
 
 
 def friendly_reason(job: dict) -> str:
@@ -90,13 +95,22 @@ def friendly_reason(job: dict) -> str:
         kind = m.group("kind").lower()
         quote = _clip(m.group("quote"), _MAX_QUOTE)
         if kind == "experience starts at 0":
+            unit = "months" if _MONTHS_RE.search(quote) else "years"
+            up_to = _UP_TO_QUOTE_RE.search(quote)
+            if up_to:
+                return f"Up to {up_to.group(1)} {unit} experience"
             rng = _RANGE_RE.search(quote)
             if rng:
-                return f"{rng.group(1)}–{rng.group(2)} years experience"
+                return f"{rng.group(1)}–{rng.group(2)} {unit} experience"
             return "No prior experience required"
         if kind == "fresher signal":
             if _NO_EXPERIENCE_QUOTE_RE.search(quote):
                 return "No prior experience required"
+            # a bare "Fresher(s)" can only come from the job title (description
+            # signals always carry context like "Freshers welcome") — say
+            # where it came from instead of echoing the same word
+            if quote.strip().lower() in ("fresher", "freshers"):
+                return "Open to freshers (stated in the job title)"
             return f"Open to freshers — “{quote}”"
         if kind == "entry-level signal":
             return f"Entry-level / graduate role — “{quote}”"

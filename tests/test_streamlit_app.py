@@ -11,7 +11,8 @@ import pytest
 st_testing = pytest.importorskip("streamlit.testing.v1")
 
 REPO = Path(__file__).resolve().parent.parent
-APP_FILES = ["streamlit_app.py", "config_store.py", "notifier.py", "job_classifier.py", "scraper.py"]
+APP_FILES = ["streamlit_app.py", "config_store.py", "notifier.py", "job_classifier.py", "scraper.py",
+             "sources.py", "identity.py", "locations.py", "repo_sync.py"]
 
 OLD_RECORD = {  # shape written before the classifier existed
     "title": "Junior Associate - Evidence Synthesis",
@@ -24,6 +25,7 @@ NEW_RECORD = {
     "company": "PwC", "location": "Pune · India", "category": "ENTRY_LEVEL",
     "reason": "entry-level signal: 'Graduate'", "date": "Sep 28, 19:16",
     "id": "PwC_Graduate_Software_Engineer",
+    "evidence": {"checks": {"detail_read": True, "fresher_or_entry_evidence": True}},
 }
 FRESHER_RECORD = {
     "title": "Trainee Analyst", "url": "https://metlife.example/job/9",
@@ -197,6 +199,9 @@ def test_clear_all_hides_but_keeps_dedup_history(app):
     at = app([OLD_RECORD, NEW_RECORD], page="settings")
     at.button(key="btn_clear_all").click().run()
     assert not at.exception
+    assert not any(j.get("dismissed") for j in _seen(at))   # the first click only asks for confirmation
+    at.button(key="btn_clear_all_confirm").click().run()
+    assert not at.exception
     seen = _seen(at)
     assert len(seen) == 2 and all(j["dismissed"] for j in seen)
     _nav(at, "home")
@@ -284,7 +289,8 @@ def test_job_detail_links_to_company(app):
     at.button(key="btn_job_company").click().run()
     assert not at.exception
     assert '<h1 class="detail-title">Sanofi</h1>' in _html(at)
-    assert "Workday API, Playwright fallback" in _html(at)       # real scraper config
+    assert "Workday API" in _html(at)                            # real scraper config
+    assert "Playwright fallback" not in _html(at)                # no landing-page fallback any more
 
 
 # ── companies ────────────────────────────────────────────────────────────────
@@ -346,7 +352,7 @@ def test_company_search(app):
     at = app([], page="companies")
     at.text_input(key="co_q").set_value("sanofi").run()
     html = _html(at)
-    assert "jobs.sanofi.com" in html and "jobs.metlife.com" not in html
+    assert "sanofi.wd3.myworkdayjobs.com" in html and "metlifecareers.com" not in html
 
 
 def test_company_with_empty_name_does_not_crash(app):
@@ -362,20 +368,28 @@ def test_statuses_come_from_scraper_data(app):
     at = app([])
     (at.tmp_path / "companies.json").write_text(json.dumps([
         {"id": "a", "name": "Alpha", "url": "https://a.example", "status": "active", "last_checked": now.isoformat()},
-        {"id": "b", "name": "Beta", "url": "https://b.example", "status": "broken", "last_checked": now.isoformat()},
+        {"id": "b", "name": "Beta", "url": "https://b.example", "status": "broken", "last_checked": now.isoformat(),
+         "status_reason": "career page shows a bot challenge (e.g. Cloudflare)"},
         {"id": "c", "name": "Gamma", "url": "https://c.example", "status": "unknown", "last_checked": ""},
         {"id": "d", "name": "Delta", "url": "https://d.example", "status": "active",
-         "last_checked": (now - timedelta(hours=10)).isoformat()},
+         "last_checked": (now - timedelta(hours=12)).isoformat()},
+        {"id": "e", "name": "Epsilon", "url": "https://e.example", "status": "failing", "last_checked": now.isoformat(),
+         "status_reason": "5 of 6 job pages could not be read (last: HTTP 429)"},
+        {"id": "f", "name": "Zeta", "url": "https://f.example", "status": "needs_config", "last_checked": now.isoformat(),
+         "status_reason": "no job postings found on this page — set the company's job search page URL"},
     ]))
     _nav(at, "monitoring")
     html = _html(at)
-    for label in ("Healthy", "Failing", "Pending", "Delayed"):
+    for label in ("Healthy", "Broken", "Failing", "Needs configuration", "Pending", "Delayed"):
         assert f"<i></i>{label}</span>" in html
-    assert "1 portal failing" in html and "Last scan failed" in html and "Not scanned yet" in html
+    assert "3 portals failing" in html and "Not scanned yet" in html
+    # the scraper's own reason is shown, not a generic "failed"
+    assert "bot challenge" in html and "HTTP 429" in html and "set the company&#x27;s job search page" in html
     assert "Disabled" not in html                          # no invented states
     _nav(at, "companies")
     at.pills(key="co_status").set_value("failing").run()
-    assert "Beta" in _html(at) and "Alpha" not in _html(at)
+    html = _html(at)
+    assert "Beta" in html and "Epsilon" in html and "Zeta" in html and "Alpha" not in html
 
 
 # ── scans ────────────────────────────────────────────────────────────────────
@@ -450,7 +464,9 @@ def test_delivery_summary_uses_notified_flags(app):
 
 def test_theme_toggle_and_engine_facts(app):
     at = app([], page="settings")
-    assert "Workday API for Sanofi" in _html(at)              # read-only facts from scraper.py
+    html = _html(at)                                          # read-only facts from scraper.py
+    assert "Workday API for PokerStars, PwC, Sanofi" in html
+    assert "Accenture job-search API for Accenture" in html and "Zoho Recruit career site for NPCI" in html
     at.button(key="btn_theme").click().run()
     assert not at.exception and at.session_state.dark_mode is True
     assert "#0b1020" in _html(at)

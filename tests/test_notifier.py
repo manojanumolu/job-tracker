@@ -160,7 +160,8 @@ def test_categories_are_distinguished():
         ("Software Engineer", "Experience: 0+ years", "No prior experience required"),
         ("Associate", "No experience required.", "No prior experience required"),
         ("Associate", "This role does not require prior experience.", "No prior experience required"),
-        ("Fresher Software Engineer", "", "Open to freshers — “Fresher”"),
+        # (no longer echoes the bare title word: "Open to freshers — “Fresher”")
+        ("Fresher Software Engineer", "", "Open to freshers (stated in the job title)"),
         ("Associate", "Freshers welcome", "Open to freshers — “Freshers welcome”"),
         ("Graduate Software Engineer", "", "Entry-level / graduate role — “Graduate”"),
         ("Associate", "This is an entry-level position.",

@@ -8,6 +8,16 @@ Only FRESHER and ENTRY_LEVEL results are alerted on. When the available text
 gives no real evidence either way the result is UNKNOWN, which is *not*
 alerted: a missed ambiguous posting is cheaper than an irrelevant
 experienced-job alert.
+
+Rules, in order of precedence:
+  1. Pages that aren't job postings (stories, programme/landing pages, talent
+     networks, country pickers, recruiter roles for graduates) -> NOT_A_JOB.
+  2. Seniority / mid-level in the title -> SENIOR / EXPERIENCED.
+  3. Any explicit experience requirement (a number of years, "prior
+     experience required", a mid/senior level field) -> EXPERIENCED. Positive
+     wording such as "freshers welcome" never overrides it.
+  4. Applicant-directed fresher / entry-level evidence -> FRESHER / ENTRY_LEVEL.
+  5. Otherwise UNKNOWN.
 """
 
 from __future__ import annotations
@@ -15,6 +25,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from enum import Enum
+
+from locations import is_location_only
 
 
 class Category(str, Enum):
@@ -66,14 +78,26 @@ _WS_RE = re.compile(r"\s+")
 
 def _normalize(text: str) -> str:
     text = _DASHES_RE.sub("-", text or "")
+    # "IN_Senior Associate_GenAI" (PwC) — "_" is a word character, so
+    # without this "\bsenior" never matches
+    text = text.replace("_", " ")
     # "one (1) year" / "1 (one) year" -> "1 year"
     text = _PAREN_NUMBER_RE.sub(lambda m: m.group("d1") or m.group("d2"), text)
-    text = text.replace("’", "'").replace(" ", " ")
+    text = text.replace("’", "'").replace(" ", " ")
+    return _WS_RE.sub(" ", text).strip()
+
+
+def normalize_title(title: str) -> str:
+    """Title key for matching a listing to its detail page and for
+    duplicate checks: case, dashes, whitespace and harmless punctuation
+    don't matter ("Associate – Evidence Synthesis" == "associate - evidence synthesis")."""
+    text = _normalize(title).lower()
+    text = re.sub(r"[^\w]+", " ", text)
     return _WS_RE.sub(" ", text).strip()
 
 
 # ---------------------------------------------------------------------------
-# Not-a-job detection (employee spotlights, blog posts)
+# Not-a-job detection
 # ---------------------------------------------------------------------------
 
 # Career pages mix real postings with employee-spotlight/blog content
@@ -82,25 +106,103 @@ def _normalize(text: str) -> str:
 _NOT_A_JOB_RE = re.compile(
     r"^\s*meet\b|^\s*[\w'’.-]+\s+[\w'’.-]+\s*:\s", re.IGNORECASE,
 )
-_NOT_A_JOB_URL_RE = re.compile(r"/(blog|news|stories|insights|article)s?/", re.IGNORECASE)
+_NOT_A_JOB_URL_RE = re.compile(r"/(blog|news|stories|insights|article|life|events?|people|culture)s?/", re.IGNORECASE)
 # Career-site navigation that carries early-career words but links to a
 # landing page, not a posting: "Early Careers", "Graduate Programs",
 # "Explore Early Careers", "Students & Graduates", "Campus Hiring India".
+# (plural / collective forms only: "Intern" or "Graduate" alone may be a posting)
+_AUDIENCE = (
+    r"(?:early[\s-]+(?:careers?|talent)|emerging\s+talent|students|graduates|campus|university|universities"
+    r"|internships|apprenticeships|young\s+professionals|school\s+leavers|freshers)"
+)
 _LANDING_PAGE_RE = re.compile(
     r"^\s*(?:explore|discover|learn\s+more|join\s+us|view|see|search|find|browse|read\s+more|apply\s+now)\b"
     r"|\b(?:careers|programs|programmes|opportunities|jobs|openings|vacancies)\s*$"
     r"|\bstudents?\s*(?:&|and)\s*graduates?\b"
-    r"|^\s*(?:campus|university)\s+(?:hiring|recruitment|placements?|programs?)\s*(?:india|20\d\d)?\s*$",
+    r"|^\s*(?:campus|university)\s+(?:hiring|recruitment|placements?|programs?)\s*(?:india|20\d\d)?\s*$"
+    # a title made only of audience words: "Early Talent", "Students & Graduates 2026"
+    r"|^\s*" + _AUDIENCE + r"(?:\s*(?:&|and|,|/|\+)\s*" + _AUDIENCE + r")*"
+    r"(?:\s+(?:hiring|recruitment|careers?|opportunities|jobs|india|20\d\d))*\s*$",
+    re.IGNORECASE,
+)
+# Stories, events, talent networks and site chrome
+_INFO_PAGE_RE = re.compile(
+    # "Inside Sanofi's Graduate Program" (but "Inside Sales Representative" is a job)
+    r"^\s*(?:inside\s+(?:our|the|life|\w+'s)|how|why|what|when|where|who|meet|introducing|celebrating|welcome\s+to"
+    r"|life\s+at|a\s+day\s+in|day\s+in\s+the\s+life|behind\s+the|spotlight|career\s+stories"
+    r"|our\s+(?:people|stories|story|culture|values|benefits)|working\s+at)\b"
+    # site chrome — only as the whole title ("Benefits Analyst" is a job)
+    r"|^\s*(?:our\s+)?(?:benefits|cookies?(?:\s+(?:policy|settings|preferences))?|privacy(?:\s+(?:policy|notice|statement))?"
+    r"|terms(?:\s+(?:of\s+use|and\s+conditions|&\s+conditions))?|accessibility(?:\s+statement)?|sitemap|faqs?"
+    r"|contact\s+us|about\s+us|search\s+jobs|similar\s+jobs|saved\s+jobs|all\s+jobs|job\s+search|view\s+all(?:\s+jobs)?)\s*$"
+    r"|\?\s*$"
+    r"|\b(?:stories|blog|podcast)\b"
+    r"|\b(?:careers?|jobs?|recruitment|recruiting|hiring|graduate|campus|university|virtual)\s+(?:fairs?|events?|days?|expos?|sessions?)\b"
+    r"|\bopen\s+days?\b|\binfo(?:rmation)?\s+sessions?\b"
+    r"|\btalent\s+(?:network|community|communities|pool|pipeline)\b|\bjoin\s+our\s+talent\b"
+    r"|\bregister\s+(?:your\s+)?interest\b|\bjob\s+alerts?\b|\bstay\s+connected\b"
+    r"|^\s*(?:early[\s-]+careers?|careers?|graduates?|students?|internships?|life|working|jobs|opportunities)\s+(?:at|with)\s+\S",
+    re.IGNORECASE,
+)
+# Language / country pickers: "India (English)", "Deutschland (Deutsch)"
+_LANGUAGE_PICKER_RE = re.compile(
+    r"^\s*[^\W\d_][\w .'’-]{1,40}\s*\(\s*(?:english|en|français|french|deutsch|german|español|spanish|"
+    r"português|portuguese|italiano|italian|nederlands|dutch|polski|日本語|中文|한국어|简体中文|繁體中文)\s*\)\s*$",
+    re.IGNORECASE,
+)
+# A programme title is an application landing page unless it names a role
+# ("Early Career Program - Analyst") or the scraper has a real JobPosting.
+_PROGRAMME_RE = re.compile(r"\b(?:programs?|programmes?|schemes?|academy|academies|leadership\s+development)\b", re.IGNORECASE)
+_ROLE_NOUN_RE = re.compile(
+    r"\b(?:engineers?|developers?|analysts?|associates?|consultants?|trainees?|interns?|specialists?|scientists?"
+    r"|officers?|executives?|designers?|testers?|accountants?|auditors?|advis[eo]rs?|administrators?|assistants?"
+    r"|representatives?|technicians?|programmers?|researchers?|writers?|apprentices?|agents?|operators?|clerks?"
+    r"|nurses?|teachers?|pharmacists?|chemists?|lawyers?|economists?|actuar(?:y|ies|ial)|underwriters?|bankers?"
+    r"|editors?|marketers?|strategists?|buyers?|planners?|controllers?|sde|swe|coordinators?|managers?)\b",
+    re.IGNORECASE,
+)
+# "Campus Recruiter", "Early Careers Talent Acquisition Partner",
+# "University Relations Specialist", "Graduate Program Coordinator" — the
+# early-career words describe who they hire, not the role itself.
+_RECRUITER_TITLE_RE = re.compile(
+    r"\b(?:recruit\w*|talent\s+acquisition|sourcer|sourcing|hiring\s+(?:specialist|coordinator|manager|partner)"
+    r"|(?:university|campus|student|graduate|school)\s+relations|ambassadors?"
+    r"|(?:programs?|programmes?)\s+(?:coordinator|manager|lead|administrator|specialist|officer)"
+    r"|(?:early[\s-]+careers?|early\s+talent|campus|university|graduate|emerging\s+talent)\s+"
+    r"(?:partner|specialist|coordinator|manager|lead|advisor|consultant|recruiter|relations))\b",
+    re.IGNORECASE,
+)
+# who a recruiter role hires for ("Talent Acquisition Trainee" is itself an
+# entry-level job, so trainee/intern are not audience words here)
+_AUDIENCE_WORD_RE = re.compile(
+    r"\b(?:graduates?|grad|campus|university|universities|early[\s-]+careers?|early\s+talent|emerging\s+talent"
+    r"|students?|freshers?|entry[\s-]*level)\b",
     re.IGNORECASE,
 )
 
 
-def is_real_job(title: str, href: str = "") -> bool:
-    if _NOT_A_JOB_RE.search(title or "") or _LANDING_PAGE_RE.search(title or ""):
-        return False
+def not_a_job_reason(title: str, href: str = "", *, posting_evidence: bool = False) -> str:
+    """Why ``title``/``href`` is not a job posting ("" when it may be one)."""
+    title = _normalize(title)
+    if not title:
+        return "empty title"
+    if _NOT_A_JOB_RE.search(title) or _INFO_PAGE_RE.search(title):
+        return "career story / event / informational page"
+    if _LANDING_PAGE_RE.search(title):
+        return "career landing page"
+    if _LANGUAGE_PICKER_RE.search(title) or is_location_only(title):
+        return "country / location picker"
     if href and _NOT_A_JOB_URL_RE.search(href):
-        return False
-    return True
+        return "blog / story URL"
+    if _RECRUITER_TITLE_RE.search(title) and _AUDIENCE_WORD_RE.search(title):
+        return "recruiting / programme-staff role, not an entry-level posting"
+    if _PROGRAMME_RE.search(title) and not _ROLE_NOUN_RE.search(title) and not posting_evidence:
+        return "programme page without job-posting evidence"
+    return ""
+
+
+def is_real_job(title: str, href: str = "", *, posting_evidence: bool = False) -> bool:
+    return not not_a_job_reason(title, href, posting_evidence=posting_evidence)
 
 
 # ---------------------------------------------------------------------------
@@ -110,12 +212,14 @@ def is_real_job(title: str, href: str = "") -> bool:
 
 _SENIOR_TITLE_RE = re.compile(
     r"\b(?:"
-    r"senior|sr\b\.?|staff|principal|lead(?!\s+generation)|leader|manager|director|head"
+    r"senior|sr\b\.?|staff|principal|lead(?!\s+generation)|leader|manager|director|head(?!\s+office)"
     r"|vice[\s-]+president|vp|svp|avp|evp|chief|c[etfo]o|president"
     r"|architect|distinguished|partner|supervisor"
     r")\b",
     re.IGNORECASE,
 )
+# "Software Engineer (Mid-level)", "Mid-Senior Analyst", "Experienced Developer"
+_MID_LEVEL_RE = re.compile(r"\bmid[\s-]*(?:level|senior|career|weight)\b|\bexperienced\b", re.IGNORECASE)
 
 # "Software Engineer II", "SDE III", "Analyst IV" — levelled titles above the
 # entry band. Case-sensitive so the pronoun/letter "v"/"i" never matches.
@@ -125,6 +229,24 @@ _LEVEL_NUM_TITLE_RE = re.compile(
     r"\b(?:sde|swe|engineer|developer|analyst|associate|consultant|scientist)[\s-]*[2-5]\b(?![\d.])",
     re.IGNORECASE,
 )
+# Level fields in descriptions / page metadata:
+#   "Seniority level: Mid-Senior level", "Management Level: 10 – Senior Analyst",
+#   "Career level: Senior Analyst"
+_LEVEL_FIELD_RE = re.compile(
+    r"\b(?:seniority|experience|career|management|job|position|grade)\s+level\s*[:=|-]\s*(?P<val>[^\n|;]{1,60})",
+    re.IGNORECASE,
+)
+_ENTRY_LEVEL_VALUE_RE = re.compile(r"^\s*(?:entry|fresher|graduate|internship|trainee)\b", re.IGNORECASE)
+
+
+def _level_field_rejection(text: str) -> str:
+    for m in _LEVEL_FIELD_RE.finditer(text or ""):
+        val = m.group("val").strip()
+        if _ENTRY_LEVEL_VALUE_RE.search(val):
+            continue
+        if _SENIOR_TITLE_RE.search(val) or _MID_LEVEL_RE.search(val):
+            return m.group(0).strip()
+    return ""
 
 
 # ---------------------------------------------------------------------------
@@ -156,11 +278,12 @@ _QUANTITY_RE = re.compile(
 
 # Nouns that make a number of years a duration/commitment rather than an
 # experience requirement: "2-year contract", "minimum 2 years service
-# agreement", "2 year graduate programme".
+# agreement", "2 year graduate programme", "15 years of full-time education".
 _DURATION_NOUNS = (
     r"(?:bond|agreement|contract|commitment|service|tenure|training|internship|"
     r"program|programme|course|degree|diploma|warranty|lock[\s-]?in|notice|"
-    r"probation|stay|stipend|period|term|fixed[\s-]term|with)"
+    r"probation|stay|stipend|period|term|fixed[\s-]term|with|"
+    r"education|schooling|studies|study|academics?|school|college|graduation)"
 )
 _DURATION_AFTER_RE = re.compile(
     r"^\s*'?s?'?\s*(?:of\s+)?(?:[\w-]+\s+){0,2}?" + _DURATION_NOUNS + r"\b",
@@ -168,13 +291,13 @@ _DURATION_AFTER_RE = re.compile(
 )
 # what may sit between the quantity and the word "experience":
 #   "2 years experience", "3 years' experience", "2 yrs of relevant work exp",
-#   "2 years C++ experience", "3 years .NET experience"
+#   "2 years C++ experience", "3 years .NET experience", "3 yrs of hands-on exposure"
 # ("1 year of internship experience" is still experience, so only the
 # commitment-type nouns break the link)
-_FILLER_STOP = r"(?:bond|agreement|contract|commitment|with|program|programme|course|degree|term)"
+_FILLER_STOP = r"(?:bond|agreement|contract|commitment|with|program|programme|course|degree|term|education|schooling)"
 _EXP_AFTER_RE = re.compile(
     r"^\s*'?s?'?\s*(?:\(\s*)?(?:of\s+)?"
-    r"(?:(?!" + _FILLER_STOP + r"\b)[\w/&+#.'-]+\s+){0,4}?(?:experience|exp)\b",
+    r"(?:(?!" + _FILLER_STOP + r"\b)[\w/&+#.'-]+\s+){0,4}?(?:experience|exp|exposure)\b",
     re.IGNORECASE,
 )
 # "You bring 3 years in backend engineering", "2 years working in a similar
@@ -195,10 +318,21 @@ _DURATION_NOUN_NEAR_RE = re.compile(
     r"tenure|probation|scheme|residency)\b",
     re.IGNORECASE,
 )
-# "experience required: 2 years", "Experience - 2-4 yrs", "exp of min 2 years"
+# "experience required: 2 years", "Experience - 2-4 yrs", "exp of min 2 years",
+# "Experienced: 2 years", "Experience in Java - 3 years"
 _EXP_BEFORE_RE = re.compile(
-    r"\b(?:experience|exp)\.?\s*(?:\((?:in\s+)?years?\))?\s*"
+    r"\b(?:experienced?|exp)\.?\s*(?:\((?:in\s+)?years?\))?\s*"
+    r"(?:(?:in|with|on)\s+[\w/&+#. ]{1,30}?\s*(?=[:=-]))?"
     r"(?:required|requirement|needed|level|range|of)?\s*[:=-]?\s*(?:of\s+)?(?:about\s+|around\s+)?$",
+    re.IGNORECASE,
+)
+# A field whose whole value is the quantity: "Java: 3 years", "SQL - 2 yrs".
+# The label must not be a duration ("Duration: 6 months", "Bond: 2 years").
+_FIELD_LABEL_RE = re.compile(r"^\s*(?P<label>[A-Za-z][\w/&+#. ()'-]{0,40}?)\s*[:=]\s*$")
+_NON_EXPERIENCE_LABEL_RE = re.compile(
+    r"\b(?:duration|bond|agreement|contract|age|notice|probation|tenure|term|period|program|programme|"
+    r"course|degree|education|qualification|stipend|internship|training|validity|commitment|lock|"
+    r"service|salary|ctc|package|founded|established|history)\b",
     re.IGNORECASE,
 )
 # Unit-less form common on Indian portals: "Years of Experience: 2-4",
@@ -215,11 +349,23 @@ _UNITLESS_RE = re.compile(
     re.IGNORECASE,
 )
 # "We have 10+ years of experience", "with over 12 years of experience" —
-# the company describing itself, not a requirement on the applicant
+# the company describing itself, not a requirement on the applicant; and
+# colleagues: "Mentored by senior engineers with 10+ years of experience",
+# "Work alongside engineers who have 8+ years", "Team members have 10 years"
+_COLLEAGUES = (
+    r"(?:engineers|colleagues|experts|leaders|mentors|professionals|specialists|consultants|developers|"
+    r"architects|scientists|veterans|seniors|people|peers|teammates|team\s+members|members|staff|coaches|managers)"
+)
+_OVER = r"(?:over\s+|more\s+than\s+|nearly\s+|almost\s+|a\s+combined\s+|an\s+average\s+of\s+)?"
 _COMPANY_CLAIM_BEFORE_RE = re.compile(
-    r"\b(?:we|our\s+\w+|the\s+company|company|firm|team)\s+(?:have|has|bring|brings|boasts?)\s+"
-    r"(?:over\s+|more\s+than\s+|nearly\s+|almost\s+)?$"
-    r"|\bwith\s+(?:over|more\s+than|nearly|almost)\s+$",
+    r"\b(?:we|our\s+\w+|the\s+company|company|firm|team)\s+(?:have|has|bring|brings|boasts?)\s+" + _OVER + r"$"
+    r"|\bwith\s+(?:over|more\s+than|nearly|almost)\s+$"
+    r"|\b(?:mentored|coached|guided|supported|trained|led|surrounded|backed|taught)\s+by\s+(?:[\w-]+\s+){0,4}?"
+    + _COLLEAGUES + r"\s+(?:(?:who|that)\s+(?:have|has|bring)\s+|with\s+|having\s+|boasting\s+)" + _OVER + r"$"
+    r"|\b(?:alongside|with|from|among)\s+(?:our\s+|the\s+)?(?:[\w-]+\s+){0,3}?" + _COLLEAGUES
+    + r"\s+(?:who|that)\s+(?:have|has|bring)\s+" + _OVER + r"$"
+    r"|\b(?:team\s+members|teammates|colleagues|our\s+(?:[\w-]+\s+){0,2}?" + _COLLEAGUES + r")\s+"
+    r"(?:have|has|bring|brings|with|boast|boasts)\s+" + _OVER + r"$",
     re.IGNORECASE,
 )
 # requirements flagged as optional don't make a role experienced
@@ -229,7 +375,15 @@ _PREFERRED_RE = re.compile(
     re.IGNORECASE,
 )
 _MANDATORY_RE = re.compile(r"\b(?:required|must|mandatory|essential|minimum|at\s+least)\b", re.IGNORECASE)
-# Section headings that switch preferred-mode on/off for the lines below them
+# A *section heading* that starts optional content: "Preferred qualifications:",
+# "Nice to have", "Bonus points". An inline field with a value ("Good to have
+# skills : NA", "Nice to have: Kubernetes") is not a heading — it qualifies
+# only itself.
+_PREFERRED_HEADING_RE = re.compile(
+    r"^\s*(?:preferred|desired|desirable|nice[\s-]+to[\s-]+have|good[\s-]+to[\s-]+have|bonus|additional|optional|plus)\b",
+    re.IGNORECASE,
+)
+# Section headings that switch preferred-mode off for the lines below them
 _REQUIRED_HEADING_RE = re.compile(
     r"\b(?:minimum|basic|required|requirements?|must[\s-]have|qualifications|eligibility|"
     r"responsibilities|what\s+you(?:'ll)?\s+(?:need|bring|do)|who\s+you\s+are|about)\b",
@@ -237,15 +391,10 @@ _REQUIRED_HEADING_RE = re.compile(
 )
 _HEADING_MAX_LEN = 60
 _CLAUSE_SPLIT_RE = re.compile(r",|\s+\band\b\s+|\s+\bbut\b\s+")
-# "Freshers or candidates with 1-2 years", "Fresher / 0-2 years",
-# "1-2 years or freshers" — experience offered as an alternative to freshers
-_FRESHER_ALTERNATIVE_RE = re.compile(
-    r"\bfreshers?\s*(?:/|\bor\b|&|\()"
-    r"|\bfreshers?\s+and\s+(?:experienced|candidates|professionals)\b"
-    r"|(?:/|\bor\b)\s*freshers?\b"
-    r"|\bfreshers?\s+(?:can|may|are)\s+(?:also\s+)?(?:apply|welcome|eligible)",
-    re.IGNORECASE,
-)
+_UP_TO_BEFORE_RE = re.compile(
+    r"\b(?:up\s*to|upto|maximum(?:\s+of)?|max\.?|not\s+more\s+than|less\s+than)\s*$", re.IGNORECASE)
+# (There is deliberately no "freshers or 1-2 years" exception: any stated
+# experience above 0 wins over the word "freshers" next to it.)
 # split on sentence ends ("Min. 2 years" stays together: the next char isn't
 # a capital), semicolons, bullets and line breaks
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?=[A-Z])|;|\s*[•·▪●]\s*|\n")
@@ -253,6 +402,30 @@ _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?=[A-Z])|;|\s*[•·▪●]\s*|\
 # 15+ years is never an entry requirement — it's company boilerplate like
 # "with over 150 years of experience in healthcare"
 _MAX_PLAUSIBLE_YEARS = 15
+
+# "Prior experience required in sales", "Relevant industry experience
+# required", "Must have prior professional experience" — a requirement with
+# no number. "Bachelor's degree or equivalent practical experience" is not.
+_PRIOR_EXPERIENCE_RE = re.compile(
+    r"\b(?:prior|previous|relevant|industry|professional|work)\s+"
+    r"(?:(?:work|professional|industry|relevant|hands[\s-]on|domain)\s+)?experience\b",
+    re.IGNORECASE,
+)
+_NEEDS_RE = re.compile(r"\b(?:required|must|mandatory|essential|necessary|needed)\b", re.IGNORECASE)
+# requirements that need no "required": "Proven experience as an SAP SD
+# Consultant", "a proven track record", and unfilled templates such as
+# "at least [X] years of experience" (a real number was meant to be there)
+_PROVEN_RE = re.compile(
+    r"\bproven\s+(?:track\s+record|(?:[\w-]+\s+){0,2}?experience)\b"
+    r"|\b(?:at\s+least|minimum(?:\s+of)?)\s+\[\s*(?:x|n|xx|#)\s*\]\+?\s*(?:years?|yrs?)\b"
+    r"|\[\s*(?:x|n|xx|#)\s*\]\+?\s*(?:years?|yrs?)\s+(?:of\s+)?(?:[\w-]+\s+){0,3}?experience\b",
+    re.IGNORECASE,
+)
+_NEGATION_RE = re.compile(
+    r"\b(?:no|not|without|nil|zero|none|don't|doesn't|do\s+not|does\s+not|isn't|is\s+not|never)\b|\bn/a\b",
+    re.IGNORECASE,
+)
+_EQUIVALENT_RE = re.compile(r"\b(?:or|and/or)\s+(?:an?\s+)?equivalent\b|\bequivalent\s+(?:\w+\s+)?experience\b", re.IGNORECASE)
 
 
 def _to_number(token: str) -> float:
@@ -286,7 +459,11 @@ def _clause_is_optional(sentence: str, start: int, end: int) -> bool:
 
 
 def _is_heading(sentence: str) -> bool:
-    return len(sentence) <= _HEADING_MAX_LEN and not _QUANTITY_RE.search(sentence)
+    if len(sentence) > _HEADING_MAX_LEN or _QUANTITY_RE.search(sentence):
+        return False
+    # "Label : value" is a field, not a heading
+    _, sep, value = sentence.partition(":")
+    return not (sep and value.strip())
 
 
 def parse_experience_requirements(text: str, *, title: bool = False) -> list[ExperienceRequirement]:
@@ -294,34 +471,40 @@ def parse_experience_requirements(text: str, *, title: bool = False) -> list[Exp
 
     Quantities are only treated as experience when the wording makes that
     clear: a range/"N+" of years (in job text that is always experience), a
-    single number tied to "experience" or "minimum"/"at least", or the
-    unit-less "Experience: 2-4" form. Durations such as "6-month internship",
-    "2 year contract" or "minimum 2 years service agreement" are ignored.
+    single number tied to "experience" or "minimum"/"at least", a field whose
+    whole value is the quantity ("Java: 3 years"), or the unit-less
+    "Experience: 2-4" form. Durations such as "6-month internship", "2 year
+    contract", "minimum 2 years service agreement" or "15 years of full-time
+    education" are ignored.
 
     With ``title=True`` any number of years counts ("Engineer — 2 years").
 
     Requirements stated as preferred / nice-to-have — inline or under a
-    "Preferred qualifications" heading — are skipped, as are ones offered as
-    an alternative to freshers ("Freshers or 1-2 years").
+    "Preferred qualifications" heading — are skipped unless the line itself
+    is mandatory ("required", "must", "minimum", "at least"). A range offered
+    next to freshers ("Freshers or 1-2 years") is still a requirement.
     """
     reqs: list[ExperienceRequirement] = []
     in_preferred_section = False
     for sentence in _sentences(text):
         if _is_heading(sentence):
-            if _PREFERRED_RE.search(sentence):
+            if _PREFERRED_HEADING_RE.search(sentence) or (_PREFERRED_RE.search(sentence) and not _MANDATORY_RE.search(sentence)):
                 in_preferred_section = True
-            elif _REQUIRED_HEADING_RE.search(sentence):
+                continue
+            if _REQUIRED_HEADING_RE.search(sentence):
                 in_preferred_section = False
-        fresher_alternative = bool(_FRESHER_ALTERNATIVE_RE.search(sentence))
+        mandatory_line = bool(_MANDATORY_RE.search(sentence))
 
-        found: list[tuple[re.Match, float, float | None]] = []
+        found: list[tuple[re.Match, float, float | None, str]] = []
         for m in _QUANTITY_RE.finditer(sentence):
             lo = _to_number(m.group("lo"))
             hi = _to_number(m.group("hi")) if m.group("hi") else None
             is_months = m.group("unit").lower().startswith("mo")
             plus = bool(m.group("plus") or m.group("plus2"))
+            qualified = bool(m.group("qual") or m.group("qual2"))
 
             before = sentence[max(0, m.start() - 40):m.start()]
+            wide_before = sentence[max(0, m.start() - 90):m.start()]
             after = sentence[m.end():m.end() + 60]
             linked_to_experience = bool(
                 _EXP_AFTER_RE.search(after)
@@ -334,12 +517,31 @@ def parse_experience_requirements(text: str, *, title: bool = False) -> list[Exp
             )
             # the quantity is the whole line: a card/field like "2-5 Yrs"
             standalone = not (sentence[:m.start()] + sentence[m.end():]).strip(" .:-()[]|,")
-            if _COMPANY_CLAIM_BEFORE_RE.search(before):
+            # "Java: 3 years" — a labelled field whose value is the quantity
+            label = _FIELD_LABEL_RE.match(sentence[:m.start()])
+            field_value = bool(
+                label and not sentence[m.end():].strip(" .;)")
+                and not _NON_EXPERIENCE_LABEL_RE.search(label.group("label"))
+            )
+            if _COMPANY_CLAIM_BEFORE_RE.search(wide_before):
+                continue
+            # "up to 7 years", "maximum 2 years of experience" -> a 0..N range
+            upto = _UP_TO_BEFORE_RE.search(before)
+            if upto and hi is None and not m.group("qual"):
+                rest = (sentence[:m.start() - len(upto.group(0))] + sentence[m.end():]).strip(" .:-()[]|,")
+                if not (linked_to_experience or not rest or field_value or title):
+                    continue
+                if _DURATION_AFTER_RE.search(after) and not linked_to_experience:
+                    continue
+                lo, hi = 0.0, lo
+                if is_months:
+                    hi = hi / 12
+                found.append((m, lo, hi, f"{upto.group(0).strip()} {m.group(0).strip()}"))
                 continue
             if is_months:
                 # "3-6 months internship" is a duration, not a requirement;
                 # "18+ months" / "6 months minimum" are requirements
-                is_requirement = linked_to_experience or plus or bool(m.group("qual2"))
+                is_requirement = linked_to_experience or plus or bool(m.group("qual2")) or field_value
             elif _DURATION_AFTER_RE.search(after) and not linked_to_experience:
                 is_requirement = False
             else:
@@ -347,7 +549,8 @@ def parse_experience_requirements(text: str, *, title: bool = False) -> list[Exp
                     linked_to_experience
                     or title
                     or standalone
-                    or bool(m.group("qual") or m.group("qual2"))
+                    or field_value
+                    or qualified
                     or hi is not None
                     or plus
                 )
@@ -355,26 +558,53 @@ def parse_experience_requirements(text: str, *, title: bool = False) -> list[Exp
                 continue
             if is_months:
                 lo, hi = lo / 12, (hi / 12 if hi is not None else None)
-            found.append((m, lo, hi))
+            found.append((m, lo, hi, m.group(0).strip()))
 
-        covered = [(m.start(), m.end()) for m, _, _ in found]
+        covered = [(m.start(), m.end()) for m, *_ in found]
         for m in _UNITLESS_RE.finditer(sentence):
             lo_start = m.start("lo")
             if any(a <= lo_start < b for a, b in covered):
                 continue
             lo = _to_number(m.group("lo"))
             hi = _to_number(m.group("hi")) if m.group("hi") else None
-            found.append((m, lo, hi))
+            found.append((m, lo, hi, m.group(0).strip()))
 
-        if in_preferred_section or fresher_alternative:
+        if in_preferred_section and not mandatory_line:
             continue
-        for m, lo, hi in found:
-            if _clause_is_optional(sentence, m.start(), m.end()):
+        for m, lo, hi, text in found:
+            if not mandatory_line and _clause_is_optional(sentence, m.start(), m.end()):
                 continue
             if lo > _MAX_PLAUSIBLE_YEARS or (hi is not None and hi < lo):
                 continue
-            reqs.append(ExperienceRequirement(lo, hi, m.group(0).strip()))
+            reqs.append(ExperienceRequirement(lo, hi, text))
     return reqs
+
+
+def prior_experience_requirement(text: str) -> str:
+    """A mandatory experience requirement without a number ("Prior
+    experience required in sales"), or ""."""
+    in_preferred_section = False
+    for sentence in _sentences(text):
+        if _is_heading(sentence):
+            if _PREFERRED_HEADING_RE.search(sentence):
+                in_preferred_section = True
+                continue
+            if _REQUIRED_HEADING_RE.search(sentence):
+                in_preferred_section = False
+        proven = _PROVEN_RE.search(sentence)
+        if proven and not _NEGATION_RE.search(sentence[:proven.start()][-30:]) and not _PREFERRED_RE.search(sentence) \
+                and not (in_preferred_section and not _MANDATORY_RE.search(sentence)):
+            return proven.group(0).strip()
+        for clause in _CLAUSE_SPLIT_RE.split(sentence):
+            m = _PRIOR_EXPERIENCE_RE.search(clause)
+            if not m or not _NEEDS_RE.search(clause):
+                continue
+            if _NEGATION_RE.search(clause) or _EQUIVALENT_RE.search(clause) or _QUANTITY_RE.search(clause):
+                continue
+            if _PREFERRED_RE.search(clause) or (in_preferred_section and not _MANDATORY_RE.search(clause)):
+                continue
+            return clause.strip()
+    return ""
 
 
 # ---------------------------------------------------------------------------
@@ -388,7 +618,7 @@ _NO_EXPERIENCE_RE = (
     r"no\s+(?:(?:prior|previous|work|professional|relevant|industry)\s+){0,2}experience\s+(?:is\s+)?(?:required|needed|necessary)"
     r"|(?:does\s+not|doesn't|do\s+not|don't)\s+(?:require|need)\s+(?:any\s+)?"
     r"(?:(?:prior|previous|work|professional|relevant|industry)\s+){0,2}experience"
-    r"|(?:experience|exp)\s*[:-]?\s*(?:0|zero|nil|none|fresher)\b(?!\s*(?:-|to)\s*[1-9])"
+    r"|(?:experience|exp)\s*[:-]?\s*(?:0|zero|nil|none|freshers?)\b(?!\s*(?:-|to)\s*[1-9])"
 )
 _FRESHER_TITLE_RE = re.compile(
     r"\b(?:freshers?|fresh\s+graduates?|" + _NO_EXPERIENCE_RE + r")\b", re.IGNORECASE,
@@ -413,12 +643,6 @@ _ENTRY_TITLE_RE = re.compile(
     r")\b",
     re.IGNORECASE,
 )
-# "Campus Recruiter", "Early Careers Talent Acquisition Partner" — the
-# early-career words describe who they hire, not the role itself.
-_RECRUITER_TITLE_RE = re.compile(
-    r"\b(?:recruit\w*|talent\s+acquisition|sourcer|hiring\s+(?:specialist|coordinator))\b",
-    re.IGNORECASE,
-)
 
 # Description text needs more specific phrasing: "graduate degree",
 # "mentor trainees" or "support entry-level staff" appear in plenty of
@@ -439,17 +663,40 @@ _ENTRY_DESC_RE = re.compile(
     r"\s+(?:all\s+)?(?:recent\s+|fresh\s+|new\s+)?graduates?"
     r"|graduates?\s+(?:are\s+)?(?:welcome|encouraged|eligible|invited)|graduates?\s+(?:can|may)\s+apply"
     r"|(?:this\s+is|is)\s+an?\s+(?:apprenticeship|traineeship)"
+    # job-board metadata: "Seniority level: Entry level", or a line that is just "Entry level"
+    r"|(?:seniority|experience|career|job|position)\s+level\s*[:=|-]\s*entry(?:[\s-]*level)?"
+    r"|^\s*entry[\s-]*level\s*$"
     r")\b",
-    re.IGNORECASE,
+    re.IGNORECASE | re.MULTILINE,
 )
 
-# A description signal about people the role works *with* rather than the
-# applicant: "mentor recent graduates", "onboard campus hires", "support our
-# apprenticeship scheme".
+# A description signal about people the role works *with* or hires, rather
+# than the applicant: "mentor recent graduates", "onboard campus hires",
+# "responsible for hiring freshers", "build our campus hiring pipeline",
+# "the team has many fresh graduates".
 _STAFF_CONTEXT_RE = re.compile(
     r"\b(?:mentor\w*|coach\w*|onboard\w*|guid(?:e|es|ing)|supervis\w*|manag\w*|support(?:s|ing)?|"
     r"administ\w*|coordinat\w*|oversee\w*|overseeing|lead(?:s|ing)?|run(?:s|ning)?|teach\w*|"
-    r"work(?:s|ing)?\s+(?:with|alongside)|alumni)\b[^.,;:\n]{0,40}\Z",
+    r"train(?:s|ing)?|hir(?:e|es|ing)|recruit\w*|interview\w*|sourc(?:e|es|ing)|screen\w*|assess\w*|"
+    r"build(?:s|ing)?|driv(?:e|es|ing)|own(?:s|ing)?|responsible\s+for|"
+    r"work(?:s|ing)?\s+(?:with|alongside)|alongside|alumni|"
+    r"(?:team|teams|colleagues|department|group|function)\s+(?:has|have|includes?|comprises?|consists?\s+of|of))\b"
+    r"[^.,;:\n]{0,40}\Z",
+    re.IGNORECASE,
+)
+# ...but the company hiring the applicant is fine: "We are hiring freshers",
+# "We are hiring through campus hiring for this role", "Start your career as a fresh graduate"
+_APPLICANT_CONTEXT_RE = re.compile(
+    r"\bwe(?:'re|\s+are)?\s+(?:actively\s+|currently\s+|now\s+)?(?:hiring|recruiting|inviting|looking\s+for)\b[^.,;:\n]{0,30}\Z"
+    r"|\bas\s+(?:an?\s+)?(?:\w+\s+)?\Z",
+    re.IGNORECASE,
+)
+# after the phrase: "recent graduates will report to you", "graduates on your team"
+_STAFF_AFTER_RE = re.compile(
+    r"^[^.\n]{0,20}?\b(?:(?:will|would|who\s+will)\s+)?(?:report(?:s|ing)?\s+(?:in)?to\s+(?:you|this\s+role|this\s+position)"
+    r"|be\s+(?:reporting\s+to|managed\s+by|mentored\s+by|supervised\s+by|trained\s+by)\s+you"
+    r"|on\s+your\s+team|in\s+your\s+team|under\s+you(?:r)?\b)"
+    r"|^\s*(?:pipeline|programs?|programmes?|process(?:es)?|strategy|events?|initiatives?|efforts?|calendar|operations|targets?|budget)\b",
     re.IGNORECASE,
 )
 
@@ -457,9 +704,15 @@ _STAFF_CONTEXT_RE = re.compile(
 def _applicant_signal(pattern: re.Pattern, text: str) -> re.Match | None:
     """First match of ``pattern`` in ``text`` that is about the applicant."""
     for m in pattern.finditer(text):
-        if not _STAFF_CONTEXT_RE.search(text[max(0, m.start() - 60):m.start()]):
-            return m
+        before = text[max(0, m.start() - 60):m.start()]
+        after = text[m.end():m.end() + 60]
+        if _STAFF_AFTER_RE.search(after):
+            continue
+        if _STAFF_CONTEXT_RE.search(before) and not _APPLICANT_CONTEXT_RE.search(before):
+            continue
+        return m
     return None
+
 
 # Words that show up in both entry and experienced titles — never proof on
 # their own ("Associate Project Specialist", "Junior Partner", "International").
@@ -481,33 +734,140 @@ def _describe(req: ExperienceRequirement) -> str:
     return f"'{req.text}'"
 
 
-def classify_job(title: str, description: str = "", url: str = "") -> Classification:
+# An eligibility range reaching this many years ("up to 7 years", "0-7 years")
+# says nothing about the role being entry-level: a title word such as
+# "Trainee" is then not enough, only independent applicant evidence is.
+# (0-3 years stays an entry-level range.)
+_BROAD_MAX_YEARS = 5
+_UP_TO_RE = re.compile(
+    r"(?P<pre>\b(?:experience|exp)\b[^\n]{0,40}?[:=|-]?\s*\n?\s*)?"
+    r"\b(?:up\s*to|upto|maximum(?:\s+of)?|max\.?|not\s+more\s+than|less\s+than)\s*"
+    r"(?P<n>" + _NUM + r")\s*\+?\s*(?:years?|yrs?)\b"
+    r"(?P<post>\.?\s*(?:of\s+)?(?:[\w-]+\s+){0,3}?(?:experience|exp)\b)?",
+    re.IGNORECASE,
+)
+
+
+def broad_experience_range(text: str, reqs: list[ExperienceRequirement] | None = None) -> str:
+    """The phrase stating a broad experience range ("Up to 7 years",
+    "0-7 years"), or ""."""
+    for m in _UP_TO_RE.finditer(text or ""):
+        line = text[text.rfind("\n", 0, m.start("n")) + 1:]
+        line = line.split("\n", 1)[0]
+        standalone = not re.sub(re.escape(m.group(0).split("\n")[-1].strip()), "", line, flags=re.IGNORECASE).strip(" .:-|()")
+        if not (m.group("pre") or m.group("post") or standalone):
+            continue
+        if _DURATION_AFTER_RE.search(text[m.end():m.end() + 60]) and not m.group("post"):
+            continue
+        if _to_number(m.group("n")) >= _BROAD_MAX_YEARS:
+            return m.group(0).strip()
+    for r in reqs if reqs is not None else parse_experience_requirements(text):
+        if r.min_years == 0 and r.max_years is not None and r.max_years >= _BROAD_MAX_YEARS:
+            return r.text
+    return ""
+
+
+def _lines(text: str) -> str:
+    return "\n".join(n for n in (_normalize(x) for x in (text or "").splitlines()) if n)
+
+
+def experience_conflict(title: str, description: str = "", strict_text: str = "") -> str:
+    """An experienced-level requirement anywhere in the posting ("" if none).
+    Used by the scraper's final safety gate independently of the verdict."""
+    reqs = (parse_experience_requirements(title or "", title=True) + parse_experience_requirements(description or "")
+            + parse_experience_requirements(strict_text or ""))
+    above_zero = [r for r in reqs if r.min_years > 0]
+    if above_zero:
+        return f"requirement {above_zero[0].text!r}"
+    full = f"{_normalize(title)}\n{_normalize(description)}\n{_normalize(strict_text)}"
+    if _NO_FRESHERS_RE.search(full):
+        return "freshers not eligible"
+    level = _level_field_rejection(_lines(description)) or _level_field_rejection(_lines(strict_text))
+    if level:
+        return f"level {level!r}"
+    prior = prior_experience_requirement(description or "") or prior_experience_requirement(strict_text or "")
+    if prior:
+        return f"requirement {prior!r}"
+    m = _SENIOR_TITLE_RE.search(_normalize(title)) or _MID_LEVEL_RE.search(_normalize(title)) \
+        or _LEVEL_TITLE_RE.search(_normalize(title)) or _LEVEL_NUM_TITLE_RE.search(_normalize(title))
+    if m:
+        return f"title level {m.group(0)!r}"
+    return ""
+
+
+def evidence_quote(result: Classification) -> str:
+    m = re.search(r"'(.+)'", result.reason or "")
+    return m.group(1) if m else ""
+
+
+def evidence_is_applicant_directed(result: Classification, title: str, description: str = "") -> bool:
+    """The quoted evidence of a positive verdict appears in the title, or in
+    the description about the applicant (not staff/hiring context)."""
+    quote = _normalize(evidence_quote(result))
+    if not quote:
+        return False
+    if quote.lower() in _normalize(title).lower():
+        return True
+    text = _lines(description)
+    for m in re.finditer(re.escape(quote), text, re.IGNORECASE):
+        before = text[max(0, m.start() - 60):m.start()]
+        after = text[m.end():m.end() + 60]
+        if _STAFF_AFTER_RE.search(after):
+            continue
+        if _STAFF_CONTEXT_RE.search(before) and not _APPLICANT_CONTEXT_RE.search(before):
+            continue
+        return True
+    return False
+
+
+def has_explicit_zero_experience(text: str) -> bool:
+    """True when ``text`` states experience starting at 0 ("0-1 years",
+    "Experience: 0-2") and no requirement above 0 — the only card-level
+    evidence strong enough to alert without a readable detail page."""
+    reqs = parse_experience_requirements(text)
+    return bool(reqs) and all(r.min_years == 0 for r in reqs)
+
+
+def classify_job(title: str, description: str = "", url: str = "", *,
+                 strict_text: str = "", posting_evidence: bool = False) -> Classification:
     """Classify a posting from its title and any extra text available.
 
     ``description`` can be card text, a detail-page description, or both
-    concatenated. Seniority is judged from the title; experience requirements
-    and entry-level evidence from title + description. Positive signals never
+    concatenated. ``strict_text`` is evidence that may only *reject* (page
+    fields outside the description, hidden text, level metadata): a
+    requirement found there counts, but a fresher phrase there doesn't.
+    ``posting_evidence`` says the scraper read a real JobPosting (ATS API or
+    schema.org data), which lets a programme-titled posting be judged as a job.
+
+    Seniority is judged from the title; experience requirements and
+    entry-level evidence from title + description. Positive signals never
     override an explicit experience requirement.
     """
     title_n = _normalize(title)
     desc_n = _normalize(description)
     # line breaks kept so a signal's context never spans two bullet points
     desc_lines = "\n".join(n for n in (_normalize(x) for x in (description or "").splitlines()) if n)
+    strict_lines = "\n".join(n for n in (_normalize(x) for x in (strict_text or "").splitlines()) if n)
     full = f"{title_n}\n{desc_n}" if desc_n else title_n
 
-    if not title_n or not is_real_job(title_n, url):
-        return Classification(Category.NOT_A_JOB, "not a job posting (spotlight/blog/empty title)")
+    reason = not_a_job_reason(title_n, url, posting_evidence=posting_evidence)
+    if reason:
+        return Classification(Category.NOT_A_JOB, f"not a job posting: {reason}")
 
     m = _SENIOR_TITLE_RE.search(title_n)
     if m:
         return Classification(Category.SENIOR, f"seniority in title: '{m.group(0)}'")
+    m = _MID_LEVEL_RE.search(title_n)
+    if m:
+        return Classification(Category.EXPERIENCED, f"experience level in title: '{m.group(0)}'")
 
-    if _NO_FRESHERS_RE.search(full):
+    if _NO_FRESHERS_RE.search(full) or _NO_FRESHERS_RE.search(strict_lines):
         return Classification(Category.EXPERIENCED, "posting says freshers are not eligible")
 
     reqs = parse_experience_requirements(title or "", title=True)
     reqs += parse_experience_requirements(description or "")
-    experienced = [r for r in reqs if r.min_years > 0]
+    strict_reqs = parse_experience_requirements(strict_text or "")
+    experienced = [r for r in reqs + strict_reqs if r.min_years > 0]
     if experienced:
         worst = max(experienced, key=lambda r: r.min_years)
         return Classification(
@@ -516,11 +876,23 @@ def classify_job(title: str, description: str = "", url: str = "") -> Classifica
             f"(minimum {_fmt_years(worst.min_years)} yr)",
         )
 
+    level = _level_field_rejection(desc_lines) or _level_field_rejection(strict_lines)
+    if level:
+        return Classification(Category.EXPERIENCED, f"experience level: '{level}'")
+    prior = prior_experience_requirement(description or "") or prior_experience_requirement(strict_text or "")
+    if prior:
+        return Classification(Category.EXPERIENCED, f"explicit requirement: '{prior}' (prior experience)")
+
     m = _LEVEL_TITLE_RE.search(title_n) or _LEVEL_NUM_TITLE_RE.search(title_n)
     if m:
         return Classification(Category.EXPERIENCED, f"levelled title above entry: '{m.group(0)}'")
 
-    zero_reqs = [r for r in reqs if r.min_years == 0]
+    # a broad range ("Experience: up to 7 years") leaves only independent
+    # applicant evidence: a narrow 0-start range, fresher / fresh-graduate /
+    # no-experience wording, or entry-level eligibility — never a title word
+    broad = broad_experience_range(desc_lines, reqs) or broad_experience_range(strict_lines, strict_reqs)
+    zero_reqs = [r for r in reqs if r.min_years == 0
+                 and (r.max_years is None or r.max_years < _BROAD_MAX_YEARS)]
     m = _FRESHER_TITLE_RE.search(title_n) or _applicant_signal(_FRESHER_DESC_RE, desc_lines)
     if m:
         return Classification(Category.FRESHER, f"fresher signal: '{m.group(0)}'")
@@ -530,9 +902,16 @@ def classify_job(title: str, description: str = "", url: str = "") -> Classifica
         )
 
     title_signal = None if _RECRUITER_TITLE_RE.search(title_n) else _ENTRY_TITLE_RE.search(title_n)
-    m = title_signal or _applicant_signal(_ENTRY_DESC_RE, desc_lines)
+    desc_signal = _applicant_signal(_ENTRY_DESC_RE, desc_lines)
+    if broad and not desc_signal:
+        return Classification(
+            Category.UNKNOWN,
+            f"broad experience range '{broad}' and no independent fresher/entry-level evidence"
+            + (f" ('{title_signal.group(0)}' in the title is not enough)" if title_signal else ""),
+        )
+    m = desc_signal if broad else (title_signal or desc_signal)
     if m:
-        return Classification(Category.ENTRY_LEVEL, f"entry-level signal: '{m.group(0)}'")
+        return Classification(Category.ENTRY_LEVEL, f"entry-level signal: '{m.group(0).strip()}'")
 
     m = _AMBIGUOUS_RE.search(title_n)
     if m:

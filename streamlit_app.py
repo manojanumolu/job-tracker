@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 import streamlit as st
 
 from config_store import (
+    alert_pending,
     dismiss_jobs,
     fetch_remote_json,
     friendly_github_error,
@@ -21,6 +22,7 @@ from config_store import (
     visible_jobs,
 )
 from notifier import category_label, friendly_reason, safe_url
+from identity import ats_job_id
 
 log = logging.getLogger("streamlit_app")
 
@@ -51,7 +53,8 @@ if "page" not in st.session_state:
     st.session_state.company_id = qp.get("company") or None
     st.session_state.company_view = "add" if qp.get("view") == "add" else None
 if "dark_mode" not in st.session_state:
-    st.session_state.dark_mode = False
+    # the theme lives in the URL (?theme=dark) so it survives reloads/bookmarks
+    st.session_state.dark_mode = st.query_params.get("theme") == "dark"
 
 st.set_page_config(
     page_title=f"{PAGES[st.session_state.page][0]} · Fresher Job Tracker",
@@ -168,8 +171,8 @@ _CSS = """
 .stat { padding: 16px 20px; min-width: 0; }
 .stat + .stat { border-left: 1px solid var(--border); }
 .stat .k { font-size: 13px; line-height: 18px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
-.stat .v { font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); margin-top: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.stat .n { font-size: 13px; line-height: 18px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat .v { font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); margin-top: 4px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat .n { font-size: 13px; line-height: 18px; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
 .st-key-stats { padding: 0 !important; overflow: hidden; }
 
 /* ── filter bar ── */
@@ -350,6 +353,9 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 [class*="st-key-nav_"] [data-testid^="stBaseButton"]:hover { background: var(--hover) !important; color: var(--text) !important; }
 [class*="st-key-nav_"] [data-testid="stIconMaterial"] { font-size: 20px !important; color: var(--muted); }
 [class*="st-key-nav_"] p { font-size: 14px !important; font-weight: 500 !important; }
+/* the ✕ / ↺ buttons on job rows are icon-only; their label is for screen readers */
+[class*="st-key-dismiss_"] [data-testid="stMarkdownContainer"], [class*="st-key-restore_"] [data-testid="stMarkdownContainer"],
+[class*="st-key-dismiss_"] [data-testid="stMarkdownContainer"] p, [class*="st-key-restore_"] [data-testid="stMarkdownContainer"] p { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; clip-path: inset(50%) !important; white-space: nowrap !important; margin: -1px !important; padding: 0 !important; border: 0 !important; }
 .side-foot { margin-top: auto; padding: 14px 12px 4px; border-top: 1px solid var(--border); font-size: 13px; line-height: 18px; color: var(--muted); }
 .side-foot .st { display: flex; align-items: center; gap: 8px; color: var(--text); font-weight: 500; }
 .side-foot a { color: var(--muted) !important; }
@@ -387,7 +393,8 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   .nav-group.first { display: none; }
   [class*="st-key-nav_"] [data-testid^="stBaseButton"] { justify-content: center !important; padding: 0 !important; }
   [class*="st-key-nav_"] [data-testid^="stBaseButton"] > div { justify-content: center !important; }
-  [class*="st-key-nav_"] p { display: none !important; }
+  /* icon rail: labels are hidden visually but kept for screen readers */
+  [class*="st-key-nav_"] p { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; clip-path: inset(50%) !important; white-space: nowrap !important; margin: -1px !important; padding: 0 !important; border: 0 !important; }
   [data-testid="stSidebarUserContent"] { padding: 16px 8px !important; }
   .side-foot { padding: 12px 0 0; text-align: center; } .side-foot .txt { display: none; } .side-foot .st { justify-content: center; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -402,22 +409,24 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   [data-testid="stMainBlockContainer"], .block-container { padding: 0 16px 32px !important; }
   [data-testid="stMainBlockContainer"] > div > [data-testid="stVerticalBlock"] { gap: 20px; }
   .st-key-mnav {
-    display: flex !important; position: sticky; top: 0; z-index: 30; margin: 0 -16px; padding: 8px 12px !important;
+    display: flex !important; position: sticky; top: 0; z-index: 30; margin: 0 -16px; padding: 6px 4px !important;
     background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border);
   }
-  .st-key-mnav > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-mnav > [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 2px !important; overflow-x: auto; scrollbar-width: none; }
-  .st-key-mnav [data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
-  .st-key-mnav [data-testid^="stBaseButton"] { border: none !important; background: transparent !important; min-height: 36px !important; padding: 0 10px !important; color: var(--text-2) !important; }
-  .st-key-mnav [data-testid="stIconMaterial"] { font-size: 20px !important; }
-  .st-key-mnav p { font-size: 13px !important; }
+  /* all six destinations visible at once: equal columns, icon above a short label */
+  .st-key-mnav > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-mnav > [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 0 !important; }
+  .st-key-mnav [data-testid="stColumn"] { flex: 1 1 0 !important; width: auto !important; min-width: 0 !important; }
+  .st-key-mnav [data-testid^="stBaseButton"] { width: 100% !important; border: none !important; background: transparent !important; min-height: 48px !important; padding: 4px 0 !important; color: var(--text-2) !important; }
+  .st-key-mnav [data-testid^="stBaseButton"] > div, .st-key-mnav [data-testid^="stBaseButton"] > div > span { flex-direction: column !important; align-items: center !important; gap: 2px !important; min-width: 0; max-width: 100%; }
+  .st-key-mnav [data-testid="stIconMaterial"] { font-size: 20px !important; margin: 0 !important; }
+  .st-key-mnav p { font-size: 10px !important; line-height: 13px !important; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 2px; }
   .page-title, .detail-title { font-size: 22px; line-height: 30px; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stat { padding: 14px 16px; } .stat .v { font-size: 20px; line-height: 28px; }
+  .stat .v, .stat .n { white-space: normal; }   /* wrap instead of cutting off key facts */
   [class*="st-key-jr_"] { padding: 14px 16px !important; }
   [class*="st-key-jr_"] > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], [class*="st-key-jr_"] > [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 10px !important; }
   [class*="st-key-jr_"] [data-testid="stColumn"]:first-child { flex: 1 1 100% !important; }
   [class*="st-key-jr_"] [data-testid="stColumn"]:last-child { margin-left: 54px; }
-  .job-why { display: none; }
   .co-row { grid-template-columns: minmax(0, 1fr) auto; }
   .co-row > :nth-child(2), .co-row > :nth-child(4), .co-row > :nth-child(5), .list-head { display: none; }
   [class*="st-key-cr_"] { padding: 12px 16px !important; }
@@ -490,14 +499,13 @@ def _found_at(date_str: str, now: datetime) -> datetime | None:
     return dt.replace(year=now.year - 1) if dt > now + timedelta(days=1) else dt
 
 
-def _next_scan() -> str:
-    """check_jobs.yml runs at minute 0 of every 3rd UTC hour (0, 3, 6, …)."""
-    now = datetime.now(timezone.utc)
-    nxt = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=3 - now.hour % 3)
-    mins = int((nxt - now).total_seconds() // 60)
-    if mins < 1:
-        return "due now"
-    return f"in {mins} min" if mins < 60 else f"in {mins // 60}h {mins % 60:02d}m"
+def _next_slot(now: datetime | None = None) -> datetime:
+    """The next slot of check_jobs.yml's cron (minute 0 of every 3rd UTC hour).
+    GitHub Actions only *schedules* at these times — runs usually start later
+    (measured Sep 2026: median 5 h apart, up to 9 h), so this is shown as a
+    scheduled time, never as a countdown."""
+    now = now or datetime.now(timezone.utc)
+    return now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=3 - now.hour % 3)
 
 
 def _ms(name: str, size: str = "") -> str:
@@ -522,14 +530,13 @@ def _logo_data_uri() -> str:
 
 
 @st.cache_resource(show_spinner=False)
-def _api_scrapers() -> dict:
-    """Company ids the scraper reads through a dedicated API (currently
-    Workday); every other portal is read with Playwright."""
+def _source_label(c: dict) -> str:
+    """How the scraper reads this company ("Workday API", "Accenture job-search API", ...)."""
     try:
-        from scraper import COMPANY_API
-        return {cid: (cfg.get("type") or "api") for cid, cfg in COMPANY_API.items()}
+        from scraper import source_label
+        return source_label(c)
     except Exception:
-        return {}
+        return "Playwright (headless browser)"
 
 
 def _trigger_scrape() -> tuple[bool, str]:
@@ -564,7 +571,9 @@ def _load_synced(name: str, default):
     remote = _remote_snapshot().get(name)
     if remote is not None and isinstance(remote, type(default)):
         return remote
-    return _load(BASE / name, default)
+    local = _load(BASE / name, default)
+    # a corrupt or hand-edited file ("null", "[]" for settings) must not crash the app
+    return local if isinstance(local, type(default)) else default
 
 
 def _save_change(name: str, mutate, default, message: str):
@@ -584,28 +593,51 @@ def _jid(job: dict) -> str:
 
 def _restore_jobs(keys: set[str]):
     """Undo a dismissal. The record keeps its ``notified`` flag, so restoring
-    never causes a second email."""
+    never causes a second email — and a job dismissed *before* it was emailed
+    is marked as handled, so restoring it doesn't send it later either (the
+    user has already seen it)."""
     def _mutate(seen: list[dict]) -> list[dict]:
         for j in seen:
             if isinstance(j, dict) and job_key(j) in keys:
                 j.pop("dismissed", None)
+                if not j.get("notified") and j.get("notify_state") not in ("claimed", "sent"):
+                    j["notify_state"] = "skipped"
         return seen
     return _mutate
 
 
 # ── data ──────────────────────────────────────────────────────────────────────
-companies: list[dict] = [c for c in _load_synced("companies.json", []) if isinstance(c, dict)]
+companies: list[dict] = []
+for _i, _c in enumerate(c for c in _load_synced("companies.json", []) if isinstance(c, dict)):
+    # every company needs a unique id for its widgets/links; a missing or
+    # repeated id (hand-edited file) gets one for this page view only — the
+    # file itself is never rewritten here
+    _c = dict(_c)
+    if not _c.get("id") or any(str(x.get("id")) == str(_c.get("id")) for x in companies):
+        _c["id"] = f"_row{_i}"
+    companies.append(_c)
 settings: dict = _load_synced("settings.json", {"recipient_email": ""})
 # seen_jobs.json is also the scraper's dedup history: jobs are dismissed
 # (hidden), never deleted, or the scraper would email them again
-all_records: list[dict] = [j for j in _load_synced("seen_jobs.json", []) if isinstance(j, dict)]
+all_records: list[dict] = []
+_seen_keys: set[str] = set()
+for _j in _load_synced("seen_jobs.json", []):
+    # a duplicated record (same id + URL) would give two widgets the same
+    # key and crash the page — show each job once
+    if isinstance(_j, dict) and job_key(_j) not in _seen_keys:
+        _seen_keys.add(job_key(_j))
+        all_records.append(_j)
 active_jobs: list[dict] = visible_jobs(all_records)                                   # newest-first
 dismissed_jobs: list[dict] = [j for j in reversed(all_records) if j.get("dismissed")]  # newest-first
 
 NOW = datetime.now(timezone.utc)
 _EMAIL_RE = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+$")
 _CHECK_COOLDOWN_S = 300
-_STALE_H = 7          # cron runs every 3 h; allow a missed/slow run before "delayed"
+# cron asks for every 3 h, but GitHub starts scheduled runs late: measured
+# gaps were median 5 h, 90th percentile 7.5 h, max 9 h — so a scan only
+# counts as "delayed" once it is overdue by more than that
+_STALE_H = 10
+SCHEDULE_NOTE = "scheduled every 3 hours; GitHub usually starts runs later, typically 3–8 hours apart"
 HOME_LIMIT = 8
 JOBS_PAGE = 12
 _CATEGORY_PILL = {"FRESHER": "fresher", "ENTRY_LEVEL": "entry"}
@@ -627,6 +659,10 @@ def toast(msg: str, kind: str = "success"):
 
 
 def go(page: str, **extra):
+    if extra.get("job"):
+        # remember the company page a job was opened from, so Back returns there
+        st.session_state.job_from_company = (st.session_state.get("company_id")
+                                             if extra.get("origin") == "companies" else None)
     st.session_state.page = page
     st.session_state.job_id = extra.get("job")
     st.session_state.company_id = extra.get("company")
@@ -642,14 +678,18 @@ last_scan = max((d for d in (_parse_iso(c.get("last_checked", "")) for c in comp
 scan_stale = last_scan is None or NOW - last_scan > timedelta(hours=_STALE_H)
 
 
+# scraper status -> label; all of them use the red "failing" style/counts
+_UNHEALTHY = {"failing": "Failing", "broken": "Broken", "needs_config": "Needs configuration"}
+
+
 def portal_status(c: dict) -> tuple[str, str]:
     """(css key, label) from the scraper's own status + last_checked."""
     checked = _parse_iso(c.get("last_checked", ""))
-    if (_check_trigger and time.time() - _check_trigger < 1200 and c.get("status") != "broken"
+    if (_check_trigger and time.time() - _check_trigger < 1200 and c.get("status") not in _UNHEALTHY
             and (checked is None or checked.timestamp() < _check_trigger)):
         return "checking", "Checking"
-    if c.get("status") == "broken":
-        return "failing", "Failing"
+    if c.get("status") in _UNHEALTHY:
+        return "failing", _UNHEALTHY[c["status"]]
     if checked is None or c.get("status") not in ("active",):
         return "pending", "Pending"
     if NOW - checked > timedelta(hours=_STALE_H):
@@ -674,17 +714,35 @@ else:
 
 found = {id(j): _found_at(j.get("date") or "", NOW) for j in all_records}
 new_this_week = sum(1 for j in active_jobs if found[id(j)] and NOW - found[id(j)] <= timedelta(days=7))
+# Records written since Sep 2026 carry the company's id (stable across a
+# rename); older records only have the company name.
 jobs_by_company: dict[str, list[dict]] = {}
+jobs_by_company_id: dict[str, list[dict]] = {}
 for j in reversed(all_records):
-    jobs_by_company.setdefault((j.get("company") or "").strip(), []).append(j)
+    if j.get("company_id"):
+        jobs_by_company_id.setdefault(str(j["company_id"]), []).append(j)
+    else:
+        jobs_by_company.setdefault((j.get("company") or "").strip(), []).append(j)
 recipient = (settings.get("recipient_email") or "").strip()
 
 
 def company_jobs(c: dict) -> list[dict]:
-    return jobs_by_company.get((c.get("name") or "").strip(), [])
+    """Every job found for this company (active and dismissed), newest first."""
+    by_id = jobs_by_company_id.get(str(c.get("id")), [])
+    by_name = jobs_by_company.get((c.get("name") or "").strip(), [])
+    return sorted(by_id + by_name, key=lambda j: found[id(j)] or datetime.min.replace(tzinfo=timezone.utc),
+                  reverse=True) if by_id and by_name else (by_id or by_name)
 
 
-def find_company(name: str) -> dict | None:
+def company_active(c: dict) -> int:
+    return sum(1 for j in company_jobs(c) if not j.get("dismissed"))
+
+
+def find_company(name: str, company_id: str | None = None) -> dict | None:
+    if company_id:
+        by_id = next((c for c in companies if str(c.get("id")) == str(company_id)), None)
+        if by_id:
+            return by_id
     name = (name or "").strip().lower()
     return next((c for c in companies if (c.get("name") or "").strip().lower() == name), None)
 
@@ -742,7 +800,7 @@ with st.container(key="mnav"):
     for col, key in zip(cols, PAGES):
         with col:
             label, icon = PAGES[key]
-            st.button({"email": "Email", "monitoring": "Monitor"}.get(key, label), key=f"mob_{key}",
+            st.button({"email": "Email", "monitoring": "Monitor", "companies": "Companies"}.get(key, label), key=f"mob_{key}",
                       icon=icon, on_click=go, args=(key,))
 
 
@@ -763,7 +821,7 @@ def page_header(title: str, sub_html: str = "", actions=None):
 def status_line() -> str:
     return (f'<span class="dot {overall[0]}"></span><span>{escape(overall[1])}</span><span class="sep">·</span>'
             f'<span class="num">Last scan {_ago(last_scan, NOW)}</span><span class="sep">·</span>'
-            f'<span class="num">Next scan {_next_scan()}</span>')
+            f'<span class="num">Next scheduled {_next_slot():%H:%M} UTC</span>')
 
 
 def scan_actions():
@@ -887,13 +945,13 @@ def job_row(j: dict, idx: str, origin: str):
             st.button("Details", key=_widget_key("crit", jkey), on_click=go, args=("jobs",),
                       kwargs={"job": _jid(j), "origin": origin})
             if j.get("dismissed"):
-                if st.button("", icon=":material/undo:", key=_widget_key("restore", jkey),
+                if st.button("Restore", icon=":material/undo:", key=_widget_key("restore", jkey),
                              help="Restore to active jobs (it won't be emailed again)"):
                     _, saved, err = _save_change("seen_jobs.json", _restore_jobs({jkey}), [], "chore: restore 1 alert(s)")
                     toast("Job restored" if saved else f"Restored here, but not saved permanently. {err}",
                           "success" if saved else "error")
                     st.rerun()
-            elif st.button("", icon=":material/close:", key=_widget_key("dismiss", jkey),
+            elif st.button("Dismiss", icon=":material/close:", key=_widget_key("dismiss", jkey),
                            help="Dismiss — hide this job (it won't be emailed again)"):
                 _, saved, err = _save_change("seen_jobs.json", dismiss_jobs({jkey}), [], "chore: dismiss 1 alert(s)")
                 toast("Removed 1 alert(s)" if saved else f"Removed here, but not saved permanently. {err}",
@@ -917,13 +975,13 @@ def page_home():
 
     st.html(f"""
     <div class="panel st-key-stats"><div class="stats">
-      <div class="stat"><div class="k">Jobs found</div><div class="v">{len(active_jobs)}</div>
+      <div class="stat"><div class="k">Active jobs</div><div class="v">{len(active_jobs)}</div>
         <div class="n">{_plural(len(dismissed_jobs), 'dismissed job') if dismissed_jobs else 'Fresher &amp; entry-level'}</div></div>
       <div class="stat"><div class="k">New this week</div><div class="v">{new_this_week}</div><div class="n">Found in the last 7 days</div></div>
       <div class="stat"><div class="k">Companies monitored</div><div class="v">{len(companies)}</div>
         <div class="n">{" · ".join(f"{n_by_status[k]} {k}" for k in ("healthy", "delayed", "failing", "pending") if n_by_status[k]) or "—"}</div></div>
       <div class="stat"><div class="k">Last scan</div><div class="v">{_ago(last_scan, NOW)}</div>
-        <div class="n">Next scan {_next_scan()}</div></div>
+        <div class="n">Next scheduled {_next_slot():%H:%M} UTC</div></div>
     </div></div>""")
 
     if not active_jobs:
@@ -936,7 +994,8 @@ def page_home():
             with b:
                 st.button("Open monitoring", key="btn_home_mon", on_click=go, args=("monitoring",))
         empty_state("travel_explore", "No alerts yet",
-                    f"The tracker checks {_plural(len(companies), 'company', 'companies')} every 3 hours. New fresher and "
+                    f"The tracker checks {_plural(len(companies), 'company', 'companies')} on a schedule of every 3 hours "
+                    "(GitHub often starts it later). New fresher and "
                     "entry-level roles in India appear here — and in your inbox — as soon as a portal publishes them.",
                     _acts)
         return
@@ -1008,12 +1067,16 @@ def page_jobs():
 
 def page_job_detail(j: dict):
     back = st.session_state.get("job_from", "jobs")
-    st.button(f"Back to {PAGES.get(back, PAGES['jobs'])[0]}", key="btn_back", icon=":material/arrow_back:",
-              type="tertiary", on_click=go, args=(back,))
+    back_co = next((x for x in companies if back == "companies"
+                    and str(x.get("id")) == str(st.session_state.get("job_from_company"))), None)
+    back_label = (back_co.get("name") or "company").strip() if back_co else PAGES.get(back, PAGES["jobs"])[0]
+    back_kwargs = {"company": back_co.get("id")} if back_co else {}
+    st.button(f"Back to {back_label}", key="btn_back", icon=":material/arrow_back:",
+              type="tertiary", on_click=go, args=(back,), kwargs=back_kwargs)
     jkey = job_key(j)
     title = (j.get("title") or "Untitled posting").strip() or "Untitled posting"
     company = (j.get("company") or "").strip()
-    c = find_company(company)
+    c = find_company(company, j.get("company_id"))
     pill_cls, pill_label = job_category(j)
     url = safe_url(j.get("url", ""))
     d = found[id(j)]
@@ -1043,7 +1106,7 @@ def page_job_detail(j: dict):
                 _, saved, err = _save_change("seen_jobs.json", dismiss_jobs({jkey}), [], "chore: dismiss 1 alert(s)")
                 toast("Removed 1 alert(s)" if saved else f"Removed here, but not saved permanently. {err}",
                       "success" if saved else "error")
-                go(back)
+                go(back, **back_kwargs)
                 st.rerun()
         with a[2]:
             if c:
@@ -1054,32 +1117,73 @@ def page_job_detail(j: dict):
         main, side = st.columns([3, 2])
     with main:
         with st.container(key="job_main"):
+            ev = j.get("evidence") if isinstance(j.get("evidence"), dict) else {}
+            # records carry evidence only when the scraper's safety gate ran; a
+            # malformed/partial evidence field is treated as "no evidence"
+            checks = ev.get("checks") if isinstance(ev.get("checks"), dict) else {}
+            has_ev = bool(checks)
+            raw_lines = ev.get("experience_lines") if isinstance(ev.get("experience_lines"), list) else []
+            exp_lines = [x.strip(" ·•-*	") for x in raw_lines if isinstance(x, str)
+                         and re.search(r"experience|\bexp\b|fresher|graduat|\d\s*(?:\+\s*)?(?:years?|yrs?|months?)\b", x, re.I)]
+            exp_lines = list(dict.fromkeys(exp_lines))
+            ev_exp = [str(x) for x in ev.get("experience") or [] if x] if isinstance(ev.get("experience"), list) else []
+            if ev_exp and ev_exp != ["no experience requirement stated"]:
+                experience = escape(", ".join(ev_exp))
+            elif exp_lines:
+                experience = escape(exp_lines[0])
+            elif has_ev:
+                experience = "No requirement stated in the posting"
+            elif re.search(r"(years|months) experience|No prior experience", friendly_reason(j)):
+                experience = escape(friendly_reason(j))
+            else:
+                experience = "Not recorded for this job"
             rows = [("Company", escape(company or "—")),
                     ("Location", escape(j.get("location") or "Not captured for this posting")),
                     ("Category", escape(pill_label)),
-                    ("Experience", escape(friendly_reason(j)) if "years experience" in friendly_reason(j) or
-                     "No prior experience" in friendly_reason(j) else "Not stated in the captured text"),
+                    ("Experience", experience),
                     ("Found", f'<span class="num">{escape(j.get("date") or "—")} UTC</span>' + (f' <span class="muted">({_ago(d, NOW)})</span>' if d else "")),
                     ("Status", "Dismissed" if j.get("dismissed") else "Active")]
             st.html('<h2 class="section-title">Job overview</h2><dl class="kv">'
                     + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in rows) + "</dl>")
             st.html('<div class="divider"></div>')
-            reason = (j.get("reason") or "").strip()
+            reason = str(j.get("reason") or "").strip()
             classified = bool(reason) or j.get("category") in _CATEGORY_PILL
             st.html(f"""<h2 class="section-title">Why this matched</h2>
               <div class="why">{_ms("check_circle", "s20")}<div>{escape(job_why(j, long=True))}
               {f'<div class="quote"><span class="muted">Classifier trace:</span> {escape(reason)}</div>' if reason else ''}
               {'' if classified else '<div class="note" style="margin-top:6px;">No classifier trace was recorded for this job.</div>'}
               </div></div>""")
+            if has_ev:
+                passed = sum(1 for v in checks.values() if v)
+                labels = {"real_job_posting": "Real job posting", "india_location": "Located in India",
+                          "detail_read": "Job's own posting was read", "detail_is_this_job": "Posting belongs to this job",
+                          "no_conflicting_experience": "No conflicting experience requirement",
+                          "not_programme_story_talent_recruiter": "Not a programme / story / recruiter page",
+                          "evidence_not_staff_context": "Evidence is about the applicant",
+                          "fresher_or_entry_evidence": "Fresher / entry-level evidence found"}
+                items = "".join(f'<li>{"✓" if ok else "✗"} {escape(labels.get(k, k))}</li>' for k, ok in checks.items())
+                quote_lines = "".join(f'<div class="quote">{escape(x)}</div>' for x in exp_lines[:3])
+                with st.expander(f"Evidence & safety checks — {passed} of {len(checks)} checks passed"):
+                    st.html(f"""<dl class="kv">
+                      <dt>Safety checks</dt><dd>{passed} of {len(checks)} checks passed</dd>
+                      <dt>Job ID</dt><dd class="num">{escape(ev.get("job_id") or ats_job_id(j.get("url", "")) or "—")}</dd>
+                      <dt>Detail matched by</dt><dd>{escape(ev.get("detail_match") or "—")}</dd>
+                      <dt>Fresher evidence</dt><dd>{escape(ev.get("fresher_evidence") or "—")}</dd></dl>
+                      {f'<div class="note" style="margin-top:8px;">From the posting:</div>{quote_lines}' if quote_lines else ''}
+                      <ul class="note" style="margin:10px 0 0;padding-left:0;list-style:none;">{items}</ul>""")
             with st.expander("Description & requirements"):
-                st.html('<p class="note">The scraper reads the full posting to classify it but doesn\'t store the description, '
-                        'requirements or skills. Open the posting on the company site for the complete details.</p>')
+                st.html('<p class="note">The scraper reads the full posting to classify it but only keeps the evidence '
+                        'above, not the full description. Open the posting on the company site for the complete details.</p>')
     with side:
         with st.container(key="job_side"):
             src = [("Portal", escape(_host(url)) if url else "—"),
                    ("Platform", "Workday" if "myworkdayjobs.com" in url else "Company career site"),
                    ("Posting", f'<a class="link" href="{escape(url, quote=True)}" target="_blank" rel="noopener">Open posting {_ms("open_in_new", "s16")}</a>' if url else "No link"),
-                   ("Email alert", "Sent" if j.get("notified") else "Pending — goes out after the next check")]
+                   ("Email alert", "Sent" if j.get("notified")
+                    else "Sending — delivery not yet confirmed" if j.get("notify_state") == "claimed"
+                    else "Not sent (dismissed)" if j.get("dismissed")
+                    else "Pending — goes out after the next check" if alert_pending(j)
+                    else "Not emailed")]
             st.html('<h2 class="section-title">Source</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
                     + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in src) + "</dl>")
             st.html('<div class="divider"></div>')
@@ -1089,7 +1193,7 @@ def page_job_detail(j: dict):
                 co = [("Monitoring", f'<span class="pill {k}"><i></i>{lbl}</span>'),
                       ("Career portal", f'<a class="link" href="{escape(curl, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(curl, 30))}</a>' if curl else "—"),
                       ("Last checked", f'<span class="num">{_ago(_parse_iso(c.get("last_checked", "")), NOW)}</span>'),
-                      ("Jobs found", str(len(company_jobs(c))))]
+                      ("Active jobs", str(company_active(c)))]
                 st.html('<h2 class="section-title">Company</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
                         + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in co) + "</dl>")
             else:
@@ -1100,7 +1204,7 @@ def page_companies():
     def _acts():
         st.button("Add company", key="btn_open_add", type="primary", icon=":material/add:",
                   on_click=go, args=("companies",), kwargs={"view": "add"})
-    page_header("Companies", f"{_plural(len(companies), 'career portal')} monitored every 3 hours", _acts)
+    page_header("Companies", f"{_plural(len(companies), 'career portal')} monitored · checks {SCHEDULE_NOTE}", _acts)
     if not companies:
         empty_state("apartment", "No companies yet", "Add a company's career page and the tracker will start checking it on the next scan.")
         return
@@ -1121,7 +1225,7 @@ def page_companies():
         empty_state("search_off", "No companies match", "Try another name or status.")
         return
     with st.container(key="company_list"):
-        st.html('<div class="list-head"><span>Company · career portal</span><span>Website</span><span>Status</span><span>Jobs found</span><span>Last checked</span><span></span></div>')
+        st.html('<div class="list-head"><span>Company · career portal</span><span>Website</span><span>Status</span><span>Active jobs</span><span>Last checked</span><span></span></div>')
         for c in rows:
             name = (c.get("name") or "").strip() or "Unnamed"
             curl = safe_url(c.get("url", ""))
@@ -1139,7 +1243,7 @@ def page_companies():
                         <div class="h">{escape(_short_url(curl)) if curl else '<span style="color:var(--red)">Invalid career page URL</span>'}</div></div></div>
                       <div class="co-cell" style="overflow:hidden;text-overflow:ellipsis;">{f'<a class="link" href="{escape(site, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(site, 28))}</a>' if site else '<span class="muted">Not set</span>'}</div>
                       <div><span class="pill {k}"><i></i>{lbl}</span></div>
-                      <div class="co-cell">{len(company_jobs(c))}<span class="l"> jobs</span></div>
+                      <div class="co-cell">{company_active(c)}<span class="l"> active jobs</span></div>
                       <div class="co-cell muted">{_ago(_parse_iso(c.get("last_checked", "")), NOW)}</div>
                     </div>""")
                 with r2:
@@ -1157,11 +1261,11 @@ def page_add_company():
                             help="The page that lists open jobs — not the company's home page.")
         site = st.text_input("Company website (optional)", placeholder="https://www.example.com", key="new_website")
         st.html(f"""<div class="note" style="display:flex;gap:10px;align-items:flex-start;">
-          {_ms("info", "s20")}<div>The scraper opens this page with a headless browser (Playwright) on every scan,
-          follows each job link, and keeps roles in India that the classifier marks as fresher or entry level.
-          A dedicated Workday API is only used for companies already configured for it (currently
-          {escape(", ".join(sorted(n.title() for n in _api_scrapers())) or "none")}). There's no per-company
-          scraper choice — it's automatic.</div></div>""")
+          {_ms("info", "s20")}<div>Use the page that lists individual job postings (its job search), not a careers
+          landing page. Workday URLs (<span class="num">*.myworkdayjobs.com</span>) are read through Workday's API;
+          other pages are opened with a headless browser (Playwright), each job link is followed, and roles in India
+          that the classifier marks as fresher or entry level are kept. If the page shows no job postings the
+          company is marked <b>Needs configuration</b> rather than healthy.</div></div>""")
         b1, b2 = st.columns([1, 4])
         with b1:
             submit = st.button("Start tracking", key="btn_add", type="primary", use_container_width=True)
@@ -1211,7 +1315,7 @@ def page_company_detail(c: dict):
       <h1 class="detail-title">{escape(name)}</h1>
       <div class="page-sub"><span class="pill {k}"><i></i>{lbl}</span>
         {'<span class="tag">Core</span>' if c.get('locked') else ''}
-        <span class="sep">·</span><span>{_plural(len(jobs), 'job')} found</span></div></div></div>""")
+        <span class="sep">·</span><span>{company_active(c)} active · {sum(1 for j in jobs if j.get("dismissed"))} dismissed</span></div></div></div>""")
     with st.container(key="co_actions"):
         a = st.columns(4)
         with a[0]:
@@ -1248,14 +1352,14 @@ def page_company_detail(c: dict):
         main, side = st.columns([3, 2])
     with side:
         with st.container(key="co_side"):
-            driver = _api_scrapers().get(c.get("id"))
             checked = _parse_iso(c.get("last_checked", ""))
             health = [("Status", f'<span class="pill {k}"><i></i>{lbl}</span>'),
                       ("Last checked", f'<span class="num">{_ago(checked, NOW)}</span>' + (f' <span class="muted num">({checked:%b %d, %H:%M} UTC)</span>' if checked else "")),
-                      ("Scraper", f"{driver.title()} API, Playwright fallback" if driver else "Playwright (headless browser)"),
+                      ("Scraper", escape(_source_label(c))),
                       ("Latest scan", escape(c.get("last_job") or "No matching job on the last scan"))]
             if k == "failing":
-                health.append(("Error", f'The last scan failed. <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">See the Actions log</a>'))
+                why = escape(c.get("status_reason") or "The last scan failed.")
+                health.append(("Problem", f'{why} <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">See the Actions log</a>'))
             st.html('<h2 class="section-title">Portal health</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
                     + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in health) + "</dl>")
             st.html('<div class="divider"></div>')
@@ -1280,14 +1384,14 @@ def page_company_detail(c: dict):
 
 
 def page_monitoring():
-    page_header("Monitoring", "The scraper runs on GitHub Actions every 3 hours and checks every tracked portal", scan_actions)
+    page_header("Monitoring", f"The scraper runs on GitHub Actions — {SCHEDULE_NOTE} — and checks every tracked portal", scan_actions)
     st.html(f"""
     <div class="panel st-key-stats"><div class="stats">
       <div class="stat"><div class="k"><span class="dot {overall[0]}"></span>Overall</div><div class="v" style="font-size:20px;">{escape(overall[1])}</div>
         <div class="n">{_plural(len(companies), 'portal')} tracked</div></div>
       <div class="stat"><div class="k">Last scan</div><div class="v">{_ago(last_scan, NOW)}</div>
         <div class="n num">{f"{last_scan:%b %d, %H:%M} UTC" if last_scan else "No scan recorded"}</div></div>
-      <div class="stat"><div class="k">Next scan</div><div class="v">{_next_scan().removeprefix("in ").capitalize() if _next_scan() == "due now" else _next_scan().removeprefix("in ")}</div><div class="n">Every 3 hours (UTC)</div></div>
+      <div class="stat"><div class="k">Next scheduled scan</div><div class="v">{_next_slot():%H:%M} UTC</div><div class="n">GitHub may start it later</div></div>
       <div class="stat"><div class="k">Portals</div><div class="v">{n_by_status['healthy']}<span class="muted" style="font-size:16px;font-weight:500;"> / {len(companies)} healthy</span></div>
         <div class="n">{n_by_status['delayed']} delayed · {n_by_status['failing']} failing · {n_by_status['pending'] + n_by_status['checking']} pending</div></div>
     </div></div>""")
@@ -1300,31 +1404,35 @@ def page_monitoring():
         k, lbl = statuses[c.get("id")]
         curl = safe_url(c.get("url", ""))
         checked = _parse_iso(c.get("last_checked", ""))
-        note = {"failing": f'Last scan failed — <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">see log</a>',
+        reason = escape(c.get("status_reason") or "")
+        note = {"failing": f'{reason or "Last scan failed"} — <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">see log</a>',
                 "delayed": f"No scan for over {_STALE_H} hours",
                 "pending": "Not scanned yet — added since the last run",
-                "checking": "Check requested"}.get(k, "—")
-        driver = _api_scrapers().get(c.get("id"))
+                "checking": "Check requested"}.get(k, escape(c.get("scan_note") or "") or "—")
         rows.append(f"""<tr>
           <td class="c">{escape((c.get('name') or '').strip() or 'Unnamed')}
             <div class="sub">{f'<a class="link" href="{escape(curl, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(curl, 34))}</a>' if curl else 'Invalid URL'}</div></td>
           <td data-l="Status"><span class="pill {k}"><i></i>{lbl}</span></td>
           <td class="num" data-l="Last checked">{_ago(checked, NOW)}</td>
-          <td class="num" data-l="Jobs found">{len(company_jobs(c))}</td>
-          <td data-l="Scraper">{f"{driver.title()} API" if driver else "Playwright"}</td>
+          <td class="num" data-l="Active jobs">{company_active(c)}</td>
+          <td data-l="Scraper">{escape(_source_label(c))}</td>
           <td data-l="Notes">{note}</td></tr>""")
     with st.container(key="mon_table"):
-        st.html('<table class="mon"><thead><tr><th>Company</th><th>Status</th><th>Last checked</th><th>Jobs found</th>'
+        st.html('<table class="mon"><thead><tr><th>Company</th><th>Status</th><th>Last checked</th><th>Active jobs</th>'
                 '<th>Scraper</th><th>Notes</th></tr></thead><tbody>' + "".join(rows) + "</tbody></table>")
     st.html(f'<p class="note">Statuses come from the scraper: <b>Healthy</b> = scanned successfully in the last {_STALE_H} hours · '
-            f'<b>Delayed</b> = no successful scan for {_STALE_H}+ hours · <b>Failing</b> = the last scan errored · '
+            f'<b>Delayed</b> = no successful scan for {_STALE_H}+ hours · <b>Failing</b> = the last scan partly failed '
+            f'(errors, rate limits or unreadable job pages) · <b>Broken</b> = the job list could not be read (blocked, HTTP error, '
+            f'site changed) · <b>Needs configuration</b> = the URL shows no job postings · '
             f'<b>Pending</b> = not scanned yet. Full run logs: <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">GitHub Actions</a>.</p>')
 
 
 def page_email():
     notified = [j for j in all_records if j.get("notified")]
-    last_mail = max((found[id(j)] for j in notified if found[id(j)]), default=None)
-    pending = [j for j in all_records if not j.get("notified")]
+    # when the email actually went out (older records only know when the job was found)
+    sent_times = [(_parse_iso(j.get("notified_at") or ""), found[id(j)]) for j in notified]
+    last_mail, last_is_sent = max(((a or b, bool(a)) for a, b in sent_times if a or b), default=(None, False))
+    pending = [j for j in all_records if alert_pending(j)]
     page_header("Email & Notifications", (
         f'<span class="pill {"on" if recipient else "off"}"><i></i>{"Alerts on" if recipient else "Alerts off"}</span>'
         + (f'<span>Sending to {escape(recipient)}</span>' if recipient else '<span>Add a recipient to turn alerts on</span>')))
@@ -1348,6 +1456,9 @@ def page_email():
         with i2:
             save = st.button("Save", key="btn_save_email", type="primary", use_container_width=True)
         synced = bool(os.environ.get("GITHUB_TOKEN"))
+        if email_val.strip() and email_val.strip() != recipient:
+            st.html(f'<p class="note" style="color:var(--amber);">{_ms("edit", "s16")} Not saved yet — alerts still go to '
+                    f'{escape(recipient) or "nobody"} until you press Save.</p>')
         st.html(f'<p class="note">{_ms("cloud_done" if synced else "cloud_off", "s16")} '
                 + ("Saved to settings.json in the GitHub repository, which the scraper reads on every run."
                    if synced else "No GitHub token — changes are saved on this server only and the scraper won't see them.")
@@ -1378,9 +1489,8 @@ def page_email():
         if not _EMAIL_RE.match(to):
             toast("Enter a valid recipient email first", "error")
         else:
-            persist_err = ""
-            if settings.get("recipient_email", "") != to:
-                _, persist_err = _set_recipient(to)
+            # a test never changes where real alerts go — that's what Save is for
+            unsaved = (settings.get("recipient_email") or "").strip() != to
             try:
                 from notifier import test_mail
                 test_mail(to)
@@ -1391,12 +1501,12 @@ def page_email():
                       else "Couldn't send the test email. Check the Gmail app password and try again.", "error")
             else:
                 st.session_state.test_status = (True, stamp)
-                toast(f"Test email sent, but the address wasn't saved permanently. {persist_err}" if persist_err
-                      else f"Test email sent — check {to}", "error" if persist_err else "success")
+                toast(f"Test email sent to {to}. This address is not saved as the alert recipient — press Save to use it."
+                      if unsaved else f"Test email sent — check {to}", "success")
         st.rerun()
 
     with st.container(key="set_behavior"):
-        rows = [("Last alert", f'<span class="num">Covered a job found {last_mail:%b %d, %H:%M} UTC</span> <span class="muted">({_ago(last_mail, NOW)})</span>'
+        rows = [("Last alert", f'<span class="num">{"Sent" if last_is_sent else "Covered a job found"} {last_mail:%b %d, %H:%M} UTC</span> <span class="muted">({_ago(last_mail, NOW)})</span>'
                  if last_mail else "No alert emails recorded yet"),
                 ("Jobs emailed", str(len(notified))),
                 ("Waiting to send", f"{len(pending)} — sent after the next check" if pending else "0")]
@@ -1404,9 +1514,10 @@ def page_email():
                 + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in rows) + "</dl>")
         st.html("""<div class="divider"></div><div><h2 class="section-title">How alerts work</h2></div>
           <ul class="note" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;">
-            <li>After every scheduled check (every 3 hours), jobs found for the first time are sent in one email.</li>
-            <li>Each job is emailed once. Dismissed jobs stay in the history so they're never sent again.</li>
-            <li>If sending fails, the jobs stay unsent and the next check retries.</li>
+            <li>After every check (scheduled every 3 hours; GitHub often starts runs later), jobs found for the first time are sent in one email.</li>
+            <li>Only fresher and entry-level jobs in India whose own posting was read are emailed — never a guess from a title.</li>
+            <li>Each job is emailed at most once. Dismissed jobs are never emailed, and stay in the history so they're never sent again.</li>
+            <li>If sending fails, the jobs stay unsent and the next check retries. A job is recorded before its email goes out, so a failed save can't cause a duplicate.</li>
             <li>Mail is sent through the Gmail account configured in the repository's GitHub Actions secrets — credentials are never shown here.</li>
           </ul>""")
 
@@ -1417,7 +1528,7 @@ def page_settings():
         a1, a2 = st.columns([4, 1], vertical_alignment="center")
         with a1:
             st.html('<div><h2 class="section-title">Appearance</h2><p class="section-sub">'
-                    f'{"Dark" if st.session_state.dark_mode else "Light"} theme · applies to this browser session</p></div>')
+                    f'{"Dark" if st.session_state.dark_mode else "Light"} theme · kept in this page’s address, so it survives reloads and bookmarks</p></div>')
         with a2:
             if st.button("Use light theme" if st.session_state.dark_mode else "Use dark theme", key="btn_theme",
                          icon=":material/light_mode:" if st.session_state.dark_mode else ":material/dark_mode:",
@@ -1438,26 +1549,48 @@ def page_settings():
                 toast("Showing the latest data", "success")
                 st.rerun()
     with st.container(key="set_engine"):
-        api = _api_scrapers()
-        rows = [("Schedule", 'Every 3 hours (cron <span class="num">0 */3 * * *</span>) — set in .github/workflows/check_jobs.yml'),
+        by_source: dict[str, list[str]] = {}
+        for c in companies:
+            by_source.setdefault(_source_label(c), []).append((c.get("name") or "").strip() or "Unnamed")
+        rows = [("Schedule", 'Scheduled every 3 hours (cron <span class="num">0 */3 * * *</span>, set in .github/workflows/check_jobs.yml). '
+                             'GitHub Actions starts scheduled runs late under load — typically 3–8 hours apart.'),
                 ("Roles kept", "Fresher and entry-level roles located in India"),
-                ("Scrapers", f"Workday API for {escape(', '.join(sorted(n.title() for n in api)))}; Playwright for every other portal"
-                             if api else "Playwright for every portal"),
-                ("Detail pages", "Each candidate job's own page is read before it is classified")]
+                ("Scrapers", "; ".join(f"{escape(src)} for {escape(', '.join(sorted(names)))}"
+                                       for src, names in sorted(by_source.items())) or "No portals yet"),
+                ("Detail pages", "Each candidate job's own posting is read before it is classified; "
+                                 "if it can't be read the job is not emailed and is retried next scan")]
         st.html('<div><h2 class="section-title">Scanning</h2><p class="section-sub">Defined in the repository; change them there.</p></div>'
                 '<dl class="kv">' + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in rows) + "</dl>")
     with st.container(key="set_maint"):
         st.html('<div><h2 class="section-title">Maintenance</h2><p class="section-sub">Dismiss every active job at once. '
                 'They stay in the history (Jobs → Dismissed) and are never emailed again.</p></div>')
-        m1, _m2 = st.columns([1, 3])
-        with m1:
-            with st.container(key="danger"):
-                if st.button(f"Dismiss all {len(active_jobs)} jobs", key="btn_clear_all", disabled=not active_jobs,
-                             use_container_width=True):
-                    _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(None), [], "chore: dismiss all alerts")
-                    toast("All alerts cleared" if saved else f"Cleared here, but not saved permanently. {err}",
-                          "success" if saved else "error")
-                    st.rerun()
+        if not st.session_state.confirm_clear:
+            m1, _m2 = st.columns([1, 3])
+            with m1:
+                with st.container(key="danger"):
+                    if st.button(f"Dismiss all {len(active_jobs)} jobs", key="btn_clear_all", disabled=not active_jobs,
+                                 use_container_width=True):
+                        st.session_state.confirm_clear = True
+                        st.rerun()
+        else:
+            unsent = sum(1 for j in active_jobs if alert_pending(j))
+            with st.container(key="danger_confirm"):
+                st.html(f'<p class="note" style="color:var(--text);">Dismiss all <b>{len(active_jobs)}</b> active jobs?'
+                        + (f" This also cancels <b>{unsent}</b> alert{'s' if unsent != 1 else ''} that haven't been emailed yet "
+                           "— they won't be emailed." if unsent else " They stay in the history and are never emailed again.")
+                        + "</p>")
+                y, n_ = st.columns([1, 3])
+                with y:
+                    if st.button("Yes, dismiss all", key="btn_clear_all_confirm", type="primary", use_container_width=True):
+                        st.session_state.confirm_clear = False
+                        _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(None), [], "chore: dismiss all alerts")
+                        toast("All alerts cleared" if saved else f"Cleared here, but not saved permanently. {err}",
+                              "success" if saved else "error")
+                        st.rerun()
+                with n_:
+                    if st.button("Cancel", key="btn_clear_all_cancel"):
+                        st.session_state.confirm_clear = False
+                        st.rerun()
     st.html(f"""<div class="app-foot"><span>Fresher Job Tracker</span>
       <a href="https://github.com/{GITHUB_REPO}" target="_blank" rel="noopener">Source on GitHub</a></div>""")
 
@@ -1496,6 +1629,8 @@ if st.session_state.company_id:
     want["company"] = str(st.session_state.company_id)
 if st.session_state.company_view:
     want["view"] = st.session_state.company_view
+if st.session_state.dark_mode:
+    want["theme"] = "dark"
 if dict(st.query_params) != want:
     st.query_params.from_dict(want)
 
