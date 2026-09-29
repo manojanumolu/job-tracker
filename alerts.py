@@ -20,6 +20,7 @@ alert is not retried — it is logged loudly instead.)
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from datetime import datetime, timezone
 
@@ -106,4 +107,9 @@ def run(send=None, publisher=publish) -> int:
 
 
 if __name__ == "__main__":
+    # publish() hard-resets the working tree to the remote branch tip — right
+    # for a throwaway Actions checkout, destructive on a developer machine
+    if os.environ.get("GITHUB_ACTIONS") != "true" and os.environ.get("ALERTS_ALLOW_LOCAL") != "1":
+        sys.exit("alerts.py resets this checkout to the remote branch; it only runs in GitHub Actions "
+                 "(set ALERTS_ALLOW_LOCAL=1 to run it in a disposable clone).")
     sys.exit(run())
