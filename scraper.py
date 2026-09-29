@@ -6,7 +6,7 @@ import time
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from urllib.parse import urldefrag, urljoin
+from urllib.parse import urldefrag, urljoin, urlparse
 
 import httpx
 
@@ -764,19 +764,30 @@ def _repost_key(job: dict) -> tuple | None:
     return ((job.get("company") or "").lower(), normalize_title(job.get("title", "")), location)
 
 
-def merge_new_jobs(seen: list[dict], found: list[dict], now: datetime | None = None) -> list[dict]:
+def _posting_key(url: str) -> str:
+    """Company-independent identity: the posting's host + ATS job ID. It keeps
+    a renamed company ("npcl" -> "NPCI") from re-alerting its old jobs."""
+    ident = ats_job_id(url)
+    return f"{urlparse(url).netloc.lower().removeprefix('www.')}|{ident}" if ident else ""
+
+
+def merge_new_jobs(seen: list[dict], found: list[dict], now: datetime | None = None,
+                   company_id: str | None = None) -> list[dict]:
     """New records for ``found`` jobs that aren't already known. Identity is
     the ATS job ID / canonical URL, so two different jobs with the same title
     both get through; the same title *and* location under a new ID is treated
-    as a repost of a job already alerted."""
+    as a repost of a job already alerted. ``company_id`` (the company's
+    immutable id) is stored on new records."""
     now = now or datetime.now(timezone.utc)
     known = {record_uid(j) for j in seen if isinstance(j, dict)}
+    known_postings = {k for k in (_posting_key(j.get("url", "")) for j in seen if isinstance(j, dict)) if k}
     reposts = {k for k in (_repost_key(j) for j in seen if isinstance(j, dict)) if k}
     new: list[dict] = []
     for job in found:
         uid = job_uid(job["company"], job["url"])
         rp = _repost_key(job)
-        if uid in known:
+        pk = _posting_key(job["url"])
+        if uid in known or (pk and pk in known_postings):
             continue
         if rp and rp in reposts:
             log.info("  %s: %s — repost of a job already alerted (same title and location)", job["company"], job["title"])
@@ -789,8 +800,12 @@ def merge_new_jobs(seen: list[dict], found: list[dict], now: datetime | None = N
             "id": f"{job['company']}_{job['title'][:40]}".replace(" ", "_"),
             "notified": False,
         })
+        if company_id:
+            record["company_id"] = company_id
         new.append(record)
         known.add(uid)
+        if pk:
+            known_postings.add(pk)
         if rp:
             reposts.add(rp)
     return new
@@ -813,7 +828,7 @@ def run_all() -> list[dict]:
         company["source"] = source_label(company)
         # reflect what this scrape actually sees
         company["last_job"] = scan.jobs[0]["title"] if scan.jobs else ""
-        new_jobs += merge_new_jobs(seen + new_jobs, scan.jobs)
+        new_jobs += merge_new_jobs(seen + new_jobs, scan.jobs, company_id=company.get("id"))
         time.sleep(1)
 
     # commit=False: alerts.py publishes the data (merge-safe) before and

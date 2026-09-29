@@ -106,6 +106,11 @@ def friendly_reason(job: dict) -> str:
         if kind == "fresher signal":
             if _NO_EXPERIENCE_QUOTE_RE.search(quote):
                 return "No prior experience required"
+            # a bare "Fresher(s)" can only come from the job title (description
+            # signals always carry context like "Freshers welcome") — say
+            # where it came from instead of echoing the same word
+            if quote.strip().lower() in ("fresher", "freshers"):
+                return "Open to freshers (stated in the job title)"
             return f"Open to freshers — “{quote}”"
         if kind == "entry-level signal":
             return f"Entry-level / graduate role — “{quote}”"

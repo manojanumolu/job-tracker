@@ -53,7 +53,8 @@ if "page" not in st.session_state:
     st.session_state.company_id = qp.get("company") or None
     st.session_state.company_view = "add" if qp.get("view") == "add" else None
 if "dark_mode" not in st.session_state:
-    st.session_state.dark_mode = False
+    # the theme lives in the URL (?theme=dark) so it survives reloads/bookmarks
+    st.session_state.dark_mode = st.query_params.get("theme") == "dark"
 
 st.set_page_config(
     page_title=f"{PAGES[st.session_state.page][0]} · Fresher Job Tracker",
@@ -170,8 +171,8 @@ _CSS = """
 .stat { padding: 16px 20px; min-width: 0; }
 .stat + .stat { border-left: 1px solid var(--border); }
 .stat .k { font-size: 13px; line-height: 18px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
-.stat .v { font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); margin-top: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.stat .n { font-size: 13px; line-height: 18px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat .v { font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); margin-top: 4px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat .n { font-size: 13px; line-height: 18px; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
 .st-key-stats { padding: 0 !important; overflow: hidden; }
 
 /* ── filter bar ── */
@@ -352,6 +353,9 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 [class*="st-key-nav_"] [data-testid^="stBaseButton"]:hover { background: var(--hover) !important; color: var(--text) !important; }
 [class*="st-key-nav_"] [data-testid="stIconMaterial"] { font-size: 20px !important; color: var(--muted); }
 [class*="st-key-nav_"] p { font-size: 14px !important; font-weight: 500 !important; }
+/* the ✕ / ↺ buttons on job rows are icon-only; their label is for screen readers */
+[class*="st-key-dismiss_"] [data-testid="stMarkdownContainer"], [class*="st-key-restore_"] [data-testid="stMarkdownContainer"],
+[class*="st-key-dismiss_"] [data-testid="stMarkdownContainer"] p, [class*="st-key-restore_"] [data-testid="stMarkdownContainer"] p { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; clip-path: inset(50%) !important; white-space: nowrap !important; margin: -1px !important; padding: 0 !important; border: 0 !important; }
 .side-foot { margin-top: auto; padding: 14px 12px 4px; border-top: 1px solid var(--border); font-size: 13px; line-height: 18px; color: var(--muted); }
 .side-foot .st { display: flex; align-items: center; gap: 8px; color: var(--text); font-weight: 500; }
 .side-foot a { color: var(--muted) !important; }
@@ -389,7 +393,8 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   .nav-group.first { display: none; }
   [class*="st-key-nav_"] [data-testid^="stBaseButton"] { justify-content: center !important; padding: 0 !important; }
   [class*="st-key-nav_"] [data-testid^="stBaseButton"] > div { justify-content: center !important; }
-  [class*="st-key-nav_"] p { display: none !important; }
+  /* icon rail: labels are hidden visually but kept for screen readers */
+  [class*="st-key-nav_"] p { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; clip-path: inset(50%) !important; white-space: nowrap !important; margin: -1px !important; padding: 0 !important; border: 0 !important; }
   [data-testid="stSidebarUserContent"] { padding: 16px 8px !important; }
   .side-foot { padding: 12px 0 0; text-align: center; } .side-foot .txt { display: none; } .side-foot .st { justify-content: center; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -404,7 +409,7 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   [data-testid="stMainBlockContainer"], .block-container { padding: 0 16px 32px !important; }
   [data-testid="stMainBlockContainer"] > div > [data-testid="stVerticalBlock"] { gap: 20px; }
   .st-key-mnav {
-    display: flex !important; position: sticky; top: 0; z-index: 30; margin: 0 -16px; padding: 8px 12px !important;
+    display: flex !important; position: sticky; top: 0; z-index: 30; margin: 0 -16px; padding: 6px 4px !important;
     background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border);
   }
   /* all six destinations visible at once: equal columns, icon above a short label */
@@ -494,14 +499,13 @@ def _found_at(date_str: str, now: datetime) -> datetime | None:
     return dt.replace(year=now.year - 1) if dt > now + timedelta(days=1) else dt
 
 
-def _next_scan() -> str:
-    """check_jobs.yml runs at minute 0 of every 3rd UTC hour (0, 3, 6, …)."""
-    now = datetime.now(timezone.utc)
-    nxt = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=3 - now.hour % 3)
-    mins = int((nxt - now).total_seconds() // 60)
-    if mins < 1:
-        return "due now"
-    return f"in {mins} min" if mins < 60 else f"in {mins // 60}h {mins % 60:02d}m"
+def _next_slot(now: datetime | None = None) -> datetime:
+    """The next slot of check_jobs.yml's cron (minute 0 of every 3rd UTC hour).
+    GitHub Actions only *schedules* at these times — runs usually start later
+    (measured Sep 2026: median 5 h apart, up to 9 h), so this is shown as a
+    scheduled time, never as a countdown."""
+    now = now or datetime.now(timezone.utc)
+    return now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=3 - now.hour % 3)
 
 
 def _ms(name: str, size: str = "") -> str:
@@ -567,7 +571,9 @@ def _load_synced(name: str, default):
     remote = _remote_snapshot().get(name)
     if remote is not None and isinstance(remote, type(default)):
         return remote
-    return _load(BASE / name, default)
+    local = _load(BASE / name, default)
+    # a corrupt or hand-edited file ("null", "[]" for settings) must not crash the app
+    return local if isinstance(local, type(default)) else default
 
 
 def _save_change(name: str, mutate, default, message: str):
@@ -601,7 +607,15 @@ def _restore_jobs(keys: set[str]):
 
 
 # ── data ──────────────────────────────────────────────────────────────────────
-companies: list[dict] = [c for c in _load_synced("companies.json", []) if isinstance(c, dict)]
+companies: list[dict] = []
+for _i, _c in enumerate(c for c in _load_synced("companies.json", []) if isinstance(c, dict)):
+    # every company needs a unique id for its widgets/links; a missing or
+    # repeated id (hand-edited file) gets one for this page view only — the
+    # file itself is never rewritten here
+    _c = dict(_c)
+    if not _c.get("id") or any(str(x.get("id")) == str(_c.get("id")) for x in companies):
+        _c["id"] = f"_row{_i}"
+    companies.append(_c)
 settings: dict = _load_synced("settings.json", {"recipient_email": ""})
 # seen_jobs.json is also the scraper's dedup history: jobs are dismissed
 # (hidden), never deleted, or the scraper would email them again
@@ -619,7 +633,11 @@ dismissed_jobs: list[dict] = [j for j in reversed(all_records) if j.get("dismiss
 NOW = datetime.now(timezone.utc)
 _EMAIL_RE = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+$")
 _CHECK_COOLDOWN_S = 300
-_STALE_H = 7          # cron runs every 3 h; allow a missed/slow run before "delayed"
+# cron asks for every 3 h, but GitHub starts scheduled runs late: measured
+# gaps were median 5 h, 90th percentile 7.5 h, max 9 h — so a scan only
+# counts as "delayed" once it is overdue by more than that
+_STALE_H = 10
+SCHEDULE_NOTE = "scheduled every 3 hours; GitHub usually starts runs later, typically 3–8 hours apart"
 HOME_LIMIT = 8
 JOBS_PAGE = 12
 _CATEGORY_PILL = {"FRESHER": "fresher", "ENTRY_LEVEL": "entry"}
@@ -696,17 +714,35 @@ else:
 
 found = {id(j): _found_at(j.get("date") or "", NOW) for j in all_records}
 new_this_week = sum(1 for j in active_jobs if found[id(j)] and NOW - found[id(j)] <= timedelta(days=7))
+# Records written since Sep 2026 carry the company's id (stable across a
+# rename); older records only have the company name.
 jobs_by_company: dict[str, list[dict]] = {}
+jobs_by_company_id: dict[str, list[dict]] = {}
 for j in reversed(all_records):
-    jobs_by_company.setdefault((j.get("company") or "").strip(), []).append(j)
+    if j.get("company_id"):
+        jobs_by_company_id.setdefault(str(j["company_id"]), []).append(j)
+    else:
+        jobs_by_company.setdefault((j.get("company") or "").strip(), []).append(j)
 recipient = (settings.get("recipient_email") or "").strip()
 
 
 def company_jobs(c: dict) -> list[dict]:
-    return jobs_by_company.get((c.get("name") or "").strip(), [])
+    """Every job found for this company (active and dismissed), newest first."""
+    by_id = jobs_by_company_id.get(str(c.get("id")), [])
+    by_name = jobs_by_company.get((c.get("name") or "").strip(), [])
+    return sorted(by_id + by_name, key=lambda j: found[id(j)] or datetime.min.replace(tzinfo=timezone.utc),
+                  reverse=True) if by_id and by_name else (by_id or by_name)
 
 
-def find_company(name: str) -> dict | None:
+def company_active(c: dict) -> int:
+    return sum(1 for j in company_jobs(c) if not j.get("dismissed"))
+
+
+def find_company(name: str, company_id: str | None = None) -> dict | None:
+    if company_id:
+        by_id = next((c for c in companies if str(c.get("id")) == str(company_id)), None)
+        if by_id:
+            return by_id
     name = (name or "").strip().lower()
     return next((c for c in companies if (c.get("name") or "").strip().lower() == name), None)
 
@@ -785,7 +821,7 @@ def page_header(title: str, sub_html: str = "", actions=None):
 def status_line() -> str:
     return (f'<span class="dot {overall[0]}"></span><span>{escape(overall[1])}</span><span class="sep">·</span>'
             f'<span class="num">Last scan {_ago(last_scan, NOW)}</span><span class="sep">·</span>'
-            f'<span class="num">Next scan {_next_scan()}</span>')
+            f'<span class="num">Next scheduled {_next_slot():%H:%M} UTC</span>')
 
 
 def scan_actions():
@@ -909,13 +945,13 @@ def job_row(j: dict, idx: str, origin: str):
             st.button("Details", key=_widget_key("crit", jkey), on_click=go, args=("jobs",),
                       kwargs={"job": _jid(j), "origin": origin})
             if j.get("dismissed"):
-                if st.button("", icon=":material/undo:", key=_widget_key("restore", jkey),
+                if st.button("Restore", icon=":material/undo:", key=_widget_key("restore", jkey),
                              help="Restore to active jobs (it won't be emailed again)"):
                     _, saved, err = _save_change("seen_jobs.json", _restore_jobs({jkey}), [], "chore: restore 1 alert(s)")
                     toast("Job restored" if saved else f"Restored here, but not saved permanently. {err}",
                           "success" if saved else "error")
                     st.rerun()
-            elif st.button("", icon=":material/close:", key=_widget_key("dismiss", jkey),
+            elif st.button("Dismiss", icon=":material/close:", key=_widget_key("dismiss", jkey),
                            help="Dismiss — hide this job (it won't be emailed again)"):
                 _, saved, err = _save_change("seen_jobs.json", dismiss_jobs({jkey}), [], "chore: dismiss 1 alert(s)")
                 toast("Removed 1 alert(s)" if saved else f"Removed here, but not saved permanently. {err}",
@@ -939,13 +975,13 @@ def page_home():
 
     st.html(f"""
     <div class="panel st-key-stats"><div class="stats">
-      <div class="stat"><div class="k">Jobs found</div><div class="v">{len(active_jobs)}</div>
+      <div class="stat"><div class="k">Active jobs</div><div class="v">{len(active_jobs)}</div>
         <div class="n">{_plural(len(dismissed_jobs), 'dismissed job') if dismissed_jobs else 'Fresher &amp; entry-level'}</div></div>
       <div class="stat"><div class="k">New this week</div><div class="v">{new_this_week}</div><div class="n">Found in the last 7 days</div></div>
       <div class="stat"><div class="k">Companies monitored</div><div class="v">{len(companies)}</div>
         <div class="n">{" · ".join(f"{n_by_status[k]} {k}" for k in ("healthy", "delayed", "failing", "pending") if n_by_status[k]) or "—"}</div></div>
       <div class="stat"><div class="k">Last scan</div><div class="v">{_ago(last_scan, NOW)}</div>
-        <div class="n">Next scan {_next_scan()}</div></div>
+        <div class="n">Next scheduled {_next_slot():%H:%M} UTC</div></div>
     </div></div>""")
 
     if not active_jobs:
@@ -958,7 +994,8 @@ def page_home():
             with b:
                 st.button("Open monitoring", key="btn_home_mon", on_click=go, args=("monitoring",))
         empty_state("travel_explore", "No alerts yet",
-                    f"The tracker checks {_plural(len(companies), 'company', 'companies')} every 3 hours. New fresher and "
+                    f"The tracker checks {_plural(len(companies), 'company', 'companies')} on a schedule of every 3 hours "
+                    "(GitHub often starts it later). New fresher and "
                     "entry-level roles in India appear here — and in your inbox — as soon as a portal publishes them.",
                     _acts)
         return
@@ -1039,7 +1076,7 @@ def page_job_detail(j: dict):
     jkey = job_key(j)
     title = (j.get("title") or "Untitled posting").strip() or "Untitled posting"
     company = (j.get("company") or "").strip()
-    c = find_company(company)
+    c = find_company(company, j.get("company_id"))
     pill_cls, pill_label = job_category(j)
     url = safe_url(j.get("url", ""))
     d = found[id(j)]
@@ -1081,14 +1118,20 @@ def page_job_detail(j: dict):
     with main:
         with st.container(key="job_main"):
             ev = j.get("evidence") if isinstance(j.get("evidence"), dict) else {}
-            exp_lines = [x.strip(" ·•-*	") for x in ev.get("experience_lines") or []
-                         if re.search(r"experience|\bexp\b|fresher|graduat|\d\s*(?:\+\s*)?(?:years?|yrs?|months?)\b", x, re.I)]
+            # records carry evidence only when the scraper's safety gate ran; a
+            # malformed/partial evidence field is treated as "no evidence"
+            checks = ev.get("checks") if isinstance(ev.get("checks"), dict) else {}
+            has_ev = bool(checks)
+            raw_lines = ev.get("experience_lines") if isinstance(ev.get("experience_lines"), list) else []
+            exp_lines = [x.strip(" ·•-*	") for x in raw_lines if isinstance(x, str)
+                         and re.search(r"experience|\bexp\b|fresher|graduat|\d\s*(?:\+\s*)?(?:years?|yrs?|months?)\b", x, re.I)]
             exp_lines = list(dict.fromkeys(exp_lines))
-            if ev.get("experience") and ev["experience"] != ["no experience requirement stated"]:
-                experience = escape(", ".join(ev["experience"]))
+            ev_exp = [str(x) for x in ev.get("experience") or [] if x] if isinstance(ev.get("experience"), list) else []
+            if ev_exp and ev_exp != ["no experience requirement stated"]:
+                experience = escape(", ".join(ev_exp))
             elif exp_lines:
                 experience = escape(exp_lines[0])
-            elif ev:
+            elif has_ev:
                 experience = "No requirement stated in the posting"
             elif re.search(r"(years|months) experience|No prior experience", friendly_reason(j)):
                 experience = escape(friendly_reason(j))
@@ -1103,15 +1146,14 @@ def page_job_detail(j: dict):
             st.html('<h2 class="section-title">Job overview</h2><dl class="kv">'
                     + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in rows) + "</dl>")
             st.html('<div class="divider"></div>')
-            reason = (j.get("reason") or "").strip()
+            reason = str(j.get("reason") or "").strip()
             classified = bool(reason) or j.get("category") in _CATEGORY_PILL
             st.html(f"""<h2 class="section-title">Why this matched</h2>
               <div class="why">{_ms("check_circle", "s20")}<div>{escape(job_why(j, long=True))}
               {f'<div class="quote"><span class="muted">Classifier trace:</span> {escape(reason)}</div>' if reason else ''}
               {'' if classified else '<div class="note" style="margin-top:6px;">No classifier trace was recorded for this job.</div>'}
               </div></div>""")
-            if ev:
-                checks = ev.get("checks") or {}
+            if has_ev:
                 passed = sum(1 for v in checks.values() if v)
                 labels = {"real_job_posting": "Real job posting", "india_location": "Located in India",
                           "detail_read": "Job's own posting was read", "detail_is_this_job": "Posting belongs to this job",
@@ -1151,7 +1193,7 @@ def page_job_detail(j: dict):
                 co = [("Monitoring", f'<span class="pill {k}"><i></i>{lbl}</span>'),
                       ("Career portal", f'<a class="link" href="{escape(curl, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(curl, 30))}</a>' if curl else "—"),
                       ("Last checked", f'<span class="num">{_ago(_parse_iso(c.get("last_checked", "")), NOW)}</span>'),
-                      ("Jobs found", str(len(company_jobs(c))))]
+                      ("Active jobs", str(company_active(c)))]
                 st.html('<h2 class="section-title">Company</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
                         + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in co) + "</dl>")
             else:
@@ -1162,7 +1204,7 @@ def page_companies():
     def _acts():
         st.button("Add company", key="btn_open_add", type="primary", icon=":material/add:",
                   on_click=go, args=("companies",), kwargs={"view": "add"})
-    page_header("Companies", f"{_plural(len(companies), 'career portal')} monitored every 3 hours", _acts)
+    page_header("Companies", f"{_plural(len(companies), 'career portal')} monitored · checks {SCHEDULE_NOTE}", _acts)
     if not companies:
         empty_state("apartment", "No companies yet", "Add a company's career page and the tracker will start checking it on the next scan.")
         return
@@ -1183,7 +1225,7 @@ def page_companies():
         empty_state("search_off", "No companies match", "Try another name or status.")
         return
     with st.container(key="company_list"):
-        st.html('<div class="list-head"><span>Company · career portal</span><span>Website</span><span>Status</span><span>Jobs found</span><span>Last checked</span><span></span></div>')
+        st.html('<div class="list-head"><span>Company · career portal</span><span>Website</span><span>Status</span><span>Active jobs</span><span>Last checked</span><span></span></div>')
         for c in rows:
             name = (c.get("name") or "").strip() or "Unnamed"
             curl = safe_url(c.get("url", ""))
@@ -1201,7 +1243,7 @@ def page_companies():
                         <div class="h">{escape(_short_url(curl)) if curl else '<span style="color:var(--red)">Invalid career page URL</span>'}</div></div></div>
                       <div class="co-cell" style="overflow:hidden;text-overflow:ellipsis;">{f'<a class="link" href="{escape(site, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(site, 28))}</a>' if site else '<span class="muted">Not set</span>'}</div>
                       <div><span class="pill {k}"><i></i>{lbl}</span></div>
-                      <div class="co-cell">{len(company_jobs(c))}<span class="l"> jobs</span></div>
+                      <div class="co-cell">{company_active(c)}<span class="l"> active jobs</span></div>
                       <div class="co-cell muted">{_ago(_parse_iso(c.get("last_checked", "")), NOW)}</div>
                     </div>""")
                 with r2:
@@ -1273,7 +1315,7 @@ def page_company_detail(c: dict):
       <h1 class="detail-title">{escape(name)}</h1>
       <div class="page-sub"><span class="pill {k}"><i></i>{lbl}</span>
         {'<span class="tag">Core</span>' if c.get('locked') else ''}
-        <span class="sep">·</span><span>{_plural(len(jobs), 'job')} found</span></div></div></div>""")
+        <span class="sep">·</span><span>{company_active(c)} active · {sum(1 for j in jobs if j.get("dismissed"))} dismissed</span></div></div></div>""")
     with st.container(key="co_actions"):
         a = st.columns(4)
         with a[0]:
@@ -1342,14 +1384,14 @@ def page_company_detail(c: dict):
 
 
 def page_monitoring():
-    page_header("Monitoring", "The scraper runs on GitHub Actions every 3 hours and checks every tracked portal", scan_actions)
+    page_header("Monitoring", f"The scraper runs on GitHub Actions — {SCHEDULE_NOTE} — and checks every tracked portal", scan_actions)
     st.html(f"""
     <div class="panel st-key-stats"><div class="stats">
       <div class="stat"><div class="k"><span class="dot {overall[0]}"></span>Overall</div><div class="v" style="font-size:20px;">{escape(overall[1])}</div>
         <div class="n">{_plural(len(companies), 'portal')} tracked</div></div>
       <div class="stat"><div class="k">Last scan</div><div class="v">{_ago(last_scan, NOW)}</div>
         <div class="n num">{f"{last_scan:%b %d, %H:%M} UTC" if last_scan else "No scan recorded"}</div></div>
-      <div class="stat"><div class="k">Next scan</div><div class="v">{_next_scan().removeprefix("in ").capitalize() if _next_scan() == "due now" else _next_scan().removeprefix("in ")}</div><div class="n">Every 3 hours (UTC)</div></div>
+      <div class="stat"><div class="k">Next scheduled scan</div><div class="v">{_next_slot():%H:%M} UTC</div><div class="n">GitHub may start it later</div></div>
       <div class="stat"><div class="k">Portals</div><div class="v">{n_by_status['healthy']}<span class="muted" style="font-size:16px;font-weight:500;"> / {len(companies)} healthy</span></div>
         <div class="n">{n_by_status['delayed']} delayed · {n_by_status['failing']} failing · {n_by_status['pending'] + n_by_status['checking']} pending</div></div>
     </div></div>""")
@@ -1372,11 +1414,11 @@ def page_monitoring():
             <div class="sub">{f'<a class="link" href="{escape(curl, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(curl, 34))}</a>' if curl else 'Invalid URL'}</div></td>
           <td data-l="Status"><span class="pill {k}"><i></i>{lbl}</span></td>
           <td class="num" data-l="Last checked">{_ago(checked, NOW)}</td>
-          <td class="num" data-l="Jobs found">{len(company_jobs(c))}</td>
+          <td class="num" data-l="Active jobs">{company_active(c)}</td>
           <td data-l="Scraper">{escape(_source_label(c))}</td>
           <td data-l="Notes">{note}</td></tr>""")
     with st.container(key="mon_table"):
-        st.html('<table class="mon"><thead><tr><th>Company</th><th>Status</th><th>Last checked</th><th>Jobs found</th>'
+        st.html('<table class="mon"><thead><tr><th>Company</th><th>Status</th><th>Last checked</th><th>Active jobs</th>'
                 '<th>Scraper</th><th>Notes</th></tr></thead><tbody>' + "".join(rows) + "</tbody></table>")
     st.html(f'<p class="note">Statuses come from the scraper: <b>Healthy</b> = scanned successfully in the last {_STALE_H} hours · '
             f'<b>Delayed</b> = no successful scan for {_STALE_H}+ hours · <b>Failing</b> = the last scan partly failed '
@@ -1472,7 +1514,7 @@ def page_email():
                 + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in rows) + "</dl>")
         st.html("""<div class="divider"></div><div><h2 class="section-title">How alerts work</h2></div>
           <ul class="note" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;">
-            <li>After every scheduled check (every 3 hours), jobs found for the first time are sent in one email.</li>
+            <li>After every check (scheduled every 3 hours; GitHub often starts runs later), jobs found for the first time are sent in one email.</li>
             <li>Only fresher and entry-level jobs in India whose own posting was read are emailed — never a guess from a title.</li>
             <li>Each job is emailed at most once. Dismissed jobs are never emailed, and stay in the history so they're never sent again.</li>
             <li>If sending fails, the jobs stay unsent and the next check retries. A job is recorded before its email goes out, so a failed save can't cause a duplicate.</li>
@@ -1486,7 +1528,7 @@ def page_settings():
         a1, a2 = st.columns([4, 1], vertical_alignment="center")
         with a1:
             st.html('<div><h2 class="section-title">Appearance</h2><p class="section-sub">'
-                    f'{"Dark" if st.session_state.dark_mode else "Light"} theme · applies to this browser session</p></div>')
+                    f'{"Dark" if st.session_state.dark_mode else "Light"} theme · kept in this page’s address, so it survives reloads and bookmarks</p></div>')
         with a2:
             if st.button("Use light theme" if st.session_state.dark_mode else "Use dark theme", key="btn_theme",
                          icon=":material/light_mode:" if st.session_state.dark_mode else ":material/dark_mode:",
@@ -1510,7 +1552,8 @@ def page_settings():
         by_source: dict[str, list[str]] = {}
         for c in companies:
             by_source.setdefault(_source_label(c), []).append((c.get("name") or "").strip() or "Unnamed")
-        rows = [("Schedule", 'Every 3 hours (cron <span class="num">0 */3 * * *</span>) — set in .github/workflows/check_jobs.yml'),
+        rows = [("Schedule", 'Scheduled every 3 hours (cron <span class="num">0 */3 * * *</span>, set in .github/workflows/check_jobs.yml). '
+                             'GitHub Actions starts scheduled runs late under load — typically 3–8 hours apart.'),
                 ("Roles kept", "Fresher and entry-level roles located in India"),
                 ("Scrapers", "; ".join(f"{escape(src)} for {escape(', '.join(sorted(names)))}"
                                        for src, names in sorted(by_source.items())) or "No portals yet"),
@@ -1586,6 +1629,8 @@ if st.session_state.company_id:
     want["company"] = str(st.session_state.company_id)
 if st.session_state.company_view:
     want["view"] = st.session_state.company_view
+if st.session_state.dark_mode:
+    want["theme"] = "dark"
 if dict(st.query_params) != want:
     st.query_params.from_dict(want)
 
