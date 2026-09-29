@@ -19,8 +19,8 @@ _TRACKING_PARAMS = re.compile(
 
 # ATS job IDs recognisable from the posting URL
 _ID_PATTERNS = [
-    # Workday: .../job/Hyderabad/Some-Title_R2868429 or _JR141427 or _R2849882-1
-    ("workday", re.compile(r"myworkdayjobs\.com/.*_([A-Za-z]{0,4}\d{4,}(?:-\d+)?)(?:/apply)?/?$", re.IGNORECASE)),
+    # Workday: .../job/Hyderabad/Some-Title_R2868429, _JR141427, _R2849882-1, PwC's _570925WD-1
+    ("workday", re.compile(r"myworkdayjobs\.com/.*_([A-Za-z]{0,4}\d{4,}[A-Za-z]{0,4}(?:-\d+)?)(?:/apply)?/?$", re.IGNORECASE)),
     # Accenture: jobdetails?id=ATCI-5780951-S2070513_en
     ("accenture", re.compile(r"accenture\.com/.*jobdetails\?(?:.*&)?id=([^&#]+)", re.IGNORECASE)),
     # Flutter careers site: /jobs/jr141427/slug/  (the Workday JR id)

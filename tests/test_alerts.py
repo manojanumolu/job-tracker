@@ -11,9 +11,14 @@ import config_store
 import repo_sync
 
 
+GATE = {"real_job_posting": True, "india_location": True, "detail_read": True, "detail_is_this_job": True,
+        "no_conflicting_experience": True, "not_programme_story_talent_recruiter": True,
+        "evidence_not_staff_context": True, "fresher_or_entry_evidence": True}
+
+
 def _rec(title, url, category="FRESHER", **extra):
     return {"title": title, "url": url, "company": "Sanofi", "location": "Hyderabad", "category": category,
-            "reason": "r", "notified": False, **extra}
+            "reason": "r", "notified": False, "evidence": {"checks": dict(GATE)}, **extra}
 
 
 LEGACY = {"title": "Associate – HEVA (Evidence Synthesis)", "company": "Sanofi", "notified": True, "dismissed": True,
@@ -78,6 +83,11 @@ class Mailer:
     ({**NEW, "notify_state": "claimed"}, False),
     ({**NEW, "notify_state": "sent"}, False),
     (LEGACY, False),
+    # the safety gate: no evidence, or any failed check -> never emailed
+    ({k: v for k, v in NEW.items() if k != "evidence"}, False),
+    ({**NEW, "evidence": {}}, False),
+    ({**NEW, "evidence": {"checks": {}}}, False),
+    *[({**NEW, "evidence": {"checks": {**GATE, check: False}}}, False) for check in GATE],
 ])
 def test_alert_eligibility(record, eligible):
     assert config_store.alert_pending(record) is eligible

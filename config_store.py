@@ -196,12 +196,16 @@ ALERT_CATEGORIES = ("FRESHER", "ENTRY_LEVEL")
 
 
 def alert_pending(job: dict) -> bool:
-    """Should this record still be emailed? Only accepted jobs that were
-    never sent, never claimed by a run and not dismissed. Records without a
-    category (pre-classifier) are never emailed."""
+    """Should this record still be emailed? Only accepted jobs that passed
+    every safety-gate check (stored in ``evidence.checks`` by the scraper),
+    were never sent, never claimed by a run and are not dismissed. Records
+    without a category or gate evidence (pre-classifier) are never emailed."""
+    if not isinstance(job, dict):
+        return False
+    checks = (job.get("evidence") or {}).get("checks") if isinstance(job.get("evidence"), dict) else None
     return (
-        isinstance(job, dict)
-        and job.get("category") in ALERT_CATEGORIES
+        job.get("category") in ALERT_CATEGORIES
+        and isinstance(checks, dict) and bool(checks) and all(checks.values())
         and not job.get("dismissed")
         and not job.get("notified")
         and job.get("notify_state") not in ("claimed", "sent", "skipped")

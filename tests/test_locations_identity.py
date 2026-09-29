@@ -139,3 +139,16 @@ def test_legacy_records_without_uid_still_deduplicate():
               "url": "https://sanofi.wd3.myworkdayjobs.com/SanofiCareers/job/Hyderabad/Associate---HEVA--Evidence-Synthesis-_R2852866"}
     again = _job("Associate - HEVA (Evidence Synthesis)", legacy["url"], company="Sanofi")
     assert scraper.merge_new_jobs([legacy], [again]) == []
+
+
+def test_pwc_workday_ids_with_letter_suffix():
+    # PwC ids end in letters ("_570925WD-1") and PwC renames postings, which
+    # changes the URL slug: identity must follow the id, not the slug
+    old = ("https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Bengaluru-Millenia/"
+           "IN-Senior-Associate---Internal-Audit--Internal-Audit-Services--Advisory--Bangalore_570925WD-1")
+    renamed = "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Bengaluru-Millenia/IN-Associate-Internal-Audit_570925WD-1"
+    assert ats_job_id(old) == "workday:570925WD-1"
+    assert job_uid("PwC", old) == job_uid("PwC", renamed)
+    assert job_uid("PwC", old) != job_uid("PwC", old.replace("570925WD-1", "570925WD-2"))
+    seen = [{**_job("IN_Senior Associate_Internal Audit", old, company="PwC"), "notified": True}]
+    assert scraper.merge_new_jobs(seen, [_job("IN_Associate _ Internal Audit", renamed, "Bengaluru Millenia", "PwC")]) == []

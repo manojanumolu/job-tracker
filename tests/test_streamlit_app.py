@@ -24,6 +24,7 @@ NEW_RECORD = {
     "company": "PwC", "location": "Pune · India", "category": "ENTRY_LEVEL",
     "reason": "entry-level signal: 'Graduate'", "date": "Sep 28, 19:16",
     "id": "PwC_Graduate_Software_Engineer",
+    "evidence": {"checks": {"detail_read": True, "fresher_or_entry_evidence": True}},
 }
 FRESHER_RECORD = {
     "title": "Trainee Analyst", "url": "https://metlife.example/job/9",

@@ -57,6 +57,7 @@ class Detail:
     strict_text: str = ""          # reject-only evidence (fields outside the description)
     posting_evidence: bool = False  # a real JobPosting (ATS record / schema.org)
     reason: str = ""               # why it is not ok
+    matched: str = ""              # how the detail was tied to this listing
 
     @classmethod
     def unreadable(cls, reason: str) -> "Detail":
@@ -195,7 +196,7 @@ def workday_detail(client: httpx.Client, url: str, title: str) -> Detail:
     if isinstance(country, dict):
         country = country.get("descriptor")
     location = " | ".join(str(x) for x in locations + [country] if x)
-    return Detail(ok=True, description=description, location=location, posting_evidence=True)
+    return Detail(ok=True, description=description, location=location, posting_evidence=True, matched="Workday record for the listing's path" + (" + same title" if got else ""))
 
 
 def workday_listings(client: httpx.Client, api: str) -> SourceResult:
@@ -303,7 +304,7 @@ def accenture_listing(row: dict, site: str = "in-en") -> Listing | None:
         f"Career level: {row['jobProfile']}" if row.get("jobProfile") else "",
         str(row.get("yearsOfExperience") or ""),
     ) if x)
-    detail = (Detail(ok=True, description=description, location=location, strict_text=strict, posting_evidence=True)
+    detail = (Detail(ok=True, description=description, location=location, strict_text=strict, posting_evidence=True, matched="ATS record of this listing")
               if len(description) >= _MIN_DESCRIPTION_CHARS else Detail.unreadable("empty job description"))
     return Listing(title=title, url=url, location=location, job_id=str(row.get("requisitionId") or ""),
                    posting_evidence=True, detail=detail)
@@ -341,7 +342,7 @@ def jibe_listings(client: httpx.Client, cfg: dict) -> SourceResult:
             if not title or not slug:
                 continue
             description = "\n".join(html_to_text(str(d.get(k) or "")) for k in ("description", "responsibilities", "qualifications"))
-            detail = (Detail(ok=True, description=description.strip(), location=location, posting_evidence=True)
+            detail = (Detail(ok=True, description=description.strip(), location=location, posting_evidence=True, matched="ATS record of this listing")
                       if len(description.strip()) >= _MIN_DESCRIPTION_CHARS else Detail.unreadable("empty job description"))
             listings.append(Listing(title=title, url=f"{host}/careers-home/jobs/{slug}?lang=en-us",
                                     location=location, job_id=str(d.get("req_id") or ""),
@@ -421,7 +422,9 @@ def avature_detail(client: httpx.Client, url: str, title: str, job_id: str) -> D
     # the page title names the same job ID / title (MetLife keeps a stale
     # JobPosting title after a rename: "Actuarial Analyst" vs "Actuarial
     # Specialist - Noida, India - 20761")
+    match = "JobPosting title/ID"
     if _pick_posting(jsonld_postings(r.text), title, job_id) is None:
+        match = "page title names the same job ID/title"
         m = re.search(r"<title>(.*?)</title>", r.text, re.S | re.IGNORECASE)
         page_title = html_lib.unescape(m.group(1)) if m else ""
         id_match = bool(job_id) and re.search(rf"(?<!\d){re.escape(job_id)}(?!\d)", page_title)
@@ -440,7 +443,7 @@ def avature_detail(client: httpx.Client, url: str, title: str, job_id: str) -> D
     description = "\n".join(parts)
     if len(description) < _MIN_DESCRIPTION_CHARS:
         return Detail.unreadable("posting has no description")
-    return Detail(ok=True, description=description, location=location, posting_evidence=True)
+    return Detail(ok=True, description=description, location=location, posting_evidence=True, matched=match)
 
 
 def avature_listings(client: httpx.Client, cfg: dict) -> SourceResult:
@@ -517,7 +520,7 @@ def zoho_listings(client: httpx.Client, cfg: dict) -> SourceResult:
             location = cfg.get("country", "")
         description = html_to_text(str(j.get("Job_Description") or ""))
         slug = re.sub(r"[^A-Za-z0-9]+", "-", title).strip("-")
-        detail = (Detail(ok=True, description=description, location=location, posting_evidence=True)
+        detail = (Detail(ok=True, description=description, location=location, posting_evidence=True, matched="ATS record of this listing")
                   if len(description) >= _MIN_DESCRIPTION_CHARS else Detail.unreadable("empty job description"))
         listings.append(Listing(title=title, url=f"{base}/{jid}/{slug}", location=location, job_id=jid,
                                 posting_evidence=True, detail=detail))

@@ -320,3 +320,62 @@ def test_workday_url_is_detected_for_user_added_companies():
     srcs = scraper.sources_for({"id": "c1", "name": "X", "url": "https://acme.wd5.myworkdayjobs.com/en-US/External"})
     assert srcs == [{"type": "workday", "api": "https://acme.wd5.myworkdayjobs.com/wday/cxs/acme/External/jobs"}]
     assert scraper.sources_for({"id": "c2", "name": "Y", "url": "https://careers.example.com/jobs"}) == []
+
+
+# ---------------------------------------------------------------------------
+# Final safety gate: every alert must pass all checks; evidence is stored
+# ---------------------------------------------------------------------------
+
+def _listing(**kw):
+    base = dict(title="Graduate Analyst", url="https://acme.wd3.myworkdayjobs.com/S/job/Pune/Graduate-Analyst_R1234567",
+                location="Pune", posting_evidence=True)
+    return sources.Listing(**{**base, **kw})
+
+
+def _detail(**kw):
+    base = dict(ok=True, description="Open to 2025 graduates. Experience: 0-1 years.", location="Pune | India",
+                posting_evidence=True, matched="ATS record of this listing")
+    return sources.Detail(**{**base, **kw})
+
+
+def test_gate_passes_and_records_evidence():
+    result, job = scraper.decide("Acme", _listing(), _detail())
+    assert job and result.category.value == "FRESHER"
+    ev = job["evidence"]
+    assert all(ev["checks"].values()) and len(ev["checks"]) == 8
+    assert ev["experience"] == ["0-1 years"] and ev["fresher_evidence"] and ev["detail_read"] is True
+    assert ev["job_id"] == "workday:R1234567" and ev["canonical_url"].endswith("_R1234567") and ev["detail_match"] == "ATS record of this listing"
+
+
+@pytest.mark.parametrize("listing_kw, detail_kw, failed", [
+    ({}, {"matched": ""}, "detail_is_this_job"),                                     # unverified detail
+    ({"url": "https://acme.com/early-careers", "posting_evidence": False},
+     {"posting_evidence": False}, "real_job_posting"),                               # not a posting URL, no JobPosting
+])
+def test_gate_blocks_alerts(listing_kw, detail_kw, failed):
+    result, job = scraper.decide("Acme", _listing(**listing_kw), _detail(**detail_kw))
+    assert job is None and result.category.value == "UNKNOWN" and failed in result.reason
+
+
+def test_gate_checks_are_independent_of_the_classifier(monkeypatch):
+    """Even if the classifier were fooled, the gate re-checks the posting."""
+    from job_classifier import Category, Classification
+    fooled = Classification(Category.FRESHER, "fresher signal: 'freshers'")
+    monkeypatch.setattr(scraper, "classify_job", lambda *a, **k: fooled)
+    cases = [
+        (_listing(), _detail(description="We are hiring. 3+ years of experience required."), "no_conflicting_experience"),
+        (_listing(), _detail(description="You will be responsible for hiring freshers."), "evidence_not_staff_context"),
+        (_listing(title="Graduate Program", posting_evidence=False), _detail(posting_evidence=False, description="freshers welcome"),
+         "not_programme_story_talent_recruiter"),
+        (_listing(title="Senior Analyst"), _detail(description="freshers welcome"), "no_conflicting_experience"),
+    ]
+    for listing, detail, failed in cases:
+        result, job = scraper.decide("Acme", listing, detail)
+        assert job is None and failed in result.reason, (listing.title, result)
+
+
+def test_unreadable_detail_never_accepted_even_with_zero_range_on_card():
+    listing = _listing(card_text="Pune, India\n0-1 Yrs")
+    for detail in (None, sources.Detail.unreadable("HTTP 429")):
+        result, job = scraper.decide("Acme", listing, detail)
+        assert job is None and result.category.value == "UNKNOWN"

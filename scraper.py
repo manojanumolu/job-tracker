@@ -10,9 +10,10 @@ from urllib.parse import urldefrag, urljoin
 
 import httpx
 
-from identity import ats_job_id, job_uid, same_page
+from identity import ats_job_id, canonical_url, job_uid, same_page
 from job_classifier import (
-    Category, Classification, classify_job, has_explicit_zero_experience, normalize_title, not_a_job_reason,
+    Category, Classification, classify_job, evidence_is_applicant_directed, evidence_quote, experience_conflict,
+    normalize_title, not_a_job_reason, parse_experience_requirements,
 )
 from locations import india_segments, is_india
 from sources import (
@@ -196,17 +197,52 @@ class Scan:
 # The decision: listing + (maybe) detail -> classification
 # ---------------------------------------------------------------------------
 
+_EXPERIENCE_LINE_RE = re.compile(r"\b(?:years?|yrs?|experience|exp\b|fresher|graduate|months?)", re.IGNORECASE)
+
+
+def safety_gate(listing: Listing, detail: Detail | None, result: Classification, location: str) -> dict[str, bool]:
+    """The final checks every alert must pass (checks 9-10 — not previously
+    notified, not dismissed — are enforced when the record is merged and
+    when the email queue is built: merge_new_jobs / alert_pending)."""
+    title, url = listing.title, listing.url
+    description = f"{listing.card_text}\n{detail.description}".strip() if detail else listing.card_text
+    posting = bool(detail and (detail.posting_evidence or listing.posting_evidence))
+    reason = not_a_job_reason(title, url, posting_evidence=posting)
+    return {
+        "real_job_posting": not reason and (posting or bool(_JOB_URL_RE.search(url))),
+        "india_location": is_india(location),
+        "detail_read": bool(detail and detail.ok),
+        "detail_is_this_job": bool(detail and detail.ok and detail.matched),
+        "no_conflicting_experience": not experience_conflict(title, description, detail.strict_text if detail else ""),
+        "not_programme_story_talent_recruiter": not reason,
+        "evidence_not_staff_context": evidence_is_applicant_directed(result, title, description),
+        "fresher_or_entry_evidence": result.accepted and bool(evidence_quote(result)),
+    }
+
+
+def _evidence(listing: Listing, detail: Detail, result: Classification, checks: dict) -> dict:
+    description = f"{listing.card_text}\n{detail.description}"
+    lines = [ln.strip()[:160] for ln in description.splitlines() if _EXPERIENCE_LINE_RE.search(ln)]
+    reqs = parse_experience_requirements(description) + parse_experience_requirements(detail.strict_text)
+    return {
+        "experience": [r.text.rstrip(" .,;") for r in reqs] or ["no experience requirement stated"],
+        "experience_lines": lines[:4],
+        "fresher_evidence": evidence_quote(result),
+        "detail_read": detail.ok,
+        "detail_match": detail.matched,
+        "job_id": ats_job_id(listing.url) or (f"id:{listing.job_id}" if listing.job_id else ""),
+        "canonical_url": canonical_url(listing.url),
+        "checks": checks,
+    }
+
+
 def decide(company: str, listing: Listing, detail: Detail | None) -> tuple[Classification, dict | None]:
     """Final verdict for one posting. Never accepts without the posting's own
-    detail, unless the card itself states a 0-year experience range."""
+    detail (the safety gate requires it), and every alert must pass all
+    safety-gate checks; its evidence is stored on the record."""
     title, card = listing.title, listing.card_text
     if detail is None or not detail.ok:
         why = detail.reason if detail else "no job page"
-        if has_explicit_zero_experience(card) and is_india(listing.location):
-            result = classify_job(title, card, url=listing.url, posting_evidence=listing.posting_evidence)
-            if result.accepted:
-                return result, _job(title, listing.url, company, result, listing.location)
-            return result, None
         return _unknown(f"job page unreadable ({why}) — not alerted, retried next run"), None
 
     if detail.location and not is_india(detail.location):
@@ -219,8 +255,14 @@ def decide(company: str, listing: Listing, detail: Detail | None) -> tuple[Class
                           posting_evidence=detail.posting_evidence or listing.posting_evidence)
     if not result.accepted:
         return result, None
+    checks = safety_gate(listing, detail, result, location)
+    failed = [k for k, ok in checks.items() if not ok]
+    if failed:
+        return _unknown(f"safety gate failed ({', '.join(failed)}) after '{result.reason}' — not alerted"), None
     shown = " | ".join(india_segments(location)) or location
-    return result, _job(title, listing.url, company, result, shown if is_india(detail.location) else location)
+    job = _job(title, listing.url, company, result, shown if is_india(detail.location) else location)
+    job["evidence"] = _evidence(listing, detail, result, checks)
+    return result, job
 
 
 def _evaluate(scan: Scan, listing: Listing, budget: list[int]) -> None:
@@ -499,8 +541,10 @@ def jsonld_detail(postings: list, title: str, job_id: str = "", *, final_url: st
             description += "\n" + str(extra["description"])
     if len(description.strip()) < 20:
         return Detail.unreadable("posting has no description")
+    same_title = normalize_title(str(posting.get("title", ""))) == normalize_title(title)
     return Detail(ok=True, description=description.strip(), location=_jsonld_location(posting),
-                  strict_text=extra_strict, posting_evidence=True)
+                  strict_text=extra_strict, posting_evidence=True,
+                  matched="JobPosting with the same title" if same_title else "JobPosting with the same job ID")
 
 
 def _same_page(a: str, b: str) -> bool:
@@ -548,7 +592,8 @@ def _playwright_detail(page, url: str, title: str, listing_url: str) -> Detail:
                 text = (el.inner_text() or "").strip()
                 if len(text) >= _MIN_DESCRIPTION_CHARS:
                     hidden = el.evaluate("e => e.textContent") or ""
-                    return Detail(ok=True, description=text, strict_text=f"{hidden}\n{fields}")
+                    return Detail(ok=True, description=text, strict_text=f"{hidden}\n{fields}",
+                                  matched="the posting's own URL (no redirect)")
         return Detail.unreadable("no job description found on the page")
     except Exception as e:
         log.warning("Detail page failed for %s: %s", url, e)

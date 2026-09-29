@@ -38,7 +38,9 @@ ACCEPTED = {Category.FRESHER, Category.ENTRY_LEVEL}
         ("Associate Software Engineer", "Experience: 0-1 years. B.Tech in CS."),
         ("Associate Software Engineer", "No prior experience required."),
         ("Associate Analyst", "This is an entry-level role for recent graduates."),
-        ("Data Analyst", "Freshers or candidates with 1-2 years of experience can apply."),
+        # (with "1-2 years" instead of 0-2 this is now rejected — explicit
+        # experience wins; see test_adversarial_classifier.test_freshers_never_override_experience)
+        ("Data Analyst", "Freshers or candidates with 0-2 years of experience can apply."),
         # company boilerplate isn't a requirement
         ("Graduate Analyst", "Sanofi has over 150 years of experience in healthcare."),
         # a 6-month internship duration isn't an experience requirement

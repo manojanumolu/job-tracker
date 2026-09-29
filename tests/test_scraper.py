@@ -430,4 +430,6 @@ def test_card_location_picks_the_india_line():
 def test_workday_jobs_carry_location(mock_workday):
     jobs = scraper._scrape_api({"id": "sanofi", "name": "Sanofi", "url": "https://jobs.sanofi.com/en"})
     assert jobs[0]["location"] == "Hyderabad · Pune · India"
-    assert set(jobs[0]) == {"title", "url", "company", "location", "category", "reason"}
+    assert set(jobs[0]) == {"title", "url", "company", "location", "category", "reason", "evidence"}
+    ev = jobs[0]["evidence"]
+    assert ev["detail_read"] is True and ev["detail_match"] and len(ev["checks"]) == 8 and all(ev["checks"].values())

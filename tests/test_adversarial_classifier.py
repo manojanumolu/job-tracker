@@ -342,3 +342,86 @@ def test_strict_text_can_only_reject():
 ])
 def test_internship_definition(title, description, expected):
     assert classify_job(title, description).category == expected
+
+
+# ---------------------------------------------------------------------------
+# Final review (Sep 30): no "freshers or 1-2 years" exception, broad ranges
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("text", [
+    "Freshers or candidates with 1-2 years of experience can apply.",
+    "Freshers or 1-2 years experience",
+    "Freshers / 1-2 years",
+    "Freshers welcome, candidates with 1-2 years may apply",
+    "1-2 years or freshers",
+    "Fresher / 1 to 2 years",
+    "Freshers & 1-3 yrs",
+])
+@pytest.mark.parametrize("title", ["Data Analyst", "Graduate Analyst", "Trainee", "Associate"])
+def test_freshers_never_override_experience(title, text):
+    result = classify_job(title, text)
+    assert not result.accepted and result.category == C.EXPERIENCED, result
+
+
+@pytest.mark.parametrize("text", ["Freshers can apply / 2+ years", "Freshers welcome. 2+ years required",
+                                  "Freshers or minimum 2 years"])
+def test_freshers_with_two_plus_years_rejected(text):
+    assert classify_job("Graduate Analyst", text).category == C.EXPERIENCED
+
+
+@pytest.mark.parametrize("title, text", [
+    ("Graduate Analyst", "Experience: 0-3 years"),
+    ("Associate", "0-3 years of relevant experience"),
+    ("Trainee", "Experience required: 0 to 3 yrs"),
+    ("Data Analyst", "Freshers or candidates with 0-2 years of experience can apply."),
+    ("Graduate Trainee", "Experience: 0-4 years"),
+    ("Graduate Trainee", "Up to 2 years of experience"),
+    ("Graduate Trainee", "Maximum 2 years of experience"),
+])
+def test_zero_start_ranges_below_five_years_stay_eligible(title, text):
+    assert classify_job(title, text).category == C.FRESHER
+
+
+def test_zero_to_three_with_an_explicit_contradiction_is_rejected():
+    assert classify_job("Graduate Analyst", "Experience: 0-3 years\nMinimum 2 years in audit required").category == C.EXPERIENCED
+
+
+BROAD = ["Experience: 0-5 years", "Experience: 0-7 years", "0 - 10 yrs", "Up to 5 years", "Up to 7 years",
+         "Up to 10 years of experience", "Experience:\nUp to 7 years", "Experience up to 5 years",
+         "Maximum 8 years of experience", "upto 6 yrs exp"]
+
+
+@pytest.mark.parametrize("text", BROAD)
+@pytest.mark.parametrize("title", ["Trainee", "Graduate Trainee", "Graduate Engineer", "Intern", "Intern/ Trainee",
+                                   "Associate", "Campus Hire - Analyst", "Apprentice Developer"])
+def test_broad_range_title_word_is_not_enough(title, text):
+    result = classify_job(title, text)
+    assert not result.accepted, result
+    assert result.category in {C.UNKNOWN, C.EXPERIENCED}
+
+
+@pytest.mark.parametrize("evidence, expected", [
+    ("Experience: 0-1 years", C.FRESHER),
+    ("Fresh graduates are welcome to apply", C.FRESHER),
+    ("No prior experience required", C.FRESHER),
+    ("Freshers are eligible", C.FRESHER),
+    ("This is an entry-level role", C.ENTRY_LEVEL),
+    ("Open to recent graduates", C.ENTRY_LEVEL),
+    ("Eligible: 2026 batch", C.ENTRY_LEVEL),
+])
+def test_broad_range_with_independent_evidence(evidence, expected):
+    for broad in ("Up to 7 years of experience", "Experience: 0-7 years"):
+        assert classify_job("Trainee", f"{broad}\n{evidence}").category == expected
+
+
+@pytest.mark.parametrize("text", ["Contract for up to 7 years", "Up to 5 years of free training",
+                                  "Stipend for up to 6 months", "Rotation of up to 5 years in the programme"])
+def test_up_to_durations_are_not_experience(text):
+    assert classify_job("Graduate Trainee", text).accepted
+
+
+def test_live_pwc_intern_trainee_up_to_seven_years():
+    # live PwC posting (Sep 2026): the only evidence besides the title word
+    result = classify_job("Intern/ Trainee", "Intern/Trainee\nITGC Reviews, IT Internal Audits, Controls Testing\n"
+                                             "Experience:\nUp to 7 years\nMinimum Qualification: BE/ BTech/CA")
+    assert result.category == C.UNKNOWN and "broad experience range" in result.reason

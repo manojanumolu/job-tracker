@@ -391,12 +391,10 @@ _REQUIRED_HEADING_RE = re.compile(
 )
 _HEADING_MAX_LEN = 60
 _CLAUSE_SPLIT_RE = re.compile(r",|\s+\band\b\s+|\s+\bbut\b\s+")
-# "Freshers or candidates with 1-2 years", "1-2 years or freshers" — freshers
-# offered as an explicit alternative to a small, unqualified range. Anything
-# stronger ("Freshers can apply / 2+ years", "freshers or minimum 2 years")
-# is a requirement: explicit experience wins.
-_FRESHER_OR_RE = re.compile(r"\bfreshers?\s+or\b|\bor\s+freshers?\b", re.IGNORECASE)
-_MAX_ALTERNATIVE_YEARS = 2
+_UP_TO_BEFORE_RE = re.compile(
+    r"\b(?:up\s*to|upto|maximum(?:\s+of)?|max\.?|not\s+more\s+than|less\s+than)\s*$", re.IGNORECASE)
+# (There is deliberately no "freshers or 1-2 years" exception: any stated
+# experience above 0 wins over the word "freshers" next to it.)
 # split on sentence ends ("Min. 2 years" stays together: the next char isn't
 # a capital), semicolons, bullets and line breaks
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?=[A-Z])|;|\s*[•·▪●]\s*|\n")
@@ -483,9 +481,8 @@ def parse_experience_requirements(text: str, *, title: bool = False) -> list[Exp
 
     Requirements stated as preferred / nice-to-have — inline or under a
     "Preferred qualifications" heading — are skipped unless the line itself
-    is mandatory ("required", "must", "minimum", "at least"). A small range
-    offered as an explicit alternative to freshers ("Freshers or 1-2 years")
-    is skipped too.
+    is mandatory ("required", "must", "minimum", "at least"). A range offered
+    next to freshers ("Freshers or 1-2 years") is still a requirement.
     """
     reqs: list[ExperienceRequirement] = []
     in_preferred_section = False
@@ -498,7 +495,7 @@ def parse_experience_requirements(text: str, *, title: bool = False) -> list[Exp
                 in_preferred_section = False
         mandatory_line = bool(_MANDATORY_RE.search(sentence))
 
-        found: list[tuple[re.Match, float, float | None, bool]] = []
+        found: list[tuple[re.Match, float, float | None, str]] = []
         for m in _QUANTITY_RE.finditer(sentence):
             lo = _to_number(m.group("lo"))
             hi = _to_number(m.group("hi")) if m.group("hi") else None
@@ -528,6 +525,19 @@ def parse_experience_requirements(text: str, *, title: bool = False) -> list[Exp
             )
             if _COMPANY_CLAIM_BEFORE_RE.search(wide_before):
                 continue
+            # "up to 7 years", "maximum 2 years of experience" -> a 0..N range
+            upto = _UP_TO_BEFORE_RE.search(before)
+            if upto and hi is None and not m.group("qual"):
+                rest = (sentence[:m.start() - len(upto.group(0))] + sentence[m.end():]).strip(" .:-()[]|,")
+                if not (linked_to_experience or not rest or field_value or title):
+                    continue
+                if _DURATION_AFTER_RE.search(after) and not linked_to_experience:
+                    continue
+                lo, hi = 0.0, lo
+                if is_months:
+                    hi = hi / 12
+                found.append((m, lo, hi, f"{upto.group(0).strip()} {m.group(0).strip()}"))
+                continue
             if is_months:
                 # "3-6 months internship" is a duration, not a requirement;
                 # "18+ months" / "6 months minimum" are requirements
@@ -548,11 +558,7 @@ def parse_experience_requirements(text: str, *, title: bool = False) -> list[Exp
                 continue
             if is_months:
                 lo, hi = lo / 12, (hi / 12 if hi is not None else None)
-            alternative = bool(
-                _FRESHER_OR_RE.search(sentence) and hi is not None and not plus and not qualified
-                and lo <= _MAX_ALTERNATIVE_YEARS and not mandatory_line
-            )
-            found.append((m, lo, hi, alternative))
+            found.append((m, lo, hi, m.group(0).strip()))
 
         covered = [(m.start(), m.end()) for m, *_ in found]
         for m in _UNITLESS_RE.finditer(sentence):
@@ -561,18 +567,16 @@ def parse_experience_requirements(text: str, *, title: bool = False) -> list[Exp
                 continue
             lo = _to_number(m.group("lo"))
             hi = _to_number(m.group("hi")) if m.group("hi") else None
-            found.append((m, lo, hi, False))
+            found.append((m, lo, hi, m.group(0).strip()))
 
         if in_preferred_section and not mandatory_line:
             continue
-        for m, lo, hi, alternative in found:
-            if alternative:
-                continue
+        for m, lo, hi, text in found:
             if not mandatory_line and _clause_is_optional(sentence, m.start(), m.end()):
                 continue
             if lo > _MAX_PLAUSIBLE_YEARS or (hi is not None and hi < lo):
                 continue
-            reqs.append(ExperienceRequirement(lo, hi, m.group(0).strip()))
+            reqs.append(ExperienceRequirement(lo, hi, text))
     return reqs
 
 
@@ -730,6 +734,92 @@ def _describe(req: ExperienceRequirement) -> str:
     return f"'{req.text}'"
 
 
+# An eligibility range reaching this many years ("up to 7 years", "0-7 years")
+# says nothing about the role being entry-level: a title word such as
+# "Trainee" is then not enough, only independent applicant evidence is.
+# (0-3 years stays an entry-level range.)
+_BROAD_MAX_YEARS = 5
+_UP_TO_RE = re.compile(
+    r"(?P<pre>\b(?:experience|exp)\b[^\n]{0,40}?[:=|-]?\s*\n?\s*)?"
+    r"\b(?:up\s*to|upto|maximum(?:\s+of)?|max\.?|not\s+more\s+than|less\s+than)\s*"
+    r"(?P<n>" + _NUM + r")\s*\+?\s*(?:years?|yrs?)\b"
+    r"(?P<post>\.?\s*(?:of\s+)?(?:[\w-]+\s+){0,3}?(?:experience|exp)\b)?",
+    re.IGNORECASE,
+)
+
+
+def broad_experience_range(text: str, reqs: list[ExperienceRequirement] | None = None) -> str:
+    """The phrase stating a broad experience range ("Up to 7 years",
+    "0-7 years"), or ""."""
+    for m in _UP_TO_RE.finditer(text or ""):
+        line = text[text.rfind("\n", 0, m.start("n")) + 1:]
+        line = line.split("\n", 1)[0]
+        standalone = not re.sub(re.escape(m.group(0).split("\n")[-1].strip()), "", line, flags=re.IGNORECASE).strip(" .:-|()")
+        if not (m.group("pre") or m.group("post") or standalone):
+            continue
+        if _DURATION_AFTER_RE.search(text[m.end():m.end() + 60]) and not m.group("post"):
+            continue
+        if _to_number(m.group("n")) >= _BROAD_MAX_YEARS:
+            return m.group(0).strip()
+    for r in reqs if reqs is not None else parse_experience_requirements(text):
+        if r.min_years == 0 and r.max_years is not None and r.max_years >= _BROAD_MAX_YEARS:
+            return r.text
+    return ""
+
+
+def _lines(text: str) -> str:
+    return "\n".join(n for n in (_normalize(x) for x in (text or "").splitlines()) if n)
+
+
+def experience_conflict(title: str, description: str = "", strict_text: str = "") -> str:
+    """An experienced-level requirement anywhere in the posting ("" if none).
+    Used by the scraper's final safety gate independently of the verdict."""
+    reqs = (parse_experience_requirements(title or "", title=True) + parse_experience_requirements(description or "")
+            + parse_experience_requirements(strict_text or ""))
+    above_zero = [r for r in reqs if r.min_years > 0]
+    if above_zero:
+        return f"requirement {above_zero[0].text!r}"
+    full = f"{_normalize(title)}\n{_normalize(description)}\n{_normalize(strict_text)}"
+    if _NO_FRESHERS_RE.search(full):
+        return "freshers not eligible"
+    level = _level_field_rejection(_lines(description)) or _level_field_rejection(_lines(strict_text))
+    if level:
+        return f"level {level!r}"
+    prior = prior_experience_requirement(description or "") or prior_experience_requirement(strict_text or "")
+    if prior:
+        return f"requirement {prior!r}"
+    m = _SENIOR_TITLE_RE.search(_normalize(title)) or _MID_LEVEL_RE.search(_normalize(title)) \
+        or _LEVEL_TITLE_RE.search(_normalize(title)) or _LEVEL_NUM_TITLE_RE.search(_normalize(title))
+    if m:
+        return f"title level {m.group(0)!r}"
+    return ""
+
+
+def evidence_quote(result: Classification) -> str:
+    m = re.search(r"'(.+)'", result.reason or "")
+    return m.group(1) if m else ""
+
+
+def evidence_is_applicant_directed(result: Classification, title: str, description: str = "") -> bool:
+    """The quoted evidence of a positive verdict appears in the title, or in
+    the description about the applicant (not staff/hiring context)."""
+    quote = _normalize(evidence_quote(result))
+    if not quote:
+        return False
+    if quote.lower() in _normalize(title).lower():
+        return True
+    text = _lines(description)
+    for m in re.finditer(re.escape(quote), text, re.IGNORECASE):
+        before = text[max(0, m.start() - 60):m.start()]
+        after = text[m.end():m.end() + 60]
+        if _STAFF_AFTER_RE.search(after):
+            continue
+        if _STAFF_CONTEXT_RE.search(before) and not _APPLICANT_CONTEXT_RE.search(before):
+            continue
+        return True
+    return False
+
+
 def has_explicit_zero_experience(text: str) -> bool:
     """True when ``text`` states experience starting at 0 ("0-1 years",
     "Experience: 0-2") and no requirement above 0 — the only card-level
@@ -797,7 +887,12 @@ def classify_job(title: str, description: str = "", url: str = "", *,
     if m:
         return Classification(Category.EXPERIENCED, f"levelled title above entry: '{m.group(0)}'")
 
-    zero_reqs = [r for r in reqs if r.min_years == 0]
+    # a broad range ("Experience: up to 7 years") leaves only independent
+    # applicant evidence: a narrow 0-start range, fresher / fresh-graduate /
+    # no-experience wording, or entry-level eligibility — never a title word
+    broad = broad_experience_range(desc_lines, reqs) or broad_experience_range(strict_lines, strict_reqs)
+    zero_reqs = [r for r in reqs if r.min_years == 0
+                 and (r.max_years is None or r.max_years < _BROAD_MAX_YEARS)]
     m = _FRESHER_TITLE_RE.search(title_n) or _applicant_signal(_FRESHER_DESC_RE, desc_lines)
     if m:
         return Classification(Category.FRESHER, f"fresher signal: '{m.group(0)}'")
@@ -807,7 +902,14 @@ def classify_job(title: str, description: str = "", url: str = "", *,
         )
 
     title_signal = None if _RECRUITER_TITLE_RE.search(title_n) else _ENTRY_TITLE_RE.search(title_n)
-    m = title_signal or _applicant_signal(_ENTRY_DESC_RE, desc_lines)
+    desc_signal = _applicant_signal(_ENTRY_DESC_RE, desc_lines)
+    if broad and not desc_signal:
+        return Classification(
+            Category.UNKNOWN,
+            f"broad experience range '{broad}' and no independent fresher/entry-level evidence"
+            + (f" ('{title_signal.group(0)}' in the title is not enough)" if title_signal else ""),
+        )
+    m = desc_signal if broad else (title_signal or desc_signal)
     if m:
         return Classification(Category.ENTRY_LEVEL, f"entry-level signal: '{m.group(0).strip()}'")
 
