@@ -26,7 +26,7 @@ log = logging.getLogger("repo_sync")
 
 BASE = Path(__file__).parent
 DATA_FILES = ("seen_jobs.json", "companies.json")
-SCAN_FIELDS = ("status", "status_reason", "last_checked", "last_job", "scan", "source")
+SCAN_FIELDS = ("status", "status_reason", "scan_note", "last_checked", "last_job", "scan", "source")
 _STATE_RANK = {None: 0, "": 0, "pending": 0, "claimed": 1, "sent": 2, "skipped": 2}
 
 

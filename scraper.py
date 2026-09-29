@@ -80,6 +80,10 @@ def source_label(company: dict) -> str:
     return " + ".join(dict.fromkeys(_SOURCE_LABELS.get(s.get("type"), s.get("type", "API")) for s in srcs))
 
 
+def _plural(n: int, word: str) -> str:
+    return f"{n} {word if n == 1 else word + 's'}"
+
+
 def _is_india(text: str) -> bool:
     return is_india(text)
 
@@ -186,7 +190,12 @@ class Scan:
         attempted = self.details_ok + self.details_failed
         if attempted >= 3 and self.details_failed / attempted > _FAILING_DETAIL_RATIO:
             return f"{self.details_failed} of {attempted} job pages could not be read (last: {self.last_detail_error})"
-        return "; ".join(self.notes)
+        return ""
+
+    @property
+    def user_note(self) -> str:
+        """Plain-language note for a healthy scan (shown in Monitoring)."""
+        return f"{_plural(self.pending, 'posting')} left for the next scan (detail-page budget)" if self.pending else ""
 
     def summary(self) -> dict:
         return {"postings_seen": self.seen, "candidates": self.candidates, "details_read": self.details_ok,
@@ -197,7 +206,9 @@ class Scan:
 # The decision: listing + (maybe) detail -> classification
 # ---------------------------------------------------------------------------
 
-_EXPERIENCE_LINE_RE = re.compile(r"\b(?:years?|yrs?|experience|exp\b|fresher|graduate|months?)", re.IGNORECASE)
+# lines about experience / eligibility ("each year" or "100 years of history" are not)
+_EXPERIENCE_LINE_RE = re.compile(
+    r"experience|\bexp\b|fresher|graduat|\d\s*(?:\+\s*)?(?:years?|yrs?|months?)\b", re.IGNORECASE)
 
 
 def safety_gate(listing: Listing, detail: Detail | None, result: Classification, location: str) -> dict[str, bool]:
@@ -222,8 +233,16 @@ def safety_gate(listing: Listing, detail: Detail | None, result: Classification,
 
 def _evidence(listing: Listing, detail: Detail, result: Classification, checks: dict) -> dict:
     description = f"{listing.card_text}\n{detail.description}"
-    lines = [ln.strip()[:160] for ln in description.splitlines() if _EXPERIENCE_LINE_RE.search(ln)]
     reqs = parse_experience_requirements(description) + parse_experience_requirements(detail.strict_text)
+    # the lines that decided it (requirement / fresher quote) first, then other
+    # experience-related lines; each line once
+    decisive = [r.text.lower() for r in reqs] + [evidence_quote(result).lower()]
+    lines: list[str] = []
+    for ln in description.splitlines():
+        ln = ln.strip(" \t·•*-")[:160]
+        if ln and _EXPERIENCE_LINE_RE.search(ln) and ln not in lines:
+            lines.append(ln)
+    lines.sort(key=lambda ln: not any(q and q in ln.lower() for q in decisive))
     return {
         "experience": [r.text.rstrip(" .,;") for r in reqs] or ["no experience requirement stated"],
         "experience_lines": lines[:4],
@@ -317,7 +336,7 @@ def _scan_sources(company: dict, sources: list[dict]) -> Scan:
             scan.sources_ok += 1
             scan.seen += result.seen
             if result.note:
-                scan.notes.append(result.note)
+                scan.notes.append(result.note)   # technical detail: logged, not shown to users
             listings += result.listings
         # more detail pages than the budget: vary the order between runs so
         # the same postings are never the ones left pending every time
@@ -328,8 +347,6 @@ def _scan_sources(company: dict, sources: list[dict]) -> Scan:
                 _evaluate(scan, listing, budget)
             except Exception as e:
                 log.warning("Skipping malformed posting for %s: %s", scan.name, e)
-    if scan.pending:
-        scan.notes.append(f"{scan.pending} posting(s) left for the next run (detail budget)")
     return scan
 
 
@@ -698,8 +715,6 @@ def _scan_playwright(company: dict) -> Scan:
             scan.fail("failing", f"browser error: {type(e).__name__}: {e}")
         finally:
             browser.close()
-    if scan.pending:
-        scan.notes.append(f"{scan.pending} posting(s) left for the next run (detail budget)")
     return scan
 
 
@@ -727,8 +742,8 @@ def scan_company(company: dict) -> Scan:
     except Exception as e:
         scan = Scan(company.get("name", "?"))
         scan.fail("failing", f"{type(e).__name__}: {e}")
-    log.info("%s → %d fresher job(s) found [%s%s]", scan.name, len(scan.jobs), scan.status,
-             f": {scan.reason}" if scan.reason else "")
+    log.info("%s → %d fresher job(s) found [%s%s]%s", scan.name, len(scan.jobs), scan.status,
+             f": {scan.reason}" if scan.reason else "", f" ({'; '.join(scan.notes)})" if scan.notes else "")
     return scan
 
 
@@ -791,7 +806,8 @@ def run_all() -> list[dict]:
     for company in companies:
         scan = scan_company(company)
         company["status"] = scan.status
-        company["status_reason"] = scan.reason
+        company["status_reason"] = scan.reason      # problems only ("" when healthy)
+        company["scan_note"] = scan.user_note
         company["last_checked"] = _now_iso()
         company["scan"] = scan.summary()
         company["source"] = source_label(company)

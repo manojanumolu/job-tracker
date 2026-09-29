@@ -11,7 +11,8 @@ import pytest
 st_testing = pytest.importorskip("streamlit.testing.v1")
 
 REPO = Path(__file__).resolve().parent.parent
-APP_FILES = ["streamlit_app.py", "config_store.py", "notifier.py", "job_classifier.py", "scraper.py"]
+APP_FILES = ["streamlit_app.py", "config_store.py", "notifier.py", "job_classifier.py", "scraper.py",
+             "sources.py", "identity.py", "locations.py", "repo_sync.py"]
 
 OLD_RECORD = {  # shape written before the classifier existed
     "title": "Junior Associate - Evidence Synthesis",
@@ -197,6 +198,9 @@ def test_dismissed_jobs_can_be_restored_without_re_emailing(app):
 def test_clear_all_hides_but_keeps_dedup_history(app):
     at = app([OLD_RECORD, NEW_RECORD], page="settings")
     at.button(key="btn_clear_all").click().run()
+    assert not at.exception
+    assert not any(j.get("dismissed") for j in _seen(at))   # the first click only asks for confirmation
+    at.button(key="btn_clear_all_confirm").click().run()
     assert not at.exception
     seen = _seen(at)
     assert len(seen) == 2 and all(j["dismissed"] for j in seen)

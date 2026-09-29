@@ -165,7 +165,8 @@ def test_detail_budget_leaves_jobs_pending(monkeypatch):
     monkeypatch.setattr(scraper, "MAX_API_DETAIL_FETCHES", 2)
     scan = scraper.scan_company({"id": "sanofi", "name": "Sanofi", "url": "x"})
     assert len(scan.jobs) == 2 and scan.pending == 3
-    assert "next run" in scan.reason
+    assert scan.reason == "" and scan.status == "active"
+    assert scan.user_note == "3 postings left for the next scan (detail-page budget)"
 
 
 # ---------------------------------------------------------------------------

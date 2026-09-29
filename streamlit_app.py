@@ -22,6 +22,7 @@ from config_store import (
     visible_jobs,
 )
 from notifier import category_label, friendly_reason, safe_url
+from identity import ats_job_id
 
 log = logging.getLogger("streamlit_app")
 
@@ -406,19 +407,21 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
     display: flex !important; position: sticky; top: 0; z-index: 30; margin: 0 -16px; padding: 8px 12px !important;
     background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border);
   }
-  .st-key-mnav > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-mnav > [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 2px !important; overflow-x: auto; scrollbar-width: none; }
-  .st-key-mnav [data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
-  .st-key-mnav [data-testid^="stBaseButton"] { border: none !important; background: transparent !important; min-height: 36px !important; padding: 0 10px !important; color: var(--text-2) !important; }
-  .st-key-mnav [data-testid="stIconMaterial"] { font-size: 20px !important; }
-  .st-key-mnav p { font-size: 13px !important; }
+  /* all six destinations visible at once: equal columns, icon above a short label */
+  .st-key-mnav > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-mnav > [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 0 !important; }
+  .st-key-mnav [data-testid="stColumn"] { flex: 1 1 0 !important; width: auto !important; min-width: 0 !important; }
+  .st-key-mnav [data-testid^="stBaseButton"] { width: 100% !important; border: none !important; background: transparent !important; min-height: 48px !important; padding: 4px 0 !important; color: var(--text-2) !important; }
+  .st-key-mnav [data-testid^="stBaseButton"] > div, .st-key-mnav [data-testid^="stBaseButton"] > div > span { flex-direction: column !important; align-items: center !important; gap: 2px !important; min-width: 0; max-width: 100%; }
+  .st-key-mnav [data-testid="stIconMaterial"] { font-size: 20px !important; margin: 0 !important; }
+  .st-key-mnav p { font-size: 10px !important; line-height: 13px !important; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 2px; }
   .page-title, .detail-title { font-size: 22px; line-height: 30px; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stat { padding: 14px 16px; } .stat .v { font-size: 20px; line-height: 28px; }
+  .stat .v, .stat .n { white-space: normal; }   /* wrap instead of cutting off key facts */
   [class*="st-key-jr_"] { padding: 14px 16px !important; }
   [class*="st-key-jr_"] > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], [class*="st-key-jr_"] > [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 10px !important; }
   [class*="st-key-jr_"] [data-testid="stColumn"]:first-child { flex: 1 1 100% !important; }
   [class*="st-key-jr_"] [data-testid="stColumn"]:last-child { margin-left: 54px; }
-  .job-why { display: none; }
   .co-row { grid-template-columns: minmax(0, 1fr) auto; }
   .co-row > :nth-child(2), .co-row > :nth-child(4), .co-row > :nth-child(5), .list-head { display: none; }
   [class*="st-key-cr_"] { padding: 12px 16px !important; }
@@ -584,11 +587,15 @@ def _jid(job: dict) -> str:
 
 def _restore_jobs(keys: set[str]):
     """Undo a dismissal. The record keeps its ``notified`` flag, so restoring
-    never causes a second email."""
+    never causes a second email — and a job dismissed *before* it was emailed
+    is marked as handled, so restoring it doesn't send it later either (the
+    user has already seen it)."""
     def _mutate(seen: list[dict]) -> list[dict]:
         for j in seen:
             if isinstance(j, dict) and job_key(j) in keys:
                 j.pop("dismissed", None)
+                if not j.get("notified") and j.get("notify_state") not in ("claimed", "sent"):
+                    j["notify_state"] = "skipped"
         return seen
     return _mutate
 
@@ -598,7 +605,14 @@ companies: list[dict] = [c for c in _load_synced("companies.json", []) if isinst
 settings: dict = _load_synced("settings.json", {"recipient_email": ""})
 # seen_jobs.json is also the scraper's dedup history: jobs are dismissed
 # (hidden), never deleted, or the scraper would email them again
-all_records: list[dict] = [j for j in _load_synced("seen_jobs.json", []) if isinstance(j, dict)]
+all_records: list[dict] = []
+_seen_keys: set[str] = set()
+for _j in _load_synced("seen_jobs.json", []):
+    # a duplicated record (same id + URL) would give two widgets the same
+    # key and crash the page — show each job once
+    if isinstance(_j, dict) and job_key(_j) not in _seen_keys:
+        _seen_keys.add(job_key(_j))
+        all_records.append(_j)
 active_jobs: list[dict] = visible_jobs(all_records)                                   # newest-first
 dismissed_jobs: list[dict] = [j for j in reversed(all_records) if j.get("dismissed")]  # newest-first
 
@@ -627,6 +641,10 @@ def toast(msg: str, kind: str = "success"):
 
 
 def go(page: str, **extra):
+    if extra.get("job"):
+        # remember the company page a job was opened from, so Back returns there
+        st.session_state.job_from_company = (st.session_state.get("company_id")
+                                             if extra.get("origin") == "companies" else None)
     st.session_state.page = page
     st.session_state.job_id = extra.get("job")
     st.session_state.company_id = extra.get("company")
@@ -746,7 +764,7 @@ with st.container(key="mnav"):
     for col, key in zip(cols, PAGES):
         with col:
             label, icon = PAGES[key]
-            st.button({"email": "Email", "monitoring": "Monitor"}.get(key, label), key=f"mob_{key}",
+            st.button({"email": "Email", "monitoring": "Monitor", "companies": "Companies"}.get(key, label), key=f"mob_{key}",
                       icon=icon, on_click=go, args=(key,))
 
 
@@ -1012,8 +1030,12 @@ def page_jobs():
 
 def page_job_detail(j: dict):
     back = st.session_state.get("job_from", "jobs")
-    st.button(f"Back to {PAGES.get(back, PAGES['jobs'])[0]}", key="btn_back", icon=":material/arrow_back:",
-              type="tertiary", on_click=go, args=(back,))
+    back_co = next((x for x in companies if back == "companies"
+                    and str(x.get("id")) == str(st.session_state.get("job_from_company"))), None)
+    back_label = (back_co.get("name") or "company").strip() if back_co else PAGES.get(back, PAGES["jobs"])[0]
+    back_kwargs = {"company": back_co.get("id")} if back_co else {}
+    st.button(f"Back to {back_label}", key="btn_back", icon=":material/arrow_back:",
+              type="tertiary", on_click=go, args=(back,), kwargs=back_kwargs)
     jkey = job_key(j)
     title = (j.get("title") or "Untitled posting").strip() or "Untitled posting"
     company = (j.get("company") or "").strip()
@@ -1047,7 +1069,7 @@ def page_job_detail(j: dict):
                 _, saved, err = _save_change("seen_jobs.json", dismiss_jobs({jkey}), [], "chore: dismiss 1 alert(s)")
                 toast("Removed 1 alert(s)" if saved else f"Removed here, but not saved permanently. {err}",
                       "success" if saved else "error")
-                go(back)
+                go(back, **back_kwargs)
                 st.rerun()
         with a[2]:
             if c:
@@ -1058,11 +1080,24 @@ def page_job_detail(j: dict):
         main, side = st.columns([3, 2])
     with main:
         with st.container(key="job_main"):
+            ev = j.get("evidence") if isinstance(j.get("evidence"), dict) else {}
+            exp_lines = [x.strip(" ·•-*	") for x in ev.get("experience_lines") or []
+                         if re.search(r"experience|\bexp\b|fresher|graduat|\d\s*(?:\+\s*)?(?:years?|yrs?|months?)\b", x, re.I)]
+            exp_lines = list(dict.fromkeys(exp_lines))
+            if ev.get("experience") and ev["experience"] != ["no experience requirement stated"]:
+                experience = escape(", ".join(ev["experience"]))
+            elif exp_lines:
+                experience = escape(exp_lines[0])
+            elif ev:
+                experience = "No requirement stated in the posting"
+            elif re.search(r"(years|months) experience|No prior experience", friendly_reason(j)):
+                experience = escape(friendly_reason(j))
+            else:
+                experience = "Not recorded for this job"
             rows = [("Company", escape(company or "—")),
                     ("Location", escape(j.get("location") or "Not captured for this posting")),
                     ("Category", escape(pill_label)),
-                    ("Experience", escape(friendly_reason(j)) if "years experience" in friendly_reason(j) or
-                     "No prior experience" in friendly_reason(j) else "Not stated in the captured text"),
+                    ("Experience", experience),
                     ("Found", f'<span class="num">{escape(j.get("date") or "—")} UTC</span>' + (f' <span class="muted">({_ago(d, NOW)})</span>' if d else "")),
                     ("Status", "Dismissed" if j.get("dismissed") else "Active")]
             st.html('<h2 class="section-title">Job overview</h2><dl class="kv">'
@@ -1075,9 +1110,28 @@ def page_job_detail(j: dict):
               {f'<div class="quote"><span class="muted">Classifier trace:</span> {escape(reason)}</div>' if reason else ''}
               {'' if classified else '<div class="note" style="margin-top:6px;">No classifier trace was recorded for this job.</div>'}
               </div></div>""")
+            if ev:
+                checks = ev.get("checks") or {}
+                passed = sum(1 for v in checks.values() if v)
+                labels = {"real_job_posting": "Real job posting", "india_location": "Located in India",
+                          "detail_read": "Job's own posting was read", "detail_is_this_job": "Posting belongs to this job",
+                          "no_conflicting_experience": "No conflicting experience requirement",
+                          "not_programme_story_talent_recruiter": "Not a programme / story / recruiter page",
+                          "evidence_not_staff_context": "Evidence is about the applicant",
+                          "fresher_or_entry_evidence": "Fresher / entry-level evidence found"}
+                items = "".join(f'<li>{"✓" if ok else "✗"} {escape(labels.get(k, k))}</li>' for k, ok in checks.items())
+                quote_lines = "".join(f'<div class="quote">{escape(x)}</div>' for x in exp_lines[:3])
+                with st.expander(f"Evidence & safety checks — {passed} of {len(checks)} checks passed"):
+                    st.html(f"""<dl class="kv">
+                      <dt>Safety checks</dt><dd>{passed} of {len(checks)} checks passed</dd>
+                      <dt>Job ID</dt><dd class="num">{escape(ev.get("job_id") or ats_job_id(j.get("url", "")) or "—")}</dd>
+                      <dt>Detail matched by</dt><dd>{escape(ev.get("detail_match") or "—")}</dd>
+                      <dt>Fresher evidence</dt><dd>{escape(ev.get("fresher_evidence") or "—")}</dd></dl>
+                      {f'<div class="note" style="margin-top:8px;">From the posting:</div>{quote_lines}' if quote_lines else ''}
+                      <ul class="note" style="margin:10px 0 0;padding-left:0;list-style:none;">{items}</ul>""")
             with st.expander("Description & requirements"):
-                st.html('<p class="note">The scraper reads the full posting to classify it but doesn\'t store the description, '
-                        'requirements or skills. Open the posting on the company site for the complete details.</p>')
+                st.html('<p class="note">The scraper reads the full posting to classify it but only keeps the evidence '
+                        'above, not the full description. Open the posting on the company site for the complete details.</p>')
     with side:
         with st.container(key="job_side"):
             src = [("Portal", escape(_host(url)) if url else "—"),
@@ -1312,7 +1366,7 @@ def page_monitoring():
         note = {"failing": f'{reason or "Last scan failed"} — <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">see log</a>',
                 "delayed": f"No scan for over {_STALE_H} hours",
                 "pending": "Not scanned yet — added since the last run",
-                "checking": "Check requested"}.get(k, reason or "—")
+                "checking": "Check requested"}.get(k, escape(c.get("scan_note") or "") or "—")
         rows.append(f"""<tr>
           <td class="c">{escape((c.get('name') or '').strip() or 'Unnamed')}
             <div class="sub">{f'<a class="link" href="{escape(curl, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(curl, 34))}</a>' if curl else 'Invalid URL'}</div></td>
@@ -1333,7 +1387,9 @@ def page_monitoring():
 
 def page_email():
     notified = [j for j in all_records if j.get("notified")]
-    last_mail = max((found[id(j)] for j in notified if found[id(j)]), default=None)
+    # when the email actually went out (older records only know when the job was found)
+    sent_times = [(_parse_iso(j.get("notified_at") or ""), found[id(j)]) for j in notified]
+    last_mail, last_is_sent = max(((a or b, bool(a)) for a, b in sent_times if a or b), default=(None, False))
     pending = [j for j in all_records if alert_pending(j)]
     page_header("Email & Notifications", (
         f'<span class="pill {"on" if recipient else "off"}"><i></i>{"Alerts on" if recipient else "Alerts off"}</span>'
@@ -1358,6 +1414,9 @@ def page_email():
         with i2:
             save = st.button("Save", key="btn_save_email", type="primary", use_container_width=True)
         synced = bool(os.environ.get("GITHUB_TOKEN"))
+        if email_val.strip() and email_val.strip() != recipient:
+            st.html(f'<p class="note" style="color:var(--amber);">{_ms("edit", "s16")} Not saved yet — alerts still go to '
+                    f'{escape(recipient) or "nobody"} until you press Save.</p>')
         st.html(f'<p class="note">{_ms("cloud_done" if synced else "cloud_off", "s16")} '
                 + ("Saved to settings.json in the GitHub repository, which the scraper reads on every run."
                    if synced else "No GitHub token — changes are saved on this server only and the scraper won't see them.")
@@ -1388,9 +1447,8 @@ def page_email():
         if not _EMAIL_RE.match(to):
             toast("Enter a valid recipient email first", "error")
         else:
-            persist_err = ""
-            if settings.get("recipient_email", "") != to:
-                _, persist_err = _set_recipient(to)
+            # a test never changes where real alerts go — that's what Save is for
+            unsaved = (settings.get("recipient_email") or "").strip() != to
             try:
                 from notifier import test_mail
                 test_mail(to)
@@ -1401,12 +1459,12 @@ def page_email():
                       else "Couldn't send the test email. Check the Gmail app password and try again.", "error")
             else:
                 st.session_state.test_status = (True, stamp)
-                toast(f"Test email sent, but the address wasn't saved permanently. {persist_err}" if persist_err
-                      else f"Test email sent — check {to}", "error" if persist_err else "success")
+                toast(f"Test email sent to {to}. This address is not saved as the alert recipient — press Save to use it."
+                      if unsaved else f"Test email sent — check {to}", "success")
         st.rerun()
 
     with st.container(key="set_behavior"):
-        rows = [("Last alert", f'<span class="num">Covered a job found {last_mail:%b %d, %H:%M} UTC</span> <span class="muted">({_ago(last_mail, NOW)})</span>'
+        rows = [("Last alert", f'<span class="num">{"Sent" if last_is_sent else "Covered a job found"} {last_mail:%b %d, %H:%M} UTC</span> <span class="muted">({_ago(last_mail, NOW)})</span>'
                  if last_mail else "No alert emails recorded yet"),
                 ("Jobs emailed", str(len(notified))),
                 ("Waiting to send", f"{len(pending)} — sent after the next check" if pending else "0")]
@@ -1463,15 +1521,33 @@ def page_settings():
     with st.container(key="set_maint"):
         st.html('<div><h2 class="section-title">Maintenance</h2><p class="section-sub">Dismiss every active job at once. '
                 'They stay in the history (Jobs → Dismissed) and are never emailed again.</p></div>')
-        m1, _m2 = st.columns([1, 3])
-        with m1:
-            with st.container(key="danger"):
-                if st.button(f"Dismiss all {len(active_jobs)} jobs", key="btn_clear_all", disabled=not active_jobs,
-                             use_container_width=True):
-                    _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(None), [], "chore: dismiss all alerts")
-                    toast("All alerts cleared" if saved else f"Cleared here, but not saved permanently. {err}",
-                          "success" if saved else "error")
-                    st.rerun()
+        if not st.session_state.confirm_clear:
+            m1, _m2 = st.columns([1, 3])
+            with m1:
+                with st.container(key="danger"):
+                    if st.button(f"Dismiss all {len(active_jobs)} jobs", key="btn_clear_all", disabled=not active_jobs,
+                                 use_container_width=True):
+                        st.session_state.confirm_clear = True
+                        st.rerun()
+        else:
+            unsent = sum(1 for j in active_jobs if alert_pending(j))
+            with st.container(key="danger_confirm"):
+                st.html(f'<p class="note" style="color:var(--text);">Dismiss all <b>{len(active_jobs)}</b> active jobs?'
+                        + (f" This also cancels <b>{unsent}</b> alert{'s' if unsent != 1 else ''} that haven't been emailed yet "
+                           "— they won't be emailed." if unsent else " They stay in the history and are never emailed again.")
+                        + "</p>")
+                y, n_ = st.columns([1, 3])
+                with y:
+                    if st.button("Yes, dismiss all", key="btn_clear_all_confirm", type="primary", use_container_width=True):
+                        st.session_state.confirm_clear = False
+                        _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(None), [], "chore: dismiss all alerts")
+                        toast("All alerts cleared" if saved else f"Cleared here, but not saved permanently. {err}",
+                              "success" if saved else "error")
+                        st.rerun()
+                with n_:
+                    if st.button("Cancel", key="btn_clear_all_cancel"):
+                        st.session_state.confirm_clear = False
+                        st.rerun()
     st.html(f"""<div class="app-foot"><span>Fresher Job Tracker</span>
       <a href="https://github.com/{GITHUB_REPO}" target="_blank" rel="noopener">Source on GitHub</a></div>""")
 
