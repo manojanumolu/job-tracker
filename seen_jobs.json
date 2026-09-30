@@ -833,5 +833,45 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00"
+  },
+  {
+    "title": "IN_Associate_FDD_Transaction Services_Advisory_Gurgaon",
+    "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Gurugram-Downtown-4/IN-Associate-FDD-Transaction-Services-Advisory-Gurgaon_744808WD-1",
+    "company": "PwC",
+    "location": "Gurugram Downtown 4 · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-1 yr'",
+    "evidence": {
+      "experience": [
+        "0-1 yr"
+      ],
+      "experience_lines": [
+        "0-1 yr",
+        "Years of experience required:"
+      ],
+      "fresher_evidence": "0-1 yr",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:744808WD-1",
+      "canonical_url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Gurugram-Downtown-4/IN-Associate-FDD-Transaction-Services-Advisory-Gurgaon_744808WD-1",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "pwc|workday:744808WD-1",
+    "date": "Sep 30, 09:30",
+    "first_seen": "2026-09-30T09:30:09.844714+00:00",
+    "id": "PwC_IN_Associate_FDD_Transaction_Services_Ad",
+    "notified": false,
+    "company_id": "pwc",
+    "notify_state": "claimed",
+    "claimed_at": "2026-09-30T09:30:49.797715+00:00"
   }
 ]
