@@ -105,10 +105,11 @@
     "date": "Sep 30, 00:09",
     "first_seen": "2026-09-30T00:09:33.809374+00:00",
     "id": "Sanofi_Scientific_Sales_Executive",
-    "notified": false,
+    "notified": true,
     "company_id": "sanofi",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T00:11:32.740020+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T00:11:32.740020+00:00",
+    "notified_at": "2026-09-30T00:11:37.715079+00:00"
   },
   {
     "title": "Associate",
@@ -146,10 +147,11 @@
     "date": "Sep 30, 00:11",
     "first_seen": "2026-09-30T00:11:23.996268+00:00",
     "id": "PwC_Associate",
-    "notified": false,
+    "notified": true,
     "company_id": "pwc",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T00:11:32.740020+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T00:11:32.740020+00:00",
+    "notified_at": "2026-09-30T00:11:37.715079+00:00"
   },
   {
     "title": "Specialist 2",
@@ -186,10 +188,11 @@
     "date": "Sep 30, 00:11",
     "first_seen": "2026-09-30T00:11:23.996268+00:00",
     "id": "PwC_Specialist_2",
-    "notified": false,
+    "notified": true,
     "company_id": "pwc",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T00:11:32.740020+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T00:11:32.740020+00:00",
+    "notified_at": "2026-09-30T00:11:37.715079+00:00"
   },
   {
     "title": "Specialist 3",
@@ -225,10 +228,11 @@
     "date": "Sep 30, 00:11",
     "first_seen": "2026-09-30T00:11:23.996268+00:00",
     "id": "PwC_Specialist_3",
-    "notified": false,
+    "notified": true,
     "company_id": "pwc",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T00:11:32.740020+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T00:11:32.740020+00:00",
+    "notified_at": "2026-09-30T00:11:37.715079+00:00"
   },
   {
     "title": "IN_Associate _ Internal Audit _Internal Audit Services_ Advisory_ Bangalore",
@@ -267,10 +271,11 @@
     "date": "Sep 30, 00:11",
     "first_seen": "2026-09-30T00:11:23.996268+00:00",
     "id": "PwC_IN_Associate___Internal_Audit__Internal_",
-    "notified": false,
+    "notified": true,
     "company_id": "pwc",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T00:11:32.740020+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T00:11:32.740020+00:00",
+    "notified_at": "2026-09-30T00:11:37.715079+00:00"
   },
   {
     "title": "Associate-CA fresher-TC",
@@ -304,10 +309,11 @@
     "date": "Sep 30, 00:11",
     "first_seen": "2026-09-30T00:11:23.996268+00:00",
     "id": "PwC_Associate-CA_fresher-TC",
-    "notified": false,
+    "notified": true,
     "company_id": "pwc",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T00:11:32.740020+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T00:11:32.740020+00:00",
+    "notified_at": "2026-09-30T00:11:37.715079+00:00"
   },
   {
     "title": "Associate - CA Freshers - RDC",
@@ -343,10 +349,11 @@
     "date": "Sep 30, 00:11",
     "first_seen": "2026-09-30T00:11:23.996268+00:00",
     "id": "PwC_Associate_-_CA_Freshers_-_RDC",
-    "notified": false,
+    "notified": true,
     "company_id": "pwc",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T00:11:32.740020+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T00:11:32.740020+00:00",
+    "notified_at": "2026-09-30T00:11:37.715079+00:00"
   },
   {
     "title": "IN_Specialist 3_Internal audit_Managed Services_Advisory_Gurgaon",
@@ -384,10 +391,11 @@
     "date": "Sep 30, 00:11",
     "first_seen": "2026-09-30T00:11:23.996268+00:00",
     "id": "PwC_IN_Specialist_3_Internal_audit_Managed_S",
-    "notified": false,
+    "notified": true,
     "company_id": "pwc",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T00:11:32.740020+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T00:11:32.740020+00:00",
+    "notified_at": "2026-09-30T00:11:37.715079+00:00"
   },
   {
     "title": "Customer Contact Comms New Associate - Messaging",
@@ -427,10 +435,11 @@
     "date": "Sep 30, 00:11",
     "first_seen": "2026-09-30T00:11:27.404619+00:00",
     "id": "Accenture_Customer_Contact_Comms_New_Associate_-_M",
-    "notified": false,
+    "notified": true,
     "company_id": "accenture",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T00:11:32.740020+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T00:11:32.740020+00:00",
+    "notified_at": "2026-09-30T00:11:37.715079+00:00"
   },
   {
     "title": "Order to Cash Operations New Associate",
@@ -470,10 +479,11 @@
     "date": "Sep 30, 00:11",
     "first_seen": "2026-09-30T00:11:27.404619+00:00",
     "id": "Accenture_Order_to_Cash_Operations_New_Associate",
-    "notified": false,
+    "notified": true,
     "company_id": "accenture",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T00:11:32.740020+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T00:11:32.740020+00:00",
+    "notified_at": "2026-09-30T00:11:37.715079+00:00"
   },
   {
     "title": "Procure to Pay Operations New Associate",
@@ -511,10 +521,11 @@
     "date": "Sep 30, 00:11",
     "first_seen": "2026-09-30T00:11:27.404619+00:00",
     "id": "Accenture_Procure_to_Pay_Operations_New_Associate",
-    "notified": false,
+    "notified": true,
     "company_id": "accenture",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T00:11:32.740020+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T00:11:32.740020+00:00",
+    "notified_at": "2026-09-30T00:11:37.715079+00:00"
   },
   {
     "title": "Record to Report Ops New Associate",
@@ -552,10 +563,11 @@
     "date": "Sep 30, 00:11",
     "first_seen": "2026-09-30T00:11:27.404619+00:00",
     "id": "Accenture_Record_to_Report_Ops_New_Associate",
-    "notified": false,
+    "notified": true,
     "company_id": "accenture",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T00:11:32.740020+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T00:11:32.740020+00:00",
+    "notified_at": "2026-09-30T00:11:37.715079+00:00"
   },
   {
     "title": "Business Advisory New Associate",
@@ -595,10 +607,11 @@
     "date": "Sep 30, 00:11",
     "first_seen": "2026-09-30T00:11:27.404619+00:00",
     "id": "Accenture_Business_Advisory_New_Associate",
-    "notified": false,
+    "notified": true,
     "company_id": "accenture",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T00:11:32.740020+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T00:11:32.740020+00:00",
+    "notified_at": "2026-09-30T00:11:37.715079+00:00"
   },
   {
     "title": "Procurement Operations New Associate",
@@ -638,10 +651,11 @@
     "date": "Sep 30, 00:11",
     "first_seen": "2026-09-30T00:11:27.404619+00:00",
     "id": "Accenture_Procurement_Operations_New_Associate",
-    "notified": false,
+    "notified": true,
     "company_id": "accenture",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T00:11:32.740020+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T00:11:32.740020+00:00",
+    "notified_at": "2026-09-30T00:11:37.715079+00:00"
   },
   {
     "title": "Customer Service New Associate",
@@ -681,10 +695,11 @@
     "date": "Sep 30, 00:11",
     "first_seen": "2026-09-30T00:11:27.404619+00:00",
     "id": "Accenture_Customer_Service_New_Associate",
-    "notified": false,
+    "notified": true,
     "company_id": "accenture",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T00:11:32.740020+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T00:11:32.740020+00:00",
+    "notified_at": "2026-09-30T00:11:37.715079+00:00"
   },
   {
     "title": "Business Advisory New Associate-Voice",
@@ -724,10 +739,11 @@
     "date": "Sep 30, 00:11",
     "first_seen": "2026-09-30T00:11:27.404619+00:00",
     "id": "Accenture_Business_Advisory_New_Associate-Voice",
-    "notified": false,
+    "notified": true,
     "company_id": "accenture",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T00:11:32.740020+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T00:11:32.740020+00:00",
+    "notified_at": "2026-09-30T00:11:37.715079+00:00"
   },
   {
     "title": "Underwriting New Associate",
@@ -768,10 +784,11 @@
     "date": "Sep 30, 00:11",
     "first_seen": "2026-09-30T00:11:27.404619+00:00",
     "id": "Accenture_Underwriting_New_Associate",
-    "notified": false,
+    "notified": true,
     "company_id": "accenture",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T00:11:32.740020+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T00:11:32.740020+00:00",
+    "notified_at": "2026-09-30T00:11:37.715079+00:00"
   },
   {
     "title": "Int Controls & Compliance Associate",
@@ -811,9 +828,10 @@
     "date": "Sep 30, 00:11",
     "first_seen": "2026-09-30T00:11:27.404619+00:00",
     "id": "Accenture_Int_Controls_&_Compliance_Associate",
-    "notified": false,
+    "notified": true,
     "company_id": "accenture",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T00:11:32.740020+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T00:11:32.740020+00:00",
+    "notified_at": "2026-09-30T00:11:37.715079+00:00"
   }
 ]
