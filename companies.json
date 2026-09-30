@@ -6,7 +6,18 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-09-29T19:51:16.344819+00:00"
+    "last_checked": "2026-09-30T00:09:05.160169+00:00",
+    "status_reason": "",
+    "scan_note": "",
+    "scan": {
+      "postings_seen": 449,
+      "candidates": 79,
+      "details_read": 20,
+      "details_unreadable": 0,
+      "pending": 0,
+      "accepted": 0
+    },
+    "source": "Avature job search"
   },
   {
     "id": "avalara",
@@ -15,7 +26,18 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-09-29T19:51:19.371690+00:00"
+    "last_checked": "2026-09-30T00:09:14.919066+00:00",
+    "status_reason": "",
+    "scan_note": "",
+    "scan": {
+      "postings_seen": 157,
+      "candidates": 28,
+      "details_read": 0,
+      "details_unreadable": 0,
+      "pending": 0,
+      "accepted": 0
+    },
+    "source": "Jibe/iCIMS API"
   },
   {
     "id": "pokerstars",
@@ -24,7 +46,18 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-09-29T19:51:24.540361+00:00"
+    "last_checked": "2026-09-30T00:09:17.063725+00:00",
+    "status_reason": "",
+    "scan_note": "",
+    "scan": {
+      "postings_seen": 1,
+      "candidates": 1,
+      "details_read": 0,
+      "details_unreadable": 0,
+      "pending": 0,
+      "accepted": 0
+    },
+    "source": "Workday API"
   },
   {
     "id": "sanofi",
@@ -32,8 +65,19 @@
     "url": "https://sanofi.wd3.myworkdayjobs.com/SanofiCareers",
     "locked": true,
     "status": "active",
-    "last_job": "",
-    "last_checked": "2026-09-29T19:51:40.045617+00:00"
+    "last_job": "Source-to-Pay Strategic Support Associate",
+    "last_checked": "2026-09-30T00:09:33.809347+00:00",
+    "status_reason": "",
+    "scan_note": "",
+    "scan": {
+      "postings_seen": 57,
+      "candidates": 57,
+      "details_read": 23,
+      "details_unreadable": 0,
+      "pending": 0,
+      "accepted": 2
+    },
+    "source": "Workday API"
   },
   {
     "id": "pwc",
@@ -41,8 +85,19 @@
     "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers",
     "locked": true,
     "status": "active",
-    "last_job": "",
-    "last_checked": "2026-09-29T19:51:56.240791+00:00"
+    "last_job": "Associate",
+    "last_checked": "2026-09-30T00:11:23.996235+00:00",
+    "status_reason": "",
+    "scan_note": "",
+    "scan": {
+      "postings_seen": 678,
+      "candidates": 678,
+      "details_read": 189,
+      "details_unreadable": 0,
+      "pending": 0,
+      "accepted": 8
+    },
+    "source": "Workday API"
   },
   {
     "id": "accenture",
@@ -50,8 +105,19 @@
     "url": "https://www.accenture.com/in-en/careers/jobsearch",
     "locked": true,
     "status": "active",
-    "last_job": "",
-    "last_checked": "2026-09-29T19:52:07.574740+00:00"
+    "last_job": "Customer Contact Comms New Associate - Messaging",
+    "last_checked": "2026-09-30T00:11:27.404584+00:00",
+    "status_reason": "",
+    "scan_note": "",
+    "scan": {
+      "postings_seen": 300,
+      "candidates": 300,
+      "details_read": 0,
+      "details_unreadable": 0,
+      "pending": 0,
+      "accepted": 45
+    },
+    "source": "Accenture job-search API"
   },
   {
     "id": "c1783687965",
@@ -60,6 +126,17 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-09-29T19:52:14.639657+00:00"
+    "last_checked": "2026-09-30T00:11:31.596899+00:00",
+    "status_reason": "",
+    "scan_note": "",
+    "scan": {
+      "postings_seen": 133,
+      "candidates": 133,
+      "details_read": 0,
+      "details_unreadable": 0,
+      "pending": 0,
+      "accepted": 0
+    },
+    "source": "Zoho Recruit career site"
   }
 ]
