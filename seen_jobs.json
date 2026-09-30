@@ -869,9 +869,10 @@
     "date": "Sep 30, 09:30",
     "first_seen": "2026-09-30T09:30:09.844714+00:00",
     "id": "PwC_IN_Associate_FDD_Transaction_Services_Ad",
-    "notified": false,
+    "notified": true,
     "company_id": "pwc",
-    "notify_state": "claimed",
-    "claimed_at": "2026-09-30T09:30:49.797715+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-09-30T09:30:49.797715+00:00",
+    "notified_at": "2026-09-30T09:30:53.154363+00:00"
   }
 ]
