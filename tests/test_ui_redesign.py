@@ -1,0 +1,182 @@
+"""Regression tests for the Oct 2026 visual redesign: the new components must
+stay truthful, accessible and lightweight, and never change behaviour."""
+import json
+import re
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+from test_streamlit_app import NEW_RECORD, _html, _key, _nav, app  # noqa: F401  (fixture re-export)
+
+NOW = datetime.now(timezone.utc)
+SRC = (Path(__file__).resolve().parent.parent / "streamlit_app.py").read_text(encoding="utf-8")
+CSS = SRC[SRC.index('_CSS = """'):SRC.index('"""', SRC.index('_CSS = """') + 10)]
+
+GATE = {k: True for k in ("real_job_posting", "india_location", "detail_read", "detail_is_this_job",
+                          "no_conflicting_experience", "not_programme_story_talent_recruiter",
+                          "evidence_not_staff_context", "fresher_or_entry_evidence")}
+GATED = {"title": "Graduate Trainee", "url": "https://sanofi.wd3.myworkdayjobs.com/S/job/Pune/Graduate-Trainee_R1234567",
+         "company": "Sanofi", "location": "Pune · India", "category": "FRESHER",
+         "reason": "experience starts at 0: '0-1 years'", "date": "Sep 29, 18:57", "id": "Sanofi_Graduate_Trainee",
+         "notified": True, "notify_state": "sent",
+         "evidence": {"experience": ["0-1 years"], "experience_lines": ["Experience: 0-1 years"],
+                      "fresher_evidence": "0-1 years", "detail_read": True, "detail_match": "same title",
+                      "job_id": "workday:R1234567", "checks": dict(GATE)}}
+
+
+def _set_companies(at, companies):
+    (at.tmp_path / "companies.json").write_text(json.dumps(companies))
+
+
+# ── Home ─────────────────────────────────────────────────────────────────────
+
+def test_home_hero_states_the_purpose_and_live_status(app):
+    at = app([GATED])
+    html = _html(at)
+    assert '<h1 class="page-title">Discover your next <em>opportunity</em></h1>' in html
+    assert "Discover jobs" in html                                  # page name kept as the eyebrow
+    assert 'class="chip live healthy"' in html or 'class="chip live' in html
+    assert "Last scan" in html and "Next scheduled" in html and " UTC" in html
+    # no invented AI claims or vanity numbers
+    assert "AI-powered" not in html and "Verified" not in html
+
+
+def test_radar_is_decoration_with_one_contact_per_portal(app):
+    at = app([])
+    html = _html(at)
+    radar = re.search(r'<div class="radar" aria-hidden="true">(.*?)</div>', html, re.S).group(1)
+    n = len(json.loads((at.tmp_path / "companies.json").read_text("utf-8")))
+    assert radar.count('class="blip') == min(n, 8)
+    assert f"{n} portals on radar" in radar
+
+
+def test_failing_portal_shows_as_a_warning_contact(app):
+    at = app([])
+    _set_companies(at, [{"id": "a", "name": "Alpha", "url": "https://a.example/jobs", "status": "broken",
+                         "last_checked": NOW.isoformat(), "status_reason": "HTTP 403"},
+                        {"id": "b", "name": "Beta", "url": "https://b.example/jobs", "status": "active",
+                         "last_checked": NOW.isoformat()}])
+    at.run()
+    html = _html(at)
+    assert html.count('class="blip warn"') == 1 and html.count('class="blip"') == 1
+
+
+def test_metric_modules_keep_real_numbers(app):
+    at = app([GATED])
+    html = _html(at)
+    assert '<div class="k">Active jobs</div><div class="v">1</div>' in html
+    assert '<div class="k">New this week</div>' in html
+
+
+# ── job cards & company identity ─────────────────────────────────────────────
+
+def test_job_card_badge_and_meta_are_truthful(app):
+    at = app([GATED, NEW_RECORD])
+    html = _html(at)
+    assert '<span class="pill fresher"><span class="ms " aria-hidden="true">task_alt</span>Fresher</span>' in html
+    assert '<span class="pill entry">' in html and "Entry level</span>" in html
+    assert "Pune · India" in html and "0–1 years experience" in html
+
+
+def test_tracked_companies_get_distinct_avatar_tints(app):
+    at = app([])
+    _nav(at, "companies")
+    hues = re.findall(r'<div class="logo" style="--h:(\d+)" aria-hidden="true">', _html(at))
+    n = len(json.loads((at.tmp_path / "companies.json").read_text("utf-8")))
+    assert len(hues) == n and len(set(hues)) == min(n, 10)
+
+
+def test_icon_only_row_actions_still_have_text_labels(app):
+    at = app([GATED, {**GATED, "url": GATED["url"].replace("1234567", "7654321"), "id": "B", "dismissed": True}])
+    labels = {b.key: b.label for b in at.button if b.key}
+    assert [labels[k] for k in labels if k.startswith("dismiss_")] == ["Dismiss"]
+    assert re.search(r'st-key-dismiss_"\] \[data-testid="stMarkdownContainer"\].*clip', CSS)
+
+
+# ── job details: evidence panel ──────────────────────────────────────────────
+
+def test_evidence_panel_lists_every_check_with_a_text_status(app):
+    at = app([GATED])
+    at.button(key=_key("crit", GATED)).click().run()
+    html = _html(at)
+    assert "8 of 8 checks passed" in html
+    assert html.count('<span class="sr-only">Passed: </span>') == 8       # not colour/icon-only
+    assert "Verified" not in html and "guarantee" not in html.lower()    # never claims more than the checks
+
+
+def test_failed_check_is_shown_as_failed(app):
+    rec = json.loads(json.dumps(GATED))
+    rec["evidence"]["checks"]["india_location"] = False
+    at = app([rec])
+    at.button(key=_key("crit", rec)).click().run()
+    html = _html(at)
+    assert "7 of 8 checks passed" in html and '<span class="sr-only">Failed: </span>Located in India' in html
+
+
+def test_detail_dismiss_is_styled_destructive_and_still_works(app):
+    at = app([GATED])
+    at.button(key=_key("crit", GATED)).click().run()
+    at.button(key="detail_dismiss").click().run()
+    assert not at.exception
+    seen = json.loads((at.tmp_path / "seen_jobs.json").read_text("utf-8"))
+    assert seen[0]["dismissed"] is True and seen[0]["notified"] is True     # dismissing never re-queues an email
+
+
+# ── monitoring & email ───────────────────────────────────────────────────────
+
+def test_monitoring_calm_state_only_when_everything_is_healthy(app):
+    at = app([])
+    _set_companies(at, [{"id": "a", "name": "Alpha", "url": "https://a.example/jobs", "status": "active",
+                         "last_checked": NOW.isoformat()}])
+    _nav(at, "monitoring")
+    assert "No monitoring issues." in _html(at)
+    _set_companies(at, [{"id": "a", "name": "Alpha", "url": "https://a.example/jobs", "status": "failing",
+                         "last_checked": NOW.isoformat(), "status_reason": "HTTP 429"},
+                        {"id": "b", "name": "Beta", "url": "https://b.example/jobs", "status": "active",
+                         "last_checked": (NOW - timedelta(hours=30)).isoformat()}])
+    at.run()
+    html = _html(at)
+    assert "No monitoring issues." not in html and "HTTP 429" in html and "<i></i>Delayed</span>" in html
+
+
+def test_monitoring_keeps_semantic_table_and_hides_empty_notes(app):
+    at = app([])
+    _set_companies(at, [{"id": "a", "name": "Alpha", "url": "https://a.example/jobs", "status": "active",
+                         "last_checked": NOW.isoformat(), "scan_note": ""}])
+    _nav(at, "monitoring")
+    html = _html(at)
+    assert "<table class=\"mon\"><thead>" in html and "<th>Company</th>" in html
+    assert '<td data-l="Notes" class="empty">—</td>' in html
+
+
+def test_email_status_card_says_whether_alerts_work(app):
+    at = app([GATED], page="email")
+    html = _html(at)
+    assert "Alerts are on" in html and "Nothing waiting to send" in html and "Jobs emailed" in html
+    (at.tmp_path / "settings.json").write_text(json.dumps({"recipient_email": ""}))
+    at.run()
+    assert "Alerts are off" in _html(at)
+
+
+# ── CSS contract: motion, accessibility, phone ───────────────────────────────
+
+def test_motion_respects_reduced_motion_and_stays_on_the_compositor():
+    rm = CSS[CSS.index("@media (prefers-reduced-motion: reduce)"):]
+    assert "animation-duration: .001ms" in rm and ".radar .sweep { animation: none" in rm
+    for name, body in re.findall(r"@keyframes ([\w-]+) \{(.*?)\}\s*\}", CSS, re.S):
+        props = set(re.findall(r"([a-z-]+)\s*:", body))
+        assert props <= {"opacity", "transform", "background-position"}, (name, props)
+    # top-level entrances are opacity-only so they never trap the fixed toast
+    assert '[data-testid="stVerticalBlock"] > * { animation: jt-fade' in CSS
+
+
+def test_focus_states_exist_for_buttons_and_links():
+    assert '[data-testid^="stBaseButton"]:focus-visible' in CSS
+    assert ".btn:focus-visible" in CSS
+
+
+def test_no_new_heavy_dependencies():
+    assert "<script" not in SRC.lower()
+    imports = set(re.findall(r'@import url\(\'https://fonts\.googleapis\.com/css2\?family=([^:&\']+)', CSS))
+    assert imports <= {"Plus+Jakarta+Sans", "Material+Symbols+Rounded"}
+    req = (Path(__file__).resolve().parent.parent / "requirements.txt").read_text()
+    assert set(l.split(">=")[0] for l in req.split()) == {"streamlit", "httpx", "PyGithub", "python-dotenv", "playwright"}
