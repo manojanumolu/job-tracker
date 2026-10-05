@@ -874,5 +874,90 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T09:30:49.797715+00:00",
     "notified_at": "2026-09-30T09:30:53.154363+00:00"
+  },
+  {
+    "title": "IN_Specialist 3_BC/NAV_MS Dynamics_Advisory_Bangalore",
+    "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Bengaluru-Millenia/IN-Senior-Associate-PowerApps-Developer-MS-Dynamics-Advisory-Bangalore_737996WD-2",
+    "company": "PwC",
+    "location": "Bengaluru Millenia · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: 'minimum of 0-2 years'",
+    "evidence": {
+      "experience": [
+        "minimum of 0-2 years",
+        "0-2 Years"
+      ],
+      "experience_lines": [
+        "Responsibilities:   A minimum of 0-2 years of experience in Microsoft Dynamics NAV(NAV 2013 & upward)/D365",
+        "Years of experience required:       0-2 Years",
+        "Experience in Visual Studio and . NET",
+        "Experience in the upgrade process and Support activities"
+      ],
+      "fresher_evidence": "minimum of 0-2 years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:737996WD-2",
+      "canonical_url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Bengaluru-Millenia/IN-Senior-Associate-PowerApps-Developer-MS-Dynamics-Advisory-Bangalore_737996WD-2",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "pwc|workday:737996WD-2",
+    "date": "Oct 5, 13:59",
+    "first_seen": "2026-10-05T13:59:03.042261+00:00",
+    "id": "PwC_IN_Specialist_3_BC/NAV_MS_Dynamics_Advis",
+    "notified": false,
+    "company_id": "pwc",
+    "notify_state": "claimed",
+    "claimed_at": "2026-10-05T13:59:12.034548+00:00"
+  },
+  {
+    "title": "IN_Specialist 3_SAP SAC _SAP_Advisory_Mumbai",
+    "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Mumbai-Goregaon/IN-Senior-Associate-SAP-SD-SAP-Advisory-Gurgaon_741745WD-1",
+    "company": "PwC",
+    "location": "Mumbai Goregaon · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 to 1 year'",
+    "evidence": {
+      "experience": [
+        "0 to 1 year"
+      ],
+      "experience_lines": [
+        "0 to 1 year",
+        "Utilize HTML and CSS concepts to customize SAC analytic applications and improve user experience.",
+        "Experience working with Joule integration to extend SAC functionality via natural language querying and AI insights.",
+        "Hands-on experience in integrating SAC with SAP Datasphere and other data sources for seamless data connectivity and harmonization."
+      ],
+      "fresher_evidence": "0 to 1 year",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:741745WD-1",
+      "canonical_url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Mumbai-Goregaon/IN-Senior-Associate-SAP-SD-SAP-Advisory-Gurgaon_741745WD-1",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "pwc|workday:741745WD-1",
+    "date": "Oct 5, 13:59",
+    "first_seen": "2026-10-05T13:59:03.042261+00:00",
+    "id": "PwC_IN_Specialist_3_SAP_SAC__SAP_Advisory_Mu",
+    "notified": false,
+    "company_id": "pwc",
+    "notify_state": "claimed",
+    "claimed_at": "2026-10-05T13:59:12.034548+00:00"
   }
 ]
