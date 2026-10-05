@@ -2,6 +2,7 @@ import base64
 import hashlib
 import json
 import logging
+import math
 import os
 import re
 import time
@@ -64,225 +65,487 @@ st.set_page_config(
 )
 
 # ── theme ─────────────────────────────────────────────────────────────────────
+# Design tokens. Two hand-tuned palettes (dark is designed, not inverted):
+# an indigo-violet primary for intent/actions and a teal "signal" for the
+# product's core promise (fresher roles found, portals healthy).
 LIGHT = {
-    "bg": "#f8fafc", "surface": "#ffffff", "surface-2": "#f8fafc", "hover": "#f1f5f9",
-    "border": "#e2e8f0", "border-strong": "#cbd5e1",
-    "text": "#0f172a", "text-2": "#334155", "muted": "#64748b",
-    "accent": "#4f46e5", "accent-hover": "#4338ca", "accent-text": "#4338ca", "accent-soft": "#eef2ff",
-    "on-accent": "#ffffff",
-    "green": "#15803d", "green-soft": "#f0fdf4", "amber": "#b45309", "amber-soft": "#fffbeb",
-    "red": "#b91c1c", "red-soft": "#fef2f2", "gray": "#475569", "gray-soft": "#f1f5f9",
-    "shadow": "0 1px 2px rgba(15,23,42,0.04)",
-    "shadow-lg": "0 10px 30px -10px rgba(15,23,42,0.18)",
+    "bg": "#f4f5fb", "surface": "#ffffff", "surface-2": "#f7f8fc", "raised": "#ffffff", "hover": "#f0f1f8",
+    "border": "#e5e7f0", "border-strong": "#d3d6e3",
+    "text": "#0d1024", "text-2": "#383e57", "muted": "#646a82",
+    "accent": "#5b4cf5", "accent-hover": "#4a3be3", "accent-text": "#4636d4", "accent-soft": "#efedff",
+    "accent-2": "#0d9488", "on-accent": "#ffffff",
+    "green": "#0b7d55", "green-soft": "#e5f6ee", "amber": "#a85a06", "amber-soft": "#fff3e2",
+    "red": "#c2303a", "red-soft": "#fdebed", "gray": "#596075", "gray-soft": "#eef0f6",
+    "glow-1": "rgba(91,76,245,.13)", "glow-2": "rgba(13,148,136,.10)", "grid": "rgba(13,16,36,.045)",
+    "hi": "inset 0 1px 0 rgba(255,255,255,.9)",
+    "shadow": "0 1px 2px rgba(16,24,40,.04), 0 2px 6px -2px rgba(16,24,40,.06)",
+    "shadow-lg": "0 22px 44px -22px rgba(36,30,110,.30), 0 2px 6px -2px rgba(16,24,40,.06)",
+    "av-sat": "70%", "av-bg": "94%", "av-fg": "34%", "av-bd": "86%",
 }
 DARK = {
-    "bg": "#0b1020", "surface": "#111827", "surface-2": "#0f172a", "hover": "#1e293b",
-    "border": "#1f2937", "border-strong": "#334155",
-    "text": "#f1f5f9", "text-2": "#cbd5e1", "muted": "#94a3b8",
-    "accent": "#6366f1", "accent-hover": "#818cf8", "accent-text": "#a5b4fc", "accent-soft": "rgba(99,102,241,0.16)",
-    "on-accent": "#ffffff",
-    "green": "#4ade80", "green-soft": "rgba(74,222,128,0.12)", "amber": "#fbbf24", "amber-soft": "rgba(251,191,36,0.12)",
-    "red": "#f87171", "red-soft": "rgba(248,113,113,0.12)", "gray": "#94a3b8", "gray-soft": "rgba(148,163,184,0.14)",
-    "shadow": "0 1px 2px rgba(0,0,0,0.3)",
-    "shadow-lg": "0 10px 30px -10px rgba(0,0,0,0.6)",
+    "bg": "#0b1020", "surface": "#121833", "surface-2": "#0f1530", "raised": "#171e3d", "hover": "#1b2347",
+    "border": "rgba(255,255,255,.075)", "border-strong": "rgba(255,255,255,.15)",
+    "text": "#eef0fb", "text-2": "#c4c9df", "muted": "#8f96b3",
+    "accent": "#7c6cff", "accent-hover": "#9184ff", "accent-text": "#b8afff", "accent-soft": "rgba(124,108,255,.16)",
+    "accent-2": "#2dd4bf", "on-accent": "#ffffff",
+    "green": "#3ddc9a", "green-soft": "rgba(61,220,154,.12)", "amber": "#f6c04e", "amber-soft": "rgba(246,192,78,.12)",
+    "red": "#ff7a85", "red-soft": "rgba(255,122,133,.12)", "gray": "#9aa3bf", "gray-soft": "rgba(154,163,191,.13)",
+    "glow-1": "rgba(124,108,255,.20)", "glow-2": "rgba(45,212,191,.10)", "grid": "rgba(255,255,255,.035)",
+    "hi": "inset 0 1px 0 rgba(255,255,255,.05)",
+    "shadow": "0 1px 2px rgba(0,0,0,.35), 0 4px 14px -6px rgba(0,0,0,.45)",
+    "shadow-lg": "0 26px 50px -24px rgba(0,0,0,.85), 0 0 0 1px rgba(124,108,255,.10)",
+    "av-sat": "55%", "av-bg": "22%", "av-fg": "80%", "av-bd": "34%",
 }
 TH = DARK if st.session_state.dark_mode else LIGHT
 _root_vars = ":root {" + "".join(f"--{k}:{v};" for k, v in TH.items()) + "}"
 
-# One typeface (Inter) everywhere; numbers use tabular figures instead of a
-# monospace font. Icons are Material Symbols ligatures — inline <svg> doesn't
-# paint in this app's hosting environment. Widgets that need styling are
-# wrapped in st.container(key=...) and targeted via .st-key-*; raw HTML tags
-# are never opened in one st.* call and closed in another.
+# Design system. Plus Jakarta Sans for everything read, JetBrains Mono only
+# for small eyebrow labels; numbers use tabular figures. Icons are Material
+# Symbols ligatures (one family everywhere) — inline <svg> doesn't paint in
+# this app's hosting environment, so the hero radar is pure CSS too. Widgets
+# that need styling are wrapped in st.container(key=...) and targeted via
+# .st-key-*; raw HTML tags are never opened in one st.* call and closed in
+# another. Motion uses transform/opacity only and honours reduced motion;
+# top-level entrances are opacity-only so they never trap the fixed toast.
 _CSS = """
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0&display=block');
 
-:root { --font: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; --sidebar-w: 240px; }
+:root {
+  --font: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sidebar-w: 248px;
+  --r-sm: 8px; --r: 12px; --r-lg: 16px; --r-xl: 20px;
+  --fast: 150ms; --normal: 240ms; --slow: 480ms; --ease: cubic-bezier(.2,.7,.2,1);
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
+}
 
 /* ── Streamlit chrome ── */
 #MainMenu, footer:not(.app-foot), header[data-testid="stHeader"] { display: none !important; }
 .stDeployButton, [data-testid="stToolbar"], [data-testid="stDecoration"] { display: none !important; }
 [data-testid="stSidebarHeader"], [data-testid="stSidebarCollapseButton"], [data-testid="stSidebarCollapsedControl"],
 [data-testid="stExpandSidebarButton"], [data-testid="stSidebarResizeHandle"] { display: none !important; }
-.stApp, [data-testid="stAppViewContainer"], .stMain { background: var(--bg) !important; }
+/* visual depth: two soft lights and a faint dot grid that fades out down the page */
+.stApp, [data-testid="stAppViewContainer"] {
+  background:
+    radial-gradient(900px 520px at 78% -8%, var(--glow-1), transparent 70%),
+    radial-gradient(700px 480px at 8% 4%, var(--glow-2), transparent 70%),
+    var(--bg) !important;
+  background-attachment: fixed !important;
+}
+.stMain { background: transparent !important; }
+.stMain::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: radial-gradient(var(--grid) 1px, transparent 1.2px); background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0, transparent 520px); mask-image: linear-gradient(180deg, #000 0, transparent 520px);
+}
 .stApp, .stApp p, .stApp label, .stApp input, .stApp button, .stApp textarea, .stApp li, .stApp h1, .stApp h2, .stApp h3, .stApp h4,
 [data-baseweb="popover"] * { font-family: var(--font) !important; }
-.stApp { color: var(--text); -webkit-font-smoothing: antialiased; font-feature-settings: 'cv11', 'ss01'; }
-.stApp h1, .stApp h2, .stApp h3, .stApp h4 { padding: 0 !important; margin: 0; letter-spacing: -0.015em; color: var(--text); }
+.stApp { color: var(--text); -webkit-font-smoothing: antialiased; }
+.stApp h1, .stApp h2, .stApp h3, .stApp h4 { padding: 0 !important; margin: 0; letter-spacing: -0.02em; color: var(--text); }
 .stApp a { text-decoration: none !important; }
 .num { font-variant-numeric: tabular-nums; }
 [data-testid="stMainBlockContainer"], .block-container {
-  max-width: 1160px !important; padding: 32px 40px 48px !important; margin: 0 !important;
+  max-width: 1200px !important; padding: 36px 44px 56px !important; margin: 0 !important; position: relative; z-index: 1;
 }
-[data-testid="stMainBlockContainer"] > div > [data-testid="stVerticalBlock"] { gap: 24px; }
+[data-testid="stMainBlockContainer"] > div > [data-testid="stVerticalBlock"] { gap: 22px; }
+::selection { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+
+/* ── motion ── */
+@keyframes jt-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes jt-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes jt-pulse { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(2.6); opacity: 0; } }
+@keyframes jt-ring { 0% { transform: scale(1); opacity: .45; } 100% { transform: scale(1.32); opacity: 0; } }
+@keyframes jt-sweep { to { transform: rotate(360deg); } }
+@keyframes jt-blip { 0%, 100% { opacity: .25; transform: scale(.8); } 12% { opacity: 1; transform: scale(1.15); } 40% { opacity: .55; transform: scale(1); } }
+@keyframes jt-shimmer { from { background-position: -320px 0; } to { background-position: 320px 0; } }
+@keyframes jt-toast-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+[data-testid="stMainBlockContainer"] > div > [data-testid="stVerticalBlock"] > * { animation: jt-fade var(--normal) var(--ease) backwards; }
+/* cards rise in, staggered; fill-mode backwards so :hover transforms win afterwards */
+.stat, [class*="st-key-jr_"], [class*="st-key-cr_"], .mon tbody tr, .step { animation: jt-rise var(--slow) var(--ease) backwards; }
+.stat:nth-child(2), .mon tbody tr:nth-child(2), .step:nth-child(2), [data-testid="stLayoutWrapper"]:nth-child(2) > :is([class*="st-key-jr_"], [class*="st-key-cr_"]) { animation-delay: 40ms; }
+.stat:nth-child(3), .mon tbody tr:nth-child(3), .step:nth-child(3), [data-testid="stLayoutWrapper"]:nth-child(3) > :is([class*="st-key-jr_"], [class*="st-key-cr_"]) { animation-delay: 80ms; }
+.stat:nth-child(4), .mon tbody tr:nth-child(4), .step:nth-child(4), [data-testid="stLayoutWrapper"]:nth-child(4) > :is([class*="st-key-jr_"], [class*="st-key-cr_"]) { animation-delay: 120ms; }
+.mon tbody tr:nth-child(n+5), .step:nth-child(n+5), [data-testid="stLayoutWrapper"]:nth-child(n+5) > :is([class*="st-key-jr_"], [class*="st-key-cr_"]) { animation-delay: 160ms; }
 
 /* ── icons ── */
 .ms {
   font-family: 'Material Symbols Rounded' !important; font-weight: normal; font-style: normal; line-height: 1;
   letter-spacing: normal; text-transform: none; white-space: nowrap; direction: ltr; font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased; display: inline-block; overflow: hidden; flex-shrink: 0; vertical-align: middle;
-  font-size: 18px; width: 1em; height: 1em;
+  font-size: 18px; width: 1em; height: 1em; font-variation-settings: 'opsz' 20, 'wght' 450;
 }
-.ms.s16 { font-size: 16px; } .ms.s20 { font-size: 20px; } .ms.s24 { font-size: 24px; }
+.ms.s14 { font-size: 14px; } .ms.s16 { font-size: 16px; } .ms.s20 { font-size: 20px; } .ms.s24 { font-size: 24px; } .ms.s28 { font-size: 28px; }
+.ms.fill { font-variation-settings: 'FILL' 1, 'opsz' 20, 'wght' 450; }
 [data-testid="stIconMaterial"] { font-family: 'Material Symbols Rounded' !important; }
 
 /* ── type ── */
-.page-title { font-size: 26px; line-height: 34px; font-weight: 650; letter-spacing: -0.02em; color: var(--text); margin: 0; }
-.page-sub { font-size: 14px; line-height: 20px; color: var(--muted); margin: 4px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
-.section-title { font-size: 16px; line-height: 24px; font-weight: 600; color: var(--text); margin: 0; }
-.section-sub { font-size: 13px; line-height: 18px; color: var(--muted); margin: 2px 0 0; }
+.eyebrow { font-family: var(--mono) !important; font-size: 11px; line-height: 16px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); display: inline-flex; align-items: center; gap: 8px; }
+.eyebrow.bar::before { content: ""; width: 14px; height: 3px; border-radius: 3px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+.page-title { font-size: 30px; line-height: 38px; font-weight: 800; letter-spacing: -0.03em; color: var(--text); margin: 6px 0 0; }
+.page-sub { font-size: 14px; line-height: 21px; color: var(--muted); margin: 6px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.section-title { font-size: 16px; line-height: 24px; font-weight: 700; color: var(--text); margin: 0; letter-spacing: -0.015em; display: flex; align-items: center; gap: 8px; }
+.section-title .ms { color: var(--accent-text); }
+.section-sub { font-size: 13px; line-height: 19px; color: var(--muted); margin: 2px 0 0; }
 .muted { color: var(--muted); } .text-2 { color: var(--text-2); } .accent { color: var(--accent-text); }
 .sep { color: var(--border-strong); }
+.sr-only { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 
-/* ── status pills: one system everywhere ── */
-.pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 12px; line-height: 20px; font-weight: 500; white-space: nowrap; }
-.pill i { width: 6px; height: 6px; border-radius: 999px; background: currentColor; display: inline-block; }
-.pill.healthy, .pill.fresher, .pill.on { color: var(--green); background: var(--green-soft); }
-.pill.delayed, .pill.pending-mail { color: var(--amber); background: var(--amber-soft); }
-.pill.failing, .pill.off { color: var(--red); background: var(--red-soft); }
-.pill.pending, .pill.legacy, .pill.neutral { color: var(--gray); background: var(--gray-soft); }
-.pill.entry, .pill.checking, .pill.new { color: var(--accent-text); background: var(--accent-soft); }
-.dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; flex-shrink: 0; }
+/* ── pills & badges: one system everywhere (status is never colour-only: dot/icon + word) ── */
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 9px; border-radius: 999px; font-size: 12px; line-height: 18px; font-weight: 600; white-space: nowrap; border: 1px solid transparent; }
+.pill i { width: 6px; height: 6px; border-radius: 999px; background: currentColor; display: inline-block; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 18%, transparent); }
+.pill .ms { font-size: 15px; margin-left: -2px; }
+.pill.healthy, .pill.fresher, .pill.on { color: var(--green); background: var(--green-soft); border-color: color-mix(in srgb, var(--green) 22%, transparent); }
+.pill.delayed, .pill.pending-mail { color: var(--amber); background: var(--amber-soft); border-color: color-mix(in srgb, var(--amber) 22%, transparent); }
+.pill.failing, .pill.off { color: var(--red); background: var(--red-soft); border-color: color-mix(in srgb, var(--red) 22%, transparent); }
+.pill.pending, .pill.legacy, .pill.neutral { color: var(--gray); background: var(--gray-soft); border-color: color-mix(in srgb, var(--gray) 18%, transparent); }
+.pill.entry, .pill.checking, .pill.new { color: var(--accent-text); background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 22%, transparent); }
+.pill.healthy i, .pill.on i, .pill.checking i { position: relative; }
+.pill.healthy i::after, .pill.on i::after, .pill.checking i::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: currentColor; animation: jt-pulse 2.4s ease-out infinite; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 13px; line-height: 18px; color: var(--text-2); background: color-mix(in srgb, var(--surface) 70%, transparent); border: 1px solid var(--border); white-space: nowrap; }
+.chip .ms { font-size: 16px; color: var(--muted); }
+.dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; flex-shrink: 0; position: relative; }
 .dot.healthy { background: var(--green); } .dot.delayed { background: var(--amber); } .dot.failing { background: var(--red); }
 .dot.pending { background: var(--gray); } .dot.checking { background: var(--accent); }
+.dot.healthy::after, .dot.checking::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: inherit; animation: jt-pulse 2.4s ease-out infinite; }
+.tag { font-family: var(--mono) !important; font-size: 10.5px; line-height: 16px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--border-strong); border-radius: 6px; padding: 0 6px; font-weight: 500; }
 
 /* ── surfaces ── */
-.panel, .st-key-stats, [class*="st-key-joblist_"], .st-key-company_list, .st-key-add_form, .st-key-email_form,
-.st-key-test_panel, [class*="st-key-set_"], .st-key-mon_table, .st-key-job_main, .st-key-job_side, .st-key-co_side,
-.st-key-co_jobs, .st-key-empty {
-  background: var(--surface) !important; border: 1px solid var(--border) !important; border-radius: 12px !important;
-  box-shadow: var(--shadow) !important;
+.panel, [class*="st-key-filters_"], .st-key-add_form, .st-key-email_form, .st-key-test_panel, [class*="st-key-set_"],
+.st-key-job_main, .st-key-job_side, .st-key-co_side, .st-key-empty, .st-key-hero, .st-key-job_hero, .st-key-co_hero, .st-key-mail_status,
+.st-key-danger_confirm, .mon tbody tr, [class*="st-key-jr_"], [class*="st-key-cr_"] {
+  background: var(--surface) !important; border: 1px solid var(--border) !important; border-radius: var(--r-lg) !important;
+  box-shadow: var(--hi), var(--shadow) !important;
 }
 .st-key-add_form, .st-key-email_form, .st-key-test_panel, [class*="st-key-set_"], .st-key-job_main, .st-key-job_side,
-.st-key-co_side, .st-key-empty { padding: 20px 24px !important; gap: 16px !important; }
+.st-key-co_side, .st-key-empty, .st-key-mail_status { padding: 22px 24px !important; gap: 16px !important; }
+.st-key-job_main, .st-key-job_side, .st-key-co_side { gap: 22px !important; }
+.divider { border-top: 1px solid var(--border); margin: 0; }
 
 /* ── page header ── */
 .st-key-page_head > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"],
 .st-key-page_head > [data-testid="stHorizontalBlock"] { align-items: flex-end !important; gap: 16px !important; flex-wrap: wrap !important; }
 .st-key-page_head [data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
 .st-key-page_head [data-testid="stColumn"]:first-child { flex: 1 1 320px !important; }
-.st-key-page_actions > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"],
-.st-key-page_actions > [data-testid="stHorizontalBlock"] { gap: 8px !important; flex-wrap: nowrap !important; }
-.st-key-page_actions [data-testid="stColumn"] { flex: 0 0 auto !important; }
+:is(.st-key-page_actions, .st-key-hero_actions) > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"],
+:is(.st-key-page_actions, .st-key-hero_actions) > [data-testid="stHorizontalBlock"] { gap: 8px !important; flex-wrap: nowrap !important; }
+:is(.st-key-page_actions, .st-key-hero_actions) [data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
 
-/* ── stats strip: one panel, divided cells ── */
-.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.stat { padding: 16px 20px; min-width: 0; }
-.stat + .stat { border-left: 1px solid var(--border); }
-.stat .k { font-size: 13px; line-height: 18px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
-.stat .v { font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); margin-top: 4px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.stat .n { font-size: 13px; line-height: 18px; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
-.st-key-stats { padding: 0 !important; overflow: hidden; }
+/* ── Home hero: the live discovery console ── */
+.st-key-hero { position: relative; overflow: hidden; padding: 30px 32px 26px !important; gap: 18px !important; isolation: isolate;
+  background:
+    radial-gradient(520px 300px at 88% 30%, var(--glow-1), transparent 70%),
+    radial-gradient(420px 260px at 0% 100%, var(--glow-2), transparent 70%),
+    var(--surface) !important; }
+.st-key-hero::after { content: ""; position: absolute; inset: 0 0 auto 0; height: 1px; z-index: -1;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 55%, transparent), color-mix(in srgb, var(--accent-2) 45%, transparent), transparent); }
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) 232px; gap: 28px; align-items: center; }
+.hero .page-title { font-size: 40px; line-height: 46px; letter-spacing: -0.035em; max-width: 620px; margin-top: 10px; }
+.hero .page-title em { font-style: normal; background: linear-gradient(92deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero-sub { font-size: 16px; line-height: 25px; color: var(--text-2); margin: 10px 0 0; max-width: 560px; }
+.hero-status { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.hero-status .live { color: var(--text); font-weight: 600; }
+.hero-status .live.healthy { border-color: color-mix(in srgb, var(--green) 30%, var(--border)); }
+.hero-status .live.failing { border-color: color-mix(in srgb, var(--red) 40%, var(--border)); }
+.hero-status .live.delayed { border-color: color-mix(in srgb, var(--amber) 40%, var(--border)); }
 
-/* ── filter bar ── */
+/* the radar: rings + crosshair + one rotating sweep; each blip is a tracked portal */
+.radar { position: relative; width: 100%; aspect-ratio: 1; border-radius: 50%; justify-self: end;
+  background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--accent) 14%, transparent) 0, transparent 68%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent); }
+.radar::before, .radar::after { content: ""; position: absolute; background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.radar::before { left: 50%; top: 6%; bottom: 6%; width: 1px; } .radar::after { top: 50%; left: 6%; right: 6%; height: 1px; }
+.radar .ring { position: absolute; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent); }
+.radar .r1 { inset: 17%; } .radar .r2 { inset: 33%; border-style: dashed; opacity: .8; } .radar .r3 { inset: 46%; border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.radar .sweep { position: absolute; inset: 2%; border-radius: 50%; will-change: transform;
+  background: conic-gradient(from 0deg, transparent 0deg 280deg, color-mix(in srgb, var(--accent) 10%, transparent) 300deg, color-mix(in srgb, var(--accent-2) 42%, transparent) 359deg, transparent 360deg);
+  animation: jt-sweep 7s linear infinite; }
+.radar .core { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 18%, transparent), 0 0 24px color-mix(in srgb, var(--accent) 60%, transparent); }
+.radar .blip { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--accent-2);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent-2) 70%, transparent); animation: jt-blip 7s ease-out infinite; }
+.radar .blip.warn { background: var(--red); box-shadow: 0 0 12px color-mix(in srgb, var(--red) 70%, transparent); }
+.radar-cap { position: absolute; right: 0; bottom: -2px; font-family: var(--mono) !important; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+
+/* ── metric modules ── */
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.stat { position: relative; padding: 18px 18px 16px; min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+  box-shadow: var(--hi), var(--shadow); transition: transform var(--normal) var(--ease), box-shadow var(--normal) var(--ease), border-color var(--normal) var(--ease); overflow: hidden; }
+.stat::before { content: ""; position: absolute; inset: 0 0 auto; height: 2px; background: linear-gradient(90deg, var(--tint, var(--accent)), transparent 70%); opacity: .7; }
+.stat:hover { transform: translateY(-2px); box-shadow: var(--hi), var(--shadow-lg); border-color: color-mix(in srgb, var(--tint, var(--accent)) 30%, var(--border)); }
+.stat .ic { width: 36px; height: 36px; border-radius: 11px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;
+  color: var(--tint, var(--accent)); background: color-mix(in srgb, var(--tint, var(--accent)) 12%, transparent); transition: transform var(--normal) var(--ease); }
+.stat:hover .ic { transform: translateY(-1px) rotate(-6deg) scale(1.06); }
+.stat.t-green { --tint: var(--green); } .stat.t-teal { --tint: var(--accent-2); } .stat.t-amber { --tint: var(--amber); } .stat.t-red { --tint: var(--red); } .stat.t-gray { --tint: var(--gray); }
+.stat .k { font-size: 13px; line-height: 18px; color: var(--muted); font-weight: 500; display: flex; align-items: center; gap: 6px; }
+.stat .v { font-size: 30px; line-height: 36px; font-weight: 800; letter-spacing: -0.03em; color: var(--text); margin-top: 4px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat .v.sm { font-size: 20px; line-height: 28px; letter-spacing: -0.02em; }
+.stat .n { font-size: 12.5px; line-height: 18px; color: var(--muted); margin-top: 4px; overflow-wrap: anywhere; }
+.st-key-stats { background: transparent !important; border: none !important; box-shadow: none !important; }
+
+/* ── discovery controls (search + filters as one component) ── */
+[class*="st-key-filters_"] { padding: 12px !important; border-radius: var(--r-lg) !important; }
 [class*="st-key-filters_"] > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"],
-[class*="st-key-filters_"] > [data-testid="stHorizontalBlock"] { gap: 8px !important; flex-wrap: wrap !important; align-items: flex-end !important; }
-[class*="st-key-filters_"] [data-testid="stColumn"] { flex: 1 1 150px !important; width: auto !important; min-width: 140px !important; max-width: 240px; }
-[class*="st-key-filters_"] [data-testid="stColumn"]:first-child { max-width: none; }
-[class*="st-key-filters_"] [data-testid="stColumn"]:first-child { flex: 2 1 240px !important; }
-[class*="st-key-filters_"] [data-testid="stColumn"]:last-child { flex: 0 0 auto !important; min-width: 0 !important; }
+[class*="st-key-filters_"] > [data-testid="stHorizontalBlock"] { gap: 8px !important; flex-wrap: wrap !important; align-items: center !important; }
+[class*="st-key-filters_"] [data-testid="stColumn"] { flex: 1 1 140px !important; width: auto !important; min-width: 130px !important; max-width: 230px; }
+[class*="st-key-filters_"] [data-testid="stColumn"]:first-child { flex: 1 1 100% !important; max-width: none; }
+[class*="st-key-filters_"] [data-testid="stColumn"]:last-child { flex: 0 0 auto !important; min-width: 0 !important; margin-left: auto; }
+:is(.st-key-h_q, .st-key-j_q) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]) { min-height: 48px !important; border-radius: var(--r) !important; background: var(--surface-2) !important; }
+:is(.st-key-h_q, .st-key-j_q) input { font-size: 15px !important; }
 :is(.st-key-h_q, .st-key-j_q, .st-key-co_q) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])::before {
   content: "search"; font-family: 'Material Symbols Rounded' !important; font-feature-settings: 'liga'; font-weight: 400;
-  font-size: 18px; width: 18px; overflow: hidden; white-space: nowrap; flex-shrink: 0;
-  color: var(--muted); margin-left: 12px; align-self: center; line-height: 1; box-sizing: content-box;
+  font-size: 20px; width: 20px; overflow: hidden; white-space: nowrap; flex-shrink: 0;
+  color: var(--muted); margin-left: 14px; align-self: center; line-height: 1; box-sizing: content-box; transition: color var(--fast);
 }
+:is(.st-key-h_q, .st-key-j_q, .st-key-co_q) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]):focus-within::before { color: var(--accent-text); }
+[class*="st-key-filters_"] [data-baseweb="select"] > div, [class*="st-key-filters_"] .stSelectbox [role="group"] { border-radius: 999px !important; min-height: 36px !important; padding-left: 6px; background: var(--surface) !important; }
 
-/* ── job list: one panel, divided rows ── */
-[class*="st-key-joblist_"] { padding: 0 !important; gap: 0 !important; overflow: hidden; }
-[class*="st-key-jr_"] { padding: 16px 20px !important; gap: 0 !important; transition: background .15s; }
-[class*="st-key-jr_"] + [class*="st-key-jr_"], [class*="st-key-joblist_"] > [data-testid="stElementContainer"] + [class*="st-key-jr_"] { border-top: 1px solid var(--border); }
-[class*="st-key-jr_"]:hover { background: var(--surface-2); }
+/* ── section heads ── */
+.sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sec-head .section-title { font-size: 19px; line-height: 26px; letter-spacing: -0.02em; margin-top: 4px; }
+
+/* ── opportunity cards ── */
+[class*="st-key-joblist_"] { gap: 10px !important; container-type: inline-size; }
+[class*="st-key-jr_"] { position: relative; padding: 18px 20px !important; gap: 0 !important; overflow: hidden;
+  transition: transform var(--normal) var(--ease), box-shadow var(--normal) var(--ease), border-color var(--normal) var(--ease); }
+[class*="st-key-jr_"]::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, var(--accent), var(--accent-2)); opacity: 0; transform: scaleY(.4); transition: opacity var(--normal) var(--ease), transform var(--normal) var(--ease); }
+[class*="st-key-jr_"]:hover, [class*="st-key-jr_"]:focus-within { transform: translateY(-2px); box-shadow: var(--hi), var(--shadow-lg) !important; border-color: color-mix(in srgb, var(--accent) 30%, var(--border)) !important; }
+[class*="st-key-jr_"]:hover::before, [class*="st-key-jr_"]:focus-within::before { opacity: 1; transform: none; }
 [class*="st-key-jr_"] > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"],
 [class*="st-key-jr_"] > [data-testid="stHorizontalBlock"] { gap: 16px !important; align-items: center !important; flex-wrap: nowrap !important; }
 [class*="st-key-jr_"] [data-testid="stColumn"] { width: auto !important; min-width: 0 !important; flex: 0 0 auto !important; }
 [class*="st-key-jr_"] [data-testid="stColumn"]:first-child { flex: 1 1 auto !important; }
 [class*="st-key-jr_"] [data-testid="stColumn"]:last-child [data-testid="stVerticalBlock"] { flex-direction: row !important; gap: 8px !important; align-items: center; flex-wrap: nowrap; }
 [class*="st-key-jr_"] [data-testid="stColumn"]:last-child [data-testid="stElementContainer"] { width: auto !important; flex: 0 0 auto; }
-.job { display: flex; gap: 14px; min-width: 0; align-items: flex-start; }
-.logo { width: 40px; height: 40px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-text); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; flex-shrink: 0; }
-.logo.lg { width: 56px; height: 56px; border-radius: 14px; font-size: 22px; }
+.job { display: flex; gap: 16px; min-width: 0; align-items: flex-start; }
+.logo { --h: 245; width: 44px; height: 44px; border-radius: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  font-size: 17px; font-weight: 800; letter-spacing: -0.02em;
+  color: hsl(var(--h) var(--av-sat) var(--av-fg)); background: linear-gradient(140deg, hsl(var(--h) var(--av-sat) var(--av-bg)), hsl(calc(var(--h) + 28) var(--av-sat) var(--av-bg)));
+  box-shadow: inset 0 0 0 1px hsl(var(--h) var(--av-sat) var(--av-bd)), var(--hi); transition: transform var(--normal) var(--ease); }
+.logo.lg { width: 64px; height: 64px; border-radius: 18px; font-size: 26px; }
+.logo.sm { width: 34px; height: 34px; border-radius: 10px; font-size: 14px; }
+[class*="st-key-jr_"]:hover .logo, [class*="st-key-cr_"]:hover .logo { transform: scale(1.06) rotate(-3deg); }
 .job-body { min-width: 0; flex: 1; }
-.job-title { font-size: 16px; line-height: 22px; font-weight: 600; color: var(--text); margin: 0; overflow-wrap: anywhere; }
-.job-meta { font-size: 14px; line-height: 20px; color: var(--muted); margin-top: 2px; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; }
-.job-meta .co { color: var(--text-2); font-weight: 500; }
-.job-why { font-size: 13px; line-height: 18px; color: var(--muted); margin-top: 8px; display: flex; align-items: center; gap: 8px; min-width: 0; }
-.job-why span.t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.list-foot { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--muted); }
-.st-key-list_foot_h, .st-key-list_foot_j { padding: 10px 20px !important; border-top: 1px solid var(--border); }
+.job-co { font-size: 13px; line-height: 18px; color: var(--text-2); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.job-title { font-size: 17px; line-height: 24px; font-weight: 700; letter-spacing: -0.015em; color: var(--text); margin: 2px 0 0; overflow-wrap: anywhere; }
+.job-meta { font-size: 13px; line-height: 20px; color: var(--muted); margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+.job-meta .mi { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.job-meta .mi .ms { font-size: 16px; color: var(--muted); }
+.job-meta .co { color: var(--text-2); font-weight: 600; }
+.job-why { font-size: 13px; line-height: 18px; color: var(--text-2); margin-top: 10px; display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
+.job-why span.t { display: inline-flex; align-items: center; gap: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; max-width: 100%; }
+.job-why span.t .ms { font-size: 16px; color: var(--accent-text); }
+.list-foot { padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--muted); }
+.st-key-list_foot_h, .st-key-list_foot_j { padding: 6px 4px 0 !important; }
 .st-key-list_foot_h > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-list_foot_h > [data-testid="stHorizontalBlock"],
 .st-key-list_foot_j > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-list_foot_j > [data-testid="stHorizontalBlock"] { align-items: center !important; gap: 8px !important; flex-wrap: nowrap !important; }
 .st-key-list_foot_h [data-testid="stColumn"], .st-key-list_foot_j [data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
 .st-key-list_foot_h [data-testid="stColumn"]:first-child, .st-key-list_foot_j [data-testid="stColumn"]:first-child { flex: 1 1 auto !important; }
+/* a narrow list (company page, tablet, phone): actions move under the text */
+@container (max-width: 780px) {
+  [class*="st-key-jr_"] > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], [class*="st-key-jr_"] > [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 14px !important; }
+  [class*="st-key-jr_"] [data-testid="stColumn"]:first-child { flex: 1 1 100% !important; }
+  [class*="st-key-jr_"] [data-testid="stColumn"]:last-child { flex: 1 1 100% !important; padding-left: 60px; }
+}
+@container (max-width: 420px) {
+  [class*="st-key-jr_"] [data-testid="stColumn"]:last-child { padding-left: 0; }
+  .job { gap: 12px; } .job .logo { width: 38px; height: 38px; font-size: 15px; border-radius: 11px; }
+}
 
-/* buttons that look like links */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 8px; font-size: 14px; font-weight: 500; white-space: nowrap; transition: background .15s, border-color .15s; }
-.btn.primary { background: var(--accent); color: var(--on-accent) !important; }
-.btn.primary:hover { background: var(--accent-hover); }
-.btn.ghost { background: var(--surface); color: var(--text) !important; border: 1px solid var(--border); }
-.btn.ghost:hover { background: var(--hover); border-color: var(--border-strong); }
+/* ── buttons ── */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 16px; border-radius: 10px; font-size: 14px; font-weight: 700;
+  white-space: nowrap; letter-spacing: -0.005em; border: 1px solid transparent;
+  transition: transform var(--fast) var(--ease), box-shadow var(--fast) var(--ease), background var(--fast), border-color var(--fast); }
+.btn .ms { transition: transform var(--fast) var(--ease); }
+.btn:hover .ms { transform: translate(2px, -2px); }
+.btn.primary { color: var(--on-accent) !important; background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 82%, #fff), var(--accent));
+  border-color: color-mix(in srgb, var(--accent) 70%, #000 0%); box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 8px 18px -10px var(--accent); }
+.btn.primary:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255,255,255,.32), 0 12px 24px -10px var(--accent); }
+.btn.primary:active { transform: translateY(0) scale(.98); }
+.btn.ghost { background: var(--surface); color: var(--text) !important; border-color: var(--border-strong); box-shadow: var(--hi); }
+.btn.ghost:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong)); color: var(--accent-text) !important; transform: translateY(-1px); }
 .btn.disabled { background: var(--hover); color: var(--muted) !important; }
-.link { color: var(--accent-text) !important; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; overflow-wrap: anywhere; }
-.link:hover { text-decoration: underline !important; }
+.btn:focus-visible, .link:focus-visible, .stApp a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+.link { color: var(--accent-text) !important; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; overflow-wrap: anywhere; }
+.link:hover { text-decoration: underline !important; text-underline-offset: 3px; }
+
+[data-testid^="stBaseButton"] {
+  border-radius: 10px !important; min-height: 38px !important; padding: 0 15px !important;
+  transition: transform var(--fast) var(--ease), background var(--fast), border-color var(--fast), color var(--fast), box-shadow var(--fast) !important;
+}
+[data-testid^="stBaseButton"]:active:not(:disabled) { transform: scale(.98); }
+[data-testid^="stBaseButton"]:focus-visible { outline: 2px solid var(--accent) !important; outline-offset: 2px !important; box-shadow: var(--ring) !important; }
+[data-testid^="stBaseButton"] [data-testid="stMarkdownContainer"] { display: flex !important; align-items: center; margin: 0 !important; padding: 0 !important; }
+[data-testid^="stBaseButton"] p { margin: 0 !important; font-size: 14px !important; line-height: 20px !important; font-weight: 600 !important; white-space: nowrap; }
+[data-testid^="stBaseButton"] [data-testid="stIconMaterial"] { font-size: 18px !important; transition: transform var(--fast) var(--ease); }
+[data-testid="stBaseButton-secondary"] { background: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--border-strong) !important; box-shadow: var(--hi) !important; }
+[data-testid="stBaseButton-secondary"]:hover:not(:disabled) { border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong)) !important; color: var(--accent-text) !important; transform: translateY(-1px); background: var(--surface) !important; }
+[data-testid="stBaseButton-primary"] { color: var(--on-accent) !important; border: 1px solid var(--accent) !important;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 82%, #fff), var(--accent)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 8px 18px -10px var(--accent) !important; }
+[data-testid="stBaseButton-primary"]:hover:not(:disabled) { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255,255,255,.32), 0 12px 24px -10px var(--accent) !important; }
+[data-testid="stBaseButton-primary"] p { font-weight: 700 !important; }
+[data-testid^="stBaseButton"]:disabled { opacity: .45 !important; transform: none !important; cursor: not-allowed; }
+[data-testid="stBaseButton-tertiary"] { color: var(--muted) !important; background: transparent !important; border: none !important; padding: 0 10px !important; }
+[data-testid="stBaseButton-tertiary"]:hover { color: var(--text) !important; background: var(--hover) !important; }
+.st-key-btn_back [data-testid="stBaseButton-tertiary"]:hover [data-testid="stIconMaterial"] { transform: translateX(-3px); }
+.st-key-btn_run_check [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] { transform: scale(1.15); }
+.st-key-btn_refresh [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"], .st-key-btn_reload [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] { transform: rotate(90deg); }
+/* destructive: quiet until hovered, then unmistakably red */
+.st-key-danger [data-testid^="stBaseButton"] { color: var(--red) !important; }
+.st-key-danger [data-testid^="stBaseButton"]:hover:not(:disabled) { color: var(--red) !important; background: var(--red-soft) !important; border-color: color-mix(in srgb, var(--red) 45%, transparent) !important; }
+.st-key-danger_confirm { padding: 16px 18px !important; gap: 12px !important; border-color: color-mix(in srgb, var(--red) 35%, var(--border)) !important;
+  background: linear-gradient(180deg, var(--red-soft), transparent 140%), var(--surface) !important; }
+.st-key-danger_confirm [data-testid="stBaseButton-secondary"] { color: var(--text) !important; }
+.st-key-danger_confirm [data-testid="stBaseButton-primary"] { background: var(--red) !important; border-color: var(--red) !important; color: #fff !important; box-shadow: 0 8px 18px -10px var(--red) !important; }
+[class*="st-key-dismiss_"] [data-testid^="stBaseButton"], [class*="st-key-restore_"] [data-testid^="stBaseButton"] { width: 38px !important; padding: 0 !important; color: var(--muted) !important; }
+[class*="st-key-dismiss_"] [data-testid^="stBaseButton"]:hover { color: var(--red) !important; border-color: color-mix(in srgb, var(--red) 40%, transparent) !important; background: var(--red-soft) !important; }
+[class*="st-key-restore_"] [data-testid^="stBaseButton"]:hover { color: var(--accent-text) !important; }
+
+/* segmented tabs (st.pills) */
+.st-key-jobs_tab_wrap [data-testid="stButtonGroup"] > div, .st-key-co_status_wrap [data-testid="stButtonGroup"] > div {
+  gap: 2px !important; background: color-mix(in srgb, var(--surface) 60%, var(--hover)); border: 1px solid var(--border); padding: 4px; border-radius: 12px; display: inline-flex !important; flex-wrap: wrap;
+}
+.st-key-jobs_tab_wrap button[data-variant="pills"], .st-key-co_status_wrap button[data-variant="pills"],
+.st-key-jobs_tab_wrap [data-testid^="stBaseButton-pills"], .st-key-co_status_wrap [data-testid^="stBaseButton-pills"] {
+  border: 1px solid transparent !important; border-radius: 9px !important; background: transparent !important; color: var(--muted) !important; min-height: 32px !important; padding: 0 13px !important;
+}
+.st-key-jobs_tab_wrap button[data-variant="pills"]:hover, .st-key-co_status_wrap button[data-variant="pills"]:hover { color: var(--text) !important; }
+.st-key-jobs_tab_wrap button[data-variant="pills"][aria-checked="true"], .st-key-co_status_wrap button[data-variant="pills"][aria-checked="true"],
+.st-key-jobs_tab_wrap [data-testid="stBaseButton-pillsActive"], .st-key-co_status_wrap [data-testid="stBaseButton-pillsActive"] {
+  background: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; box-shadow: var(--hi), var(--shadow) !important;
+}
+.st-key-jobs_tab_wrap button[data-variant="pills"] p, .st-key-co_status_wrap button[data-variant="pills"] p { color: inherit !important; font-size: 13.5px !important; }
 
 /* ── detail views ── */
-.detail-head { display: flex; gap: 16px; align-items: flex-start; }
-.detail-title { font-size: 26px; line-height: 34px; font-weight: 650; letter-spacing: -0.02em; margin: 0; color: var(--text); overflow-wrap: anywhere; }
-.kv { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 10px 16px; font-size: 14px; line-height: 20px; margin: 12px 0 0 !important; padding: 0 !important; }
-.kv dt { color: var(--muted); margin: 0 !important; padding: 0 !important; } .kv dd { margin: 0 !important; padding: 0 !important; color: var(--text); min-width: 0; overflow-wrap: anywhere; }
-.note { font-size: 14px; line-height: 20px; color: var(--muted); margin: 0; }
-.why { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 20px; color: var(--text); }
-.why .ms { color: var(--green); margin-top: 1px; }
-.quote { margin-top: 10px; padding: 10px 12px; border-left: 3px solid var(--border-strong); background: var(--surface-2); border-radius: 0 8px 8px 0; font-size: 13px; line-height: 18px; color: var(--text-2); }
+.st-key-job_hero, .st-key-co_hero { position: relative; overflow: hidden; padding: 26px 28px !important; gap: 20px !important;
+  background: radial-gradient(480px 240px at 100% 0%, var(--glow-1), transparent 70%), var(--surface) !important; }
+.detail-head { display: flex; gap: 18px; align-items: flex-start; }
+.detail-title { font-size: 28px; line-height: 35px; font-weight: 800; letter-spacing: -0.03em; margin: 4px 0 0; color: var(--text); overflow-wrap: anywhere; }
+.detail-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+.kv { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px 18px; font-size: 14px; line-height: 20px; margin: 14px 0 0 !important; padding: 0 !important; }
+.kv dt { color: var(--muted); margin: 0 !important; padding: 0 !important; } .kv dd { margin: 0 !important; padding: 0 !important; color: var(--text); min-width: 0; overflow-wrap: anywhere; font-weight: 500; }
+.note { font-size: 14px; line-height: 21px; color: var(--muted); margin: 0; }
+.why { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; line-height: 22px; color: var(--text); font-weight: 500; margin-top: 12px; }
+.why > .ms { color: var(--green); margin-top: 1px; }
+.quote { margin-top: 10px; padding: 10px 12px; border-left: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); background: var(--surface-2); border-radius: 0 10px 10px 0; font-size: 13px; line-height: 19px; color: var(--text-2); font-weight: 400; }
+.checks-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.checks-score { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--green); }
+.meter { display: grid; grid-template-columns: repeat(var(--n, 8), 1fr); gap: 4px; margin-top: 14px; }
+.meter span { height: 6px; border-radius: 6px; background: var(--green); opacity: .85; }
+.meter span.off { background: var(--red); }
+.checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 16px 0 0 !important; padding: 0 !important; list-style: none; }
+.checks li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); font-size: 13.5px; line-height: 19px; color: var(--text-2); }
+.checks li .ms { font-size: 18px; color: var(--green); }
+.checks li.off .ms { color: var(--red); }
 .st-key-job_cols > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-job_cols > [data-testid="stHorizontalBlock"],
-.st-key-co_cols > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-co_cols > [data-testid="stHorizontalBlock"] { gap: 24px !important; align-items: flex-start !important; }
+.st-key-co_cols > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-co_cols > [data-testid="stHorizontalBlock"] { gap: 22px !important; align-items: flex-start !important; }
 .st-key-job_actions > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-job_actions > [data-testid="stHorizontalBlock"],
 .st-key-co_actions > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-co_actions > [data-testid="stHorizontalBlock"] { gap: 8px !important; flex-wrap: wrap !important; }
 .st-key-job_actions [data-testid="stColumn"], .st-key-co_actions [data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
-.st-key-job_main, .st-key-job_side, .st-key-co_side { gap: 20px !important; }
-.divider { border-top: 1px solid var(--border); margin: 0; }
-[data-testid="stExpander"] details { border: 1px solid var(--border) !important; border-radius: 10px !important; background: var(--surface) !important; }
+[data-testid="stExpander"] details { border: 1px solid var(--border) !important; border-radius: var(--r) !important; background: var(--surface-2) !important; }
 [data-testid="stExpander"] summary p { font-size: 14px !important; font-weight: 600 !important; color: var(--text) !important; }
 [data-testid="stExpander"] summary:hover { color: var(--accent-text) !important; }
 
-/* ── companies list ── */
-.st-key-company_list { padding: 0 !important; gap: 0 !important; overflow: hidden; }
-[class*="st-key-cr_"] { padding: 14px 20px !important; transition: background .15s; }
-[class*="st-key-cr_"] + [class*="st-key-cr_"] { border-top: 1px solid var(--border); }
-[class*="st-key-cr_"]:hover { background: var(--surface-2); }
+/* ── companies ── */
+.st-key-company_list { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px !important; }
+.st-key-company_list > [data-testid="stElementContainer"]:first-child { display: none; }   /* table header: cards carry their own labels */
+[class*="st-key-cr_"] { padding: 18px !important; gap: 0 !important; height: 100%;
+  transition: transform var(--normal) var(--ease), box-shadow var(--normal) var(--ease), border-color var(--normal) var(--ease); }
+[class*="st-key-cr_"]:hover, [class*="st-key-cr_"]:focus-within { transform: translateY(-2px); box-shadow: var(--hi), var(--shadow-lg) !important; border-color: color-mix(in srgb, var(--accent) 30%, var(--border)) !important; }
+[class*="st-key-cr_"] > [data-testid="stLayoutWrapper"], [class*="st-key-cr_"] > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] { height: 100%; }
 [class*="st-key-cr_"] > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"],
-[class*="st-key-cr_"] > [data-testid="stHorizontalBlock"] { gap: 16px !important; align-items: center !important; flex-wrap: nowrap !important; }
-[class*="st-key-cr_"] [data-testid="stColumn"] { width: auto !important; min-width: 0 !important; flex: 0 0 auto !important; }
+[class*="st-key-cr_"] > [data-testid="stHorizontalBlock"] { gap: 14px !important; flex-direction: column !important; align-items: stretch !important; flex-wrap: nowrap !important; }
+[class*="st-key-cr_"] [data-testid="stColumn"] { width: 100% !important; min-width: 0 !important; flex: 0 0 auto !important; }
 [class*="st-key-cr_"] [data-testid="stColumn"]:first-child { flex: 1 1 auto !important; }
-.co-row { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 110px 90px 100px; gap: 16px; align-items: center; min-width: 0; }
+[class*="st-key-cr_"] [data-testid="stColumn"]:last-child [data-testid^="stBaseButton"] { width: 100%; }
+.co-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name status" "stats stats" "site site"; gap: 14px 12px; align-items: start; min-width: 0; }
+.co-row > :nth-child(1) { grid-area: name; } .co-row > :nth-child(2) { grid-area: site; } .co-row > :nth-child(3) { grid-area: status; }
+.co-stats { grid-area: stats; display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface-2); }
+.co-stats > div { padding: 10px 12px; min-width: 0; } .co-stats > div + div { border-left: 1px solid var(--border); }
+.co-stats .k { font-family: var(--mono) !important; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 2px; }
 .co-name { display: flex; gap: 12px; align-items: center; min-width: 0; }
-.co-name .t { font-size: 15px; line-height: 20px; font-weight: 600; color: var(--text); display: flex; gap: 8px; align-items: center; }
-.co-name .h { font-size: 13px; line-height: 18px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.co-cell { font-size: 14px; color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.co-cell .l { display: none; }
-.list-head { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 110px 90px 100px 88px; gap: 16px; padding: 10px 20px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--border); background: var(--surface-2); }
-.tag { font-size: 12px; line-height: 18px; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 0 6px; font-weight: 500; }
+.co-name .t { font-size: 16px; line-height: 22px; font-weight: 700; color: var(--text); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; letter-spacing: -0.015em; }
+.co-name .h { font-size: 12.5px; line-height: 18px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.co-cell { font-size: 14px; color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
+.co-cell .ms { font-size: 16px; color: var(--muted); }
+.co-cell .l { color: var(--muted); font-weight: 500; }
+.co-cell.site { font-size: 13px; font-weight: 500; }
+.list-head { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 110px 90px 100px 88px; gap: 16px; padding: 10px 20px; font-size: 13px; color: var(--muted); }
+.st-key-co_toolbar > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-co_toolbar > [data-testid="stHorizontalBlock"] { gap: 12px !important; flex-wrap: wrap !important; }
+.st-key-co_toolbar [data-testid="stColumn"]:first-child { flex: 1 1 280px !important; min-width: 0 !important; }
+.st-key-co_toolbar [data-testid="stColumn"]:last-child { flex: 2 1 320px !important; min-width: 0 !important; }
+.st-key-co_q :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]) { min-height: 44px !important; border-radius: var(--r) !important; }
+.add-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.add-steps div { padding: 12px 14px; border-radius: var(--r); background: var(--surface-2); border: 1px solid var(--border); font-size: 13px; line-height: 19px; color: var(--text-2); }
+.add-steps b { display: flex; align-items: center; gap: 6px; color: var(--text); font-size: 13.5px; margin-bottom: 2px; }
+.add-steps .ms { color: var(--accent-text); }
 
-/* ── monitoring table ── */
-.st-key-mon_table { padding: 0 !important; overflow: hidden; }
-.mon { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
-.mon th { text-align: left; font-weight: 500; color: var(--muted); font-size: 13px; padding: 10px 16px; background: var(--surface-2); border-bottom: 1px solid var(--border); white-space: nowrap; }
-.mon td { padding: 14px 16px; border-bottom: 1px solid var(--border); color: var(--text-2); vertical-align: top; }
-.mon tr:last-child td { border-bottom: none; }
-.mon td.c { color: var(--text); font-weight: 600; }
-.mon td .sub { color: var(--muted); font-size: 13px; font-weight: 400; margin-top: 2px; overflow-wrap: anywhere; }
-.mon td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* ── monitoring: one health card per portal (semantic table, card layout) ── */
+.st-key-mon_table { background: transparent !important; border: none !important; box-shadow: none !important; }
+.mon { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; line-height: 20px; }
+.mon thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.mon tbody { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+.mon tbody tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 12px; padding: 18px; position: relative; overflow: hidden;
+  transition: transform var(--normal) var(--ease), box-shadow var(--normal) var(--ease), border-color var(--normal) var(--ease); }
+.mon tbody tr::before { content: ""; position: absolute; inset: 0 0 auto; height: 3px; background: var(--green); opacity: .75; }
+.mon tbody tr:has(.pill.failing) { border-color: color-mix(in srgb, var(--red) 40%, var(--border)) !important; }
+.mon tbody tr:has(.pill.failing)::before { background: var(--red); }
+.mon tbody tr:has(.pill.delayed)::before { background: var(--amber); }
+.mon tbody tr:has(.pill.pending)::before, .mon tbody tr:has(.pill.checking)::before { background: var(--gray); }
+.mon tbody tr:hover { transform: translateY(-2px); box-shadow: var(--hi), var(--shadow-lg) !important; }
+.mon td { display: block; padding: 0; border: none; color: var(--text); min-width: 0; font-weight: 600; }
+.mon td.c { grid-column: 1 / 3; font-weight: 700; font-size: 15.5px; letter-spacing: -0.015em; }
+.mon td[data-l="Status"] { grid-column: 3; justify-self: end; }
+.mon td[data-l="Notes"] { grid-column: 1 / -1; font-weight: 400; color: var(--text-2); font-size: 13px; line-height: 19px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); }
+.mon td[data-l]:not([data-l="Status"])::before { content: attr(data-l); display: block; font-family: var(--mono); font-size: 10px; line-height: 14px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin-bottom: 3px; }
+.mon td[data-l="Scraper"] { font-weight: 500; font-size: 13px; color: var(--text-2); }
+.mon-co { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.mon td .sub { color: var(--muted); font-size: 12.5px; font-weight: 400; margin-top: 1px; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mon td.empty { display: none; }
+.mon td.num { font-variant-numeric: tabular-nums; }
+.legend { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: var(--r); background: color-mix(in srgb, var(--surface) 70%, transparent); border: 1px dashed var(--border-strong); }
+.legend > .ms { color: var(--accent-text); margin-top: 1px; }
+
+/* ── email: notification centre ── */
+.mail-status { display: flex; gap: 16px; align-items: center; }
+.mail-status .big { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; }
+.mail-status .big.on { color: var(--green); background: var(--green-soft); } .mail-status .big.off { color: var(--red); background: var(--red-soft); }
+.mail-status .big.on::after { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 2px solid var(--green); animation: jt-ring 2.8s ease-out infinite; }
+.mail-status h2 { font-size: 20px; line-height: 27px; font-weight: 800; letter-spacing: -0.02em; }
+.mail-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 4px 0 0 !important; padding: 0 !important; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface-2); overflow: hidden; }
+.mail-facts > div { padding: 12px 16px; min-width: 0; } .mail-facts > div + div { border-left: 1px solid var(--border); }
+.mail-facts dt { font-family: var(--mono) !important; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 3px !important; }
+.mail-facts dd { margin: 0 !important; font-size: 14px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+.timeline { list-style: none; margin: 4px 0 0 !important; padding: 0 !important; display: flex; flex-direction: column; gap: 0; }
+.step { margin: 0 !important; }
+.step { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 14px; position: relative; padding-bottom: 16px; }
+.step:last-child { padding-bottom: 0; }
+.step::before { content: ""; position: absolute; left: 17px; top: 36px; bottom: 0; width: 2px; background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 35%, transparent), var(--border)); }
+.step:last-child::before { display: none; }
+.step .node { width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--accent-text); background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent); }
+.step b { display: block; font-size: 14px; line-height: 20px; color: var(--text); font-weight: 700; margin-top: 1px; }
+.step p { margin: 2px 0 0; font-size: 13.5px; line-height: 20px; color: var(--muted); }
+
+/* ── settings ── */
+[class*="st-key-set_"] { position: relative; }
+.set-head { display: flex; gap: 14px; align-items: flex-start; }
+.set-head .ic { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--accent-text); background: var(--accent-soft); }
+.set-head .ic.red { color: var(--red); background: var(--red-soft); }
+.st-key-set_maint { border-color: color-mix(in srgb, var(--red) 28%, var(--border)) !important; }
+.st-key-set_maint::before { content: ""; position: absolute; inset: 0 0 auto; height: 3px; border-radius: var(--r-lg) var(--r-lg) 0 0; background: linear-gradient(90deg, var(--red), transparent 70%); opacity: .7; }
 
 /* ── widgets ── */
-.stTextInput label p, .stSelectbox label p, .stCheckbox label p { font-size: 13px !important; line-height: 18px !important; font-weight: 500 !important; color: var(--text-2) !important; }
+.stTextInput label p, .stSelectbox label p, .stCheckbox label p { font-size: 13px !important; line-height: 18px !important; font-weight: 600 !important; color: var(--text-2) !important; }
 .stTextInput [data-baseweb="input"], [data-testid="stTextInputRootElement"], [data-baseweb="select"] > div, .stSelectbox [role="group"] {
-  background: var(--surface) !important; border: 1px solid var(--border-strong) !important; border-radius: 8px !important;
-  min-height: 38px; transition: border-color .15s, box-shadow .15s;
+  background: var(--surface) !important; border: 1px solid var(--border-strong) !important; border-radius: 10px !important;
+  min-height: 40px; transition: border-color var(--fast), box-shadow var(--normal) var(--ease), background var(--fast);
 }
 .stTextInput [data-baseweb="input"] *, [data-testid="stTextInputRootElement"] * { background-color: transparent !important; }
-.stTextInput [data-baseweb="input"]:hover, [data-testid="stTextInputRootElement"]:hover, [data-baseweb="select"] > div:hover, .stSelectbox [role="group"]:hover { border-color: var(--muted) !important; }
+.stTextInput [data-baseweb="input"]:hover, [data-testid="stTextInputRootElement"]:hover, [data-baseweb="select"] > div:hover, .stSelectbox [role="group"]:hover { border-color: color-mix(in srgb, var(--accent) 35%, var(--border-strong)) !important; }
 .stTextInput [data-baseweb="input"]:focus-within, [data-testid="stTextInputRootElement"]:focus-within, [data-baseweb="select"] > div:focus-within, .stSelectbox [role="group"]:focus-within {
-  border-color: var(--accent) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent) !important;
+  border-color: var(--accent) !important; box-shadow: var(--ring), 0 8px 24px -14px var(--accent) !important; background: var(--surface) !important;
 }
 .stTextInput input { font-size: 14px !important; color: var(--text) !important; -webkit-text-fill-color: var(--text); padding: 8px 12px !important; }
 .stTextInput input::placeholder { color: var(--muted) !important; -webkit-text-fill-color: var(--muted); opacity: 1; }
@@ -290,153 +553,172 @@ _CSS = """
 .stSelectbox svg { fill: var(--muted) !important; color: var(--muted) !important; }
 [data-baseweb="select"] * { font-size: 14px !important; color: var(--text) !important; }
 [data-baseweb="select"] svg { fill: var(--muted) !important; }
-[data-baseweb="popover"] ul, [data-baseweb="popover"] [role="listbox"] { background: var(--surface) !important; }
+[data-baseweb="popover"] ul, [data-baseweb="popover"] [role="listbox"] { background: var(--raised) !important; border-radius: 12px !important; }
+[data-baseweb="popover"] > div { border-radius: 12px !important; box-shadow: var(--shadow-lg) !important; border: 1px solid var(--border) !important; overflow: hidden; }
 [data-baseweb="popover"] li { color: var(--text) !important; font-size: 14px !important; }
-[data-baseweb="popover"] li:hover, [data-baseweb="popover"] li[aria-selected="true"] { background: var(--hover) !important; }
+[data-baseweb="popover"] li:hover, [data-baseweb="popover"] li[aria-selected="true"] { background: var(--accent-soft) !important; }
 [data-testid="InputInstructions"] { display: none !important; }
+/* loading: Streamlit's own placeholders, given a calm shimmer (they vanish when content arrives) */
+[data-testid="stSkeleton"] { border-radius: 12px !important; background: linear-gradient(90deg, var(--hover) 0, color-mix(in srgb, var(--surface) 60%, var(--hover)) 40%, var(--hover) 80%) !important;
+  background-size: 640px 100% !important; animation: jt-shimmer 1.4s linear infinite; }
 
-[data-testid^="stBaseButton"] {
-  border-radius: 8px !important; min-height: 36px !important; padding: 0 14px !important; box-shadow: none !important;
-  transition: background .15s, border-color .15s, color .15s !important;
-}
-[data-testid^="stBaseButton"] [data-testid="stMarkdownContainer"] { display: flex !important; align-items: center; margin: 0 !important; padding: 0 !important; }
-[data-testid^="stBaseButton"] p { margin: 0 !important; font-size: 14px !important; line-height: 20px !important; font-weight: 500 !important; white-space: nowrap; }
-[data-testid="stBaseButton-secondary"] { background: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--border) !important; }
-[data-testid="stBaseButton-secondary"]:hover { background: var(--hover) !important; border-color: var(--border-strong) !important; color: var(--text) !important; }
-[data-testid="stBaseButton-primary"] { background: var(--accent) !important; color: var(--on-accent) !important; border: 1px solid var(--accent) !important; }
-[data-testid="stBaseButton-primary"]:hover { background: var(--accent-hover) !important; border-color: var(--accent-hover) !important; }
-[data-testid^="stBaseButton"]:disabled { opacity: .45 !important; }
-[data-testid="stBaseButton-tertiary"] { color: var(--muted) !important; background: transparent !important; border: none !important; }
-[data-testid="stBaseButton-tertiary"]:hover { color: var(--text) !important; background: var(--hover) !important; }
-.st-key-danger [data-testid^="stBaseButton"], .st-key-danger_confirm [data-testid="stBaseButton-secondary"] { color: var(--red) !important; }
-.st-key-danger_confirm [data-testid="stBaseButton-secondary"] { color: var(--text) !important; }
-.st-key-danger_confirm [data-testid="stBaseButton-primary"] { background: var(--red) !important; border-color: var(--red) !important; color: #fff !important; }
-[class*="st-key-dismiss_"] [data-testid^="stBaseButton"], [class*="st-key-restore_"] [data-testid^="stBaseButton"] { width: 36px !important; padding: 0 !important; }
-
-/* segmented tabs (st.pills) */
-.st-key-jobs_tab_wrap [data-testid="stButtonGroup"] > div, .st-key-co_status_wrap [data-testid="stButtonGroup"] > div {
-  gap: 2px !important; background: var(--hover); padding: 3px; border-radius: 10px; display: inline-flex !important; flex-wrap: wrap;
-}
-.st-key-jobs_tab_wrap button[data-variant="pills"], .st-key-co_status_wrap button[data-variant="pills"],
-.st-key-jobs_tab_wrap [data-testid^="stBaseButton-pills"], .st-key-co_status_wrap [data-testid^="stBaseButton-pills"] {
-  border: none !important; border-radius: 8px !important; background: transparent !important; color: var(--muted) !important; min-height: 32px !important; padding: 0 12px !important;
-}
-.st-key-jobs_tab_wrap button[data-variant="pills"][aria-checked="true"], .st-key-co_status_wrap button[data-variant="pills"][aria-checked="true"],
-.st-key-jobs_tab_wrap [data-testid="stBaseButton-pillsActive"], .st-key-co_status_wrap [data-testid="stBaseButton-pillsActive"] {
-  background: var(--surface) !important; color: var(--text) !important; box-shadow: 0 1px 2px rgba(15,23,42,.08) !important;
-}
-.st-key-jobs_tab_wrap button[data-variant="pills"] p, .st-key-co_status_wrap button[data-variant="pills"] p { color: inherit !important; font-size: 14px !important; }
-
-/* ── sidebar ── */
+/* ── sidebar: the product's spine ── */
 section[data-testid="stSidebar"] {
-  width: var(--sidebar-w) !important; min-width: var(--sidebar-w) !important; max-width: var(--sidebar-w) !important;
-  background: var(--surface) !important; border-right: 1px solid var(--border) !important; transform: none !important;
+  width: var(--sidebar-w) !important; min-width: var(--sidebar-w) !important; max-width: var(--sidebar-w) !important; transform: none !important;
+  background: radial-gradient(260px 300px at 20% 0%, var(--glow-1), transparent 70%), radial-gradient(240px 260px at 100% 100%, var(--glow-2), transparent 70%), var(--surface) !important;
+  border-right: 1px solid var(--border) !important;
 }
-section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { background: var(--surface) !important; }
+section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { background: transparent !important; }
 [data-testid="stSidebarContent"] { padding: 0 !important; }
-[data-testid="stSidebarUserContent"] { padding: 20px 12px 16px !important; margin: 0 !important; width: 100% !important; min-height: 100vh; display: flex; flex-direction: column; }
+[data-testid="stSidebarUserContent"] { padding: 22px 14px 16px !important; margin: 0 !important; width: 100% !important; min-height: 100vh; display: flex; flex-direction: column; }
 [data-testid="stSidebarUserContent"] > div { flex: 1 1 auto; display: flex; flex-direction: column; }
 [data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] { flex: 1 1 auto; }
 [data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-side_foot_wrap) { margin-top: auto; }
-[data-testid="stSidebarUserContent"] [data-testid="stVerticalBlock"] { gap: 2px !important; }
-.brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 20px; }
-.brand img { width: 32px; height: 32px; border-radius: 9px; display: block; }
-.brand .n { font-size: 15px; line-height: 20px; font-weight: 650; letter-spacing: -0.01em; color: var(--text); }
-.brand .s { font-size: 12px; line-height: 16px; color: var(--muted); }
-.nav-group { font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); padding: 16px 12px 6px; }
-.nav-group.first { padding-top: 4px; }
+[data-testid="stSidebarUserContent"] [data-testid="stVerticalBlock"] { gap: 3px !important; }
+.brand { display: flex; align-items: center; gap: 12px; padding: 0 6px 22px; }
+.brand .mark { position: relative; flex-shrink: 0; }
+.brand img { width: 38px; height: 38px; border-radius: 12px; display: block; box-shadow: 0 8px 20px -8px var(--accent), 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
+.brand .mark::after { content: ""; position: absolute; right: -2px; bottom: -2px; width: 10px; height: 10px; border-radius: 50%; background: var(--green); border: 2px solid var(--surface); }
+.brand .mark.failing::after { background: var(--red); } .brand .mark.delayed::after { background: var(--amber); } .brand .mark.pending::after, .brand .mark.checking::after { background: var(--gray); }
+.brand > div:last-child { min-width: 0; }
+.brand .n { font-size: 15px; line-height: 20px; font-weight: 800; letter-spacing: -0.025em; color: var(--text); white-space: nowrap; }
+.brand .s { font-family: var(--mono) !important; font-size: 9.5px; line-height: 14px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-top: 2px; white-space: nowrap; }
+.nav-group { font-family: var(--mono) !important; font-size: 10.5px; line-height: 16px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); padding: 18px 12px 8px; }
+.nav-group.first { padding-top: 2px; }
 [class*="st-key-nav_"] [data-testid^="stBaseButton"] {
-  width: 100% !important; justify-content: flex-start !important; min-height: 38px !important; padding: 0 12px !important;
-  border-radius: 8px !important; color: var(--text-2) !important; background: transparent !important; border: none !important; gap: 10px;
+  position: relative; width: 100% !important; justify-content: flex-start !important; min-height: 42px !important; padding: 0 12px !important;
+  border-radius: 11px !important; color: var(--text-2) !important; background: transparent !important; border: 1px solid transparent !important; gap: 10px;
 }
-[class*="st-key-nav_"] [data-testid^="stBaseButton"] > div { justify-content: flex-start !important; gap: 10px !important; }
-[class*="st-key-nav_"] [data-testid^="stBaseButton"]:hover { background: var(--hover) !important; color: var(--text) !important; }
-[class*="st-key-nav_"] [data-testid="stIconMaterial"] { font-size: 20px !important; color: var(--muted); }
-[class*="st-key-nav_"] p { font-size: 14px !important; font-weight: 500 !important; }
+[class*="st-key-nav_"] [data-testid^="stBaseButton"] > div { justify-content: flex-start !important; gap: 12px !important; }
+[class*="st-key-nav_"] [data-testid^="stBaseButton"]:hover { background: var(--hover) !important; color: var(--text) !important; transform: none; }
+[class*="st-key-nav_"] [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] { transform: translateX(2px); color: var(--accent-text); }
+[class*="st-key-nav_"] [data-testid="stIconMaterial"] { font-size: 21px !important; color: var(--muted); transition: transform var(--normal) var(--ease), color var(--fast); }
+[class*="st-key-nav_"] p { font-size: 14px !important; font-weight: 600 !important; }
 /* the ✕ / ↺ buttons on job rows are icon-only; their label is for screen readers */
 [class*="st-key-dismiss_"] [data-testid="stMarkdownContainer"], [class*="st-key-restore_"] [data-testid="stMarkdownContainer"],
 [class*="st-key-dismiss_"] [data-testid="stMarkdownContainer"] p, [class*="st-key-restore_"] [data-testid="stMarkdownContainer"] p { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; clip-path: inset(50%) !important; white-space: nowrap !important; margin: -1px !important; padding: 0 !important; border: 0 !important; }
-.side-foot { margin-top: auto; padding: 14px 12px 4px; border-top: 1px solid var(--border); font-size: 13px; line-height: 18px; color: var(--muted); }
-.side-foot .st { display: flex; align-items: center; gap: 8px; color: var(--text); font-weight: 500; }
-.side-foot a { color: var(--muted) !important; }
+.side-foot { margin-top: auto; padding: 14px; border-radius: 14px; border: 1px solid var(--border); background: color-mix(in srgb, var(--surface-2) 80%, transparent); font-size: 12.5px; line-height: 18px; color: var(--muted); box-shadow: var(--hi); }
+.side-foot .st { display: flex; align-items: center; gap: 9px; color: var(--text); font-weight: 700; font-size: 13px; }
+.side-foot .meta { margin-top: 8px; display: flex; flex-direction: column; gap: 2px; }
+.side-foot a { color: var(--muted) !important; display: inline-flex; align-items: center; gap: 4px; }
 .side-foot a:hover { color: var(--accent-text) !important; }
-.st-key-side_foot_wrap { margin-top: auto; }
+.side-foot .src { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.st-key-side_foot_wrap { margin-top: auto; padding-top: 16px; }
 
 /* mobile top nav (phones only) */
 .st-key-mnav { display: none !important; }
+
+/* ── how-it-works strip (Home) ── */
+.how { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.how > div { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: var(--r-lg); border: 1px dashed var(--border-strong); background: color-mix(in srgb, var(--surface) 55%, transparent); }
+.how .ic { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--accent-text); background: var(--accent-soft); }
+.how b { display: block; font-size: 14px; line-height: 20px; color: var(--text); }
+.how p { margin: 2px 0 0; font-size: 13px; line-height: 19px; color: var(--muted); }
 
 /* ── footer ── */
 .app-foot { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 8px; }
 .app-foot a { color: var(--muted) !important; } .app-foot a:hover { color: var(--accent-text) !important; }
 
-/* ── empty ── */
-.empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 24px 8px; }
-.empty .ic { width: 48px; height: 48px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-text); display: flex; align-items: center; justify-content: center; margin-bottom: 4px; }
-.empty h3 { font-size: 16px; line-height: 24px; font-weight: 600; }
-.empty p { font-size: 14px; line-height: 20px; color: var(--muted); max-width: 460px; margin: 0; }
+/* ── empty states ── */
+.st-key-empty { background: radial-gradient(360px 180px at 50% 0%, var(--glow-1), transparent 70%), var(--surface) !important; }
+.empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 26px 8px 18px; }
+.empty .ic { width: 56px; height: 56px; border-radius: 18px; background: var(--accent-soft); color: var(--accent-text); display: flex; align-items: center; justify-content: center; margin-bottom: 8px;
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 7%, transparent), 0 0 0 16px color-mix(in srgb, var(--accent) 4%, transparent); }
+.empty h3 { font-size: 17px; line-height: 24px; font-weight: 700; }
+.empty p { font-size: 14px; line-height: 21px; color: var(--muted); max-width: 460px; margin: 0; }
 .st-key-empty_actions > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-empty_actions > [data-testid="stHorizontalBlock"] { justify-content: center !important; gap: 8px !important; }
 .st-key-empty_actions [data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
+.st-key-empty_actions { align-items: center !important; }
+.st-key-empty_actions > [data-testid="stElementContainer"] { width: auto !important; }
+
+/* ── toast ── */
+.jt-toast { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; align-items: center; gap: 12px; padding: 12px 16px 12px 14px; border-radius: 14px;
+  background: var(--raised); border: 1px solid var(--border); box-shadow: var(--shadow-lg); max-width: 400px; overflow: hidden; }
+.jt-toast::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--tone); }
+.jt-toast .ic { display: flex; color: var(--tone); }
+.jt-toast .msg { font-size: 14px; line-height: 20px; color: var(--text); font-weight: 500; }
 
 /* ── responsive ── */
 @media (max-width: 1279px) {
-  [data-testid="stMainBlockContainer"], .block-container { padding: 28px 28px 40px !important; }
+  [data-testid="stMainBlockContainer"], .block-container { padding: 30px 30px 44px !important; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* company page: the job list gets the full width, details follow */
+  .st-key-co_cols > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-co_cols > [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; }
+  .st-key-co_cols [data-testid="stColumn"]:nth-child(n) { flex: 1 1 100% !important; width: 100% !important; }
 }
 @media (max-width: 1100px) {
-  .co-row { grid-template-columns: minmax(0, 1fr) 110px 90px; } .list-head { grid-template-columns: minmax(0, 1fr) 110px 90px 88px; }
-  .co-row > :nth-child(2), .co-row > :nth-child(5), .list-head > :nth-child(2), .list-head > :nth-child(5) { display: none; }
+  .hero { grid-template-columns: minmax(0, 1fr) 176px; }
+  .hero .page-title { font-size: 34px; line-height: 41px; }
 }
 /* tablet: icon rail */
 @media (max-width: 1023px) {
-  :root { --sidebar-w: 72px; }
-  .brand { justify-content: center; padding: 0 0 16px; } .brand > div { display: none; }
-  .nav-group { font-size: 0; padding: 10px 0 4px; border-top: 1px solid var(--border); margin: 8px 8px 0; }
+  :root { --sidebar-w: 76px; }
+  .brand { justify-content: center; padding: 0 0 16px; } .brand > div:not(.mark) { display: none; }
+  .nav-group { font-size: 0; padding: 10px 0 4px; border-top: 1px solid var(--border); margin: 8px 10px 0; }
   .nav-group.first { display: none; }
-  [class*="st-key-nav_"] [data-testid^="stBaseButton"] { justify-content: center !important; padding: 0 !important; }
+  [class*="st-key-nav_"] [data-testid^="stBaseButton"] { justify-content: center !important; padding: 0 !important; min-height: 46px !important; }
   [class*="st-key-nav_"] [data-testid^="stBaseButton"] > div { justify-content: center !important; }
   /* icon rail: labels are hidden visually but kept for screen readers */
   [class*="st-key-nav_"] p { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; clip-path: inset(50%) !important; white-space: nowrap !important; margin: -1px !important; padding: 0 !important; border: 0 !important; }
-  [data-testid="stSidebarUserContent"] { padding: 16px 8px !important; }
-  .side-foot { padding: 12px 0 0; text-align: center; } .side-foot .txt { display: none; } .side-foot .st { justify-content: center; }
-  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .stat:nth-child(3) { border-left: none; } .stat:nth-child(n+3) { border-top: 1px solid var(--border); }
-  .st-key-job_cols > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-job_cols > [data-testid="stHorizontalBlock"],
-  .st-key-co_cols > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-co_cols > [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; }
-  .st-key-job_cols [data-testid="stColumn"]:nth-child(n), .st-key-co_cols [data-testid="stColumn"]:nth-child(n) { flex: 1 1 100% !important; width: 100% !important; }
+  [data-testid="stSidebarUserContent"] { padding: 18px 10px !important; }
+  .side-foot { padding: 12px 0; text-align: center; border: none; background: none; box-shadow: none; } .side-foot .txt, .side-foot .meta, .side-foot .src { display: none; } .side-foot .st { justify-content: center; }
+  .st-key-job_cols > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-job_cols > [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; }
+  .st-key-job_cols [data-testid="stColumn"]:nth-child(n) { flex: 1 1 100% !important; width: 100% !important; }
+  .how { grid-template-columns: minmax(0, 1fr); }
+  .mail-facts { grid-template-columns: minmax(0, 1fr); } .mail-facts > div + div { border-left: none; border-top: 1px solid var(--border); }
 }
 /* phone: sidebar hidden, top nav bar instead */
 @media (max-width: 767px) {
   section[data-testid="stSidebar"] { display: none !important; }
-  [data-testid="stMainBlockContainer"], .block-container { padding: 0 16px 32px !important; }
-  [data-testid="stMainBlockContainer"] > div > [data-testid="stVerticalBlock"] { gap: 20px; }
+  [data-testid="stMainBlockContainer"], .block-container { padding: 0 16px 36px !important; }
+  [data-testid="stMainBlockContainer"] > div > [data-testid="stVerticalBlock"] { gap: 18px; }
   .st-key-mnav {
-    display: flex !important; position: sticky; top: 0; z-index: 30; margin: 0 -16px; padding: 6px 4px !important;
-    background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border);
+    display: flex !important; position: sticky; top: 0; z-index: 30; margin: 0 -16px; padding: 6px 4px !important; width: calc(100% + 32px) !important; max-width: none !important;
+    background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--border);
   }
   /* all six destinations visible at once: equal columns, icon above a short label */
   .st-key-mnav > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-mnav > [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 0 !important; }
   .st-key-mnav [data-testid="stColumn"] { flex: 1 1 0 !important; width: auto !important; min-width: 0 !important; }
-  .st-key-mnav [data-testid^="stBaseButton"] { width: 100% !important; border: none !important; background: transparent !important; min-height: 48px !important; padding: 4px 0 !important; color: var(--text-2) !important; }
-  .st-key-mnav [data-testid^="stBaseButton"] > div, .st-key-mnav [data-testid^="stBaseButton"] > div > span { flex-direction: column !important; align-items: center !important; gap: 2px !important; min-width: 0; max-width: 100%; }
-  .st-key-mnav [data-testid="stIconMaterial"] { font-size: 20px !important; margin: 0 !important; }
-  .st-key-mnav p { font-size: 10px !important; line-height: 13px !important; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 2px; }
-  .page-title, .detail-title { font-size: 22px; line-height: 30px; }
-  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .stat { padding: 14px 16px; } .stat .v { font-size: 20px; line-height: 28px; }
+  .st-key-mnav [data-testid^="stBaseButton"] { width: 100% !important; border: none !important; background: transparent !important; box-shadow: none !important; min-height: 52px !important; padding: 4px 0 !important; color: var(--text-2) !important; }
+  .st-key-mnav [data-testid^="stBaseButton"]:hover { transform: none; }
+  .st-key-mnav [data-testid^="stBaseButton"] > div, .st-key-mnav [data-testid^="stBaseButton"] > div > span { flex-direction: column !important; align-items: center !important; gap: 3px !important; min-width: 0; max-width: 100%; }
+  .st-key-mnav [data-testid="stIconMaterial"] { font-size: 20px !important; margin: 0 !important; padding: 2px 12px; border-radius: 999px; transition: background var(--normal) var(--ease), color var(--fast); }
+  .st-key-mnav p { font-size: 10.5px !important; line-height: 13px !important; font-weight: 600 !important; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 1px; }
+  .page-title, .detail-title { font-size: 24px; line-height: 31px; }
+  .st-key-hero { padding: 22px 18px 20px !important; }
+  .hero { grid-template-columns: minmax(0, 1fr) 76px; gap: 14px; align-items: start; }
+  .hero .page-title { font-size: 27px; line-height: 33px; }
+  .hero-sub { font-size: 14.5px; line-height: 22px; }
+  .radar-cap { display: none; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .stat { padding: 14px 14px 13px; } .stat .ic { width: 32px; height: 32px; margin-bottom: 10px; } .stat .v { font-size: 24px; line-height: 30px; } .stat .v.sm { font-size: 17px; line-height: 24px; }
   .stat .v, .stat .n { white-space: normal; }   /* wrap instead of cutting off key facts */
-  [class*="st-key-jr_"] { padding: 14px 16px !important; }
-  [class*="st-key-jr_"] > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], [class*="st-key-jr_"] > [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 10px !important; }
-  [class*="st-key-jr_"] [data-testid="stColumn"]:first-child { flex: 1 1 100% !important; }
-  [class*="st-key-jr_"] [data-testid="stColumn"]:last-child { margin-left: 54px; }
-  .co-row { grid-template-columns: minmax(0, 1fr) auto; }
-  .co-row > :nth-child(2), .co-row > :nth-child(4), .co-row > :nth-child(5), .list-head { display: none; }
-  [class*="st-key-cr_"] { padding: 12px 16px !important; }
-  .kv { grid-template-columns: minmax(0, 1fr); gap: 2px; } .kv dd { margin-bottom: 10px; }
-  .mon thead { display: none; }
-  .mon, .mon tbody, .mon tr, .mon td { display: block; width: 100%; }
-  .mon tr { padding: 12px 16px; border-bottom: 1px solid var(--border); }
-  .mon td { border: none; padding: 2px 0; }
-  .mon td[data-l]::before { content: attr(data-l) ": "; color: var(--muted); }
-  .st-key-add_form, .st-key-email_form, .st-key-test_panel, [class*="st-key-set_"], .st-key-job_main, .st-key-job_side, .st-key-co_side, .st-key-empty { padding: 16px !important; }
+  [class*="st-key-jr_"] { padding: 16px !important; }
+  .detail-head { gap: 14px; } .logo.lg { width: 52px; height: 52px; font-size: 21px; border-radius: 15px; }
+  .st-key-job_hero, .st-key-co_hero { padding: 20px 18px !important; }
+  .st-key-company_list { grid-template-columns: minmax(0, 1fr); }
+  .mon tbody { grid-template-columns: minmax(0, 1fr); }
+  .mon tbody tr { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 16px; }
+  .mon td.c { grid-column: 1 / -1; } .mon td[data-l="Status"] { grid-column: 1 / -1; justify-self: start; grid-row: 2; }
+  .mon td[data-l="Scraper"] { grid-column: 1 / -1; }
+  .kv { grid-template-columns: minmax(0, 1fr); gap: 2px; } .kv dd { margin-bottom: 10px !important; }
+  .checks { grid-template-columns: minmax(0, 1fr); }
+  .add-steps { grid-template-columns: minmax(0, 1fr); }
+  .st-key-add_form, .st-key-email_form, .st-key-test_panel, [class*="st-key-set_"], .st-key-job_main, .st-key-job_side, .st-key-co_side, .st-key-empty, .st-key-mail_status { padding: 18px 16px !important; }
+  .jt-toast { left: 16px; right: 16px; bottom: 16px; max-width: none; }
+}
+@media (max-width: 360px) {
+  /* size each destination to its label so "Companies" is never cut off */
+  .st-key-mnav [data-testid="stColumn"]:nth-child(n) { flex: 1 1 auto !important; }
+  .st-key-mnav p { font-size: 10px !important; letter-spacing: -0.02em; text-overflow: clip; }
+  .st-key-mnav [data-testid="stIconMaterial"] { padding: 2px 8px; }
+  .hero { grid-template-columns: minmax(0, 1fr); } .radar { display: none; }
+  .stat .v { font-size: 21px; line-height: 27px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+  .radar .sweep { animation: none !important; transform: rotate(40deg); }
+  .radar .blip { animation: none !important; opacity: .8; }
 }
 """
 
@@ -515,6 +797,21 @@ def _ms(name: str, size: str = "") -> str:
 def _initial(name: str) -> str:
     name = (name or "").strip()
     return escape(name[:1].upper()) if name[:1].isalnum() else "•"
+
+
+# company tints: well-separated hues, assigned in tracking order so every
+# tracked company gets its own; anything else falls back to a name hash
+_HUES = (250, 175, 25, 320, 205, 140, 285, 0, 55, 230)
+
+
+def _avatar(name: str, size: str = "") -> str:
+    """Company identity: the initial on a tint, so companies are told apart
+    at a glance (no logos are fetched or invented)."""
+    key = (name or "").strip().lower()
+    order = [(c.get("name") or "").strip().lower() for c in companies]
+    idx = order.index(key) if key in order else int(hashlib.sha1(key.encode("utf-8")).hexdigest()[:4], 16)
+    hue = _HUES[idx % len(_HUES)]
+    return f'<div class="logo{" " + size if size else ""}" style="--h:{hue}" aria-hidden="true">{_initial(name)}</div>'
 
 
 def _plural(n: int, word: str, many: str | None = None) -> str:
@@ -769,16 +1066,25 @@ def job_locations(j: dict) -> list[str]:
 # SIDEBAR
 # ═══════════════════════════════════════════════════════════════════════════════
 current = st.session_state.page
-st.html(f"<style>.st-key-nav_{current} [data-testid^='stBaseButton'], .st-key-nav_{current} [data-testid^='stBaseButton']:hover, "
-        f".st-key-mob_{current} [data-testid^='stBaseButton'], .st-key-mob_{current} [data-testid^='stBaseButton']:hover"
-        "{background: var(--accent-soft) !important; color: var(--accent-text) !important;}"
-        f".st-key-nav_{current} [data-testid='stIconMaterial'], .st-key-mob_{current} [data-testid='stIconMaterial']"
-        "{color: var(--accent-text) !important;}"
-        f".st-key-nav_{current} p {{font-weight: 600 !important;}}</style>")
+# the selected destination: a soft accent wash, a glowing indicator bar and
+# an accent icon (sidebar); an accent pill behind the icon (phone bar)
+_nav_on = f".st-key-nav_{current} [data-testid^='stBaseButton']"
+st.html(f"<style>{_nav_on}, {_nav_on}:hover {{"
+        "background: linear-gradient(90deg, var(--accent-soft), color-mix(in srgb, var(--accent-soft) 30%, transparent)) !important;"
+        "color: var(--text) !important; border-color: color-mix(in srgb, var(--accent) 22%, transparent) !important;"
+        "box-shadow: var(--hi), 0 10px 22px -16px var(--accent) !important;}"
+        f"{_nav_on}::before {{content: ''; position: absolute; left: -15px; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0;"
+        "background: linear-gradient(180deg, var(--accent), var(--accent-2)); box-shadow: 0 0 12px var(--accent);}"
+        f"@media (max-width: 1023px) {{ {_nav_on}::before {{ left: -11px; }} }}"
+        f".st-key-nav_{current} [data-testid='stIconMaterial'] {{color: var(--accent-text) !important;}}"
+        f".st-key-nav_{current} p {{font-weight: 700 !important;}}"
+        f".st-key-mob_{current} [data-testid^='stBaseButton'] {{color: var(--accent-text) !important;}}"
+        f".st-key-mob_{current} [data-testid='stIconMaterial'] {{background: var(--accent-soft); color: var(--accent-text) !important;}}"
+        f".st-key-mob_{current} p {{font-weight: 700 !important;}}</style>")
 
 with st.sidebar:
     logo = _logo_data_uri()
-    st.html(f"""<div class="brand">{f'<img src="{logo}" alt="">' if logo else ''}
+    st.html(f"""<div class="brand"><div class="mark {overall[0]}">{f'<img src="{logo}" alt="">' if logo else ''}</div>
       <div><div class="n">Fresher Job Tracker</div><div class="s">Entry-level job radar</div></div></div>""")
     for gi, (group, items) in enumerate(NAV_GROUPS):
         st.html(f'<div class="nav-group{" first" if gi == 0 else ""}">{group}</div>')
@@ -788,10 +1094,10 @@ with st.sidebar:
                       on_click=go, args=(key,))
     with st.container(key="side_foot_wrap"):
         st.html(f"""<div class="side-foot">
-          <div class="st" title="{escape(overall[1], quote=True)}"><span class="dot {overall[0]}"></span><span class="txt">{_plural(len(companies), 'company', 'companies')} monitored</span></div>
-          <div class="txt" style="margin-top:4px;">{escape(overall[1])}</div>
-          <div class="txt num" style="margin-top:2px;">Last scan {_ago(last_scan, NOW)}</div>
-          <div class="txt" style="margin-top:10px;"><a href="https://github.com/{GITHUB_REPO}" target="_blank" rel="noopener">Source on GitHub</a></div>
+          <div class="st" title="{escape(overall[1], quote=True)}"><span class="dot {overall[0]}"></span><span class="txt">{escape(overall[1])}</span></div>
+          <div class="meta"><span class="txt">{_plural(len(companies), 'company', 'companies')} monitored</span>
+            <span class="txt num">Last scan {_ago(last_scan, NOW)}</span></div>
+          <div class="src txt"><a href="https://github.com/{GITHUB_REPO}" target="_blank" rel="noopener">{_ms("code", "s16")} Source on GitHub</a></div>
         </div>""")
 
 # phones: the sidebar is hidden and this compact bar takes over (CSS decides)
@@ -807,11 +1113,16 @@ with st.container(key="mnav"):
 # ═══════════════════════════════════════════════════════════════════════════════
 # SHARED PIECES
 # ═══════════════════════════════════════════════════════════════════════════════
-def page_header(title: str, sub_html: str = "", actions=None):
+def _eyebrow(page: str) -> str:
+    return next((g for g, items in NAV_GROUPS if page in items), "Discover")
+
+
+def page_header(title: str, sub_html: str = "", actions=None, eyebrow: str | None = None):
     with st.container(key="page_head"):
         c1, c2 = st.columns([3, 2], vertical_alignment="bottom")
         with c1:
-            st.html(f'<h1 class="page-title">{escape(title)}</h1>' + (f'<div class="page-sub">{sub_html}</div>' if sub_html else ""))
+            st.html(f'<div class="eyebrow bar">{escape(eyebrow or _eyebrow(st.session_state.page))}</div>'
+                    f'<h1 class="page-title">{escape(title)}</h1>' + (f'<div class="page-sub">{sub_html}</div>' if sub_html else ""))
         with c2:
             if actions:
                 with st.container(key="page_actions"):
@@ -819,9 +1130,10 @@ def page_header(title: str, sub_html: str = "", actions=None):
 
 
 def status_line() -> str:
-    return (f'<span class="dot {overall[0]}"></span><span>{escape(overall[1])}</span><span class="sep">·</span>'
-            f'<span class="num">Last scan {_ago(last_scan, NOW)}</span><span class="sep">·</span>'
-            f'<span class="num">Next scheduled {_next_slot():%H:%M} UTC</span>')
+    """The live system state as three chips: health · last scan · next slot."""
+    return (f'<span class="chip live {overall[0]}"><span class="dot {overall[0]}"></span>{escape(overall[1])}</span>'
+            f'<span class="chip num">{_ms("history", "s16")}Last scan {_ago(last_scan, NOW)}</span>'
+            f'<span class="chip num">{_ms("schedule", "s16")}Next scheduled {_next_slot():%H:%M} UTC</span>')
 
 
 def scan_actions():
@@ -832,7 +1144,7 @@ def scan_actions():
             toast("Showing the latest data", "success")
             st.rerun()
     with b:
-        if st.button("Run check", key="btn_run_check", icon=":material/play_arrow:",
+        if st.button("Run check", key="btn_run_check", icon=":material/radar:", type="primary",
                      help="Ask GitHub Actions to scan every portal now (takes a few minutes)"):
             since = time.time() - st.session_state.get("last_check_trigger", 0)
             if since < _CHECK_COOLDOWN_S:
@@ -849,7 +1161,9 @@ def apply_link(j: dict, label: str = "Apply") -> str:
     url = safe_url(j.get("url", ""))
     if not url:
         return '<span class="btn disabled">No link</span>'
-    return (f'<a class="btn primary" href="{escape(url, quote=True)}" target="_blank" rel="noopener noreferrer">'
+    title = (j.get("title") or "this job").strip() or "this job"
+    return (f'<a class="btn primary" href="{escape(url, quote=True)}" target="_blank" rel="noopener noreferrer" '
+            f'aria-label="{escape(label, quote=True)}: {escape(title, quote=True)} (opens the company site)">'
             f'{label} {_ms("arrow_outward", "s16")}</a>')
 
 
@@ -916,28 +1230,36 @@ def filter_jobs(prefix: str, jobs: list[dict]) -> list[dict]:
     return out, active, _clear
 
 
+def badge(cls: str, label: str) -> str:
+    """The category badge: a check for jobs that passed the entry-level
+    filter, a history mark for records from before the classifier."""
+    icon = "history" if cls == "legacy" else "task_alt"
+    return f'<span class="pill {cls}">{_ms(icon)}{escape(label)}</span>'
+
+
 def job_row(j: dict, idx: str, origin: str):
     jkey = job_key(j)
     raw_title = (j.get("title") or "Untitled posting").strip() or "Untitled posting"
     company = (j.get("company") or "").strip()
     pill_cls, pill_label = job_category(j)
-    meta = [f'<span class="co">{escape(company)}</span>'] if company else []
+    meta = []
     if j.get("location"):
-        meta.append(f'<span>{escape(j["location"])}</span>')
+        meta.append(f'<span class="mi">{_ms("location_on")}<span>{escape(j["location"])}</span></span>')
     d = found[id(j)]
     if d or j.get("date"):
-        meta.append(f'<span class="num" title="{escape(j.get("date") or "", quote=True)} UTC">Found {_ago(d, NOW) if d else escape(j["date"])}</span>')
-    sep = '<span class="sep">·</span>'
+        meta.append(f'<span class="mi num" title="{escape(j.get("date") or "", quote=True)} UTC">{_ms("schedule")}'
+                    f'Found {_ago(d, NOW) if d else escape(j["date"])}</span>')
     with st.container(key=f"jr_{idx}"):
         c1, c2 = st.columns([5, 2], vertical_alignment="center")
         with c1:
             st.html(f"""
             <div class="job">
-              <div class="logo">{_initial(company)}</div>
+              {_avatar(company)}
               <div class="job-body">
+                {f'<div class="job-co"><span class="co">{escape(company)}</span></div>' if company else ''}
                 <h3 class="job-title" title="{escape(raw_title, quote=True)}">{escape(raw_title)}</h3>
-                <div class="job-meta">{sep.join(meta) or '&nbsp;'}</div>
-                <div class="job-why"><span class="pill {pill_cls}">{escape(pill_label)}</span><span class="t">{escape(job_why(j))}</span></div>
+                <div class="job-meta">{"".join(meta) or '&nbsp;'}</div>
+                <div class="job-why">{badge(pill_cls, pill_label)}<span class="t">{_ms("work_history" if pill_cls != "legacy" else "info")}{escape(job_why(j))}</span></div>
               </div>
             </div>""")
         with c2:
@@ -970,19 +1292,50 @@ def empty_state(icon: str, title: str, text: str, actions=None):
 # ═══════════════════════════════════════════════════════════════════════════════
 # PAGES
 # ═══════════════════════════════════════════════════════════════════════════════
-def page_home():
-    page_header("Discover jobs", status_line(), scan_actions)
+def _stat(label: str, value, note: str, icon: str, tint: str = "", small: bool = False) -> str:
+    """One metric module: icon, label, number, supporting line."""
+    return (f'<div class="stat{" " + tint if tint else ""}"><div class="ic">{_ms(icon, "s20")}</div>'
+            f'<div class="k">{label}</div><div class="v{" sm" if small else ""}">{value}</div><div class="n">{note}</div></div>')
 
-    st.html(f"""
-    <div class="panel st-key-stats"><div class="stats">
-      <div class="stat"><div class="k">Active jobs</div><div class="v">{len(active_jobs)}</div>
-        <div class="n">{_plural(len(dismissed_jobs), 'dismissed job') if dismissed_jobs else 'Fresher &amp; entry-level'}</div></div>
-      <div class="stat"><div class="k">New this week</div><div class="v">{new_this_week}</div><div class="n">Found in the last 7 days</div></div>
-      <div class="stat"><div class="k">Companies monitored</div><div class="v">{len(companies)}</div>
-        <div class="n">{" · ".join(f"{n_by_status[k]} {k}" for k in ("healthy", "delayed", "failing", "pending") if n_by_status[k]) or "—"}</div></div>
-      <div class="stat"><div class="k">Last scan</div><div class="v">{_ago(last_scan, NOW)}</div>
-        <div class="n">Next scheduled {_next_slot():%H:%M} UTC</div></div>
-    </div></div>""")
+
+# radar contacts: one per tracked portal (up to 8), at fixed polar positions;
+# each lights up as the 7 s sweep passes its bearing
+_BLIPS = ((32, .62), (104, .40), (158, .80), (214, .55), (282, .72), (332, .34), (70, .84), (248, .46))
+
+
+def _radar() -> str:
+    blips = []
+    for (deg, r), c in zip(_BLIPS, companies):
+        x = 50 + r * 46 * math.sin(math.radians(deg))
+        y = 50 - r * 46 * math.cos(math.radians(deg))
+        warn = " warn" if statuses.get(c.get("id"), ("",))[0] == "failing" else ""
+        blips.append(f'<span class="blip{warn}" style="left:{x:.1f}%;top:{y:.1f}%;animation-delay:{deg / 360 * 7 - .84:.2f}s"></span>')
+    return ('<div class="radar" aria-hidden="true"><span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>'
+            f'<span class="sweep"></span>{"".join(blips)}<span class="core"></span>'
+            f'<span class="radar-cap">{_plural(len(companies), "portal")} on radar</span></div>')
+
+
+def page_home():
+    with st.container(key="hero"):
+        st.html(f"""<div class="hero"><div>
+          <div class="eyebrow bar">Discover jobs</div>
+          <h1 class="page-title">Discover your next <em>opportunity</em></h1>
+          <p class="hero-sub">Fresher and entry-level roles in India, found across the companies you track — each one read from its own posting before it reaches you.</p>
+          <div class="hero-status">{status_line()}</div>
+        </div>{_radar()}</div>""")
+        with st.container(key="hero_actions"):
+            scan_actions()
+
+    healthy_note = " · ".join(f"{n_by_status[k]} {k}" for k in ("healthy", "delayed", "failing", "pending") if n_by_status[k]) or "—"
+    st.html('<div class="stats">'
+            + _stat("Active jobs", len(active_jobs),
+                    _plural(len(dismissed_jobs), 'dismissed job') if dismissed_jobs else 'Fresher &amp; entry-level', "work")
+            + _stat("New this week", new_this_week, "Found in the last 7 days", "trending_up", "t-teal")
+            + _stat("Companies monitored", len(companies), healthy_note, "apartment",
+                    "t-red" if n_by_status["failing"] else "t-green")
+            + _stat("Last scan", _ago(last_scan, NOW), f"Next scheduled {_next_slot():%H:%M} UTC", "radar",
+                    "t-amber" if scan_stale else "", small=True)
+            + "</div>")
 
     if not active_jobs:
         def _acts():
@@ -1000,8 +1353,8 @@ def page_home():
                     _acts)
         return
 
-    st.html('<div><h2 class="section-title">Latest jobs</h2>'
-            '<p class="section-sub">Newest fresher and entry-level roles found on the portals you track</p></div>')
+    st.html('<div class="sec-head"><div><div class="eyebrow">Latest opportunities</div><h2 class="section-title">Latest jobs</h2>'
+            '<p class="section-sub">Newest fresher and entry-level roles found on the portals you track</p></div></div>')
     shown, active, clear = filter_jobs("h", active_jobs)
     if not shown:
         empty_state("search_off", "No jobs match these filters",
@@ -1018,6 +1371,11 @@ def page_home():
             with f2:
                 st.button("View all jobs", key="btn_all_jobs", icon=":material/arrow_forward:", icon_position="right",
                           on_click=go, args=("jobs",))
+    st.html(f"""<div class="how">
+      <div><span class="ic">{_ms("radar")}</span><div><b>Tracks career portals</b><p>Each company's job list is scanned on a schedule — no manual searching.</p></div></div>
+      <div><span class="ic">{_ms("article")}</span><div><b>Reads every posting</b><p>A job is judged from its own page, never from its title alone.</p></div></div>
+      <div><span class="ic">{_ms("mark_email_read")}</span><div><b>Emails each role once</b><p>Only India fresher and entry-level jobs that pass every check are sent.</p></div></div>
+    </div>""")
 
 
 def page_jobs():
@@ -1080,76 +1438,78 @@ def page_job_detail(j: dict):
     pill_cls, pill_label = job_category(j)
     url = safe_url(j.get("url", ""))
     d = found[id(j)]
-    st.html(f"""
-    <div class="detail-head">
-      <div class="logo lg">{_initial(company)}</div>
-      <div style="min-width:0;">
-        <h1 class="detail-title">{escape(title)}</h1>
-        <div class="page-sub"><span class="text-2" style="font-weight:500;">{escape(company or 'Unknown company')}</span>
-          {f'<span class="sep">·</span><span>{escape(j["location"])}</span>' if j.get("location") else ''}
-          <span class="sep">·</span><span class="pill {pill_cls}">{escape(pill_label)}</span>
-          {'<span class="pill neutral">Dismissed</span>' if j.get('dismissed') else ''}</div>
-      </div>
-    </div>""")
-    with st.container(key="job_actions"):
-        a = st.columns(4)
-        with a[0]:
-            st.html(apply_link(j, "Apply on company site"))
-        with a[1]:
-            if j.get("dismissed"):
-                if st.button("Restore", key="detail_restore", icon=":material/undo:"):
-                    _, saved, err = _save_change("seen_jobs.json", _restore_jobs({jkey}), [], "chore: restore 1 alert(s)")
-                    toast("Job restored" if saved else f"Restored here, but not saved permanently. {err}",
-                          "success" if saved else "error")
-                    st.rerun()
-            elif st.button("Dismiss", key="detail_dismiss", icon=":material/close:"):
-                _, saved, err = _save_change("seen_jobs.json", dismiss_jobs({jkey}), [], "chore: dismiss 1 alert(s)")
-                toast("Removed 1 alert(s)" if saved else f"Removed here, but not saved permanently. {err}",
-                      "success" if saved else "error")
-                go(back, **back_kwargs)
-                st.rerun()
-        with a[2]:
-            if c:
-                st.button("Company details", key="btn_job_company", icon=":material/apartment:",
-                          on_click=go, args=("companies",), kwargs={"company": c.get("id")})
+    ev = j.get("evidence") if isinstance(j.get("evidence"), dict) else {}
+    # records carry evidence only when the scraper's safety gate ran; a
+    # malformed/partial evidence field is treated as "no evidence"
+    checks = ev.get("checks") if isinstance(ev.get("checks"), dict) else {}
+    has_ev = bool(checks)
+    raw_lines = ev.get("experience_lines") if isinstance(ev.get("experience_lines"), list) else []
+    exp_lines = [x.strip(" ·•-*	") for x in raw_lines if isinstance(x, str)
+                 and re.search(r"experience|\bexp\b|fresher|graduat|\d\s*(?:\+\s*)?(?:years?|yrs?|months?)\b", x, re.I)]
+    exp_lines = list(dict.fromkeys(exp_lines))
+    ev_exp = [str(x) for x in ev.get("experience") or [] if x] if isinstance(ev.get("experience"), list) else []
+    if ev_exp and ev_exp != ["no experience requirement stated"]:
+        experience = escape(", ".join(ev_exp))
+    elif exp_lines:
+        experience = escape(exp_lines[0])
+    elif has_ev:
+        experience = "No requirement stated in the posting"
+    elif re.search(r"(years|months) experience|No prior experience", friendly_reason(j)):
+        experience = escape(friendly_reason(j))
+    else:
+        experience = "Not recorded for this job"
+
+    with st.container(key="job_hero"):
+        chips = []
+        if j.get("location"):
+            chips.append(f'<span class="chip">{_ms("location_on")}{escape(j["location"])}</span>')
+        if pill_cls != "legacy":
+            chips.append(f'<span class="chip">{_ms("work_history")}{escape(job_why(j))}</span>')
+        if d:
+            chips.append(f'<span class="chip num">{_ms("schedule")}Found {_ago(d, NOW)}</span>')
+        st.html(f"""
+        <div class="detail-head">
+          {_avatar(company, "lg")}
+          <div style="min-width:0;">
+            <div class="eyebrow">{escape(company or 'Unknown company')}</div>
+            <h1 class="detail-title">{escape(title)}</h1>
+            <div class="detail-chips">{badge(pill_cls, pill_label)}
+              {'<span class="pill neutral">Dismissed</span>' if j.get('dismissed') else ''}{"".join(chips)}</div>
+          </div>
+        </div>""")
+        with st.container(key="job_actions"):
+            a = st.columns(4)
+            with a[0]:
+                st.html(apply_link(j, "Apply on company site"))
+            with a[1]:
+                if j.get("dismissed"):
+                    if st.button("Restore", key="detail_restore", icon=":material/undo:"):
+                        _, saved, err = _save_change("seen_jobs.json", _restore_jobs({jkey}), [], "chore: restore 1 alert(s)")
+                        toast("Job restored" if saved else f"Restored here, but not saved permanently. {err}",
+                              "success" if saved else "error")
+                        st.rerun()
+                else:
+                    with st.container(key="danger"):
+                        dismiss = st.button("Dismiss", key="detail_dismiss", icon=":material/close:")
+                    if dismiss:
+                        _, saved, err = _save_change("seen_jobs.json", dismiss_jobs({jkey}), [], "chore: dismiss 1 alert(s)")
+                        toast("Removed 1 alert(s)" if saved else f"Removed here, but not saved permanently. {err}",
+                              "success" if saved else "error")
+                        go(back, **back_kwargs)
+                        st.rerun()
+            with a[2]:
+                if c:
+                    st.button("Company details", key="btn_job_company", icon=":material/apartment:",
+                              on_click=go, args=("companies",), kwargs={"company": c.get("id")})
 
     with st.container(key="job_cols"):
         main, side = st.columns([3, 2])
     with main:
         with st.container(key="job_main"):
-            ev = j.get("evidence") if isinstance(j.get("evidence"), dict) else {}
-            # records carry evidence only when the scraper's safety gate ran; a
-            # malformed/partial evidence field is treated as "no evidence"
-            checks = ev.get("checks") if isinstance(ev.get("checks"), dict) else {}
-            has_ev = bool(checks)
-            raw_lines = ev.get("experience_lines") if isinstance(ev.get("experience_lines"), list) else []
-            exp_lines = [x.strip(" ·•-*	") for x in raw_lines if isinstance(x, str)
-                         and re.search(r"experience|\bexp\b|fresher|graduat|\d\s*(?:\+\s*)?(?:years?|yrs?|months?)\b", x, re.I)]
-            exp_lines = list(dict.fromkeys(exp_lines))
-            ev_exp = [str(x) for x in ev.get("experience") or [] if x] if isinstance(ev.get("experience"), list) else []
-            if ev_exp and ev_exp != ["no experience requirement stated"]:
-                experience = escape(", ".join(ev_exp))
-            elif exp_lines:
-                experience = escape(exp_lines[0])
-            elif has_ev:
-                experience = "No requirement stated in the posting"
-            elif re.search(r"(years|months) experience|No prior experience", friendly_reason(j)):
-                experience = escape(friendly_reason(j))
-            else:
-                experience = "Not recorded for this job"
-            rows = [("Company", escape(company or "—")),
-                    ("Location", escape(j.get("location") or "Not captured for this posting")),
-                    ("Category", escape(pill_label)),
-                    ("Experience", experience),
-                    ("Found", f'<span class="num">{escape(j.get("date") or "—")} UTC</span>' + (f' <span class="muted">({_ago(d, NOW)})</span>' if d else "")),
-                    ("Status", "Dismissed" if j.get("dismissed") else "Active")]
-            st.html('<h2 class="section-title">Job overview</h2><dl class="kv">'
-                    + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in rows) + "</dl>")
-            st.html('<div class="divider"></div>')
             reason = str(j.get("reason") or "").strip()
             classified = bool(reason) or j.get("category") in _CATEGORY_PILL
-            st.html(f"""<h2 class="section-title">Why this matched</h2>
-              <div class="why">{_ms("check_circle", "s20")}<div>{escape(job_why(j, long=True))}
+            st.html(f"""<div class="eyebrow bar">Why this qualifies</div><h2 class="section-title" style="margin-top:6px;">Why this matched</h2>
+              <div class="why">{_ms("task_alt" if classified else "history", "s20")}<div>{escape(job_why(j, long=True))}
               {f'<div class="quote"><span class="muted">Classifier trace:</span> {escape(reason)}</div>' if reason else ''}
               {'' if classified else '<div class="note" style="margin-top:6px;">No classifier trace was recorded for this job.</div>'}
               </div></div>""")
@@ -1161,16 +1521,31 @@ def page_job_detail(j: dict):
                           "not_programme_story_talent_recruiter": "Not a programme / story / recruiter page",
                           "evidence_not_staff_context": "Evidence is about the applicant",
                           "fresher_or_entry_evidence": "Fresher / entry-level evidence found"}
-                items = "".join(f'<li>{"✓" if ok else "✗"} {escape(labels.get(k, k))}</li>' for k, ok in checks.items())
+                items = "".join(f'<li class="{"" if ok else "off"}">{_ms("check_circle" if ok else "cancel")}'
+                                f'<span><span class="sr-only">{"Passed: " if ok else "Failed: "}</span>{escape(labels.get(k, k))}</span></li>'
+                                for k, ok in checks.items())
+                meter = "".join(f'<span class="{"" if ok else "off"}"></span>' for ok in checks.values())
                 quote_lines = "".join(f'<div class="quote">{escape(x)}</div>' for x in exp_lines[:3])
-                with st.expander(f"Evidence & safety checks — {passed} of {len(checks)} checks passed"):
-                    st.html(f"""<dl class="kv">
-                      <dt>Safety checks</dt><dd>{passed} of {len(checks)} checks passed</dd>
-                      <dt>Job ID</dt><dd class="num">{escape(ev.get("job_id") or ats_job_id(j.get("url", "")) or "—")}</dd>
-                      <dt>Detail matched by</dt><dd>{escape(ev.get("detail_match") or "—")}</dd>
-                      <dt>Fresher evidence</dt><dd>{escape(ev.get("fresher_evidence") or "—")}</dd></dl>
-                      {f'<div class="note" style="margin-top:8px;">From the posting:</div>{quote_lines}' if quote_lines else ''}
-                      <ul class="note" style="margin:10px 0 0;padding-left:0;list-style:none;">{items}</ul>""")
+                st.html(f"""<div class="divider"></div>
+                  <div class="checks-head"><div><div class="eyebrow">Evidence &amp; safety checks</div>
+                    <h2 class="section-title" style="margin-top:4px;">{_ms("shield", "s20")}Checked before it was alerted</h2></div>
+                    <span class="checks-score">{_ms("task_alt")}{passed} of {len(checks)} checks passed</span></div>
+                  <div class="meter" style="--n:{len(checks)}" aria-hidden="true">{meter}</div>
+                  <ul class="checks">{items}</ul>
+                  <dl class="kv">
+                    <dt>Job ID</dt><dd class="num">{escape(ev.get("job_id") or ats_job_id(j.get("url", "")) or "—")}</dd>
+                    <dt>Detail matched by</dt><dd>{escape(ev.get("detail_match") or "—")}</dd>
+                    <dt>Fresher evidence</dt><dd>{escape(ev.get("fresher_evidence") or "—")}</dd></dl>
+                  {f'<div class="note" style="margin-top:10px;">From the posting:</div>{quote_lines}' if quote_lines else ''}""")
+            rows = [("Company", escape(company or "—")),
+                    ("Location", escape(j.get("location") or "Not captured for this posting")),
+                    ("Category", escape(pill_label)),
+                    ("Experience", experience),
+                    ("Found", f'<span class="num">{escape(j.get("date") or "—")} UTC</span>' + (f' <span class="muted">({_ago(d, NOW)})</span>' if d else "")),
+                    ("Status", "Dismissed" if j.get("dismissed") else "Active")]
+            st.html('<div class="divider"></div><div class="eyebrow">Posting information</div>'
+                    '<h2 class="section-title" style="margin-top:4px;">Job overview</h2><dl class="kv">'
+                    + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in rows) + "</dl>")
             with st.expander("Description & requirements"):
                 st.html('<p class="note">The scraper reads the full posting to classify it but only keeps the evidence '
                         'above, not the full description. Open the posting on the company site for the complete details.</p>')
@@ -1184,7 +1559,7 @@ def page_job_detail(j: dict):
                     else "Not sent (dismissed)" if j.get("dismissed")
                     else "Pending — goes out after the next check" if alert_pending(j)
                     else "Not emailed")]
-            st.html('<h2 class="section-title">Source</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
+            st.html(f'<h2 class="section-title">{_ms("link")}Source</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
                     + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in src) + "</dl>")
             st.html('<div class="divider"></div>')
             if c:
@@ -1194,10 +1569,10 @@ def page_job_detail(j: dict):
                       ("Career portal", f'<a class="link" href="{escape(curl, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(curl, 30))}</a>' if curl else "—"),
                       ("Last checked", f'<span class="num">{_ago(_parse_iso(c.get("last_checked", "")), NOW)}</span>'),
                       ("Active jobs", str(company_active(c)))]
-                st.html('<h2 class="section-title">Company</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
+                st.html(f'<h2 class="section-title">{_ms("apartment")}Company</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
                         + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in co) + "</dl>")
             else:
-                st.html('<h2 class="section-title">Company</h2><p class="note">This company is no longer tracked.</p>')
+                st.html(f'<h2 class="section-title">{_ms("apartment")}Company</h2><p class="note">This company is no longer tracked.</p>')
 
 
 def page_companies():
@@ -1208,15 +1583,17 @@ def page_companies():
     if not companies:
         empty_state("apartment", "No companies yet", "Add a company's career page and the tracker will start checking it on the next scan.")
         return
-    f1, f2 = st.columns([2, 3], vertical_alignment="center")
-    with f1:
-        q = st.text_input("Search companies", key="co_q", placeholder="Search companies", label_visibility="collapsed").strip().lower()
-    with f2:
-        with st.container(key="co_status_wrap"):
-            opts = ["all", "healthy", "delayed", "failing", "pending"]
-            sel = st.pills("Status", [o for o in opts if o == "all" or n_by_status[o]], key="co_status",
-                           label_visibility="collapsed", default="all",
-                           format_func=lambda o: f"All ({len(companies)})" if o == "all" else f"{o.title()} ({n_by_status[o]})")
+    with st.container(key="co_toolbar"):
+        f1, f2 = st.columns([2, 3], vertical_alignment="center")
+        with f1:
+            q = st.text_input("Search companies", key="co_q", placeholder="Search companies or portals",
+                              label_visibility="collapsed").strip().lower()
+        with f2:
+            with st.container(key="co_status_wrap"):
+                opts = ["all", "healthy", "delayed", "failing", "pending"]
+                sel = st.pills("Status", [o for o in opts if o == "all" or n_by_status[o]], key="co_status",
+                               label_visibility="collapsed", default="all",
+                               format_func=lambda o: f"All ({len(companies)})" if o == "all" else f"{o.title()} ({n_by_status[o]})")
     sel = sel or "all"
     rows = [c for c in companies
             if (not q or q in f"{c.get('name', '')} {c.get('url', '')}".lower())
@@ -1238,16 +1615,18 @@ def page_companies():
                 r1, r2 = st.columns([6, 1], vertical_alignment="center")
                 with r1:
                     st.html(f"""<div class="co-row">
-                      <div class="co-name"><div class="logo">{_initial(name)}</div>
+                      <div class="co-name">{_avatar(name)}
                         <div style="min-width:0;"><div class="t">{escape(name)}{tags}</div>
                         <div class="h">{escape(_short_url(curl)) if curl else '<span style="color:var(--red)">Invalid career page URL</span>'}</div></div></div>
-                      <div class="co-cell" style="overflow:hidden;text-overflow:ellipsis;">{f'<a class="link" href="{escape(site, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(site, 28))}</a>' if site else '<span class="muted">Not set</span>'}</div>
+                      <div class="co-cell site">{_ms("language")}{f'<a class="link" href="{escape(site, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(site, 28))}</a>' if site else '<span class="muted">Not set</span>'}</div>
                       <div><span class="pill {k}"><i></i>{lbl}</span></div>
-                      <div class="co-cell">{company_active(c)}<span class="l"> active jobs</span></div>
-                      <div class="co-cell muted">{_ago(_parse_iso(c.get("last_checked", "")), NOW)}</div>
+                      <div class="co-stats">
+                        <div><span class="k">Openings</span><div class="co-cell">{_ms("work")}{company_active(c)}<span class="l"> active jobs</span></div></div>
+                        <div><span class="k">Last scan</span><div class="co-cell">{_ms("schedule")}{_ago(_parse_iso(c.get("last_checked", "")), NOW)}</div></div>
+                      </div>
                     </div>""")
                 with r2:
-                    st.button("View", key=f"view_{_widget_key('c', str(c.get('id')))}", icon=":material/chevron_right:",
+                    st.button("View company", key=f"view_{_widget_key('c', str(c.get('id')))}", icon=":material/arrow_forward:",
                               icon_position="right", on_click=go, args=("companies",), kwargs={"company": c.get("id")})
 
 
@@ -1255,6 +1634,11 @@ def page_add_company():
     st.button("Back to Companies", key="btn_back", icon=":material/arrow_back:", type="tertiary",
               on_click=go, args=("companies",))
     page_header("Add a company", "Start monitoring a company's career portal for fresher and entry-level roles")
+    st.html(f"""<div class="add-steps">
+      <div><b>{_ms("link")}1 · Paste the job search page</b>The page that lists individual openings — not the careers landing page.</div>
+      <div><b>{_ms("radar")}2 · It joins the next scan</b>Every posting found there is opened and read on the scheduled check.</div>
+      <div><b>{_ms("mark_email_read")}3 · Fresher roles reach you</b>India fresher and entry-level jobs appear here and in your inbox.</div>
+    </div>""")
     with st.container(key="add_form"):
         name = st.text_input("Company name", placeholder="e.g. Infosys", key="new_name")
         url = st.text_input("Career portal URL", placeholder="https://careers.example.com/jobs", key="new_url",
@@ -1311,12 +1695,15 @@ def page_company_detail(c: dict):
     site = safe_url(c.get("website", ""))
     k, lbl = statuses[c.get("id")]
     jobs = company_jobs(c)
-    st.html(f"""<div class="detail-head"><div class="logo lg">{_initial(name)}</div><div style="min-width:0;">
+    hero = st.container(key="co_hero")
+    hero.html(f"""<div class="detail-head">{_avatar(name, "lg")}<div style="min-width:0;">
+      <div class="eyebrow">Tracked company</div>
       <h1 class="detail-title">{escape(name)}</h1>
-      <div class="page-sub"><span class="pill {k}"><i></i>{lbl}</span>
+      <div class="detail-chips"><span class="pill {k}"><i></i>{lbl}</span>
         {'<span class="tag">Core</span>' if c.get('locked') else ''}
-        <span class="sep">·</span><span>{company_active(c)} active · {sum(1 for j in jobs if j.get("dismissed"))} dismissed</span></div></div></div>""")
-    with st.container(key="co_actions"):
+        <span class="chip">{_ms("work")}<span>{company_active(c)} active · {sum(1 for j in jobs if j.get("dismissed"))} dismissed</span></span>
+        <span class="chip num">{_ms("schedule")}Checked {_ago(_parse_iso(c.get("last_checked", "")), NOW)}</span></div></div></div>""")
+    with hero, st.container(key="co_actions"):
         a = st.columns(4)
         with a[0]:
             if curl:
@@ -1360,7 +1747,7 @@ def page_company_detail(c: dict):
             if k == "failing":
                 why = escape(c.get("status_reason") or "The last scan failed.")
                 health.append(("Problem", f'{why} <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">See the Actions log</a>'))
-            st.html('<h2 class="section-title">Portal health</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
+            st.html(f'<h2 class="section-title">{_ms("monitor_heart")}Portal health</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
                     + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in health) + "</dl>")
             st.html('<div class="divider"></div>')
             cats = {"FRESHER": 0, "ENTRY_LEVEL": 0, "legacy": 0}
@@ -1370,11 +1757,11 @@ def page_company_detail(c: dict):
                     ("Website", f'<a class="link" href="{escape(site, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(site, 30))}</a>' if site else '<span class="muted">Not set</span>'),
                     ("Classified", f"{cats['FRESHER']} fresher · {cats['ENTRY_LEVEL']} entry level"
                                    + (f" · {cats['legacy']} keyword match" if cats["legacy"] else ""))]
-            st.html('<h2 class="section-title">Details</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
+            st.html(f'<h2 class="section-title">{_ms("info")}Details</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
                     + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in info) + "</dl>")
     with main:
-        st.html(f'<div><h2 class="section-title">Recent jobs from {escape(name)}</h2>'
-                f'<p class="section-sub">{_plural(len(jobs), "job")} found · {sum(1 for j in jobs if j.get("dismissed"))} dismissed</p></div>')
+        st.html(f'<div class="sec-head"><div><div class="eyebrow">Openings</div><h2 class="section-title">Recent jobs from {escape(name)}</h2>'
+                f'<p class="section-sub">{_plural(len(jobs), "job")} found · {sum(1 for j in jobs if j.get("dismissed"))} dismissed</p></div></div>')
         if jobs:
             with st.container(key="joblist_company"):
                 for i, j in enumerate(jobs[:10]):
@@ -1385,16 +1772,18 @@ def page_company_detail(c: dict):
 
 def page_monitoring():
     page_header("Monitoring", f"The scraper runs on GitHub Actions — {SCHEDULE_NOTE} — and checks every tracked portal", scan_actions)
-    st.html(f"""
-    <div class="panel st-key-stats"><div class="stats">
-      <div class="stat"><div class="k"><span class="dot {overall[0]}"></span>Overall</div><div class="v" style="font-size:20px;">{escape(overall[1])}</div>
-        <div class="n">{_plural(len(companies), 'portal')} tracked</div></div>
-      <div class="stat"><div class="k">Last scan</div><div class="v">{_ago(last_scan, NOW)}</div>
-        <div class="n num">{f"{last_scan:%b %d, %H:%M} UTC" if last_scan else "No scan recorded"}</div></div>
-      <div class="stat"><div class="k">Next scheduled scan</div><div class="v">{_next_slot():%H:%M} UTC</div><div class="n">GitHub may start it later</div></div>
-      <div class="stat"><div class="k">Portals</div><div class="v">{n_by_status['healthy']}<span class="muted" style="font-size:16px;font-weight:500;"> / {len(companies)} healthy</span></div>
-        <div class="n">{n_by_status['delayed']} delayed · {n_by_status['failing']} failing · {n_by_status['pending'] + n_by_status['checking']} pending</div></div>
-    </div></div>""")
+    tone = {"healthy": "t-green", "failing": "t-red", "delayed": "t-amber"}.get(overall[0], "t-gray")
+    icon = {"healthy": "health_and_safety", "failing": "error", "delayed": "schedule"}.get(overall[0], "hourglass_empty")
+    st.html('<div class="stats">'
+            + _stat(f'<span class="dot {overall[0]}"></span>Overall', escape(overall[1]),
+                    f"{_plural(len(companies), 'portal')} tracked", icon, tone, small=True)
+            + _stat("Last scan", _ago(last_scan, NOW), f"{last_scan:%b %d, %H:%M} UTC" if last_scan else "No scan recorded",
+                    "history", "t-amber" if scan_stale else "t-teal", small=True)
+            + _stat("Next scheduled scan", f"{_next_slot():%H:%M} UTC", "GitHub may start it later", "schedule", "", small=True)
+            + _stat("Portals", f'{n_by_status["healthy"]}<span class="muted" style="font-size:16px;font-weight:600;"> / {len(companies)} healthy</span>',
+                    f"{n_by_status['delayed']} delayed · {n_by_status['failing']} failing · {n_by_status['pending'] + n_by_status['checking']} pending",
+                    "lan", "t-red" if n_by_status["failing"] else "t-green")
+            + "</div>")
     if not companies:
         empty_state("monitor_heart", "Nothing to monitor", "Add a company to start scanning its career portal.")
         return
@@ -1410,21 +1799,24 @@ def page_monitoring():
                 "pending": "Not scanned yet — added since the last run",
                 "checking": "Check requested"}.get(k, escape(c.get("scan_note") or "") or "—")
         rows.append(f"""<tr>
-          <td class="c">{escape((c.get('name') or '').strip() or 'Unnamed')}
-            <div class="sub">{f'<a class="link" href="{escape(curl, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(curl, 34))}</a>' if curl else 'Invalid URL'}</div></td>
+          <td class="c"><div class="mon-co">{_avatar(c.get('name') or '', "sm")}<div style="min-width:0;">{escape((c.get('name') or '').strip() or 'Unnamed')}
+            <div class="sub">{f'<a class="link" href="{escape(curl, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(curl, 34))}</a>' if curl else 'Invalid URL'}</div></div></div></td>
           <td data-l="Status"><span class="pill {k}"><i></i>{lbl}</span></td>
           <td class="num" data-l="Last checked">{_ago(checked, NOW)}</td>
           <td class="num" data-l="Active jobs">{company_active(c)}</td>
           <td data-l="Scraper">{escape(_source_label(c))}</td>
-          <td data-l="Notes">{note}</td></tr>""")
+          <td data-l="Notes"{' class="empty"' if note == "—" else ""}>{note}</td></tr>""")
+    if not (n_by_status["failing"] or n_by_status["delayed"]) and last_scan:
+        st.html(f'<div class="legend" style="border-style:solid;">{_ms("task_alt", "s20")}<div class="note"><b style="color:var(--text);">No monitoring issues.</b> '
+                f'Every portal was scanned successfully in the last {_STALE_H} hours.</div></div>')
     with st.container(key="mon_table"):
         st.html('<table class="mon"><thead><tr><th>Company</th><th>Status</th><th>Last checked</th><th>Active jobs</th>'
                 '<th>Scraper</th><th>Notes</th></tr></thead><tbody>' + "".join(rows) + "</tbody></table>")
-    st.html(f'<p class="note">Statuses come from the scraper: <b>Healthy</b> = scanned successfully in the last {_STALE_H} hours · '
+    st.html(f'<div class="legend">{_ms("info", "s20")}<p class="note">Statuses come from the scraper: <b>Healthy</b> = scanned successfully in the last {_STALE_H} hours · '
             f'<b>Delayed</b> = no successful scan for {_STALE_H}+ hours · <b>Failing</b> = the last scan partly failed '
             f'(errors, rate limits or unreadable job pages) · <b>Broken</b> = the job list could not be read (blocked, HTTP error, '
             f'site changed) · <b>Needs configuration</b> = the URL shows no job postings · '
-            f'<b>Pending</b> = not scanned yet. Full run logs: <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">GitHub Actions</a>.</p>')
+            f'<b>Pending</b> = not scanned yet. Full run logs: <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">GitHub Actions</a>.</p></div>')
 
 
 def page_email():
@@ -1446,8 +1838,25 @@ def page_email():
         settings.update(data)
         return saved, err
 
+    with st.container(key="mail_status"):
+        if not recipient:
+            headline, sub = "Alerts are off", "Add a recipient below and new fresher jobs will be emailed after each check."
+        elif pending:
+            headline, sub = "Alerts are on", f"{_plural(len(pending), 'job')} waiting — sent after the next check."
+        else:
+            headline, sub = "Alerts are on", "Nothing waiting to send. New fresher jobs are emailed after each check."
+        last_txt = (f'<span class="num">{"Sent" if last_is_sent else "Covered a job found"} {last_mail:%b %d, %H:%M} UTC</span> <span class="muted">({_ago(last_mail, NOW)})</span>'
+                    if last_mail else "No alert emails recorded yet")
+        st.html(f"""<div class="mail-status"><div class="big {'on' if recipient else 'off'}">{_ms("notifications_active" if recipient else "notifications_off", "s28")}</div>
+          <div style="min-width:0;"><h2>{headline}</h2><p class="section-sub">{sub}</p></div></div>
+          <dl class="mail-facts">
+            <div><dt>Last alert</dt><dd>{last_txt}</dd></div>
+            <div><dt>Jobs emailed</dt><dd class="num">{len(notified)}</dd></div>
+            <div><dt>Waiting to send</dt><dd class="num">{f"{len(pending)} — sent after the next check" if pending else "0"}</dd></div>
+          </dl>""")
+
     with st.container(key="email_form"):
-        st.html('<div><h2 class="section-title">Recipient</h2><p class="section-sub">Where new-job alerts are delivered.</p></div>')
+        st.html(f'<div><h2 class="section-title">{_ms("alternate_email")}Recipient</h2><p class="section-sub">Where new-job alerts are delivered.</p></div>')
         i1, i2 = st.columns([4, 1], vertical_alignment="bottom")
         with i1:
             email_val = st.text_input("Recipient email", value=st.session_state.email_val, placeholder="you@example.com",
@@ -1479,7 +1888,7 @@ def page_email():
                   f"Sent at {ts[1]} UTC" if ts[0] else f"Failed at {ts[1]} UTC")
         t1, t2 = st.columns([4, 1], vertical_alignment="center")
         with t1:
-            st.html(f'<div><h2 class="section-title">Test delivery</h2><p class="section-sub">Send a sample alert to confirm emails arrive. '
+            st.html(f'<div><h2 class="section-title">{_ms("send")}Test delivery</h2><p class="section-sub">Send a sample alert to confirm emails arrive. '
                     f'<span class="num" style="color:var({"--green" if ts and ts[0] else "--red" if ts else "--muted"});">{status}</span></p></div>')
         with t2:
             test = st.button("Send test email", key="btn_test", icon=":material/send:", use_container_width=True)
@@ -1506,20 +1915,13 @@ def page_email():
         st.rerun()
 
     with st.container(key="set_behavior"):
-        rows = [("Last alert", f'<span class="num">{"Sent" if last_is_sent else "Covered a job found"} {last_mail:%b %d, %H:%M} UTC</span> <span class="muted">({_ago(last_mail, NOW)})</span>'
-                 if last_mail else "No alert emails recorded yet"),
-                ("Jobs emailed", str(len(notified))),
-                ("Waiting to send", f"{len(pending)} — sent after the next check" if pending else "0")]
-        st.html('<div><h2 class="section-title">Delivery</h2></div><dl class="kv">'
-                + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in rows) + "</dl>")
-        st.html("""<div class="divider"></div><div><h2 class="section-title">How alerts work</h2></div>
-          <ul class="note" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;">
-            <li>After every check (scheduled every 3 hours; GitHub often starts runs later), jobs found for the first time are sent in one email.</li>
-            <li>Only fresher and entry-level jobs in India whose own posting was read are emailed — never a guess from a title.</li>
-            <li>Each job is emailed at most once. Dismissed jobs are never emailed, and stay in the history so they're never sent again.</li>
-            <li>If sending fails, the jobs stay unsent and the next check retries. A job is recorded before its email goes out, so a failed save can't cause a duplicate.</li>
-            <li>Mail is sent through the Gmail account configured in the repository's GitHub Actions secrets — credentials are never shown here.</li>
-          </ul>""")
+        steps = [("radar", "A check runs", "Scheduled every 3 hours (GitHub often starts runs later). Every tracked portal is scanned."),
+                 ("fact_check", "Only qualifying jobs are kept", "Fresher and entry-level jobs in India whose own posting was read — never a guess from a title."),
+                 ("outgoing_mail", "New jobs go out in one email", "Each job is emailed at most once. Dismissed jobs are never emailed, and stay in the history so they're never sent again."),
+                 ("replay", "Failures retry safely", "If sending fails, the jobs stay unsent and the next check retries. A job is recorded before its email goes out, so a failed save can't cause a duplicate.")]
+        st.html(f'<div><h2 class="section-title">{_ms("route")}How alerts work</h2></div><ol class="timeline">'
+                + "".join(f'<li class="step"><span class="node">{_ms(i)}</span><div><b>{t}</b><p>{d}</p></div></li>' for i, t, d in steps)
+                + '</ol><p class="note" style="font-size:13px;">Mail is sent through the Gmail account configured in the repository\'s GitHub Actions secrets — credentials are never shown here.</p>')
 
 
 def page_settings():
@@ -1527,8 +1929,9 @@ def page_settings():
     with st.container(key="set_appearance"):
         a1, a2 = st.columns([4, 1], vertical_alignment="center")
         with a1:
-            st.html('<div><h2 class="section-title">Appearance</h2><p class="section-sub">'
-                    f'{"Dark" if st.session_state.dark_mode else "Light"} theme · kept in this page’s address, so it survives reloads and bookmarks</p></div>')
+            st.html(f'<div class="set-head"><span class="ic">{_ms("dark_mode" if st.session_state.dark_mode else "light_mode")}</span><div>'
+                    '<div class="eyebrow">General</div><h2 class="section-title">Appearance</h2><p class="section-sub">'
+                    f'{"Dark" if st.session_state.dark_mode else "Light"} theme · kept in this page’s address, so it survives reloads and bookmarks</p></div></div>')
         with a2:
             if st.button("Use light theme" if st.session_state.dark_mode else "Use dark theme", key="btn_theme",
                          icon=":material/light_mode:" if st.session_state.dark_mode else ":material/dark_mode:",
@@ -1539,10 +1942,11 @@ def page_settings():
         synced = bool(os.environ.get("GITHUB_TOKEN"))
         d1, d2 = st.columns([4, 1], vertical_alignment="center")
         with d1:
-            st.html('<div><h2 class="section-title">Data &amp; sync</h2><p class="section-sub">'
+            st.html(f'<div class="set-head"><span class="ic">{_ms("cloud_sync" if synced else "cloud_off")}</span><div>'
+                    '<div class="eyebrow">Data</div><h2 class="section-title">Data &amp; sync</h2><p class="section-sub">'
                     + (f"Live data from github.com/{GITHUB_REPO}, cached for up to 5 minutes."
                        if synced else "Reading the files bundled with this deployment — no GitHub token is configured.")
-                    + "</p></div>")
+                    + "</p></div></div>")
         with d2:
             if st.button("Reload data", key="btn_reload", icon=":material/refresh:", use_container_width=True):
                 _remote_snapshot.clear()
@@ -1559,11 +1963,13 @@ def page_settings():
                                        for src, names in sorted(by_source.items())) or "No portals yet"),
                 ("Detail pages", "Each candidate job's own posting is read before it is classified; "
                                  "if it can't be read the job is not emailed and is retried next scan")]
-        st.html('<div><h2 class="section-title">Scanning</h2><p class="section-sub">Defined in the repository; change them there.</p></div>'
+        st.html(f'<div class="set-head"><span class="ic">{_ms("radar")}</span><div><div class="eyebrow">Monitoring</div>'
+                '<h2 class="section-title">Scanning</h2><p class="section-sub">Defined in the repository; change them there.</p></div></div>'
                 '<dl class="kv">' + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in rows) + "</dl>")
     with st.container(key="set_maint"):
-        st.html('<div><h2 class="section-title">Maintenance</h2><p class="section-sub">Dismiss every active job at once. '
-                'They stay in the history (Jobs → Dismissed) and are never emailed again.</p></div>')
+        st.html(f'<div class="set-head"><span class="ic red">{_ms("warning")}</span><div><div class="eyebrow">Danger zone</div>'
+                '<h2 class="section-title">Dismiss all jobs</h2><p class="section-sub">Dismiss every active job at once. '
+                'They stay in the history (Jobs → Dismissed) and are never emailed again.</p></div></div>')
         if not st.session_state.confirm_clear:
             m1, _m2 = st.columns([1, 3])
             with m1:
@@ -1643,10 +2049,9 @@ if st.session_state.toast:
     st.html(f"""
 <style>
 @keyframes jt-toast {{ 0%, 85% {{ opacity: 1; }} 100% {{ opacity: 0; visibility: hidden; }} }}
-.jt-toast {{ animation: jt-toast {4 if ok else 6}s ease-in forwards; }}
-@media (max-width: 640px) {{ .jt-toast {{ left: 16px; right: 16px; bottom: 16px; max-width: none !important; }} }}
+.jt-toast {{ animation: jt-toast-in .28s cubic-bezier(.2,.7,.2,1) both, jt-toast {4 if ok else 6}s ease-in forwards; }}
 </style>
-<div class="jt-toast" role="status" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-lg);max-width:380px;">
-  <span style="display:flex;color:var({'--green' if ok else '--red'});">{_ms('check_circle' if ok else 'error', 's20')}</span>
-  <div style="font-size:14px;line-height:20px;color:var(--text);">{msg}</div>
+<div class="jt-toast" role="status" style="--tone:var({'--green' if ok else '--red'});">
+  <span class="ic">{_ms('check_circle' if ok else 'error', 's20')}</span>
+  <div class="msg">{msg}</div>
 </div>""")

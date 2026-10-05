@@ -91,7 +91,8 @@ def test_every_page_renders_and_updates_the_url(app):
     at = app([OLD_RECORD, NEW_RECORD])
     assert not at.exception and "Discover jobs" in _html(at)
     for page, heading in [("jobs", "Jobs"), ("companies", "Companies"), ("monitoring", "Monitoring"),
-                          ("email", "Email &amp; Notifications"), ("settings", "Settings"), ("home", "Discover jobs")]:
+                          ("email", "Email &amp; Notifications"), ("settings", "Settings"),
+                          ("home", "Discover your next <em>opportunity</em>")]:
         _nav(at, page)
         assert f'<h1 class="page-title">{heading}</h1>' in _html(at)
         assert at.query_params["page"] == [page]
