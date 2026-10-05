@@ -2,7 +2,6 @@ import base64
 import hashlib
 import json
 import logging
-import math
 import os
 import re
 import time
@@ -89,6 +88,15 @@ LIGHT = {
     "shadow": "0 1px 2px rgba(16,24,40,.04), 0 2px 6px -2px rgba(16,24,40,.06)",
     "shadow-lg": "0 22px 44px -22px rgba(36,30,110,.30), 0 2px 6px -2px rgba(16,24,40,.06)",
     "av-sat": "70%", "av-bg": "94%", "av-fg": "34%", "av-bd": "86%",
+    # glossy primary / raised secondary controls
+    "btn-grad": "linear-gradient(180deg, #7a6dff 0%, #5b4cf5 52%, #4c3de6 100%)", "btn-border": "#4a3bd8",
+    "btn-hi": "inset 0 1px 0 rgba(255,255,255,.34), inset 0 -1px 0 rgba(20,10,90,.22)",
+    "btn-shadow": "0 1px 2px rgba(40,28,140,.25), 0 8px 18px -10px rgba(91,76,245,.75)",
+    "btn-shadow-hover": "0 2px 4px rgba(40,28,140,.22), 0 14px 26px -12px rgba(91,76,245,.85)",
+    "btn-pressed": "inset 0 2px 4px rgba(20,10,90,.28), 0 1px 2px rgba(40,28,140,.2)",
+    "btn2-grad": "linear-gradient(180deg, #ffffff, #f6f7fc)", "btn2-shadow": "0 1px 2px rgba(16,24,40,.06)",
+    "btn2-shadow-hover": "0 6px 14px -8px rgba(36,30,110,.28)", "btn2-pressed": "inset 0 1px 3px rgba(16,24,40,.12)",
+    "badge-hi": "inset 0 1px 0 rgba(255,255,255,.75)", "flow-op": ".55",
 }
 DARK = {
     "bg": "#0b1020", "surface": "#121833", "surface-2": "#0f1530", "raised": "#171e3d", "hover": "#1b2347",
@@ -103,6 +111,14 @@ DARK = {
     "shadow": "0 1px 2px rgba(0,0,0,.35), 0 4px 14px -6px rgba(0,0,0,.45)",
     "shadow-lg": "0 26px 50px -24px rgba(0,0,0,.85), 0 0 0 1px rgba(124,108,255,.10)",
     "av-sat": "55%", "av-bg": "22%", "av-fg": "80%", "av-bd": "34%",
+    "btn-grad": "linear-gradient(180deg, #9286ff 0%, #7c6cff 50%, #6a59f0 100%)", "btn-border": "rgba(160,150,255,.55)",
+    "btn-hi": "inset 0 1px 0 rgba(255,255,255,.26), inset 0 -1px 0 rgba(10,5,50,.35)",
+    "btn-shadow": "0 1px 2px rgba(0,0,0,.4), 0 8px 20px -10px rgba(124,108,255,.65)",
+    "btn-shadow-hover": "0 2px 4px rgba(0,0,0,.4), 0 14px 28px -12px rgba(124,108,255,.8)",
+    "btn-pressed": "inset 0 2px 5px rgba(10,5,50,.45)",
+    "btn2-grad": "linear-gradient(180deg, #1a2148, #131936)", "btn2-shadow": "0 1px 2px rgba(0,0,0,.35)",
+    "btn2-shadow-hover": "0 8px 18px -10px rgba(0,0,0,.7), 0 0 0 1px rgba(124,108,255,.12)", "btn2-pressed": "inset 0 1px 4px rgba(0,0,0,.45)",
+    "badge-hi": "inset 0 1px 0 rgba(255,255,255,.06)", "flow-op": ".42",
 }
 TH = DARK if st.session_state.dark_mode else LIGHT
 _root_vars = ":root {" + "".join(f"--{k}:{v};" for k, v in TH.items()) + "}"
@@ -110,7 +126,7 @@ _root_vars = ":root {" + "".join(f"--{k}:{v};" for k, v in TH.items()) + "}"
 # Design system. Plus Jakarta Sans for everything read, JetBrains Mono only
 # for small eyebrow labels; numbers use tabular figures. Icons are Material
 # Symbols ligatures (one family everywhere) — inline <svg> doesn't paint in
-# this app's hosting environment, so the hero radar is pure CSS too. Widgets
+# this app's hosting environment, so the hero Opportunity Flow is pure CSS. Widgets
 # that need styling are wrapped in st.container(key=...) and targeted via
 # .st-key-*; raw HTML tags are never opened in one st.* call and closed in
 # another. Motion uses transform/opacity only and honours reduced motion;
@@ -164,8 +180,16 @@ _CSS = """
 @keyframes jt-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes jt-pulse { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(2.6); opacity: 0; } }
 @keyframes jt-ring { 0% { transform: scale(1); opacity: .45; } 100% { transform: scale(1.32); opacity: 0; } }
-@keyframes jt-sweep { to { transform: rotate(360deg); } }
-@keyframes jt-blip { 0%, 100% { opacity: .25; transform: scale(.8); } 12% { opacity: 1; transform: scale(1.15); } 40% { opacity: .55; transform: scale(1); } }
+/* Opportunity Flow: slow drifting light, never a loop you can see restart */
+@keyframes jt-aurora { 0% { transform: translate3d(-6%, 4%, 0) rotate(var(--rot, -12deg)) scaleY(.9); } 100% { transform: translate3d(6%, -5%, 0) rotate(calc(var(--rot, -12deg) + 7deg)) scaleY(1.12); } }
+@keyframes jt-wave { 0% { transform: translateY(-3%) rotate(var(--rot, 0deg)); } 100% { transform: translateY(4%) rotate(calc(var(--rot, 0deg) - 3deg)); } }
+@keyframes jt-drift { 0% { opacity: 0; transform: translate(0, 0) scale(.5); } 18%, 78% { opacity: var(--o, .85); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) * 1cqw), calc(var(--dy) * 1cqh)) scale(1); } }
+@keyframes jt-twinkle { 0%, 100% { opacity: .45; transform: scale(.85); } 50% { opacity: 1; transform: scale(1.1); } }
+@keyframes jt-breathe { 0%, 100% { opacity: .7; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.06); } }
+@keyframes jt-flare { 0%, 62%, 100% { opacity: 0; transform: scale(.6); } 72% { opacity: .9; transform: scale(1); } 84% { opacity: 0; transform: scale(1.25); } }
+@keyframes jt-pop { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
+@keyframes jt-grow { from { opacity: 0; transform: scaleY(.3); } to { opacity: 1; transform: none; } }
 @keyframes jt-shimmer { from { background-position: -320px 0; } to { background-position: 320px 0; } }
 @keyframes jt-toast-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 [data-testid="stMainBlockContainer"] > div > [data-testid="stVerticalBlock"] > * { animation: jt-fade var(--normal) var(--ease) backwards; }
@@ -208,6 +232,15 @@ _CSS = """
 .pill.failing, .pill.off { color: var(--red); background: var(--red-soft); border-color: color-mix(in srgb, var(--red) 22%, transparent); }
 .pill.pending, .pill.legacy, .pill.neutral { color: var(--gray); background: var(--gray-soft); border-color: color-mix(in srgb, var(--gray) 18%, transparent); }
 .pill.entry, .pill.checking, .pill.new { color: var(--accent-text); background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 22%, transparent); }
+/* category badges: slightly dimensional; Fresher carries the spark (same meaning, same words) */
+.pill.fresher, .pill.entry { position: relative; padding-right: 11px; box-shadow: var(--badge-hi), 0 1px 2px -1px color-mix(in srgb, currentColor 30%, transparent);
+  animation: jt-pop var(--normal) var(--ease) backwards; }
+.pill.fresher { background: linear-gradient(180deg, color-mix(in srgb, var(--green-soft) 70%, var(--surface)), var(--green-soft));
+  border-color: color-mix(in srgb, var(--green) 30%, transparent); }
+.pill.entry { background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 70%, var(--surface)), var(--accent-soft)); }
+.pill.fresher::after { content: ""; position: absolute; top: -2px; right: -2px; width: 6px; height: 6px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff 0 22%, var(--accent-2) 70%);
+  box-shadow: 0 0 0 2px var(--surface), 0 0 8px color-mix(in srgb, var(--accent-2) 70%, transparent); }
 .pill.healthy i, .pill.on i, .pill.checking i { position: relative; }
 .pill.healthy i::after, .pill.on i::after, .pill.checking i::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: currentColor; animation: jt-pulse 2.4s ease-out infinite; }
 .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 13px; line-height: 18px; color: var(--text-2); background: color-mix(in srgb, var(--surface) 70%, transparent); border: 1px solid var(--border); white-space: nowrap; }
@@ -242,12 +275,16 @@ _CSS = """
 /* ── Home hero: the live discovery console ── */
 .st-key-hero { position: relative; overflow: hidden; padding: 30px 32px 26px !important; gap: 18px !important; isolation: isolate;
   background:
-    radial-gradient(520px 300px at 88% 30%, var(--glow-1), transparent 70%),
-    radial-gradient(420px 260px at 0% 100%, var(--glow-2), transparent 70%),
-    var(--surface) !important; }
+    radial-gradient(380px 320px at 84% 46%, var(--glow-1), transparent 72%),
+    radial-gradient(260px 220px at 90% 40%, var(--glow-2), transparent 70%),
+    radial-gradient(460px 260px at 0% 100%, var(--glow-2), transparent 70%),
+    linear-gradient(180deg, var(--surface) 40%, color-mix(in srgb, var(--surface) 92%, var(--accent)) 100%) !important; }
 .st-key-hero::after { content: ""; position: absolute; inset: 0 0 auto 0; height: 1px; z-index: -1;
   background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 55%, transparent), color-mix(in srgb, var(--accent-2) 45%, transparent), transparent); }
-.hero { display: grid; grid-template-columns: minmax(0, 1fr) 232px; gap: 28px; align-items: center; }
+/* faint layered edge: a soft tint rising from the bottom and fading at the sides */
+.st-key-hero::before { content: ""; position: absolute; inset: auto 0 0 0; height: 46%; z-index: -1; pointer-events: none;
+  background: radial-gradient(70% 100% at 70% 100%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%); }
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: center; }
 .hero .page-title { font-size: 40px; line-height: 46px; letter-spacing: -0.035em; max-width: 620px; margin-top: 10px; }
 .hero .page-title em { font-style: normal; background: linear-gradient(92deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .hero-sub { font-size: 16px; line-height: 25px; color: var(--text-2); margin: 10px 0 0; max-width: 560px; }
@@ -257,33 +294,83 @@ _CSS = """
 .hero-status .live.failing { border-color: color-mix(in srgb, var(--red) 40%, var(--border)); }
 .hero-status .live.delayed { border-color: color-mix(in srgb, var(--amber) 40%, var(--border)); }
 
-/* the radar: rings + crosshair + one rotating sweep; each blip is a tracked portal */
-.radar { position: relative; width: 100%; aspect-ratio: 1; border-radius: 50%; justify-self: end;
-  background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--accent) 14%, transparent) 0, transparent 68%);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent); }
-.radar::before, .radar::after { content: ""; position: absolute; background: color-mix(in srgb, var(--accent) 16%, transparent); }
-.radar::before { left: 50%; top: 6%; bottom: 6%; width: 1px; } .radar::after { top: 50%; left: 6%; right: 6%; height: 1px; }
-.radar .ring { position: absolute; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent); }
-.radar .r1 { inset: 17%; } .radar .r2 { inset: 33%; border-style: dashed; opacity: .8; } .radar .r3 { inset: 46%; border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
-.radar .sweep { position: absolute; inset: 2%; border-radius: 50%; will-change: transform;
-  background: conic-gradient(from 0deg, transparent 0deg 280deg, color-mix(in srgb, var(--accent) 10%, transparent) 300deg, color-mix(in srgb, var(--accent-2) 42%, transparent) 359deg, transparent 360deg);
-  animation: jt-sweep 7s linear infinite; }
-.radar .core { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%;
-  background: var(--accent); box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 18%, transparent), 0 0 24px color-mix(in srgb, var(--accent) 60%, transparent); }
-.radar .blip { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--accent-2);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--accent-2) 70%, transparent); animation: jt-blip 7s ease-out infinite; }
-.radar .blip.warn { background: var(--red); box-shadow: 0 0 12px color-mix(in srgb, var(--red) 70%, transparent); }
-.radar-cap { position: absolute; right: 0; bottom: -2px; font-family: var(--mono) !important; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+/* the Opportunity Spark: the product's one recurring mark — a small point of
+   light where something was found. Used sparingly: hero, discovery headings,
+   the Fresher badge. */
+.spark { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; position: relative;
+  background: radial-gradient(circle at 35% 35%, #fff 0 18%, var(--accent-2) 46%, var(--accent) 100%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 14%, transparent), 0 0 12px color-mix(in srgb, var(--accent-2) 55%, transparent); }
+.eyebrow.sparked::before { content: ""; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  background: radial-gradient(circle at 35% 35%, #fff 0 18%, var(--accent-2) 46%, var(--accent) 100%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 14%, transparent), 0 0 12px color-mix(in srgb, var(--accent-2) 55%, transparent); }
+
+/* Opportunity Flow: aurora ribbons and streams of light drifting towards one
+   spark (discovery). Each node on the streams is a tracked portal. Pure CSS
+   (inline svg doesn't paint here); every animation is transform/opacity. */
+.flow { position: relative; width: 100%; aspect-ratio: 1.08; justify-self: end; overflow: hidden; container-type: size; pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 24%, #000 84%, transparent), linear-gradient(180deg, transparent, #000 20%, #000 80%, transparent);
+  -webkit-mask-composite: source-in; mask-image: linear-gradient(90deg, transparent, #000 24%, #000 84%, transparent), linear-gradient(180deg, transparent, #000 20%, #000 80%, transparent);
+  mask-composite: intersect; }
+.flow > span { position: absolute; display: block; }
+.flow .aura { left: 30%; top: 21%; width: 64%; height: 60%; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 26%, transparent), transparent); opacity: var(--flow-op); }
+/* aurora ribbons: thick, blurred top edges of wide ellipses = soft curved bands of light */
+.flow .rib { left: -30%; width: 160%; border-radius: 50%; border-top: 16px solid; border-color: var(--c) transparent transparent; filter: blur(10px); opacity: var(--flow-op);
+  -webkit-mask-image: linear-gradient(90deg, transparent 12%, #000 38%, #000 66%, transparent 90%); mask-image: linear-gradient(90deg, transparent 12%, #000 38%, #000 66%, transparent 90%);
+  transform: rotate(var(--rot)); will-change: transform; animation: jt-aurora var(--t, 14s) ease-in-out infinite alternate; }
+.flow .rib.a { top: 41%; height: 80%; --rot: -12deg; --t: 13s; --c: var(--accent); }
+.flow .rib.b { top: 53%; height: 100%; --rot: -3deg; --t: 17s; animation-delay: -6s; border-top-width: 12px; --c: var(--accent-2); }
+.flow .rib.c { top: 31%; height: 70%; --rot: -21deg; --t: 21s; animation-delay: -11s; border-top-width: 20px; filter: blur(14px); --c: #6d7cff; opacity: calc(var(--flow-op) * .7); }
+/* streams: the top edge of wide, offset ellipses = gentle flowing curves */
+.flow .ln { left: -30%; width: 160%; border-radius: 50%; border-top: 1.5px solid; border-color: color-mix(in srgb, var(--accent) 75%, transparent) transparent transparent;
+  -webkit-mask-image: linear-gradient(90deg, transparent 18%, #000 42%, #000 60%, transparent 86%); mask-image: linear-gradient(90deg, transparent 18%, #000 42%, #000 60%, transparent 86%);
+  transform: rotate(var(--rot)); will-change: transform; animation: jt-wave var(--t, 9s) ease-in-out infinite alternate; }
+.flow .l1 { top: 49%; height: 70%; --rot: -9deg; --t: 9s; }
+.flow .l2 { top: 54%; height: 90%; --rot: -4deg; --t: 11s; animation-delay: -3s; border-top-color: color-mix(in srgb, var(--accent-2) 60%, transparent); }
+.flow .l3 { top: 43%; height: 58%; --rot: -15deg; --t: 13s; animation-delay: -7s; border-top-width: 1px; }
+.flow .l4 { top: 59%; height: 110%; --rot: 2deg; --t: 10s; animation-delay: -5s; border-top-width: 1px; border-top-color: color-mix(in srgb, var(--accent-2) 45%, transparent); }
+.flow .l5 { top: 37%; height: 64%; --rot: -20deg; --t: 15s; animation-delay: -9s; border-top-width: 1px; opacity: .7; }
+/* particles drift along the streams through the spark and fade out */
+.flow .pt { width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: #fff; opacity: 0;
+  box-shadow: 0 0 6px 1px color-mix(in srgb, var(--accent-2) 80%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 60%, transparent);
+  will-change: transform, opacity; animation: jt-drift var(--t, 7s) cubic-bezier(.35,.1,.45,1) infinite; }
+.flow .pt.s { width: 3px; height: 3px; }
+/* nodes: one per tracked portal, resting on the streams */
+.flow .node { width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff 0 20%, var(--accent-2) 60%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 16%, transparent), 0 0 12px color-mix(in srgb, var(--accent-2) 65%, transparent);
+  animation: jt-twinkle 5.5s ease-in-out infinite; }
+.flow .node.warn { background: radial-gradient(circle at 35% 35%, #fff 0 20%, var(--red) 60%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--red) 16%, transparent), 0 0 12px color-mix(in srgb, var(--red) 60%, transparent); }
+/* the spark: where the streams meet */
+.flow .halo { left: 62%; top: 51%; width: 46%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent-2) 34%, transparent), color-mix(in srgb, var(--accent) 14%, transparent) 55%, transparent);
+  animation: jt-breathe 6s ease-in-out infinite; }
+.flow .flare { left: 62%; top: 51%; width: 22%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; opacity: 0;
+  background: radial-gradient(closest-side, color-mix(in srgb, #fff 80%, var(--accent-2)), color-mix(in srgb, var(--accent-2) 30%, transparent) 45%, transparent);
+  animation: jt-flare 9s ease-out infinite 2s; }
+.flow .core { left: 62%; top: 51%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 38%, #fff 0 28%, var(--accent-2) 62%, var(--accent));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-2) 18%, transparent), 0 0 22px 2px color-mix(in srgb, var(--accent-2) 60%, transparent), 0 0 46px color-mix(in srgb, var(--accent) 45%, transparent); }
+.flow-wrap { position: relative; min-width: 0; margin: -18px -24px -18px 0; }
+.flow-cap { position: absolute; right: 4px; bottom: 2px; font-family: var(--mono) !important; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
 
 /* ── metric modules ── */
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-.stat { position: relative; padding: 18px 18px 16px; min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+.stat { position: relative; padding: 18px 18px 16px; min-width: 0; border: 1px solid var(--border); border-radius: var(--r-lg);
+  background: radial-gradient(160px 90px at 0% 0%, color-mix(in srgb, var(--tint, var(--accent)) 6%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--surface) 70%, var(--surface-2)));
   box-shadow: var(--hi), var(--shadow); transition: transform var(--normal) var(--ease), box-shadow var(--normal) var(--ease), border-color var(--normal) var(--ease); overflow: hidden; }
-.stat::before { content: ""; position: absolute; inset: 0 0 auto; height: 2px; background: linear-gradient(90deg, var(--tint, var(--accent)), transparent 70%); opacity: .7; }
+.stat::before { content: ""; position: absolute; left: 16px; right: 40%; top: 0; height: 2px; border-radius: 0 0 2px 2px;
+  background: linear-gradient(90deg, var(--tint, var(--accent)), transparent); opacity: .65; transition: opacity var(--normal) var(--ease); }
 .stat:hover { transform: translateY(-2px); box-shadow: var(--hi), var(--shadow-lg); border-color: color-mix(in srgb, var(--tint, var(--accent)) 30%, var(--border)); }
+.stat:hover::before { opacity: 1; }
 .stat .ic { width: 36px; height: 36px; border-radius: 11px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;
-  color: var(--tint, var(--accent)); background: color-mix(in srgb, var(--tint, var(--accent)) 12%, transparent); transition: transform var(--normal) var(--ease); }
-.stat:hover .ic { transform: translateY(-1px) rotate(-6deg) scale(1.06); }
+  color: var(--tint, var(--accent)); border: 1px solid color-mix(in srgb, var(--tint, var(--accent)) 18%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tint, var(--accent)) 9%, transparent), color-mix(in srgb, var(--tint, var(--accent)) 16%, transparent));
+  box-shadow: var(--badge-hi); transition: transform var(--normal) var(--ease), box-shadow var(--normal) var(--ease); }
+.stat:hover .ic { transform: translateY(-1px) scale(1.05);
+  box-shadow: var(--badge-hi), 0 6px 16px -6px color-mix(in srgb, var(--tint, var(--accent)) 60%, transparent); }
 .stat.t-green { --tint: var(--green); } .stat.t-teal { --tint: var(--accent-2); } .stat.t-amber { --tint: var(--amber); } .stat.t-red { --tint: var(--red); } .stat.t-gray { --tint: var(--gray); }
 .stat .k { font-size: 13px; line-height: 18px; color: var(--muted); font-weight: 500; display: flex; align-items: center; gap: 6px; }
 .stat .v { font-size: 30px; line-height: 36px; font-weight: 800; letter-spacing: -0.03em; color: var(--text); margin-top: 4px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
@@ -333,7 +420,15 @@ _CSS = """
   box-shadow: inset 0 0 0 1px hsl(var(--h) var(--av-sat) var(--av-bd)), var(--hi); transition: transform var(--normal) var(--ease); }
 .logo.lg { width: 64px; height: 64px; border-radius: 18px; font-size: 26px; }
 .logo.sm { width: 34px; height: 34px; border-radius: 10px; font-size: 14px; }
-[class*="st-key-jr_"]:hover .logo, [class*="st-key-cr_"]:hover .logo { transform: scale(1.06) rotate(-3deg); }
+[class*="st-key-jr_"]:hover .logo, [class*="st-key-cr_"]:hover .logo { transform: scale(1.05);
+  box-shadow: inset 0 0 0 1px hsl(var(--h) var(--av-sat) var(--av-bd)), var(--hi), 0 6px 14px -8px hsl(var(--h) 60% 45%); }
+/* a hovered card's primary action steps forward slightly */
+:is([class*="st-key-jr_"]:hover, [class*="st-key-jr_"]:focus-within) .btn.primary { box-shadow: var(--btn-hi), 0 10px 22px -10px var(--accent); }
+/* soft light in the card's top-left corner on hover */
+[class*="st-key-jr_"], [class*="st-key-cr_"] { position: relative; isolation: isolate; }
+[class*="st-key-jr_"]::after, [class*="st-key-cr_"]::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; z-index: -1;
+  background: radial-gradient(420px 160px at 0% 0%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 70%); transition: opacity var(--normal) var(--ease); }
+:is([class*="st-key-jr_"], [class*="st-key-cr_"]):is(:hover, :focus-within)::after { opacity: 1; }
 .job-body { min-width: 0; flex: 1; }
 .job-co { font-size: 13px; line-height: 18px; color: var(--text-2); font-weight: 600; display: flex; align-items: center; gap: 6px; }
 .job-title { font-size: 17px; line-height: 24px; font-weight: 700; letter-spacing: -0.015em; color: var(--text); margin: 2px 0 0; overflow-wrap: anywhere; }
@@ -367,12 +462,21 @@ _CSS = """
   transition: transform var(--fast) var(--ease), box-shadow var(--fast) var(--ease), background var(--fast), border-color var(--fast); }
 .btn .ms { transition: transform var(--fast) var(--ease); }
 .btn:hover .ms { transform: translate(2px, -2px); }
-.btn.primary { color: var(--on-accent) !important; background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 82%, #fff), var(--accent));
-  border-color: color-mix(in srgb, var(--accent) 70%, #000 0%); box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 8px 18px -10px var(--accent); }
-.btn.primary:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255,255,255,.32), 0 12px 24px -10px var(--accent); }
-.btn.primary:active { transform: translateY(0) scale(.98); }
-.btn.ghost { background: var(--surface); color: var(--text) !important; border-color: var(--border-strong); box-shadow: var(--hi); }
-.btn.ghost:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong)); color: var(--accent-text) !important; transform: translateY(-1px); }
+/* Primary = one glossy surface everywhere (links styled as buttons and real
+   Streamlit buttons): a lit top edge, a gradient body, a darker lip, a soft
+   coloured shadow, and on hover a single specular sweep. Secondary shares the
+   radius, height and motion but stays a quiet raised surface. */
+.btn.primary, [data-testid="stBaseButton-primary"] { position: relative; overflow: hidden; isolation: isolate; }
+.btn.primary { color: var(--on-accent) !important; background: var(--btn-grad); border-color: var(--btn-border); box-shadow: var(--btn-hi), var(--btn-shadow); }
+.btn.primary:hover { transform: translateY(-1px); box-shadow: var(--btn-hi), var(--btn-shadow-hover); }
+.btn.primary:active { transform: translateY(0) scale(.98); box-shadow: var(--btn-pressed); }
+.btn.primary::after, [data-testid="stBaseButton-primary"]::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 60%; z-index: -1; pointer-events: none;
+  background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,.28) 50%, transparent 80%);
+  transform: translateX(-130%) skewX(-12deg); transition: transform 0s; }
+.btn.primary:hover::after, [data-testid="stBaseButton-primary"]:hover:not(:disabled)::after { transform: translateX(230%) skewX(-12deg); transition: transform 700ms var(--ease); }
+.btn.ghost { background: var(--btn2-grad); color: var(--text) !important; border-color: var(--border-strong); box-shadow: var(--hi), var(--btn2-shadow); }
+.btn.ghost:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong)); color: var(--accent-text) !important; transform: translateY(-1px); box-shadow: var(--hi), var(--btn2-shadow-hover); }
 .btn.disabled { background: var(--hover); color: var(--muted) !important; }
 .btn:focus-visible, .link:focus-visible, .stApp a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
 .link { color: var(--accent-text) !important; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; overflow-wrap: anywhere; }
@@ -387,12 +491,14 @@ _CSS = """
 [data-testid^="stBaseButton"] [data-testid="stMarkdownContainer"] { display: flex !important; align-items: center; margin: 0 !important; padding: 0 !important; }
 [data-testid^="stBaseButton"] p { margin: 0 !important; font-size: 14px !important; line-height: 20px !important; font-weight: 600 !important; white-space: nowrap; }
 [data-testid^="stBaseButton"] [data-testid="stIconMaterial"] { font-size: 18px !important; transition: transform var(--fast) var(--ease); }
-[data-testid="stBaseButton-secondary"] { background: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--border-strong) !important; box-shadow: var(--hi) !important; }
-[data-testid="stBaseButton-secondary"]:hover:not(:disabled) { border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong)) !important; color: var(--accent-text) !important; transform: translateY(-1px); background: var(--surface) !important; }
-[data-testid="stBaseButton-primary"] { color: var(--on-accent) !important; border: 1px solid var(--accent) !important;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 82%, #fff), var(--accent)) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 8px 18px -10px var(--accent) !important; }
-[data-testid="stBaseButton-primary"]:hover:not(:disabled) { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255,255,255,.32), 0 12px 24px -10px var(--accent) !important; }
+[data-testid="stBaseButton-secondary"] { background: var(--btn2-grad) !important; color: var(--text) !important; border: 1px solid var(--border-strong) !important; box-shadow: var(--hi), var(--btn2-shadow) !important; }
+[data-testid="stBaseButton-secondary"]:hover:not(:disabled) { border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong)) !important; color: var(--accent-text) !important; transform: translateY(-1px);
+  background: var(--btn2-grad) !important; box-shadow: var(--hi), var(--btn2-shadow-hover) !important; }
+[data-testid="stBaseButton-secondary"]:active:not(:disabled) { transform: translateY(0) scale(.98); box-shadow: var(--btn2-pressed) !important; }
+[data-testid="stBaseButton-primary"] { color: var(--on-accent) !important; border: 1px solid var(--btn-border) !important;
+  background: var(--btn-grad) !important; box-shadow: var(--btn-hi), var(--btn-shadow) !important; text-shadow: 0 1px 0 rgba(20,10,80,.18); }
+[data-testid="stBaseButton-primary"]:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--btn-hi), var(--btn-shadow-hover) !important; }
+[data-testid="stBaseButton-primary"]:active:not(:disabled) { transform: translateY(0) scale(.98); box-shadow: var(--btn-pressed) !important; }
 [data-testid="stBaseButton-primary"] p { font-weight: 700 !important; }
 [data-testid^="stBaseButton"]:disabled { opacity: .45 !important; transform: none !important; cursor: not-allowed; }
 [data-testid="stBaseButton-tertiary"] { color: var(--muted) !important; background: transparent !important; border: none !important; padding: 0 10px !important; }
@@ -596,6 +702,7 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 [class*="st-key-nav_"] [data-testid^="stBaseButton"] {
   position: relative; width: 100% !important; justify-content: flex-start !important; min-height: 42px !important; padding: 0 12px !important;
   border-radius: 11px !important; color: var(--text-2) !important; background: transparent !important; border: 1px solid transparent !important; gap: 10px;
+  transition: background var(--normal) var(--ease), border-color var(--normal) var(--ease), box-shadow var(--normal) var(--ease), color var(--fast) !important;
 }
 [class*="st-key-nav_"] [data-testid^="stBaseButton"] > div { justify-content: flex-start !important; gap: 12px !important; }
 [class*="st-key-nav_"] [data-testid^="stBaseButton"]:hover { background: var(--hover) !important; color: var(--text) !important; transform: none; }
@@ -605,12 +712,15 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 /* the ✕ / ↺ buttons on job rows are icon-only; their label is for screen readers */
 [class*="st-key-dismiss_"] [data-testid="stMarkdownContainer"], [class*="st-key-restore_"] [data-testid="stMarkdownContainer"],
 [class*="st-key-dismiss_"] [data-testid="stMarkdownContainer"] p, [class*="st-key-restore_"] [data-testid="stMarkdownContainer"] p { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; clip-path: inset(50%) !important; white-space: nowrap !important; margin: -1px !important; padding: 0 !important; border: 0 !important; }
-.side-foot { margin-top: auto; padding: 14px; border-radius: 14px; border: 1px solid var(--border); background: color-mix(in srgb, var(--surface-2) 80%, transparent); font-size: 12.5px; line-height: 18px; color: var(--muted); box-shadow: var(--hi); }
+/* application status, integrated into the rail: a quiet inset surface, not another card */
+.side-foot { margin-top: auto; padding: 12px 12px 11px; border-radius: 12px; border: 1px solid var(--border); position: relative; overflow: hidden;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 70%, transparent), color-mix(in srgb, var(--surface-2) 95%, transparent));
+  font-size: 12px; line-height: 17px; color: var(--muted); box-shadow: var(--hi); transition: border-color var(--normal) var(--ease); }
+.side-foot::before { content: ""; position: absolute; left: 12px; right: 12px; top: 0; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--tone, var(--green)) 50%, transparent), transparent); }
+.side-foot.failing { --tone: var(--red); } .side-foot.delayed { --tone: var(--amber); } .side-foot.pending, .side-foot.checking { --tone: var(--gray); }
 .side-foot .st { display: flex; align-items: center; gap: 9px; color: var(--text); font-weight: 700; font-size: 13px; }
-.side-foot .meta { margin-top: 8px; display: flex; flex-direction: column; gap: 2px; }
-.side-foot a { color: var(--muted) !important; display: inline-flex; align-items: center; gap: 4px; }
-.side-foot a:hover { color: var(--accent-text) !important; }
-.side-foot .src { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.side-foot .meta { margin-top: 7px; padding-left: 17px; display: flex; flex-direction: column; gap: 3px; }
+.side-foot .meta .txt { display: flex; align-items: center; gap: 6px; } .side-foot .meta .ms { color: var(--muted); opacity: .8; }
 .st-key-side_foot_wrap { margin-top: auto; padding-top: 16px; }
 
 /* mobile top nav (phones only) */
@@ -622,6 +732,12 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .how .ic { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--accent-text); background: var(--accent-soft); }
 .how b { display: block; font-size: 14px; line-height: 20px; color: var(--text); }
 .how p { margin: 2px 0 0; font-size: 13px; line-height: 19px; color: var(--muted); }
+/* every icon tile shares one finish: lit top edge + hairline border */
+.how .ic, .set-head .ic, .step .node, .empty .ic, .add-steps .ms { box-shadow: var(--badge-hi); }
+.how .ic, .set-head .ic:not(.red) { border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 60%, var(--surface)), var(--accent-soft)); }
+.how > div { transition: border-color var(--normal) var(--ease), background var(--normal) var(--ease); }
+.how > div:hover { border-color: color-mix(in srgb, var(--accent) 30%, var(--border-strong)); background: color-mix(in srgb, var(--surface) 85%, transparent); }
 
 /* ── footer ── */
 .app-foot { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 8px; }
@@ -655,7 +771,7 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   .st-key-co_cols [data-testid="stColumn"]:nth-child(n) { flex: 1 1 100% !important; width: 100% !important; }
 }
 @media (max-width: 1100px) {
-  .hero { grid-template-columns: minmax(0, 1fr) 176px; }
+  .hero { grid-template-columns: minmax(0, 1fr) 240px; gap: 12px; }
   .hero .page-title { font-size: 34px; line-height: 41px; }
 }
 /* tablet: icon rail */
@@ -669,7 +785,7 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   /* icon rail: labels are hidden visually but kept for screen readers */
   [class*="st-key-nav_"] p { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; clip-path: inset(50%) !important; white-space: nowrap !important; margin: -1px !important; padding: 0 !important; border: 0 !important; }
   [data-testid="stSidebarUserContent"] { padding: 18px 10px !important; }
-  .side-foot { padding: 12px 0; text-align: center; border: none; background: none; box-shadow: none; } .side-foot .txt, .side-foot .meta, .side-foot .src { display: none; } .side-foot .st { justify-content: center; }
+  .side-foot { padding: 12px 0; text-align: center; border: none; background: none; box-shadow: none; } .side-foot .txt, .side-foot .meta { display: none; } .side-foot::before { display: none; } .side-foot .st { justify-content: center; }
   .st-key-job_cols > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-job_cols > [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; }
   .st-key-job_cols [data-testid="stColumn"]:nth-child(n) { flex: 1 1 100% !important; width: 100% !important; }
   .how { grid-template-columns: minmax(0, 1fr); }
@@ -694,10 +810,14 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   .st-key-mnav p { font-size: 10.5px !important; line-height: 13px !important; font-weight: 600 !important; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 1px; }
   .page-title, .detail-title { font-size: 24px; line-height: 31px; }
   .st-key-hero { padding: 22px 18px 20px !important; }
-  .hero { grid-template-columns: minmax(0, 1fr) 76px; gap: 14px; align-items: start; }
+  /* the flow becomes a slim ribbon across the top of the hero card, behind nothing */
+  .hero { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .flow-wrap { order: -1; margin: -22px -18px 0; }
+  .flow { aspect-ratio: auto; height: 76px; justify-self: stretch; }
+  .flow .halo { width: 22%; } .flow .flare { width: 12%; } .flow .pt.x { display: none; }
   .hero .page-title { font-size: 27px; line-height: 33px; }
   .hero-sub { font-size: 14.5px; line-height: 22px; }
-  .radar-cap { display: none; }
+  .flow-cap { display: none; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .stat { padding: 14px 14px 13px; } .stat .ic { width: 32px; height: 32px; margin-bottom: 10px; } .stat .v { font-size: 24px; line-height: 30px; } .stat .v.sm { font-size: 17px; line-height: 24px; }
   .stat .v, .stat .n { white-space: normal; }   /* wrap instead of cutting off key facts */
@@ -720,13 +840,15 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   .st-key-mnav [data-testid="stColumn"]:nth-child(n) { flex: 1 1 auto !important; }
   .st-key-mnav p { font-size: 10px !important; letter-spacing: -0.02em; text-overflow: clip; }
   .st-key-mnav [data-testid="stIconMaterial"] { padding: 2px 8px; }
-  .hero { grid-template-columns: minmax(0, 1fr); } .radar { display: none; }
   .stat .v { font-size: 21px; line-height: 27px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
-  .radar .sweep { animation: none !important; transform: rotate(40deg); }
-  .radar .blip { animation: none !important; opacity: .8; }
+  /* the flow holds still as a composed gradient: particles rest mid-stream */
+  .flow > span { animation: none !important; }
+  .flow .pt { opacity: var(--o, .85); transform: translate(calc(var(--dx) * var(--p, .5) * 1cqw), calc(var(--dy) * var(--p, .5) * 1cqh)); }
+  .flow .node { opacity: .85; } .flow .flare { opacity: 0; }
+  .btn.primary::after, [data-testid="stBaseButton-primary"]::after { display: none; }
 }
 """
 
@@ -1082,9 +1204,11 @@ st.html(f"<style>{_nav_on}, {_nav_on}:hover {{"
         "color: var(--text) !important; border-color: color-mix(in srgb, var(--accent) 22%, transparent) !important;"
         "box-shadow: var(--hi), 0 10px 22px -16px var(--accent) !important;}"
         f"{_nav_on}::before {{content: ''; position: absolute; left: -15px; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0;"
-        "background: linear-gradient(180deg, var(--accent), var(--accent-2)); box-shadow: 0 0 12px var(--accent);}"
+        "background: linear-gradient(180deg, var(--accent), var(--accent-2)); box-shadow: 0 0 12px var(--accent);"
+        "animation: jt-grow var(--normal) var(--ease) backwards;}"
         f"@media (max-width: 1023px) {{ {_nav_on}::before {{ left: -11px; }} }}"
-        f".st-key-nav_{current} [data-testid='stIconMaterial'] {{color: var(--accent-text) !important;}}"
+        f".st-key-nav_{current} [data-testid='stIconMaterial'] {{color: var(--accent-text) !important; font-variation-settings: 'FILL' 1;"
+        "text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 45%, transparent);}"
         f".st-key-nav_{current} p {{font-weight: 700 !important;}}"
         f".st-key-mob_{current} [data-testid^='stBaseButton'] {{color: var(--accent-text) !important;}}"
         f".st-key-mob_{current} [data-testid='stIconMaterial'] {{background: var(--accent-soft); color: var(--accent-text) !important;}}"
@@ -1101,11 +1225,10 @@ with st.sidebar:
             st.button(label, key=f"nav_{key}", icon=icon, type="tertiary", use_container_width=True,
                       on_click=go, args=(key,))
     with st.container(key="side_foot_wrap"):
-        st.html(f"""<div class="side-foot">
+        st.html(f"""<div class="side-foot {overall[0]}" role="status">
           <div class="st" title="{escape(overall[1], quote=True)}"><span class="dot {overall[0]}"></span><span class="txt">{escape(overall[1])}</span></div>
-          <div class="meta"><span class="txt">{_plural(len(companies), 'company', 'companies')} monitored</span>
-            <span class="txt num">Last scan {_ago(last_scan, NOW)}</span></div>
-          <div class="src txt"><a href="https://github.com/{GITHUB_REPO}" target="_blank" rel="noopener">{_ms("code", "s16")} Source on GitHub</a></div>
+          <div class="meta"><span class="txt">{_ms("apartment", "s14")}{_plural(len(companies), 'company', 'companies')} monitored</span>
+            <span class="txt num">{_ms("history", "s14")}Last scan {_ago(last_scan, NOW)}</span></div>
         </div>""")
 
 # phones: the sidebar is hidden and this compact bar takes over (CSS decides)
@@ -1152,7 +1275,7 @@ def scan_actions():
             toast("Showing the latest data", "success")
             st.rerun()
     with b:
-        if st.button("Run check", key="btn_run_check", icon=":material/radar:", type="primary",
+        if st.button("Run check", key="btn_run_check", icon=":material/travel_explore:", type="primary",
                      help="Ask GitHub Actions to scan every portal now (takes a few minutes)"):
             since = time.time() - st.session_state.get("last_check_trigger", 0)
             if since < _CHECK_COOLDOWN_S:
@@ -1306,31 +1429,42 @@ def _stat(label: str, value, note: str, icon: str, tint: str = "", small: bool =
             f'<div class="k">{label}</div><div class="v{" sm" if small else ""}">{value}</div><div class="n">{note}</div></div>')
 
 
-# radar contacts: one per tracked portal (up to 8), at fixed polar positions;
-# each lights up as the 7 s sweep passes its bearing
-_BLIPS = ((32, .62), (104, .40), (158, .80), (214, .55), (282, .72), (332, .34), (70, .84), (248, .46))
+# Opportunity Flow particles: start (x %, y %), travel (dx, dy in container
+# units), duration s, delay s, peak opacity, classes ("s" small, "x" desktop only).
+# Each path drifts left to right through the spark at (62 %, 51 %); --p is
+# where it rests when motion is reduced.
+_PARTICLES = ((6, 77, 70, -34, 8.0, 0, .9, ""), (2, 59, 78, -12, 9.5, -2.5, .8, "s"), (10, 37, 62, 14, 7.5, -4.8, .7, "s"),
+              (18, 89, 60, -48, 10, -6.5, .85, ""), (0, 47, 84, 0, 11, -1.2, .6, "s x"), (24, 67, 58, -22, 8.5, -7.6, .9, "x"),
+              (8, 25, 66, 30, 12, -9, .55, "s x"), (30, 81, 50, -36, 9, -3.6, .75, "s"))
+_REST = (.62, .35, .8, .5, .22, .9, .45, .7)
+# one node per tracked portal (up to 8), resting on the streams
+_NODES = ((22, 65), (38, 56), (80, 43), (48, 73), (88, 59), (30, 45), (72, 67), (54, 37))
 
 
-def _radar() -> str:
-    blips = []
-    for (deg, r), c in zip(_BLIPS, companies):
-        x = 50 + r * 46 * math.sin(math.radians(deg))
-        y = 50 - r * 46 * math.cos(math.radians(deg))
-        warn = " warn" if statuses.get(c.get("id"), ("",))[0] == "failing" else ""
-        blips.append(f'<span class="blip{warn}" style="left:{x:.1f}%;top:{y:.1f}%;animation-delay:{deg / 360 * 7 - .84:.2f}s"></span>')
-    return ('<div class="radar" aria-hidden="true"><span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>'
-            f'<span class="sweep"></span>{"".join(blips)}<span class="core"></span>'
-            f'<span class="radar-cap">{_plural(len(companies), "portal")} on radar</span></div>')
+def _flow() -> str:
+    """The hero's decorative Opportunity Flow (aria-hidden; the caption's facts
+    are also in the stats and sidebar)."""
+    pts = "".join(f'<span class="pt {cls}" style="left:{x}%;top:{y}%;--dx:{dx};--dy:{dy};--t:{t}s;animation-delay:{d}s;--o:{o};--p:{r}"></span>'
+                  for (x, y, dx, dy, t, d, o, cls), r in zip(_PARTICLES, _REST))
+    nodes = "".join(
+        f'<span class="node{" warn" if statuses.get(c.get("id"), ("",))[0] == "failing" else ""}" '
+        f'style="left:{x}%;top:{y}%;animation-delay:{-i * .7:.1f}s"></span>'
+        for i, ((x, y), c) in enumerate(zip(_NODES, companies)))
+    return ('<div class="flow-wrap" aria-hidden="true"><div class="flow"><span class="aura"></span>'
+            '<span class="rib a"></span><span class="rib b"></span><span class="rib c"></span>'
+            '<span class="ln l1"></span><span class="ln l2"></span><span class="ln l3"></span><span class="ln l4"></span><span class="ln l5"></span>'
+            f'<span class="halo"></span>{pts}{nodes}<span class="flare"></span><span class="core"></span></div>'
+            f'<span class="flow-cap"><span class="spark"></span>{_plural(len(companies), "portal")} monitored</span></div>')
 
 
 def page_home():
     with st.container(key="hero"):
         st.html(f"""<div class="hero"><div>
-          <div class="eyebrow bar">Discover jobs</div>
+          <div class="eyebrow sparked">Discover jobs</div>
           <h1 class="page-title">Discover your next <em>opportunity</em></h1>
           <p class="hero-sub">Fresher and entry-level roles in India, found across the companies you track — each one read from its own posting before it reaches you.</p>
           <div class="hero-status">{status_line()}</div>
-        </div>{_radar()}</div>""")
+        </div>{_flow()}</div>""")
         with st.container(key="hero_actions"):
             scan_actions()
 
@@ -1341,7 +1475,7 @@ def page_home():
             + _stat("New this week", new_this_week, "Found in the last 7 days", "trending_up", "t-teal")
             + _stat("Companies monitored", len(companies), healthy_note, "apartment",
                     "t-red" if n_by_status["failing"] else "t-green")
-            + _stat("Last scan", _ago(last_scan, NOW), f"Next scheduled {_next_slot():%H:%M} UTC", "radar",
+            + _stat("Last scan", _ago(last_scan, NOW), f"Next scheduled {_next_slot():%H:%M} UTC", "update",
                     "t-amber" if scan_stale else "", small=True)
             + "</div>")
 
@@ -1361,7 +1495,7 @@ def page_home():
                     _acts)
         return
 
-    st.html('<div class="sec-head"><div><div class="eyebrow">Latest opportunities</div><h2 class="section-title">Latest jobs</h2>'
+    st.html('<div class="sec-head"><div><div class="eyebrow sparked">Latest opportunities</div><h2 class="section-title">Latest jobs</h2>'
             '<p class="section-sub">Newest fresher and entry-level roles found on the portals you track</p></div></div>')
     shown, active, clear = filter_jobs("h", active_jobs)
     if not shown:
@@ -1380,7 +1514,7 @@ def page_home():
                 st.button("View all jobs", key="btn_all_jobs", icon=":material/arrow_forward:", icon_position="right",
                           on_click=go, args=("jobs",))
     st.html(f"""<div class="how">
-      <div><span class="ic">{_ms("radar")}</span><div><b>Tracks career portals</b><p>Each company's job list is scanned on a schedule — no manual searching.</p></div></div>
+      <div><span class="ic">{_ms("travel_explore")}</span><div><b>Tracks career portals</b><p>Each company's job list is scanned on a schedule — no manual searching.</p></div></div>
       <div><span class="ic">{_ms("article")}</span><div><b>Reads every posting</b><p>A job is judged from its own page, never from its title alone.</p></div></div>
       <div><span class="ic">{_ms("mark_email_read")}</span><div><b>Emails each role once</b><p>Only India fresher and entry-level jobs that pass every check are sent.</p></div></div>
     </div>""")
@@ -1644,7 +1778,7 @@ def page_add_company():
     page_header("Add a company", "Start monitoring a company's career portal for fresher and entry-level roles")
     st.html(f"""<div class="add-steps">
       <div><b>{_ms("link")}1 · Paste the job search page</b>The page that lists individual openings — not the careers landing page.</div>
-      <div><b>{_ms("radar")}2 · It joins the next scan</b>Every posting found there is opened and read on the scheduled check.</div>
+      <div><b>{_ms("travel_explore")}2 · It joins the next scan</b>Every posting found there is opened and read on the scheduled check.</div>
       <div><b>{_ms("mark_email_read")}3 · Fresher roles reach you</b>India fresher and entry-level jobs appear here and in your inbox.</div>
     </div>""")
     with st.container(key="add_form"):
@@ -1923,7 +2057,7 @@ def page_email():
         st.rerun()
 
     with st.container(key="set_behavior"):
-        steps = [("radar", "A check runs", "Scheduled every 3 hours (GitHub often starts runs later). Every tracked portal is scanned."),
+        steps = [("travel_explore", "A check runs", "Scheduled every 3 hours (GitHub often starts runs later). Every tracked portal is scanned."),
                  ("fact_check", "Only qualifying jobs are kept", "Fresher and entry-level jobs in India whose own posting was read — never a guess from a title."),
                  ("outgoing_mail", "New jobs go out in one email", "Each job is emailed at most once. Dismissed jobs are never emailed, and stay in the history so they're never sent again."),
                  ("replay", "Failures retry safely", "If sending fails, the jobs stay unsent and the next check retries. A job is recorded before its email goes out, so a failed save can't cause a duplicate.")]
@@ -1971,7 +2105,7 @@ def page_settings():
                                        for src, names in sorted(by_source.items())) or "No portals yet"),
                 ("Detail pages", "Each candidate job's own posting is read before it is classified; "
                                  "if it can't be read the job is not emailed and is retried next scan")]
-        st.html(f'<div class="set-head"><span class="ic">{_ms("radar")}</span><div><div class="eyebrow">Monitoring</div>'
+        st.html(f'<div class="set-head"><span class="ic">{_ms("manage_search")}</span><div><div class="eyebrow">Monitoring</div>'
                 '<h2 class="section-title">Scanning</h2><p class="section-sub">Defined in the repository; change them there.</p></div></div>'
                 '<dl class="kv">' + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in rows) + "</dl>")
     with st.container(key="set_maint"):
@@ -2005,8 +2139,7 @@ def page_settings():
                     if st.button("Cancel", key="btn_clear_all_cancel"):
                         st.session_state.confirm_clear = False
                         st.rerun()
-    st.html(f"""<div class="app-foot"><span>Fresher Job Tracker</span>
-      <a href="https://github.com/{GITHUB_REPO}" target="_blank" rel="noopener">Source on GitHub</a></div>""")
+    st.html('<div class="app-foot"><span>Fresher Job Tracker</span><span>Fresher and entry-level roles in India</span></div>')
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

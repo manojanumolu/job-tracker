@@ -46,13 +46,31 @@ def test_home_hero_states_the_purpose_and_live_status(app):
     assert "AI-powered" not in html and "Verified" not in html
 
 
-def test_radar_is_decoration_with_one_contact_per_portal(app):
+def test_opportunity_flow_is_decoration_with_one_node_per_portal(app):
     at = app([])
     html = _html(at)
-    radar = re.search(r'<div class="radar" aria-hidden="true">(.*?)</div>', html, re.S).group(1)
+    flow = re.search(r'<div class="flow-wrap" aria-hidden="true">(.*?)</div></div>', html, re.S).group(1)
     n = len(json.loads((at.tmp_path / "companies.json").read_text("utf-8")))
-    assert radar.count('class="blip') == min(n, 8)
-    assert f"{n} portals on radar" in radar
+    assert flow.count('class="node') == min(n, 8)
+    assert f"{n} portals monitored" in html
+    assert 'class="core"' in flow and flow.count('class="pt') >= 6
+
+
+def test_radar_is_gone_for_good(app):
+    """Job Tracker has its own identity; the radar belongs to another product."""
+    at = app([])
+    html = _html(at)
+    assert 'class="radar' not in html and "on radar" not in html and "blip" not in html
+    assert ".radar" not in CSS and "conic-gradient" not in CSS and "jt-sweep" not in CSS
+    assert ":material/radar:" not in SRC and '_ms("radar")' not in SRC
+
+
+def test_sidebar_has_status_but_no_repository_link(app):
+    at = app([])
+    html = _html(at)
+    assert "Source on GitHub" not in html and "Source on GitHub" not in SRC
+    foot = re.search(r'<div class="side-foot[^"]*" role="status">(.*?)</div>\s*</div>', html, re.S).group(1)
+    assert "monitored" in foot and "Last scan" in foot and "github" not in foot.lower()
 
 
 def test_failing_portal_shows_as_a_warning_contact(app):
@@ -63,7 +81,7 @@ def test_failing_portal_shows_as_a_warning_contact(app):
                          "last_checked": NOW.isoformat()}])
     at.run()
     html = _html(at)
-    assert html.count('class="blip warn"') == 1 and html.count('class="blip"') == 1
+    assert html.count('class="node warn"') == 1 and html.count('class="node"') == 1
 
 
 def test_metric_modules_keep_real_numbers(app):
@@ -195,7 +213,8 @@ def test_in_app_navigation_still_wins_over_an_unchanged_url(app):
 
 def test_motion_respects_reduced_motion_and_stays_on_the_compositor():
     rm = CSS[CSS.index("@media (prefers-reduced-motion: reduce)"):]
-    assert "animation-duration: .001ms" in rm and ".radar .sweep { animation: none" in rm
+    assert "animation-duration: .001ms" in rm and ".flow > span { animation: none !important; }" in rm
+    assert '[data-testid="stBaseButton-primary"]::after { display: none; }' in rm   # no light sweep either
     for name, body in re.findall(r"@keyframes ([\w-]+) \{(.*?)\}\s*\}", CSS, re.S):
         props = set(re.findall(r"([a-z-]+)\s*:", body))
         assert props <= {"opacity", "transform", "background-position"}, (name, props)
