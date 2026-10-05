@@ -1,5 +1,6 @@
 """Regression tests for the remaining audit items A–G (Sep 30 follow-up)."""
 import json
+import re
 from datetime import datetime, timedelta, timezone
 
 from test_streamlit_app import _html, _nav, _qp, app  # noqa: F401  (fixture re-export)
@@ -38,7 +39,7 @@ def test_no_exact_countdown_is_promised(app):
     _nav(at, "monitoring")
     html = _html(at)
     assert "GitHub may start it later" in html and "Every 3 hours (UTC)" not in html
-    assert "usually starts runs later" in html
+    assert "may start scans later" in html
 
 
 # ── C: one meaning for each count ────────────────────────────────────────────
@@ -106,10 +107,11 @@ def test_renamed_company_does_not_re_alert_known_postings():
     assert len(new) == 1 and new[0]["company_id"] == "c1783687965"
 
 
-def test_next_scheduled_time_is_written_in_utc_capitals(app):
+def test_next_scheduled_time_is_shown_in_ist(app):
     at = app([])
     html = _html(at)
-    assert "Next scheduled" in html and " UTC" in html and " utc" not in html
+    assert re.search(r"Next scheduled \d{1,2}:\d{2} [AP]M IST", html) and " ist" not in html
+    assert not re.search(r"Next scheduled \d{2}:\d{2} UTC", html)
 
 
 def test_icon_only_buttons_have_accessible_labels(app):

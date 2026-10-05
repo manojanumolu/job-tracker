@@ -97,9 +97,10 @@ LIGHT = {
     "btn2-grad": "linear-gradient(180deg, #ffffff, #f6f7fc)", "btn2-shadow": "0 1px 2px rgba(16,24,40,.06)",
     "btn2-shadow-hover": "0 6px 14px -8px rgba(36,30,110,.28)", "btn2-pressed": "inset 0 1px 3px rgba(16,24,40,.12)",
     "badge-hi": "inset 0 1px 0 rgba(255,255,255,.75)",
-    # aurora light field
-    "aur-op": "1", "aur-1": "rgba(104,84,255,.55)", "aur-2": "rgba(20,184,166,.42)", "aur-3": "rgba(59,130,246,.38)",
-    "aur-4": "rgba(192,132,252,.42)", "aur-core": "rgba(255,255,255,.85)", "aur-sheen": "rgba(255,255,255,.40)",
+    # hero opportunity cards
+    "opp-glow": "1", "oc-bg": "rgba(255,255,255,.82)", "oc-border": "rgba(91,76,245,.14)",
+    "oc-shadow": "0 18px 40px -18px rgba(36,30,110,.32), 0 2px 6px -2px rgba(16,24,40,.06)",
+    "oc-bar": "#e9eaf3", "oc-bar-strong": "#d6d8e8",
 }
 DARK = {
     "bg": "#0b1020", "surface": "#121833", "surface-2": "#0f1530", "raised": "#171e3d", "hover": "#1b2347",
@@ -122,8 +123,9 @@ DARK = {
     "btn2-grad": "linear-gradient(180deg, #1a2148, #131936)", "btn2-shadow": "0 1px 2px rgba(0,0,0,.35)",
     "btn2-shadow-hover": "0 8px 18px -10px rgba(0,0,0,.7), 0 0 0 1px rgba(124,108,255,.12)", "btn2-pressed": "inset 0 1px 4px rgba(0,0,0,.45)",
     "badge-hi": "inset 0 1px 0 rgba(255,255,255,.06)",
-    "aur-op": ".9", "aur-1": "rgba(112,92,255,.62)", "aur-2": "rgba(45,212,191,.36)", "aur-3": "rgba(56,110,240,.48)",
-    "aur-4": "rgba(168,85,247,.42)", "aur-core": "rgba(200,206,255,.30)", "aur-sheen": "rgba(210,216,255,.08)",
+    "opp-glow": ".85", "oc-bg": "rgba(26,32,66,.78)", "oc-border": "rgba(255,255,255,.10)",
+    "oc-shadow": "0 20px 44px -18px rgba(0,0,0,.75), 0 0 0 1px rgba(124,108,255,.08)",
+    "oc-bar": "rgba(255,255,255,.08)", "oc-bar-strong": "rgba(255,255,255,.16)",
 }
 TH = DARK if st.session_state.dark_mode else LIGHT
 _root_vars = ":root {" + "".join(f"--{k}:{v};" for k, v in TH.items()) + "}"
@@ -131,7 +133,7 @@ _root_vars = ":root {" + "".join(f"--{k}:{v};" for k, v in TH.items()) + "}"
 # Design system. Plus Jakarta Sans for everything (small labels are the same
 # family in tracked-out caps); numbers use tabular figures. Icons are Material
 # Symbols ligatures (one family everywhere) — inline <svg> doesn't paint in
-# this app's hosting environment, so the hero aurora is pure CSS. Widgets
+# this app's hosting environment, so the hero cards are pure CSS. Widgets
 # that need styling are wrapped in st.container(key=...) and targeted via
 # .st-key-*; raw HTML tags are never opened in one st.* call and closed in
 # another. Motion uses transform/opacity only and honours reduced motion;
@@ -186,13 +188,12 @@ _CSS = """
 @keyframes jt-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes jt-pulse { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(2.6); opacity: 0; } }
 @keyframes jt-ring { 0% { transform: scale(1); opacity: .45; } 100% { transform: scale(1.32); opacity: 0; } }
-/* aurora: slow organic drift, a breathing glow, a soft shimmer, a rare sparkle */
-@keyframes jt-float-a { 0% { transform: translate3d(-6%, 3%, 0) scale(1); } 50% { transform: translate3d(4%, -5%, 0) scale(1.08); } 100% { transform: translate3d(8%, 4%, 0) scale(.96); } }
-@keyframes jt-float-b { 0% { transform: translate3d(5%, -4%, 0) scale(1.05); } 100% { transform: translate3d(-7%, 6%, 0) scale(.94); } }
-@keyframes jt-lean { 0% { transform: translate3d(-5%, 4%, 0) rotate(-16deg) scaleX(.92); } 100% { transform: translate3d(6%, -3%, 0) rotate(-11deg) scaleX(1.06); } }
-@keyframes jt-breathe { 0%, 100% { opacity: .75; transform: scale(.94); } 50% { opacity: 1; transform: scale(1.06); } }
-@keyframes jt-shimmer-x { 0% { transform: translateX(-35%); opacity: 0; } 30%, 70% { opacity: 1; } 100% { transform: translateX(35%); opacity: 0; } }
-@keyframes jt-sparkle { 0%, 86%, 100% { opacity: 0; transform: scale(.4); } 91% { opacity: 1; transform: scale(1); } 95% { opacity: .2; transform: scale(.7); } }
+/* opportunity cards: a few pixels of float, one card softly brightening */
+@keyframes jt-float { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(0, -6px, 0); } }
+@keyframes jt-float-s { 0%, 100% { transform: translate3d(0, 0, 0) rotate(var(--tilt, 0deg)); } 50% { transform: translate3d(2px, -4px, 0) rotate(var(--tilt, 0deg)); } }
+@keyframes jt-brighten { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+@keyframes jt-dim { 0%, 100% { opacity: 1; } 50% { opacity: .82; } }
+@keyframes jt-glow-drift { 0% { transform: translate3d(-3%, 2%, 0) scale(1); } 100% { transform: translate3d(3%, -2%, 0) scale(1.05); } }
 @keyframes jt-pop { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
 @keyframes jt-grow { from { opacity: 0; transform: scaleY(.3); } to { opacity: 1; transform: none; } }
 @keyframes jt-shimmer { from { background-position: -320px 0; } to { background-position: 320px 0; } }
@@ -290,7 +291,7 @@ _CSS = """
 /* faint layered edge: a soft tint rising from the bottom and fading at the sides */
 .st-key-hero::before { content: ""; position: absolute; inset: auto 0 0 0; height: 46%; z-index: -1; pointer-events: none;
   background: radial-gradient(70% 100% at 70% 100%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%); }
-.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 38%); gap: 16px; align-items: center; }
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 38%); gap: 24px; align-items: center; }
 .hero .page-title { font-size: 42px; line-height: 50px; font-weight: 800; letter-spacing: -0.028em; word-spacing: .08em; text-wrap: balance; max-width: 620px; margin-top: 10px; }
 .hero .page-title em { font-style: normal; background: linear-gradient(92deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .hero-sub { font-size: 16px; line-height: 25px; color: var(--text-2); margin: 10px 0 0; max-width: 560px; }
@@ -310,35 +311,50 @@ _CSS = """
   background: radial-gradient(circle at 35% 35%, #fff 0 18%, var(--accent-2) 46%, var(--accent) 100%);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 14%, transparent), 0 0 12px color-mix(in srgb, var(--accent-2) 55%, transparent); }
 
-/* Aurora light field: large blurred washes of indigo, violet, blue and teal
-   drifting slowly behind the right of the hero, a breathing glow, a soft
-   shimmer and a rare sparkle. Decorative (aria-hidden), pure CSS (inline svg
-   doesn't paint here), transform/opacity animation only, no lines or paths. */
+/* Opportunity cards: three crisp, abstract job cards and a "fresher" check
+   tile resting in depth over a soft glow — the product's subject (roles being
+   found), not a monitoring metaphor. No names or fake listings: an icon tile,
+   placeholder text bars and a badge shape. Decorative (aria-hidden), pure CSS,
+   transform/opacity animation only; nothing travels along a path. */
 .hero { position: relative; }
-.aurora-wrap { position: relative; align-self: stretch; min-height: 250px; }
-.aurora { position: absolute; inset: -44px -34px -150px -22%; z-index: -1; pointer-events: none; overflow: hidden;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 34%), linear-gradient(180deg, transparent, #000 16%, #000 62%, transparent);
-  -webkit-mask-composite: source-in; mask-image: linear-gradient(90deg, transparent, #000 34%), linear-gradient(180deg, transparent, #000 16%, #000 62%, transparent);
-  mask-composite: intersect; }
-.aurora > span { position: absolute; display: block; border-radius: 50%; will-change: transform; }
-.aurora .w { filter: blur(28px); opacity: var(--aur-op); animation: jt-float-a var(--t, 18s) ease-in-out infinite alternate; }
-.aurora .w1 { left: 22%; top: 2%; width: 58%; height: 62%; --t: 19s; background: radial-gradient(closest-side, var(--aur-1), transparent); }
-.aurora .w2 { left: 48%; top: 22%; width: 52%; height: 58%; --t: 15s; animation-name: jt-float-b; animation-delay: -5s; background: radial-gradient(closest-side, var(--aur-2), transparent); }
-.aurora .w3 { left: 30%; top: 36%; width: 50%; height: 46%; --t: 21s; animation-delay: -9s; background: radial-gradient(closest-side, var(--aur-3), transparent); }
-.aurora .w4 { left: 60%; top: -8%; width: 40%; height: 44%; --t: 17s; animation-name: jt-float-b; animation-delay: -12s; background: radial-gradient(closest-side, var(--aur-4), transparent); }
-/* the bright heart of the field, where the colours meet */
-.aurora .glow { left: 46%; top: 18%; width: 34%; height: 40%; filter: blur(24px); animation: jt-breathe 9s ease-in-out infinite;
-  background: radial-gradient(closest-side, var(--aur-core), transparent); }
-.aurora .sheen { inset: 0; border-radius: 0; animation: jt-shimmer-x 14s ease-in-out infinite;
-  background: linear-gradient(112deg, transparent 38%, var(--aur-sheen) 50%, transparent 62%); }
-.aurora .sp { width: 4px; height: 4px; margin: -2px 0 0 -2px; opacity: 0; background: #fff;
-  box-shadow: 0 0 6px 1px color-mix(in srgb, var(--accent-2) 70%, transparent), 0 0 16px color-mix(in srgb, var(--accent) 50%, transparent);
-  animation: jt-sparkle 13s ease-out infinite; }
-/* an elongated wash leaning forward: light moving ahead (a shape, not a path) */
-.aurora .beam { left: 18%; top: 30%; width: 84%; height: 22%; filter: blur(22px); opacity: var(--aur-op); transform: rotate(-16deg);
-  background: linear-gradient(90deg, transparent, var(--aur-1) 30%, var(--aur-2) 70%, transparent);
-  animation: jt-lean 16s ease-in-out infinite alternate; }
-.aurora .s1 { left: 58%; top: 26%; } .aurora .s2 { left: 76%; top: 44%; animation-delay: -6.5s; animation-duration: 15s; }
+.opps-wrap { position: relative; align-self: stretch; min-height: 270px; }
+.opps { position: absolute; inset: 0; container-type: inline-size; }
+.opps > .glow-bg { position: absolute; inset: -30px -40px -60px -10%; z-index: -1; pointer-events: none; opacity: var(--opp-glow);
+  background: radial-gradient(48% 52% at 58% 44%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 72%),
+    radial-gradient(36% 40% at 80% 70%, color-mix(in srgb, var(--accent-2) 26%, transparent), transparent 72%),
+    radial-gradient(30% 34% at 30% 76%, color-mix(in srgb, #3b82f6 22%, transparent), transparent 72%);
+  animation: jt-glow-drift 12s ease-in-out infinite alternate; }
+.oc { position: absolute; display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px;
+  background: var(--oc-bg); border: 1px solid var(--oc-border); box-shadow: var(--hi), var(--oc-shadow);
+  backdrop-filter: blur(10px) saturate(1.2); -webkit-backdrop-filter: blur(10px) saturate(1.2);
+  animation: jt-float var(--t, 9s) ease-in-out infinite; will-change: transform; }
+.oc::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; opacity: 0;   /* the brighten */
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent), 0 14px 34px -14px color-mix(in srgb, var(--accent) 60%, transparent); }
+.oc .ic { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  color: var(--accent-text); border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent); box-shadow: var(--badge-hi);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 60%, var(--surface)), var(--accent-soft)); }
+.oc .ic.teal { color: var(--accent-2); border-color: color-mix(in srgb, var(--accent-2) 22%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 8%, var(--surface)), color-mix(in srgb, var(--accent-2) 16%, transparent)); }
+.oc .ic.blue { color: #3b82f6; border-color: color-mix(in srgb, #3b82f6 22%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, #3b82f6 8%, var(--surface)), color-mix(in srgb, #3b82f6 15%, transparent)); }
+.oc .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.oc .tx i { display: block; height: 7px; border-radius: 6px; background: var(--oc-bar); }
+.oc .tx i.l1 { width: 82%; height: 8px; background: var(--oc-bar-strong); } .oc .tx i.l2 { width: 56%; } .oc .tx i.l3 { width: 38%; }
+.oc .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px 3px 6px; border-radius: 999px; width: max-content;
+  color: var(--green); background: var(--green-soft); border: 1px solid color-mix(in srgb, var(--green) 28%, transparent); box-shadow: var(--badge-hi); }
+.oc .badge .ms { font-size: 14px; } .oc .badge b { display: block; width: 30px; height: 6px; border-radius: 6px; background: color-mix(in srgb, var(--green) 40%, transparent); }
+/* the composition: one card in front, one behind, one lower, one check tile */
+.oc.a { left: 6%; top: 36%; width: 74%; z-index: 3; --t: 9s; padding: 16px 18px; }
+.oc.a .ic { width: 44px; height: 44px; border-radius: 13px; }
+.oc.a::after { animation: jt-brighten 10s ease-in-out infinite; }
+.oc.b { left: 30%; top: 10%; width: 64%; z-index: 2; --t: 11s; animation-delay: -4s; animation-name: jt-float, jt-dim; animation-duration: 11s, 10s; }
+.oc.c { left: 0; top: 71%; width: 54%; z-index: 4; --t: 8s; animation-delay: -2s; padding: 12px 14px; }
+.oc.c .ic { width: 32px; height: 32px; border-radius: 10px; }
+.oc.d { left: 74%; top: 65%; z-index: 5; padding: 12px; --t: 7s; --tilt: 6deg; animation-name: jt-float-s; animation-delay: -3s; border-radius: 16px; }
+.oc.d .ic { width: 40px; height: 40px; border-radius: 12px; color: var(--green); border-color: color-mix(in srgb, var(--green) 25%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--green-soft) 50%, var(--surface)), var(--green-soft)); }
+.oc.d .spark-dot { position: absolute; top: 7px; right: 7px; width: 7px; height: 7px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff 0 20%, var(--accent-2) 70%); box-shadow: 0 0 8px color-mix(in srgb, var(--accent-2) 70%, transparent); }
 
 /* ── metric modules ── */
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
@@ -529,6 +545,8 @@ _CSS = """
 .kv { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px 18px; font-size: 14px; line-height: 20px; margin: 14px 0 0 !important; padding: 0 !important; }
 .kv dt { color: var(--muted); margin: 0 !important; padding: 0 !important; } .kv dd { margin: 0 !important; padding: 0 !important; color: var(--text); min-width: 0; overflow-wrap: anywhere; font-weight: 500; }
 .note { font-size: 14px; line-height: 21px; color: var(--muted); margin: 0; }
+.kv-note { display: block; margin-top: 3px; font-size: 13px; line-height: 19px; color: var(--muted); font-weight: 400; }
+.kv.tech { margin: 2px 0 4px !important; font-size: 13px; } .kv.tech dd { font-weight: 400; color: var(--text-2); }
 .why { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; line-height: 22px; color: var(--text); font-weight: 500; margin-top: 12px; }
 .why > .ms { color: var(--green); margin-top: 1px; }
 .quote { margin-top: 10px; padding: 10px 12px; border-left: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); background: var(--surface-2); border-radius: 0 10px 10px 0; font-size: 13px; line-height: 19px; color: var(--text-2); font-weight: 400; }
@@ -684,7 +702,7 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .brand .mark.failing::after { background: var(--red); } .brand .mark.delayed::after { background: var(--amber); } .brand .mark.pending::after, .brand .mark.checking::after { background: var(--gray); }
 .brand > div:last-child { min-width: 0; }
 .brand .n { font-size: 15px; line-height: 20px; font-weight: 800; letter-spacing: -0.025em; color: var(--text); white-space: nowrap; }
-.brand .s { font-family: var(--label) !important; font-size: 9.5px; line-height: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-top: 3px; }
+.brand .s { font-family: var(--label) !important; font-size: 9.5px; line-height: 13px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-top: 3px; white-space: nowrap; }
 .nav-group { font-family: var(--label) !important; font-size: 10.5px; line-height: 16px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); padding: 18px 12px 8px; }
 .nav-group.first { padding-top: 2px; }
 [class*="st-key-nav_"] [data-testid^="stBaseButton"] {
@@ -759,7 +777,9 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   .st-key-co_cols [data-testid="stColumn"]:nth-child(n) { flex: 1 1 100% !important; width: 100% !important; }
 }
 @media (max-width: 1100px) {
-  .hero { grid-template-columns: minmax(0, 1fr) minmax(0, 34%); gap: 12px; }
+  .hero { grid-template-columns: minmax(0, 1fr) minmax(0, 34%); gap: 16px; }
+  .opps-wrap { min-height: 230px; } .oc.c { display: none; } .oc.a { left: 0; width: 86%; top: 34%; } .oc.b { left: 18%; width: 78%; } .oc.d { left: 70%; top: 66%; }
+  .oc { gap: 10px; padding: 12px 13px; } .oc.a { padding: 13px 14px; } .oc.a .ic { width: 38px; height: 38px; } .oc .ic { width: 32px; height: 32px; }
   .hero .page-title { font-size: 34px; line-height: 41px; }
 }
 /* tablet: icon rail */
@@ -798,13 +818,16 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   .st-key-mnav p { font-size: 10.5px !important; line-height: 13px !important; font-weight: 600 !important; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 1px; }
   .page-title, .detail-title { font-size: 24px; line-height: 31px; }
   .st-key-hero { padding: 22px 18px 20px !important; }
-  /* phones: the aurora becomes a soft light band across the top of the card,
-     fading out behind the heading, so the hero is no taller than its text */
+  /* phones: not a shrunk desktop — a compact strip of one card and the
+     check tile above the eyebrow, so nothing sits over the heading */
   .hero { grid-template-columns: minmax(0, 1fr); gap: 0; }
-  .aurora-wrap { position: static; min-height: 0; }
-  .aurora { inset: -22px -18px auto -18px; height: 150px; opacity: .8;
-    -webkit-mask-image: linear-gradient(180deg, #000 20%, transparent); mask-image: linear-gradient(180deg, #000 20%, transparent); }
-  .aurora .w { filter: blur(26px); } .aurora .w3, .aurora .s2 { display: none; }
+  .opps-wrap { order: -1; min-height: 0; height: 58px; margin-bottom: 16px; }
+  .opps > .glow-bg { inset: -22px -18px -20px -18px; }
+  .oc.b, .oc.c { display: none; }
+  .oc.a { left: 0; top: 0; width: min(250px, 74%); padding: 9px 12px; gap: 10px; border-radius: 12px; --t: 10s; }
+  .oc.a .ic { width: 34px; height: 34px; border-radius: 10px; } .oc .tx { gap: 5px; } .oc .tx i.l3, .oc.a .badge { display: none; }
+  .oc.d { left: auto; right: 0; top: 4px; padding: 8px; border-radius: 13px; }
+  .oc.d .ic { width: 34px; height: 34px; }
   .hero .page-title { font-size: 27px; line-height: 33px; }
   .hero-sub { font-size: 14.5px; line-height: 22px; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -833,9 +856,9 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
-  /* the aurora holds still as a composed light field; no shimmer or sparkle */
-  .aurora > span { animation: none !important; }
-  .aurora .sheen, .aurora .sp { display: none; } .aurora .glow { opacity: .9; }
+  /* the cards rest in place: no float, no brighten, no glow drift */
+  .oc, .oc::after, .opps > .glow-bg { animation: none !important; }
+  .oc.d { transform: rotate(6deg); }
   .btn.primary::after, [data-testid="stBaseButton-primary"]::after { display: none; }
 }
 """
@@ -901,13 +924,83 @@ def _found_at(date_str: str, now: datetime) -> datetime | None:
     return dt.replace(year=now.year - 1) if dt > now + timedelta(days=1) else dt
 
 
-def _next_slot(now: datetime | None = None) -> datetime:
-    """The next slot of check_jobs.yml's cron (minute 0 of every 3rd UTC hour).
+# The scan schedule is whatever check_jobs.yml's cron says (always UTC on
+# GitHub). It is read from the workflow so the UI follows any change there,
+# and shown in India time. IST is a fixed +05:30 (India has no DST), so no
+# tz database is needed.
+IST = timezone(timedelta(hours=5, minutes=30), "IST")
+_WORKFLOW = BASE / ".github" / "workflows" / "check_jobs.yml"
+_DEFAULT_CRON = "0 */3 * * *"
+
+
+def _schedule_cron() -> str:
+    try:
+        m = re.search(r"""cron:\s*["']([^"']+)["']""", _WORKFLOW.read_text("utf-8"))
+    except OSError:
+        m = None
+    return m.group(1).strip() if m else _DEFAULT_CRON
+
+
+def _cron_field(spec: str, lo: int, hi: int) -> list[int]:
+    """Values of one cron field: *, */n, a, a-b, a-b/n, a/n and comma lists."""
+    vals: set[int] = set()
+    for part in spec.split(","):
+        rng, _, step = part.partition("/")
+        if rng == "*":
+            a, b = lo, hi
+        elif "-" in rng:
+            a, b = (int(x) for x in rng.split("-", 1))
+        else:
+            a = int(rng)
+            b = hi if step else a
+        vals.update(range(a, b + 1, int(step) if step else 1))
+    return sorted(v for v in vals if lo <= v <= hi)
+
+
+def _cron_times(expr: str) -> tuple[list[int], list[int]]:
+    """(minutes, hours) of a cron line; the day fields of this workflow are
+    all '*', so only minute and hour decide the slots."""
+    try:
+        minute, hour = expr.split()[:2]
+        mins, hrs = _cron_field(minute, 0, 59), _cron_field(hour, 0, 23)
+        if mins and hrs:
+            return mins, hrs
+    except ValueError:
+        pass
+    return _cron_times(_DEFAULT_CRON) if expr != _DEFAULT_CRON else ([0], list(range(0, 24, 3)))
+
+
+def _next_slot(now: datetime | None = None, expr: str | None = None) -> datetime:
+    """The next scheduled slot of check_jobs.yml's cron (UTC).
     GitHub Actions only *schedules* at these times — runs usually start later
     (measured Sep 2026: median 5 h apart, up to 9 h), so this is shown as a
     scheduled time, never as a countdown."""
     now = now or datetime.now(timezone.utc)
-    return now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=3 - now.hour % 3)
+    mins, hrs = _cron_times(expr or _schedule_cron())
+    day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    return min(t for d in (0, 1) for h in hrs for m in mins
+               if (t := day + timedelta(days=d, hours=h, minutes=m)) > now)
+
+
+def _cadence(expr: str | None = None) -> str:
+    """'Every 3 hours' / 'Every hour' / 'Daily' / '4 times a day'."""
+    mins, hrs = _cron_times(expr or _schedule_cron())
+    if len(mins) == 1 and len(hrs) == 1:
+        return "Daily"
+    if len(mins) == 1 and 24 % len(hrs) == 0 and hrs == list(range(hrs[0], 24, 24 // len(hrs))):
+        n = 24 // len(hrs)
+        return "Every hour" if n == 1 else f"Every {n} hours"
+    return f"{len(mins) * len(hrs)} times a day"
+
+
+def _ist(dt: datetime) -> str:
+    """'11:30 PM IST'."""
+    return dt.astimezone(IST).strftime("%I:%M %p").lstrip("0") + " IST"
+
+
+def _ist_stamp(dt: datetime) -> str:
+    """'Oct 05, 7:29 PM IST'."""
+    return f"{dt.astimezone(IST):%b %d}, {_ist(dt)}"
 
 
 def _ms(name: str, size: str = "") -> str:
@@ -1054,7 +1147,7 @@ _CHECK_COOLDOWN_S = 300
 # gaps were median 5 h, 90th percentile 7.5 h, max 9 h — so a scan only
 # counts as "delayed" once it is overdue by more than that
 _STALE_H = 10
-SCHEDULE_NOTE = "scheduled every 3 hours; GitHub usually starts runs later, typically 3–8 hours apart"
+SCHEDULE_NOTE = f"{_cadence().lower()} (GitHub may start scans later)"
 HOME_LIMIT = 8
 JOBS_PAGE = 12
 _CATEGORY_PILL = {"FRESHER": "fresher", "ENTRY_LEVEL": "entry"}
@@ -1207,7 +1300,7 @@ st.html(f"<style>{_nav_on}, {_nav_on}:hover {{"
 with st.sidebar:
     logo = _logo_data_uri()
     st.html(f"""<div class="brand"><div class="mark {overall[0]}">{f'<img src="{logo}" alt="">' if logo else ''}</div>
-      <div><div class="n">Fresher Job Tracker</div><div class="s">India entry-level opportunities</div></div></div>""")
+      <div><div class="n">Fresher Job Tracker</div><div class="s">Fresher opportunities</div></div></div>""")
     for gi, (group, items) in enumerate(NAV_GROUPS):
         st.html(f'<div class="nav-group{" first" if gi == 0 else ""}">{group}</div>')
         for key in items:
@@ -1254,7 +1347,7 @@ def status_line() -> str:
     """The live system state as three chips: health · last scan · next slot."""
     return (f'<span class="chip live {overall[0]}"><span class="dot {overall[0]}"></span>{escape(overall[1])}</span>'
             f'<span class="chip num">{_ms("history", "s16")}Last scan {_ago(last_scan, NOW)}</span>'
-            f'<span class="chip num">{_ms("schedule", "s16")}Next scheduled {_next_slot():%H:%M} UTC</span>')
+            f'<span class="chip num">{_ms("schedule", "s16")}Next scheduled {_ist(_next_slot())}</span>')
 
 
 def scan_actions():
@@ -1419,11 +1512,17 @@ def _stat(label: str, value, note: str, icon: str, tint: str = "", small: bool =
             f'<div class="k">{label}</div><div class="v{" sm" if small else ""}">{value}</div><div class="n">{note}</div></div>')
 
 
-def _aurora() -> str:
-    """The hero's decorative light field (aria-hidden, no data in it)."""
-    return ('<div class="aurora-wrap" aria-hidden="true"><div class="aurora">'
-            '<span class="w w1"></span><span class="w w2"></span><span class="w w3"></span><span class="w w4"></span>'
-            '<span class="beam"></span><span class="glow"></span><span class="sheen"></span><span class="sp s1"></span><span class="sp s2"></span>'
+def _opportunity_cards() -> str:
+    """The hero's decorative opportunity cards (aria-hidden; abstract, no names
+    or listings): a job card in front, one behind, a smaller one below and a
+    fresher check tile."""
+    bars = '<span class="tx"><i class="l1"></i><i class="l2"></i>{}</span>'
+    badge = f'<span class="badge">{_ms("check")}<b></b></span>'
+    return ('<div class="opps-wrap" aria-hidden="true"><div class="opps"><span class="glow-bg"></span>'
+            f'<div class="oc b"><span class="ic blue">{_ms("apartment", "s20")}</span>{bars.format("")}</div>'
+            f'<div class="oc a"><span class="ic">{_ms("work", "s24")}</span>{bars.format(badge)}</div>'
+            f'<div class="oc c"><span class="ic teal">{_ms("school", "s20")}</span>{bars.format("")}</div>'
+            f'<div class="oc d"><span class="ic">{_ms("task_alt", "s24")}</span><span class="spark-dot"></span></div>'
             '</div></div>')
 
 
@@ -1434,7 +1533,7 @@ def page_home():
           <h1 class="page-title">Discover your next <em>opportunity</em></h1>
           <p class="hero-sub">Fresher and entry-level roles in India, found across the companies you track — each one read from its own posting before it reaches you.</p>
           <div class="hero-status">{status_line()}</div>
-        </div>{_aurora()}</div>""")
+        </div>{_opportunity_cards()}</div>""")
         with st.container(key="hero_actions"):
             scan_actions()
 
@@ -1445,7 +1544,7 @@ def page_home():
             + _stat("New this week", new_this_week, "Found in the last 7 days", "trending_up", "t-teal")
             + _stat("Companies monitored", len(companies), healthy_note, "apartment",
                     "t-red" if n_by_status["failing"] else "t-green")
-            + _stat("Last scan", _ago(last_scan, NOW), f"Next scheduled {_next_slot():%H:%M} UTC", "update",
+            + _stat("Last scan", _ago(last_scan, NOW), f"Next scheduled {_ist(_next_slot())}", "update",
                     "t-amber" if scan_stale else "", small=True)
             + "</div>")
 
@@ -1853,7 +1952,7 @@ def page_company_detail(c: dict):
         with st.container(key="co_side"):
             checked = _parse_iso(c.get("last_checked", ""))
             health = [("Status", f'<span class="pill {k}"><i></i>{lbl}</span>'),
-                      ("Last checked", f'<span class="num">{_ago(checked, NOW)}</span>' + (f' <span class="muted num">({checked:%b %d, %H:%M} UTC)</span>' if checked else "")),
+                      ("Last checked", f'<span class="num">{_ago(checked, NOW)}</span>' + (f' <span class="muted num">({_ist_stamp(checked)})</span>' if checked else "")),
                       ("Scraper", escape(_source_label(c))),
                       ("Latest scan", escape(c.get("last_job") or "No matching job on the last scan"))]
             if k == "failing":
@@ -1883,15 +1982,15 @@ def page_company_detail(c: dict):
 
 
 def page_monitoring():
-    page_header("Monitoring", f"The scraper runs on GitHub Actions — {SCHEDULE_NOTE} — and checks every tracked portal", scan_actions)
+    page_header("Monitoring", f"Every tracked portal is checked {SCHEDULE_NOTE}", scan_actions)
     tone = {"healthy": "t-green", "failing": "t-red", "delayed": "t-amber"}.get(overall[0], "t-gray")
     icon = {"healthy": "health_and_safety", "failing": "error", "delayed": "schedule"}.get(overall[0], "hourglass_empty")
     st.html('<div class="stats">'
             + _stat(f'<span class="dot {overall[0]}"></span>Overall', escape(overall[1]),
                     f"{_plural(len(companies), 'portal')} tracked", icon, tone, small=True)
-            + _stat("Last scan", _ago(last_scan, NOW), f"{last_scan:%b %d, %H:%M} UTC" if last_scan else "No scan recorded",
+            + _stat("Last scan", _ago(last_scan, NOW), _ist_stamp(last_scan) if last_scan else "No scan recorded",
                     "history", "t-amber" if scan_stale else "t-teal", small=True)
-            + _stat("Next scheduled scan", f"{_next_slot():%H:%M} UTC", "GitHub may start it later", "schedule", "", small=True)
+            + _stat("Next scheduled scan", _ist(_next_slot()), "GitHub may start it later", "schedule", "", small=True)
             + _stat("Portals", f'{n_by_status["healthy"]}<span class="muted" style="font-size:16px;font-weight:600;"> / {len(companies)} healthy</span>',
                     f"{n_by_status['delayed']} delayed · {n_by_status['failing']} failing · {n_by_status['pending'] + n_by_status['checking']} pending",
                     "lan", "t-red" if n_by_status["failing"] else "t-green")
@@ -2068,16 +2167,20 @@ def page_settings():
         by_source: dict[str, list[str]] = {}
         for c in companies:
             by_source.setdefault(_source_label(c), []).append((c.get("name") or "").strip() or "Unnamed")
-        rows = [("Schedule", 'Scheduled every 3 hours (cron <span class="num">0 */3 * * *</span>, set in .github/workflows/check_jobs.yml). '
-                             'GitHub Actions starts scheduled runs late under load — typically 3–8 hours apart.'),
+        rows = [("Schedule", f'{_cadence()} · Next scheduled <span class="num">{_ist(_next_slot())}</span>'
+                             '<span class="kv-note">GitHub may start scheduled scans later than the scheduled time.</span>'),
                 ("Roles kept", "Fresher and entry-level roles located in India"),
-                ("Scrapers", "; ".join(f"{escape(src)} for {escape(', '.join(sorted(names)))}"
-                                       for src, names in sorted(by_source.items())) or "No portals yet"),
-                ("Detail pages", "Each candidate job's own posting is read before it is classified; "
-                                 "if it can't be read the job is not emailed and is retried next scan")]
+                ("Detail pages", "Every candidate job's own posting is read before it can be classified and emailed; "
+                                 "if it can't be read, it is retried on the next scan")]
         st.html(f'<div class="set-head"><span class="ic">{_ms("manage_search")}</span><div><div class="eyebrow">Monitoring</div>'
-                '<h2 class="section-title">Scanning</h2><p class="section-sub">Defined in the repository; change them there.</p></div></div>'
+                '<h2 class="section-title">Scanning</h2><p class="section-sub">How and when the tracker looks for new roles.</p></div></div>'
                 '<dl class="kv">' + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in rows) + "</dl>")
+        # implementation facts, for debugging only: collapsed by default
+        with st.expander("Technical details", icon=":material/code:"):
+            tech = [("Scrapers", "; ".join(f"{escape(src)} for {escape(', '.join(sorted(names)))}"
+                                           for src, names in sorted(by_source.items())) or "No portals yet"),
+                    ("Schedule (UTC)", f'cron <span class="num">{escape(_schedule_cron())}</span> in .github/workflows/check_jobs.yml')]
+            st.html('<dl class="kv tech">' + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in tech) + "</dl>")
     with st.container(key="set_maint"):
         st.html(f'<div class="set-head"><span class="ic red">{_ms("warning")}</span><div><div class="eyebrow">Danger zone</div>'
                 '<h2 class="section-title">Dismiss all jobs</h2><p class="section-sub">Dismiss every active job at once. '
