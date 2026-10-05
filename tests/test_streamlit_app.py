@@ -79,6 +79,13 @@ def _key(prefix: str, job: dict) -> str:
     return f"{prefix}_" + hashlib.sha1(job_key(job).encode("utf-8")).hexdigest()[:16]
 
 
+def _qp(at, key):
+    """A query parameter as a list: AppTest returns ["x"] up to Streamlit 1.64
+    and "x" from 1.65 — the value checked is the same either way."""
+    v = at.query_params[key]
+    return list(v) if isinstance(v, (list, tuple)) else [v]
+
+
 def _nav(at, page):
     at.button(key=f"nav_{page}").click().run()
     assert not at.exception
@@ -95,7 +102,7 @@ def test_every_page_renders_and_updates_the_url(app):
                           ("home", "Discover your next <em>opportunity</em>")]:
         _nav(at, page)
         assert f'<h1 class="page-title">{heading}</h1>' in _html(at)
-        assert at.query_params["page"] == [page]
+        assert _qp(at, "page") == [page]
 
 
 def test_home_is_only_about_jobs(app):
@@ -223,7 +230,7 @@ def test_pagination_counts(app):
     at = app(jobs)
     assert "Showing 8 of 23 jobs" in _html(at)          # Home shows a short list + link to Jobs
     at.button(key="btn_all_jobs").click().run()
-    assert at.query_params["page"] == ["jobs"]
+    assert _qp(at, "page") == ["jobs"]
 
 
 # ── filters ──────────────────────────────────────────────────────────────────
@@ -272,7 +279,7 @@ def test_job_details_show_real_fields_only(app):
     assert '<h1 class="detail-title">Trainee Analyst</h1>' in html
     assert "Why this matched" in html and "fresher signal: &#x27;Freshers welcome&#x27;" in html
     assert "Hyderabad · India" in html and "Email alert" in html
-    assert at.query_params["page"] == ["jobs"] and at.query_params["job"]
+    assert _qp(at, "page") == ["jobs"] and at.query_params["job"]
     at.button(key="btn_back").click().run()
     assert "Discover jobs" in _html(at)                  # back to where it was opened
 
@@ -299,7 +306,7 @@ def test_job_detail_links_to_company(app):
 def test_add_and_remove_company(app):
     at = app([], page="companies")
     at.button(key="btn_open_add").click().run()
-    assert "Add a company" in _html(at) and at.query_params["view"] == ["add"]
+    assert "Add a company" in _html(at) and _qp(at, "view") == ["add"]
     at.text_input(key="new_name").set_value("Infosys & Co <x>").run()
     at.text_input(key="new_url").set_value("javascript:alert(1)").run()
     at.button(key="btn_add").click().run()
@@ -327,7 +334,7 @@ def test_add_and_remove_company(app):
     at.button(key="btn_remove").click().run()
     assert not at.exception
     assert [c["name"] for c in _companies(at)] == [c["name"] for c in companies[:-1]]
-    assert at.query_params["page"] == ["companies"] and "company" not in at.query_params
+    assert _qp(at, "page") == ["companies"] and "company" not in at.query_params
 
 
 def test_add_company_validation(app):

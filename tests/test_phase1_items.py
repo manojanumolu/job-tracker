@@ -2,7 +2,7 @@
 import json
 from datetime import datetime, timedelta, timezone
 
-from test_streamlit_app import _html, _nav, app  # noqa: F401  (fixture re-export)
+from test_streamlit_app import _html, _nav, _qp, app  # noqa: F401  (fixture re-export)
 
 NOW = datetime.now(timezone.utc)
 
@@ -70,9 +70,9 @@ def test_active_counts_are_consistent_across_pages(app):
 def test_dark_theme_is_kept_in_the_url(app):
     at = app([], page="settings")
     at.button(key="btn_theme").click().run()
-    assert at.session_state.dark_mode is True and at.query_params["theme"] == ["dark"]
+    assert at.session_state.dark_mode is True and _qp(at, "theme") == ["dark"]
     _nav(at, "jobs")
-    assert at.query_params["theme"] == ["dark"]            # kept while navigating
+    assert _qp(at, "theme") == ["dark"]            # kept while navigating
     reloaded = app([], query={"page": "home", "theme": "dark"})   # a browser reload
     assert reloaded.session_state.dark_mode is True
     assert "#0b1020" in _html(reloaded)

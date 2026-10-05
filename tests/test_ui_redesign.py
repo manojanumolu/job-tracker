@@ -1,5 +1,6 @@
 """Regression tests for the Oct 2026 visual redesign: the new components must
 stay truthful, accessible and lightweight, and never change behaviour."""
+import hashlib
 import json
 import re
 from datetime import datetime, timedelta, timezone
@@ -21,6 +22,11 @@ GATED = {"title": "Graduate Trainee", "url": "https://sanofi.wd3.myworkdayjobs.c
          "evidence": {"experience": ["0-1 years"], "experience_lines": ["Experience: 0-1 years"],
                       "fresher_evidence": "0-1 years", "detail_read": True, "detail_match": "same title",
                       "job_id": "workday:R1234567", "checks": dict(GATE)}}
+
+
+def job_key(job):
+    from config_store import job_key as _jk
+    return _jk(job)
 
 
 def _set_companies(at, companies):
@@ -155,6 +161,34 @@ def test_email_status_card_says_whether_alerts_work(app):
     (at.tmp_path / "settings.json").write_text(json.dumps({"recipient_email": ""}))
     at.run()
     assert "Alerts are off" in _html(at)
+
+
+# ── browser Back / Forward (Streamlit 1.65 keeps the session on Back) ────────
+
+def test_browser_back_changes_the_view_to_the_url(app):
+    at = app([GATED])
+    at.button(key=_key("crit", GATED)).click().run()
+    assert at.session_state.page == "jobs" and at.session_state.job_id
+    _nav(at, "companies")
+    assert at.session_state.page == "companies" and not at.session_state.job_id
+    # the browser goes Back: the URL returns to the job page within the same session
+    job_id = hashlib.sha1(job_key(GATED).encode("utf-8")).hexdigest()[:12]
+    at.query_params.clear()
+    at.query_params["page"] = "jobs"
+    at.query_params["job"] = job_id
+    at.run()
+    assert not at.exception
+    assert at.session_state.page == "jobs" and at.session_state.job_id == job_id
+    assert '<h1 class="detail-title">Graduate Trainee</h1>' in _html(at)
+
+
+def test_in_app_navigation_still_wins_over_an_unchanged_url(app):
+    at = app([GATED])
+    _nav(at, "monitoring")
+    _nav(at, "settings")
+    assert at.session_state.page == "settings" and '<h1 class="page-title">Settings</h1>' in _html(at)
+    at.button(key="btn_theme").click().run()
+    assert at.session_state.dark_mode is True                      # theme toggle is not undone by the URL check
 
 
 # ── CSS contract: motion, accessibility, phone ───────────────────────────────
