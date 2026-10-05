@@ -913,10 +913,11 @@
     "date": "Oct 5, 13:59",
     "first_seen": "2026-10-05T13:59:03.042261+00:00",
     "id": "PwC_IN_Specialist_3_BC/NAV_MS_Dynamics_Advis",
-    "notified": false,
+    "notified": true,
     "company_id": "pwc",
-    "notify_state": "claimed",
-    "claimed_at": "2026-10-05T13:59:12.034548+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-10-05T13:59:12.034548+00:00",
+    "notified_at": "2026-10-05T13:59:15.281758+00:00"
   },
   {
     "title": "IN_Specialist 3_SAP SAC _SAP_Advisory_Mumbai",
@@ -955,9 +956,10 @@
     "date": "Oct 5, 13:59",
     "first_seen": "2026-10-05T13:59:03.042261+00:00",
     "id": "PwC_IN_Specialist_3_SAP_SAC__SAP_Advisory_Mu",
-    "notified": false,
+    "notified": true,
     "company_id": "pwc",
-    "notify_state": "claimed",
-    "claimed_at": "2026-10-05T13:59:12.034548+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-10-05T13:59:12.034548+00:00",
+    "notified_at": "2026-10-05T13:59:15.281758+00:00"
   }
 ]
