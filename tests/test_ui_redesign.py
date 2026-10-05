@@ -41,19 +41,24 @@ def test_home_hero_states_the_purpose_and_live_status(app):
     assert '<h1 class="page-title">Discover your next <em>opportunity</em></h1>' in html
     assert "Discover jobs" in html                                  # page name kept as the eyebrow
     assert 'class="chip live healthy"' in html or 'class="chip live' in html
-    assert "Last scan" in html and "Next scheduled" in html and " UTC" in html
+    assert "Last scan" in html and re.search(r"Next scheduled \d{1,2}:\d{2} [AP]M IST", html)
     # no invented AI claims or vanity numbers
     assert "AI-powered" not in html and "Verified" not in html
 
 
-def test_hero_aurora_is_pure_decoration(app):
-    """The hero visual is a light field: hidden from screen readers, carries no
-    data, and has none of the tracking language (paths, nodes, rings)."""
+def test_hero_opportunity_cards_are_abstract_decoration(app):
+    """The hero shows a few crisp job cards: hidden from screen readers, no
+    company names or fake listings, and none of the tracking language."""
     at = app([])
     html = _html(at)
-    aurora = re.search(r'<div class="aurora-wrap" aria-hidden="true">(.*?)</div></div>', html, re.S).group(1)
-    assert aurora.count('class="w w') == 4 and 'class="glow"' in aurora and 'class="sheen"' in aurora
-    assert re.sub(r"<[^>]+>", "", aurora).strip() == ""              # no text at all
+    cards = re.search(r'<div class="opps-wrap" aria-hidden="true">(.*?<span class="spark-dot"></span></div>)', html, re.S).group(1)
+    assert cards.count('<div class="oc ') == 4
+    for icon in ("work", "apartment", "school", "task_alt"):          # job, company, entry-level, fresher check
+        assert f'aria-hidden="true">{icon}</span>' in cards
+    words = re.sub(r"<[^>]+>", " ", cards).split()                     # only icon ligature names, no text
+    assert set(words) <= {"work", "apartment", "school", "task_alt", "check"}
+    for gone in ("aurora", "radar", "globe", "orbit"):
+        assert gone not in html.lower()
     for gone in ('class="node', 'class="pt', 'class="ln', 'class="flow', "portals monitored"):
         assert gone not in html
     for gone in (".flow ", ".flow .node", ".aurora .node", "border-top: 1.5px solid"):
@@ -71,8 +76,9 @@ def test_radar_is_gone_for_good(app):
 
 def test_brand_subtitle_has_no_radar(app):
     html = _html(app([]))
-    assert '<div class="s">India entry-level opportunities</div>' in html
-    assert "job radar" not in html.lower()
+    assert '<div class="s">Fresher opportunities</div>' in html
+    for gone in ("job radar", "india entry-level opportunities"):
+        assert gone not in html.lower()
 
 
 def test_web_fonts_are_imported_first_so_they_load():
@@ -231,8 +237,7 @@ def test_in_app_navigation_still_wins_over_an_unchanged_url(app):
 
 def test_motion_respects_reduced_motion_and_stays_on_the_compositor():
     rm = CSS[CSS.index("@media (prefers-reduced-motion: reduce)"):]
-    assert "animation-duration: .001ms" in rm and ".aurora > span { animation: none !important; }" in rm
-    assert ".aurora .sheen, .aurora .sp { display: none; }" in rm   # static: no shimmer or sparkle
+    assert "animation-duration: .001ms" in rm and ".oc, .oc::after, .opps > .glow-bg { animation: none !important; }" in rm   # cards rest in place
     assert '[data-testid="stBaseButton-primary"]::after { display: none; }' in rm   # no light sweep either
     for name, body in re.findall(r"@keyframes ([\w-]+) \{(.*?)\}\s*\}", CSS, re.S):
         props = set(re.findall(r"([a-z-]+)\s*:", body))
@@ -252,3 +257,55 @@ def test_no_new_heavy_dependencies():
     assert imports <= {"Plus+Jakarta+Sans", "Material+Symbols+Rounded"}
     req = (Path(__file__).resolve().parent.parent / "requirements.txt").read_text()
     assert set(l.split(">=")[0] for l in req.split()) == {"streamlit", "httpx", "PyGithub", "python-dotenv", "playwright"}
+
+
+# ── schedule: read from the workflow's cron (UTC), shown in IST ─────────────
+
+def _schedule_ns():
+    code = SRC[SRC.index("IST = timezone("):SRC.index("def _ms(name: str")]
+    ns = {"datetime": datetime, "timedelta": timedelta, "timezone": timezone, "re": re,
+          "BASE": Path(__file__).resolve().parent.parent}
+    exec(code, ns)
+    return ns
+
+
+def test_schedule_follows_the_workflow_cron():
+    ns = _schedule_ns()
+    workflow = (Path(__file__).resolve().parent.parent / ".github/workflows/check_jobs.yml").read_text("utf-8")
+    assert f'cron: "{ns["_schedule_cron"]()}"' in workflow                 # the real configured value
+    u = lambda h, m=0: datetime(2026, 10, 5, h, m, tzinfo=timezone.utc)
+    assert ns["_next_slot"](u(16, 59), "0 */3 * * *") == u(18)
+    assert ns["_next_slot"](u(18), "0 */3 * * *") == u(21)                  # strictly after now
+    assert ns["_next_slot"](u(22, 30), "0 */3 * * *") == u(0) + timedelta(days=1)
+    assert ns["_next_slot"](u(10), "30 9 * * *") == u(9, 30) + timedelta(days=1)
+    assert ns["_next_slot"](u(1), "15 */6 * * *") == u(6, 15)
+    assert ns["_next_slot"](u(1), "not a cron") == u(3)                     # falls back to every 3 h
+    assert ns["_cadence"]("0 */3 * * *") == "Every 3 hours" and ns["_cadence"]("0 * * * *") == "Every hour"
+    assert ns["_cadence"]("30 9 * * *") == "Daily" and ns["_cadence"]("0 1,5,9 * * *") == "3 times a day"
+
+
+def test_utc_slots_are_converted_to_ist_for_display():
+    ns = _schedule_ns()
+    u = lambda h, m=0: datetime(2026, 10, 5, h, m, tzinfo=timezone.utc)
+    assert ns["_ist"](u(18)) == "11:30 PM IST"
+    assert ns["_ist"](u(0)) == "5:30 AM IST" and ns["_ist"](u(6, 30)) == "12:00 PM IST"
+    assert ns["_ist"](u(21)) == "2:30 AM IST"                               # crosses midnight in India
+    assert ns["_ist_stamp"](u(20)) == "Oct 06, 1:30 AM IST"
+
+
+def test_settings_schedule_is_plain_language(app):
+    at = app([], page="settings")
+    html = _html(at)
+    main = re.search(r'<dl class="kv">(.*?)</dl>', html, re.S).group(1)
+    assert "Every 3 hours · Next scheduled" in main and " IST" in main
+    assert "GitHub may start scheduled scans later than the scheduled time." in main
+    assert "cron" not in main and ".github" not in main and "API" not in main
+    # the implementation facts still exist, tucked into a collapsed section
+    def blocks(node):                       # AppTest lists an expander with an icon as a status block
+        for c in getattr(node, "children", {}).values():
+            yield c
+            yield from blocks(c)
+    tech_box = [b.proto for b in blocks(at._tree) if getattr(b, "label", None) == "Technical details"]
+    assert len(tech_box) == 1 and not tech_box[0].expanded
+    tech = re.search(r'<dl class="kv tech">(.*?)</dl>', html, re.S).group(1)
+    assert "0 */3 * * *" in tech and "check_jobs.yml" in tech and "Workday API" in tech
