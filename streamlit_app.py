@@ -47,12 +47,20 @@ PAGES = {
 NAV_GROUPS = [("Discover", ["home", "jobs", "companies", "monitoring"]),
               ("Management", ["email", "settings"])]
 
-if "page" not in st.session_state:
+# Read the view from the URL on a new session, and also whenever the URL no
+# longer matches what this app last wrote: that means the browser's Back /
+# Forward changed it (Streamlit 1.65+ keeps the session on Back instead of
+# starting a new one, so the URL must win over the remembered view).
+if "page" not in st.session_state or (
+        "_url_written" in st.session_state and dict(st.query_params) != st.session_state._url_written):
     qp = st.query_params
     st.session_state.page = qp.get("page") if qp.get("page") in PAGES else "home"
     st.session_state.job_id = qp.get("job") or None
     st.session_state.company_id = qp.get("company") or None
     st.session_state.company_view = "add" if qp.get("view") == "add" else None
+    st.session_state.confirm_remove = None
+    if "dark_mode" in st.session_state:
+        st.session_state.dark_mode = qp.get("theme") == "dark"
 if "dark_mode" not in st.session_state:
     # the theme lives in the URL (?theme=dark) so it survives reloads/bookmarks
     st.session_state.dark_mode = st.query_params.get("theme") == "dark"
@@ -2039,6 +2047,7 @@ if st.session_state.dark_mode:
     want["theme"] = "dark"
 if dict(st.query_params) != want:
     st.query_params.from_dict(want)
+st.session_state._url_written = want   # a later mismatch means browser Back/Forward
 
 # ── toast ─────────────────────────────────────────────────────────────────────
 # Shown once and faded out with CSS; a sleep()+rerun would freeze the app.
