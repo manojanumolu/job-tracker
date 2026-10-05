@@ -46,14 +46,18 @@ def test_home_hero_states_the_purpose_and_live_status(app):
     assert "AI-powered" not in html and "Verified" not in html
 
 
-def test_opportunity_flow_is_decoration_with_one_node_per_portal(app):
+def test_hero_aurora_is_pure_decoration(app):
+    """The hero visual is a light field: hidden from screen readers, carries no
+    data, and has none of the tracking language (paths, nodes, rings)."""
     at = app([])
     html = _html(at)
-    flow = re.search(r'<div class="flow-wrap" aria-hidden="true">(.*?)</div></div>', html, re.S).group(1)
-    n = len(json.loads((at.tmp_path / "companies.json").read_text("utf-8")))
-    assert flow.count('class="node') == min(n, 8)
-    assert f"{n} portals monitored" in html
-    assert 'class="core"' in flow and flow.count('class="pt') >= 6
+    aurora = re.search(r'<div class="aurora-wrap" aria-hidden="true">(.*?)</div></div>', html, re.S).group(1)
+    assert aurora.count('class="w w') == 4 and 'class="glow"' in aurora and 'class="sheen"' in aurora
+    assert re.sub(r"<[^>]+>", "", aurora).strip() == ""              # no text at all
+    for gone in ('class="node', 'class="pt', 'class="ln', 'class="flow', "portals monitored"):
+        assert gone not in html
+    for gone in (".flow ", ".flow .node", ".aurora .node", "border-top: 1.5px solid"):
+        assert gone not in CSS
 
 
 def test_radar_is_gone_for_good(app):
@@ -63,6 +67,19 @@ def test_radar_is_gone_for_good(app):
     assert 'class="radar' not in html and "on radar" not in html and "blip" not in html
     assert ".radar" not in CSS and "conic-gradient" not in CSS and "jt-sweep" not in CSS
     assert ":material/radar:" not in SRC and '_ms("radar")' not in SRC
+
+
+def test_brand_subtitle_has_no_radar(app):
+    html = _html(app([]))
+    assert '<div class="s">India entry-level opportunities</div>' in html
+    assert "job radar" not in html.lower()
+
+
+def test_web_fonts_are_imported_first_so_they_load():
+    """@import is ignored unless it is the first rule of a stylesheet."""
+    assert 'st.html(f"<style>{_CSS}\\n{_root_vars}</style>")' in SRC
+    assert CSS.split('"""', 1)[1].lstrip().startswith("@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans")
+    assert "JetBrains" not in SRC and "--font: 'Plus Jakarta Sans'" in CSS
 
 
 def test_sidebar_has_status_but_no_repository_link(app):
@@ -81,7 +98,8 @@ def test_failing_portal_shows_as_a_warning_contact(app):
                          "last_checked": NOW.isoformat()}])
     at.run()
     html = _html(at)
-    assert html.count('class="node warn"') == 1 and html.count('class="node"') == 1
+    # the hero says so in words (the decorative aurora carries no status)
+    assert 'class="chip live failing"' in html and "1 portal failing" in html
 
 
 def test_metric_modules_keep_real_numbers(app):
@@ -213,7 +231,8 @@ def test_in_app_navigation_still_wins_over_an_unchanged_url(app):
 
 def test_motion_respects_reduced_motion_and_stays_on_the_compositor():
     rm = CSS[CSS.index("@media (prefers-reduced-motion: reduce)"):]
-    assert "animation-duration: .001ms" in rm and ".flow > span { animation: none !important; }" in rm
+    assert "animation-duration: .001ms" in rm and ".aurora > span { animation: none !important; }" in rm
+    assert ".aurora .sheen, .aurora .sp { display: none; }" in rm   # static: no shimmer or sparkle
     assert '[data-testid="stBaseButton-primary"]::after { display: none; }' in rm   # no light sweep either
     for name, body in re.findall(r"@keyframes ([\w-]+) \{(.*?)\}\s*\}", CSS, re.S):
         props = set(re.findall(r"([a-z-]+)\s*:", body))
