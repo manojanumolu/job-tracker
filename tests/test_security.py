@@ -539,3 +539,49 @@ def test_app_button_sends_through_the_guarded_operation(app, monkeypatch, mail_l
     assert calls == [True]
     assert [t for t, _ in mail_layer] == [SECRET_ADDR]
     assert "Test email sent" in _html(at)
+
+
+# ---------------------------------------------------------------------------
+# The owner password is never kept in server-side session state
+# ---------------------------------------------------------------------------
+
+WRONG_PASSWORD = "wrong-owner-guess-7731"
+
+
+def _password_kept(at, password) -> bool:
+    return password in json.dumps(at.session_state.to_dict(), default=str)
+
+
+def test_wrong_owner_password_is_not_retained(app):
+    at = app([], page="settings", owner=False)
+    _sign_in(at, WRONG_PASSWORD)
+    assert "That password isn" in _html(at)
+    assert access.OWNER_SESSION_KEY not in at.session_state
+    assert not at.session_state["owner_pw"]
+    assert not _password_kept(at, WRONG_PASSWORD) and WRONG_PASSWORD not in _html(at)
+    at.run()                                             # still gone on the next rerun
+    assert not _password_kept(at, WRONG_PASSWORD)
+
+
+def test_passwords_are_not_retained_through_lockout(app):
+    at = app([], page="settings", owner=False)
+    for i in range(access.MAX_SIGNIN_FAILURES):
+        _sign_in(at, f"{WRONG_PASSWORD}-{i}")
+    _sign_in(at, OWNER_PASSWORD)                         # refused: locked out
+    assert "Too many failed attempts" in _html(at)
+    assert access.OWNER_SESSION_KEY not in at.session_state
+    dump = json.dumps(at.session_state.to_dict(), default=str)
+    assert OWNER_PASSWORD not in dump and WRONG_PASSWORD not in dump
+
+
+def test_correct_owner_password_still_signs_in_for_eight_hours(app):
+    at = app([NEW_RECORD], page="settings", owner=False)
+    before = time.time()
+    _sign_in(at, OWNER_PASSWORD)
+    until = at.session_state[access.OWNER_SESSION_KEY]
+    assert before + access.OWNER_SESSION_S <= until <= time.time() + access.OWNER_SESSION_S
+    assert "Signed in as the owner" in _html(at) and "btn_sign_out" in {b.key for b in at.button}
+    assert not _password_kept(at, OWNER_PASSWORD) and OWNER_PASSWORD not in _html(at)
+    _nav(at, "jobs")                                     # and changes work
+    at.button(key=_key("dismiss", NEW_RECORD)).click().run()
+    assert _seen(at)[0]["dismissed"] is True

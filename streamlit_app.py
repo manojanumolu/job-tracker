@@ -1122,6 +1122,16 @@ def sign_in(password: str) -> tuple[bool, str]:
     return True, "Signed in as the owner"
 
 
+def _owner_submit() -> None:
+    """Form callback: wipe the password from session state before checking
+    it, so neither a right nor a wrong one stays on the server
+    (clear_on_submit only clears the browser's copy)."""
+    password = st.session_state.get("owner_pw", "")
+    st.session_state.owner_pw = ""
+    ok, msg = sign_in(password)
+    toast(msg, "success" if ok else "error")
+
+
 def sign_out() -> None:
     st.session_state.pop(OWNER_SESSION_KEY, None)
 
@@ -2386,14 +2396,11 @@ def page_settings():
                     toast("Signed out", "success")
                     st.rerun()
         elif owner_configured():
-            # a form clears the field on submit, so the password isn't kept in session state
+            # the submit callback wipes the password from session state right away
             with st.form("owner_signin", clear_on_submit=True, border=False):
-                pw = st.text_input("Owner password", type="password", key="owner_pw", autocomplete="current-password")
-                go_in = st.form_submit_button("Sign in", key="btn_sign_in", icon=":material/login:", type="primary")
-            if go_in:
-                ok, msg = sign_in(pw)
-                toast(msg, "success" if ok else "error")
-                st.rerun()
+                st.text_input("Owner password", type="password", key="owner_pw", autocomplete="current-password")
+                st.form_submit_button("Sign in", key="btn_sign_in", icon=":material/login:", type="primary",
+                                      on_click=_owner_submit)
     firebase_panel()
     with st.container(key="set_data"):
         synced = bool(os.environ.get("GITHUB_TOKEN"))
