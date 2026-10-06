@@ -302,6 +302,17 @@ def token_expired(token: object, now: float | None = None, margin_s: float = 60)
     return exp <= (time.time() if now is None else now) + margin_s
 
 
+def token_age(token: object, now: float | None = None) -> float | None:
+    """Seconds since this JWT was issued (``iat``), or None if unknown.
+    A Google ID token only minutes old means the person has just come back
+    from Google's sign-in page."""
+    try:
+        iat = float(_jwt_claims(token).get("iat"))
+    except (ValueError, TypeError, UnicodeError):
+        return None
+    return (time.time() if now is None else now) - iat
+
+
 def session_user(session, now: float | None = None) -> dict | None:
     """The signed-in Firebase user of this session, or None (signed out,
     expired or malformed)."""

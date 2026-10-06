@@ -739,6 +739,10 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .side-foot::before { content: ""; position: absolute; left: 12px; right: 12px; top: 0; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--tone, var(--green)) 50%, transparent), transparent); }
 .side-foot.failing { --tone: var(--red); } .side-foot.delayed { --tone: var(--amber); } .side-foot.pending, .side-foot.checking { --tone: var(--gray); }
 .side-foot .st { display: flex; align-items: center; gap: 9px; color: var(--text); font-weight: 700; font-size: 13px; }
+.side-auth { margin-top: 8px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border); display: flex; align-items: center; gap: 7px;
+  font-size: 12.5px; color: var(--text-2); min-width: 0; }
+.side-auth .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-auth.warn { border-color: color-mix(in srgb, var(--amber) 45%, var(--border)); color: var(--text); }
 .side-foot .meta { margin-top: 7px; padding-left: 17px; display: flex; flex-direction: column; gap: 3px; }
 .side-foot .meta .txt { display: flex; align-items: center; gap: 6px; } .side-foot .meta .ms { color: var(--muted); opacity: .8; }
 .st-key-side_foot_wrap { margin-top: auto; padding-top: 16px; }
@@ -1402,6 +1406,7 @@ with st.sidebar:
           <div class="meta"><span class="txt">{_ms("apartment", "s14")}{_plural(len(companies), 'company', 'companies')} monitored</span>
             <span class="txt num">{_ms("history", "s14")}Last scan {_ago(last_scan, NOW)}</span></div>
         </div>""")
+        _auth_slot = st.empty()      # filled after the Firebase sign-in step (see the router)
 
 # phones: the sidebar is hidden and this compact bar takes over (CSS decides)
 with st.container(key="mnav"):
@@ -2239,6 +2244,14 @@ def page_email():
 # an incomplete setup shows which setting is missing (names, never values).
 _FB_CREDENTIAL_ERRORS = {"EMAIL_NOT_FOUND", "INVALID_PASSWORD", "INVALID_LOGIN_CREDENTIALS", "INVALID_EMAIL"}
 _OIDC_KEYS = ("client_id", "client_secret", "server_metadata_url")
+_FRESH_GOOGLE_LOGIN_S = 300
+# what a Firebase refusal of a Google sign-in usually means (shown on the card)
+_GOOGLE_ERROR_HINTS = {
+    "INVALID_IDP_RESPONSE": "Firebase didn't accept this Google sign-in. Usually the Google OAuth client used by "
+                            "this app isn't allowed by the Firebase project's Google provider.",
+    "OPERATION_NOT_ALLOWED": "The Google provider isn't enabled in the Firebase project.",
+    "PROJECT_MISMATCH": "The Firebase project settings don't match the project that answered.",
+}
 
 
 def _secrets_dict() -> dict:
@@ -2311,13 +2324,25 @@ def firebase_google_exchange() -> None:
     if firebase_auth.token_expired(token):
         st.session_state._fb_google_expired = True
         return
+    # just back from Google's page — Streamlit returns to the bare "/" (no
+    # ?page=) and the token is minutes old: show the result on Settings
+    # instead of leaving the person on Home with only a toast. A visit to a
+    # specific page (?page=...) is left alone.
+    age = firebase_auth.token_age(token)
+    if (age is not None and age < _FRESH_GOOGLE_LOGIN_S and "page" not in st.query_params
+            and not st.session_state.get("_fb_google_landed")):
+        st.session_state._fb_google_landed = True
+        go("settings")
+        st.rerun()      # once: so the sidebar and the page are drawn for Settings together
     try:
         user = firebase_auth.sign_in_with_google_id_token(token, google["redirect_uri"], config=config)
     except firebase_auth.FirebaseAuthError as e:
         st.session_state._fb_google_failed = True
+        st.session_state._fb_google_error = {"message": str(e), "code": e.code}
         toast(str(e), "error")
         return
     st.session_state.pop("_fb_google_expired", None)
+    st.session_state.pop("_fb_google_error", None)
     st.session_state[firebase_auth.SESSION_KEY] = user.as_session()
     toast("Signed in with Google", "success")
 
@@ -2355,6 +2380,7 @@ def firebase_sign_out() -> None:
     # session, even while the Google login cookie is still being cleared
     st.session_state._fb_signed_out = True
     st.session_state.pop(firebase_auth.SESSION_KEY, None)
+    st.session_state.pop("_fb_google_error", None)
     st.session_state.pop("_fb_google_failed", None)
     st.session_state.pop("_fb_google_expired", None)
 
@@ -2363,6 +2389,20 @@ def _firebase_head(icon: str, sub: str) -> None:
     st.html(f'<div class="set-head"><span class="ic">{_ms(icon)}</span><div>'
             '<div class="eyebrow">Preview</div><h2 class="section-title">Firebase sign-in</h2>'
             f'<p class="section-sub">{escape(sub)}</p></div></div>')
+
+
+def firebase_status_line() -> None:
+    """The sidebar's sign-in line: who is signed in, or that a Google
+    sign-in didn't complete. Empty otherwise."""
+    user = firebase_auth.session_user(st.session_state)
+    if user:
+        method = {"google.com": "Google", "password": "email"}.get(user.get("provider"), "Firebase")
+        line = f'Signed in with {method} · {user.get("email") or user["uid"]}'
+        _auth_slot.html(f'<div class="side-auth" role="status" title="{escape(line, quote=True)}">{_ms("account_circle", "s16")}'
+                        f'<span class="txt">{escape(line)}</span></div>')
+    elif st.session_state.get("_fb_google_error"):
+        _auth_slot.html(f'<div class="side-auth warn" role="status">{_ms("warning", "s16")}'
+                        '<span class="txt">Google sign-in incomplete — see Settings</span></div>')
 
 
 def firebase_panel() -> None:
@@ -2404,11 +2444,20 @@ def firebase_panel() -> None:
             st.text_input("Password", type="password", key="fb_pw", autocomplete="current-password")
             st.form_submit_button("Sign in with email", key="btn_fb_sign_in", icon=":material/login:",
                                   on_click=_firebase_submit)
+        failure = st.session_state.get("_fb_google_error")
+        if google and failure:
+            hint = _GOOGLE_ERROR_HINTS.get(failure.get("code"), "")
+            st.html(f'<div class="legend" style="border-color:color-mix(in srgb, var(--amber) 45%, var(--border));">'
+                    f'{_ms("warning", "s20")}<p class="note" style="color:var(--text);"><b>Google sign-in reached the app, '
+                    f'but Firebase sign-in failed:</b> {escape(failure.get("message") or "")} '
+                    f'<span class="num">({escape(failure.get("code") or "unknown")})</span>'
+                    + (f"<br>{escape(hint)}" if hint else "") + "</p></div>")
         if google:
             if st.session_state.get("_fb_google_expired"):
                 st.html(f'<p class="note">{_ms("schedule", "s16")} Your Google sign-in has expired — continue with Google again.</p>')
             if st.button("Continue with Google", key="btn_fb_google", icon=":material/account_circle:"):
                 st.session_state.pop("_fb_google_failed", None)
+                st.session_state.pop("_fb_google_error", None)
                 st.session_state.pop("_fb_google_expired", None)
                 st.session_state.pop("_fb_signed_out", None)
                 if google["provider"]:
@@ -2539,6 +2588,10 @@ try:
     firebase_google_exchange()
 except Exception as _e:          # never let the preview break a page
     log.warning("Firebase Google exchange failed: %s", type(_e).__name__)
+try:
+    firebase_status_line()
+except Exception as _e:
+    log.warning("Firebase status line failed: %s", type(_e).__name__)
 page = st.session_state.page
 jobs_by_id = {_jid(j): j for j in all_records}
 if page == "jobs" and st.session_state.job_id:

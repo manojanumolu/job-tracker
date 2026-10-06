@@ -1,6 +1,7 @@
 """Firebase Authentication spike. Firebase is never contacted: every REST
 call goes through an httpx.MockTransport that answers like Identity Toolkit."""
 import base64
+from html import unescape
 import json
 import logging
 import time
@@ -621,3 +622,109 @@ def test_password_sign_in_works_with_secrets_only_config(app, no_env, monkeypatc
     _fb_sign_in(at)
     assert at.session_state[firebase_auth.SESSION_KEY]["uid"] == UID
     assert fb.requests[0].headers["x-goog-api-key"] == API_KEY
+
+
+# ---------------------------------------------------------------------------
+# After Google sign-in the outcome must stay visible (production report:
+# "back on the normal website, no sign it worked") — previously only a
+# 4-6 second toast on Home said whether it worked or failed.
+# ---------------------------------------------------------------------------
+
+AUTH_GOOGLE = {**AUTH_BASE, **GOOGLE_CLIENT}
+
+
+def _fresh_google_token(**extra):
+    return make_id_token(project="google-issued", uid="google-sub", iat=time.time() - 5, **extra)
+
+
+@pytest.mark.parametrize("age, expected", [(5, 5), (600, 600)])
+def test_token_age(age, expected):
+    assert firebase_auth.token_age(make_id_token(iat=time.time() - age)) == pytest.approx(expected, abs=2)
+
+
+@pytest.mark.parametrize("token", [make_id_token(), "not-a-jwt", None, "a." + _b64({"iat": "x"}) + ".c"])
+def test_token_age_unknown(token):
+    assert firebase_auth.token_age(token) is None
+
+
+def test_fresh_google_sign_in_lands_on_settings_with_the_result(app, google_env):
+    google_env["firebase"](ok_google_answer())
+    google_env["set_user"](FakeUser(token=_fresh_google_token()))
+    at = app([], secrets={**FB_SECRETS, "auth": AUTH_GOOGLE})          # Streamlit returns to Home
+    assert not at.exception
+    assert at.session_state.page == "settings"                          # ... the app shows the result
+    assert ".st-key-nav_settings [data-testid^='stBaseButton']" in _html(at)   # sidebar highlights Settings too
+    html = _html(at)
+    assert "Firebase UID" in html and UID in html and "Sign-in method</dt><dd>Google" in html
+    assert "Signed in with Google · " + EMAIL.lower() in html             # sidebar line
+    at.run()                                                            # toast gone, still visible
+    html = _html(at)
+    assert "Signed in with Google · " in html and UID in html
+
+
+def test_landing_on_settings_happens_once_per_session(app, google_env):
+    google_env["firebase"](ok_google_answer())
+    google_env["set_user"](FakeUser(token=_fresh_google_token()))
+    at = app([], secrets={**FB_SECRETS, "auth": AUTH_GOOGLE})
+    _nav(at, "home")
+    at.run()
+    assert at.session_state.page == "home"
+    assert "Signed in with Google · " in _html(at)                      # still shown on Home
+
+
+@pytest.mark.parametrize("page", ["home", "jobs"])
+def test_a_specific_page_is_not_overridden_after_sign_in(app, google_env, page):
+    """Only the bare post-login URL lands on Settings; opening ?page=... in a
+    new tab right after signing in stays on that page."""
+    google_env["firebase"](ok_google_answer())
+    google_env["set_user"](FakeUser(token=_fresh_google_token()))
+    at = app([], query={"page": page}, secrets={**FB_SECRETS, "auth": AUTH_GOOGLE})
+    assert at.session_state.page == page and "Signed in with Google · " in _html(at)
+
+
+def test_returning_visitor_is_not_moved_to_settings(app, google_env):
+    """An older (still valid) Google login: no forced navigation, but the
+    sidebar says who is signed in."""
+    google_env["firebase"](ok_google_answer())
+    google_env["set_user"](FakeUser(token=make_id_token(project="google-issued", iat=time.time() - 1200)))
+    at = app([], secrets={**FB_SECRETS, "auth": AUTH_GOOGLE})
+    assert at.session_state.page == "home" and "Signed in with Google · " in _html(at)
+
+
+@pytest.mark.parametrize("message, code, hint", [
+    ("INVALID_IDP_RESPONSE : Invalid Idp Response: the Google id_token is not allowed to be used with this application",
+     "INVALID_IDP_RESPONSE", "isn't allowed by the Firebase project"),
+    ("OPERATION_NOT_ALLOWED", "OPERATION_NOT_ALLOWED", "Google provider isn't enabled"),
+    ("SOMETHING_ELSE", "SOMETHING_ELSE", ""),
+])
+def test_google_failure_stays_visible_after_the_toast(app, google_env, message, code, hint):
+    fb = google_env["firebase"](error_answer(message))
+    google_env["set_user"](FakeUser(token=_fresh_google_token()))
+    at = app([], secrets={**FB_SECRETS, "auth": AUTH_GOOGLE})
+    assert at.session_state.page == "settings" and firebase_auth.SESSION_KEY not in at.session_state
+    for _ in range(2):                                   # survives the toast and later reruns
+        html = _html(at)
+        assert "but Firebase sign-in failed" in html and f"({code})" in html
+        assert hint in unescape(html)
+        assert "Google sign-in incomplete — see Settings" in html      # sidebar
+        assert API_KEY not in html and "placeholder-client" not in html
+        at.run()
+    assert len(fb.requests) == 1
+    at.button(key="btn_fb_google").click().run()                      # retrying clears the old error
+    assert "_fb_google_error" not in at.session_state and google_env["calls"]["login"] == [None]
+
+
+def test_password_sign_in_shows_the_sidebar_line_and_sign_out_clears_it(app, no_env, monkeypatch):
+    fb = FakeFirebase(ok_password_answer())
+    monkeypatch.setattr(firebase_auth, "_new_client", fb.client)
+    at = app([], page="settings", secrets=FB_SECRETS)
+    assert "Signed in with" not in _html(at)
+    _fb_sign_in(at)
+    assert "Signed in with email · " + EMAIL.lower() in _html(at)
+    at.button(key="btn_fb_sign_out").click().run()
+    assert "Signed in with" not in _html(at)
+
+
+def test_no_sign_in_line_without_firebase(app, no_env):
+    at = app([])
+    assert 'class="side-auth' not in _html(at)
