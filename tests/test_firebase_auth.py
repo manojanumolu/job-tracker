@@ -12,7 +12,7 @@ import firebase_auth
 from firebase_auth import FirebaseAuthError, FirebaseConfig, FirebaseConfigError
 from test_streamlit_app import NEW_RECORD, _html, _key, _nav, _seen, app  # noqa: F401  (fixture re-export)
 
-API_KEY = "AIzaFAKE-test-key-never-real-0123456789"
+API_KEY = "test-placeholder-firebase-web-api-key"   # deliberately not shaped like a real Google key
 PROJECT = "job-tracker-test"
 OTHER_PROJECT = "movie-ticket-radar"
 UID = "Xf3kQ9bLm2RzT8vW1yNcA7pD4eH5"
