@@ -439,3 +439,103 @@ def test_workflow_passes_the_recipient_secret_only_to_the_alert_step():
 def test_browser_never_gets_tracebacks():
     cfg = (REPO / ".streamlit" / "config.toml").read_text("utf-8")
     assert '[client]' in cfg and 'showErrorDetails = "type"' in cfg
+
+
+# ---------------------------------------------------------------------------
+# The test-email operation checks the owner itself (not only its button)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def mail_layer(monkeypatch, tmp_path):
+    """Mocked mail layer: records what notifier would send, and fails the
+    test if anything reaches a real SMTP connection."""
+    import smtplib
+
+    def no_network(*a, **k):
+        raise AssertionError("a real SMTP connection was attempted")
+    monkeypatch.setattr(smtplib, "SMTP_SSL", no_network)
+    monkeypatch.setattr(smtplib, "SMTP", no_network)
+    sent = []
+    monkeypatch.setattr(notifier, "_send", lambda to, subject, html, text: sent.append((to, subject)))
+    monkeypatch.setenv("JT_OWNER_PASSWORD", OWNER_PASSWORD)
+    monkeypatch.delenv("ALERT_RECIPIENT", raising=False)
+    return sent
+
+
+def _owner_session(offset_s=3600):
+    return {access.OWNER_SESSION_KEY: time.time() + offset_s}
+
+
+@pytest.mark.parametrize("session", [
+    {}, {access.OWNER_SESSION_KEY: None}, {access.OWNER_SESSION_KEY: "not-a-time"},
+    {access.OWNER_SESSION_KEY: 0}, {"owner": True, "is_owner": True}, None, [],
+])
+def test_direct_test_email_without_sign_in_is_refused(mail_layer, monkeypatch, session):
+    monkeypatch.setenv("ALERT_RECIPIENT", SECRET_ADDR)
+    with pytest.raises(access.OwnerRequired):
+        access.send_test_email(session, {"recipient_email": "me@example.com"})
+    assert mail_layer == []
+
+
+def test_direct_test_email_with_expired_sign_in_is_refused(mail_layer, monkeypatch):
+    monkeypatch.setenv("ALERT_RECIPIENT", SECRET_ADDR)
+    with pytest.raises(access.OwnerRequired):
+        access.send_test_email(_owner_session(-1), {})
+    assert mail_layer == []
+
+
+@pytest.mark.parametrize("password", [None, "short"])
+def test_direct_test_email_refused_while_owner_access_is_not_set_up(mail_layer, monkeypatch, password):
+    """A session carrying the owner flag is still refused when no (valid)
+    owner password is configured — fail closed."""
+    if password is None:
+        monkeypatch.delenv("JT_OWNER_PASSWORD", raising=False)
+    else:
+        monkeypatch.setenv("JT_OWNER_PASSWORD", password)
+    monkeypatch.setenv("ALERT_RECIPIENT", SECRET_ADDR)
+    with pytest.raises(access.OwnerRequired):
+        access.send_test_email(_owner_session(), {})
+    assert mail_layer == []
+
+
+def test_owner_test_email_goes_to_the_secret_recipient(mail_layer, monkeypatch):
+    monkeypatch.setenv("ALERT_RECIPIENT", SECRET_ADDR)
+    to = access.send_test_email(_owner_session(), {"recipient_email": "me@example.com"})
+    assert to == SECRET_ADDR
+    assert mail_layer == [(SECRET_ADDR, "Test email from Fresher Job Tracker")]
+
+
+def test_owner_test_email_falls_back_to_settings_recipient(mail_layer):
+    to = access.send_test_email(_owner_session(), {"recipient_email": " me@example.com "})
+    assert to == "me@example.com" and [t for t, _ in mail_layer] == ["me@example.com"]
+
+
+def test_owner_test_email_without_a_recipient_sends_nothing(mail_layer):
+    with pytest.raises(LookupError):
+        access.send_test_email(_owner_session(), {"recipient_email": ""})
+    assert mail_layer == []
+
+
+def test_test_email_operation_takes_no_recipient_argument():
+    """There is no way to pass an address in: only the session and the
+    stored settings."""
+    import inspect
+    assert list(inspect.signature(access.send_test_email).parameters) == ["session", "settings"]
+
+
+def test_app_button_sends_through_the_guarded_operation(app, monkeypatch, mail_layer):
+    """The dashboard's button reaches the mail layer only via
+    access.send_test_email, which re-checks the owner sign-in."""
+    calls = []
+    real = access.send_test_email
+
+    def spy(session, settings=None):
+        calls.append(access.owner_session_valid(session))
+        return real(session, settings)
+    monkeypatch.setattr(access, "send_test_email", spy)
+    monkeypatch.setenv("ALERT_RECIPIENT", SECRET_ADDR)
+    at = app([], page="email")
+    at.button(key="btn_test").click().run()
+    assert calls == [True]
+    assert [t for t, _ in mail_layer] == [SECRET_ADDR]
+    assert "Test email sent" in _html(at)

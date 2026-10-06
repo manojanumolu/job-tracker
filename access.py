@@ -28,6 +28,7 @@ OWNER_PASSWORD_ENV = "JT_OWNER_PASSWORD"
 RECIPIENT_ENV = "ALERT_RECIPIENT"
 MIN_PASSWORD_LEN = 12
 OWNER_SESSION_S = 8 * 3600       # an owner sign-in lasts for one working day
+OWNER_SESSION_KEY = "_owner_until"  # session-state key: when the owner sign-in expires
 MAX_SIGNIN_FAILURES = 10         # per window, across every browser session
 SIGNIN_WINDOW_S = 15 * 60
 
@@ -52,6 +53,18 @@ def password_matches(candidate: str) -> bool:
     # equal-length digests, so the comparison time says nothing about the password
     return hmac.compare_digest(hashlib.sha256(candidate.encode("utf-8")).digest(),
                                hashlib.sha256(expected.encode("utf-8")).digest())
+
+
+def owner_session_valid(session, now: float | None = None) -> bool:
+    """Does this session (Streamlit session state, or any mapping) hold an
+    unexpired owner sign-in? Always False while no owner password is set."""
+    if not owner_configured():
+        return False
+    try:
+        until = float(session.get(OWNER_SESSION_KEY, 0) or 0)
+    except (TypeError, ValueError, AttributeError):
+        return False
+    return until > (time.time() if now is None else now)
 
 
 class AttemptLimiter:
@@ -129,6 +142,26 @@ def alert_recipient(settings: dict | None = None) -> tuple[str, str]:
     legacy = (settings or {}).get("recipient_email") if isinstance(settings, dict) else ""
     legacy = legacy.strip() if isinstance(legacy, str) else ""
     return (legacy, "settings.json") if legacy else ("", "")
+
+
+class OwnerRequired(PermissionError):
+    """A protected operation was attempted without a valid owner sign-in."""
+
+
+def send_test_email(session, settings: dict | None = None) -> str:
+    """The test-email operation itself: refuses unless ``session`` holds a
+    valid owner sign-in, and only ever writes to the configured alert
+    recipient (never to an address supplied by the caller). Returns the
+    address it was sent to. The button that calls this checks too — this
+    is the second, server-side check."""
+    if not owner_session_valid(session):
+        raise OwnerRequired("owner sign-in required to send a test email")
+    recipient, _ = alert_recipient(settings)
+    if not recipient:
+        raise LookupError("no alert recipient is configured")
+    from notifier import test_mail
+    test_mail(recipient)
+    return recipient
 
 
 # the practical address alphabet: quotes/braces around an address in an error

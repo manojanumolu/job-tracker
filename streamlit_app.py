@@ -24,13 +24,17 @@ from config_store import (
 from notifier import category_label, friendly_reason, safe_url
 from identity import ats_job_id
 from access import (
+    OWNER_SESSION_KEY,
     OWNER_SESSION_S,
     AttemptLimiter,
     Cooldown,
+    OwnerRequired,
     alert_recipient,
     mask_email,
     owner_configured,
+    owner_session_valid,
     password_matches,
+    send_test_email,
 )
 
 log = logging.getLogger("streamlit_app")
@@ -1097,7 +1101,7 @@ def _guards() -> dict:
 
 
 def is_owner() -> bool:
-    return owner_configured() and st.session_state.get("_owner_until", 0) > time.time()
+    return owner_session_valid(st.session_state)
 
 
 def sign_in(password: str) -> tuple[bool, str]:
@@ -1112,12 +1116,12 @@ def sign_in(password: str) -> tuple[bool, str]:
         log.warning("failed owner sign-in")
         return False, "That password isn't right."
     limiter.succeeded()
-    st.session_state._owner_until = time.time() + OWNER_SESSION_S
+    st.session_state[OWNER_SESSION_KEY] = time.time() + OWNER_SESSION_S
     return True, "Signed in as the owner"
 
 
 def sign_out() -> None:
-    st.session_state.pop("_owner_until", None)
+    st.session_state.pop(OWNER_SESSION_KEY, None)
 
 
 def owner_only(action: str) -> bool:
@@ -2191,8 +2195,10 @@ def page_email():
             toast("No alert recipient is set — see Recipient above", "error")
         else:
             try:
-                from notifier import test_mail
-                test_mail(recipient)
+                # re-checks the owner sign-in itself and sends only to the configured recipient
+                send_test_email(st.session_state, settings)
+            except OwnerRequired:
+                owner_only("send test emails")
             except Exception as ex:
                 log.warning("test mail failed: %s", type(ex).__name__)
                 st.session_state.test_status = (False, stamp)
@@ -2230,7 +2236,7 @@ def page_settings():
     with st.container(key="set_owner"):
         owner = is_owner()
         if owner:
-            left = max(0, int(st.session_state.get("_owner_until", 0) - time.time()))
+            left = max(0, int(st.session_state.get(OWNER_SESSION_KEY, 0) - time.time()))
             sub = (f"Signed in as the owner in this browser session · ends in {left // 3600} h {left % 3600 // 60:02d} min. "
                    "Changes (dismiss, companies, Run check, test email) are enabled.")
         elif owner_configured():
