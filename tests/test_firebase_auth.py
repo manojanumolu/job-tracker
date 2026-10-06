@@ -738,3 +738,94 @@ def test_send_test_email_checks_the_admin_role(monkeypatch):
         with pytest.raises(access.OwnerRequired):
             access.send_test_email(session, {})
     assert access.send_test_email(admin, {}) == "alerts@example.org" and sent == ["alerts@example.org"]
+
+
+# ---------------------------------------------------------------------------
+# A failed Google code exchange must be explained, not silently "start over"
+# (production evidence: Google answered "invalid_client: The provided client
+# secret is invalid", Streamlit cleared the cookies and redirected to the
+# login page with nothing said).
+# ---------------------------------------------------------------------------
+
+AUTH_ROUTES_LOGGER = "streamlit.web.server.starlette.starlette_auth_routes"
+
+
+@pytest.fixture
+def auth_capture():
+    """Reset the process-wide sign-in record before and after each test."""
+    def reset():
+        for h in logging.getLogger(AUTH_ROUTES_LOGGER).handlers:
+            store = getattr(h, "_jt_auth_capture", None)
+            if store is not None:
+                store["events"].clear()
+                store["exchange"] = {"at": None, "code": ""}
+    reset()
+    yield
+    reset()
+
+
+class OAuthError(Exception):
+    """Shaped like authlib's: str() is "<error>: <description>"."""
+
+
+def _streamlit_reports_failed_exchange(message):
+    """Exactly what Streamlit's callback logs when the code exchange fails."""
+    try:
+        raise OAuthError(message)
+    except OAuthError:
+        logging.getLogger(AUTH_ROUTES_LOGGER).warning(
+            "OAuth token exchange failed for provider '%s'. Clearing auth cookies.", "default", exc_info=True)
+
+
+def test_invalid_client_is_explained_on_the_login_page(app, google_env, auth_capture):
+    at = app([], secrets=GATED, owner=False)                 # the app installs its capture
+    assert _login_page(at) and "invalid_client" not in _html(at)
+    _streamlit_reports_failed_exchange("invalid_client: The provided client secret is invalid.")
+    for _ in range(2):                                       # a lasting message, not a toast
+        at.run()
+        html = unescape(_html(at))
+        assert _login_page(at)
+        assert "Google rejected this app's sign-in credentials (invalid_client)" in html
+        assert "update the Google OAuth client secret" in html
+        assert 'class="jt-toast"' not in _html(at)
+
+
+def test_invalid_grant_asks_to_try_again(app, google_env, auth_capture):
+    at = app([], secrets=GATED, owner=False)
+    _streamlit_reports_failed_exchange("invalid_grant: Bad Request")
+    at.run()
+    assert "had expired or was already used" in unescape(_html(at))
+
+
+def test_unknown_exchange_errors_name_the_code_only(app, google_env, auth_capture):
+    at = app([], secrets=GATED, owner=False)
+    _streamlit_reports_failed_exchange("server_error: upstream person@example.com eyJhbGciOiJSUzI1NiJ9.e30.sig")
+    at.run()
+    html = unescape(_html(at))
+    assert "Google sign-in couldn't be completed (server_error)" in html
+    assert "person@example.com" not in html and "eyJ" not in html
+
+
+def test_the_notice_expires(app, google_env, auth_capture, monkeypatch):
+    at = app([], secrets=GATED, owner=False)
+    _streamlit_reports_failed_exchange("invalid_client: The provided client secret is invalid.")
+    real = time.time
+    monkeypatch.setattr(time, "time", lambda: real() + 301)
+    at.run()
+    assert "invalid_client" not in _html(at)
+
+
+def test_no_notice_without_a_failure(app, google_env, auth_capture):
+    at = app([], secrets=GATED, owner=False)
+    at.run()
+    assert 'class="login-err"' not in _html(at)
+
+
+def test_diag_page_lists_the_redacted_failure(app, google_env, auth_capture):
+    at = app([], secrets=GATED, owner=False)
+    _streamlit_reports_failed_exchange("invalid_client: The provided client secret is invalid.")
+    diag = app([], query={"diag": "auth"}, secrets=GATED, owner=False)
+    html = _html(diag)
+    assert "Sign-in diagnostics" in html and "token exchange failed" in html
+    assert "OAuthError: invalid_client: The provided client secret is invalid." in unescape(html)
+    assert API_KEY not in html

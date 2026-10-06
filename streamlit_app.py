@@ -136,36 +136,55 @@ def _redact(text: object) -> str:
     return _REDACT_RE.sub("<redacted>", str(text))[:300]
 
 
-@st.cache_resource(show_spinner=False)
-def _auth_events():
+_AUTH_LOGGERS = ("streamlit.web.server.starlette.starlette_auth_routes",
+                 "streamlit.web.server.starlette.starlette_websocket",
+                 "streamlit.web.server.oauth_authlib_routes", "streamlit.web.server.browser_websocket_handler",
+                 "streamlit.auth_util", "authlib")
+_OAUTH_CODE_RE = re.compile(r"^\s*([a-z_]{3,40})\s*:")
+
+
+def _auth_capture() -> dict:
+    """The process-wide sign-in record: {"events": deque of redacted lines,
+    "exchange": {"at": time or None, "code": str}} for the last failed Google
+    code exchange. One handler per process, attached to Streamlit's own
+    auth loggers (they don't propagate)."""
     import collections
 
-    events = collections.deque(maxlen=40)
+    first = logging.getLogger(_AUTH_LOGGERS[0])
+    for h in first.handlers:
+        if getattr(h, "_jt_auth_capture", None) is not None:
+            return h._jt_auth_capture
+    store = {"events": collections.deque(maxlen=40), "exchange": {"at": None, "code": ""}}
 
     class _Capture(logging.Handler):
         def emit(self, record):
             try:
+                msg = record.getMessage()
                 exc = ""
                 if record.exc_info and record.exc_info[1] is not None:
                     e = record.exc_info[1]
-                    exc = f" | {type(e).__name__}: {_redact(str(e).splitlines()[0] if str(e) else '')}"
-                events.append(f"{time.strftime('%H:%M:%S', time.gmtime(record.created))}Z {record.levelname} "
-                              f"{record.name.rsplit('.', 1)[-1]}: {_redact(record.getMessage())}{exc}")
+                    first_line = str(e).splitlines()[0] if str(e) else ""
+                    exc = f" | {type(e).__name__}: {_redact(first_line)}"
+                    if "token exchange failed" in msg:
+                        m = _OAUTH_CODE_RE.match(first_line)
+                        store["exchange"] = {"at": record.created, "code": m.group(1) if m else type(e).__name__}
+                store["events"].append(f"{time.strftime('%H:%M:%S', time.gmtime(record.created))}Z {record.levelname} "
+                                       f"{record.name.rsplit('.', 1)[-1]}: {_redact(msg)}{exc}")
             except Exception:
                 pass
 
     handler = _Capture(level=logging.WARNING)
-    # Streamlit's own loggers don't propagate, so attach to the exact ones
-    # that report sign-in problems
-    for name in ("streamlit.web.server.starlette.starlette_auth_routes",
-                 "streamlit.web.server.starlette.starlette_websocket",
-                 "streamlit.web.server.oauth_authlib_routes", "streamlit.web.server.browser_websocket_handler",
-                 "streamlit.auth_util", "authlib"):
+    handler._jt_auth_capture = store
+    for name in _AUTH_LOGGERS:
         lg = logging.getLogger(name)
         lg.addHandler(handler)
         if lg.level == logging.NOTSET or lg.level > logging.WARNING:
             lg.setLevel(logging.WARNING)
-    return events
+    return store
+
+
+def _auth_events():
+    return _auth_capture()["events"]
 
 
 def auth_event(message: str) -> None:
@@ -173,7 +192,27 @@ def auth_event(message: str) -> None:
     _auth_events().append(f"{time.strftime('%H:%M:%S', time.gmtime())}Z APP gate: {_redact(message)}")
 
 
-_auth_events()
+# what a failed Google code exchange means, for the login page
+_EXCHANGE_HINTS = {
+    "invalid_client": ("Google rejected this app's sign-in credentials (invalid_client). "
+                       "The app owner needs to update the Google OAuth client secret in the app's settings."),
+    "invalid_grant": "That Google sign-in had expired or was already used. Please continue with Google again.",
+}
+_EXCHANGE_NOTICE_S = 300
+
+
+def recent_google_failure(now: float | None = None) -> str:
+    """A safe, human message if a Google sign-in failed at the code exchange
+    in the last few minutes (process-wide), else ""."""
+    ex = _auth_capture()["exchange"]
+    if not ex.get("at") or (time.time() if now is None else now) - ex["at"] > _EXCHANGE_NOTICE_S:
+        return ""
+    code = ex.get("code") or "unknown"
+    return _EXCHANGE_HINTS.get(code, f"Google sign-in couldn't be completed ({code}). Please try again; if it keeps "
+                                     "happening, the app owner should check the Google sign-in settings.")
+
+
+_auth_capture()
 
 # ── sign-in diagnostics (read-only) ───────────────────────────────────────────
 # ?diag=auth shows what THIS session's server process can see of the sign-in
@@ -1585,7 +1624,8 @@ def _login_google() -> None:
 
 _LOGIN_CSS = """
 [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"], .st-key-mnav { display: none !important; }
-.login-head, .login-head *, .st-key-login_card, .st-key-login_card *, .login-foot { font-family: var(--font) !important; }
+.login-head, .login-head *, .st-key-login_card, .login-foot,
+.st-key-login_card *:not([data-testid="stIconMaterial"]):not([data-testid="stExpanderIcon"]):not(.ms) { font-family: var(--font) !important; }
 .login-head { max-width: 440px; margin: 7vh auto 0; text-align: center; }
 .login-head .lmark { width: 54px; height: 54px; margin: 0 auto 14px; border-radius: 16px; display: grid; place-items: center;
   background: linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow: 0 14px 30px -14px var(--accent); }
@@ -1614,7 +1654,7 @@ def render_login_page() -> None:
             '<h1>Sign in to your <em>opportunities</em></h1>'
             '<p>Fresher and entry-level roles in India, read from each company\'s own careers page.</p></div>')
     with st.container(key="login_card"):
-        err = st.session_state.get("_login_error")
+        err = st.session_state.get("_login_error") or (recent_google_failure() if _GOOGLE else "")
         if err:
             st.html(f'<div class="login-err" role="alert">{_ms("error", "s20")}<div>{escape(err)}</div></div>')
         if _GOOGLE:
@@ -1631,7 +1671,7 @@ def render_login_page() -> None:
         # until admins come from sign-in (JT_ADMIN_EMAILS), the owner can always
         # get in — even if Google or Firebase misbehaves
         if owner_configured() and not admins_configured():
-            with st.expander("Trouble signing in? Use the owner password", icon=":material/key:"):
+            with st.expander("Trouble signing in? Use the owner password"):
                 with st.form("login_owner_form", clear_on_submit=True, border=False):
                     st.text_input("Owner password", type="password", key="login_owner_pw",
                                   autocomplete="current-password")
