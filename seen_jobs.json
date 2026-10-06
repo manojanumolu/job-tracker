@@ -961,5 +961,85 @@
     "notify_state": "sent",
     "claimed_at": "2026-10-05T13:59:12.034548+00:00",
     "notified_at": "2026-10-05T13:59:15.281758+00:00"
+  },
+  {
+    "title": "ISSRRN000656 - Infra Tech Support Practitioner Copy 09",
+    "url": "https://www.accenture.com/in-en/careers/jobdetails?id=14264500_en&title=ISSRRN000656+-+Infra+Tech+Support+Practitioner+Copy+09",
+    "company": "Accenture",
+    "location": "Gurugram · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: 'minimum of 0 years'",
+    "evidence": {
+      "experience": [
+        "minimum of 0 years",
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "A minimum of 0 years of experience in relevant related skills."
+      ],
+      "fresher_evidence": "minimum of 0 years",
+      "detail_read": true,
+      "detail_match": "ATS record of this listing",
+      "job_id": "accenture:14264500_en",
+      "canonical_url": "https://accenture.com/in-en/careers/jobdetails?id=14264500_en&title=ISSRRN000656+-+Infra+Tech+Support+Practitioner+Copy+09",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "accenture|accenture:14264500_en",
+    "date": "Oct 6, 05:26",
+    "first_seen": "2026-10-06T05:26:57.018937+00:00",
+    "id": "Accenture_ISSRRN000656_-_Infra_Tech_Support_Practi",
+    "notified": false,
+    "company_id": "accenture",
+    "notify_state": "claimed",
+    "claimed_at": "2026-10-06T05:27:02.759250+00:00"
+  },
+  {
+    "title": "ISSRRN000733 - Infra Tech Support Practitioner",
+    "url": "https://www.accenture.com/in-en/careers/jobdetails?id=14263574_en&title=ISSRRN000733+-+Infra+Tech+Support+Practitioner",
+    "company": "Accenture",
+    "location": "Gurugram · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: 'minimum of 0 years'",
+    "evidence": {
+      "experience": [
+        "minimum of 0 years",
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "A minimum of 0 years of experience in relevant related skills."
+      ],
+      "fresher_evidence": "minimum of 0 years",
+      "detail_read": true,
+      "detail_match": "ATS record of this listing",
+      "job_id": "accenture:14263574_en",
+      "canonical_url": "https://accenture.com/in-en/careers/jobdetails?id=14263574_en&title=ISSRRN000733+-+Infra+Tech+Support+Practitioner",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "accenture|accenture:14263574_en",
+    "date": "Oct 6, 05:26",
+    "first_seen": "2026-10-06T05:26:57.018937+00:00",
+    "id": "Accenture_ISSRRN000733_-_Infra_Tech_Support_Practi",
+    "notified": false,
+    "company_id": "accenture",
+    "notify_state": "claimed",
+    "claimed_at": "2026-10-06T05:27:02.759250+00:00"
   }
 ]
