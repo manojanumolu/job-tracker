@@ -1,4 +1,15 @@
-"""Interim owner access and alert-recipient privacy.
+"""Who may change things, and alert-recipient privacy.
+
+Admin rights, in order of preference:
+
+  * Signed in (Firebase / Google) with a VERIFIED email listed in the
+    JT_ADMIN_EMAILS secret. Once that secret is set it is the only way:
+    there is no second password to type.
+  * Until it is set: the legacy owner password (JT_OWNER_PASSWORD).
+
+The signed-in account lives in server-side session state under
+ACCOUNT_KEY (written by the app's sign-in gate each run, never by the
+browser). Everyone else — visitors and signed-in non-admins — is read-only.
 
 Until real sign-in exists, the dashboard is readable by anyone with the URL
 (everything it shows is already public in the GitHub repository), but every
@@ -29,6 +40,8 @@ RECIPIENT_ENV = "ALERT_RECIPIENT"
 MIN_PASSWORD_LEN = 12
 OWNER_SESSION_S = 8 * 3600       # an owner sign-in lasts for one working day
 OWNER_SESSION_KEY = "_owner_until"  # session-state key: when the owner sign-in expires
+ADMIN_EMAILS_ENV = "JT_ADMIN_EMAILS"
+ACCOUNT_KEY = "_account"            # session-state key: the signed-in account (see module doc)
 MAX_SIGNIN_FAILURES = 10         # per window, across every browser session
 SIGNIN_WINDOW_S = 15 * 60
 
@@ -55,12 +68,36 @@ def password_matches(candidate: str) -> bool:
                                hashlib.sha256(expected.encode("utf-8")).digest())
 
 
-def owner_session_valid(session, now: float | None = None) -> bool:
-    """Does this session (Streamlit session state, or any mapping) hold an
-    unexpired owner sign-in? Always False while no owner password is set."""
-    if not owner_configured():
+def admin_emails() -> frozenset[str]:
+    """The admin allowlist: JT_ADMIN_EMAILS, comma/space separated."""
+    raw = os.environ.get(ADMIN_EMAILS_ENV, "")
+    return frozenset(e.strip().lower() for e in re.split(r"[,\s;]+", raw) if "@" in e)
+
+
+def admins_configured() -> bool:
+    return bool(admin_emails())
+
+
+def account_is_admin(account) -> bool:
+    """A signed-in account whose email is verified and on the allowlist.
+    An unverified email (e.g. a fresh email/password account that merely
+    claims an address) never counts."""
+    if not isinstance(account, dict):
         return False
+    email = account.get("email")
+    return (account.get("email_verified") is True and isinstance(email, str)
+            and email.strip().lower() in admin_emails())
+
+
+def owner_session_valid(session, now: float | None = None) -> bool:
+    """May this session (Streamlit session state, or any mapping) make
+    changes? With JT_ADMIN_EMAILS set: only a signed-in, verified admin
+    account. Without it: an unexpired legacy owner-password sign-in."""
     try:
+        if admins_configured():
+            return account_is_admin(session.get(ACCOUNT_KEY))
+        if not owner_configured():
+            return False
         until = float(session.get(OWNER_SESSION_KEY, 0) or 0)
     except (TypeError, ValueError, AttributeError):
         return False

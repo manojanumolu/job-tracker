@@ -1,6 +1,7 @@
 """Firebase Authentication spike. Firebase is never contacted: every REST
 call goes through an httpx.MockTransport that answers like Identity Toolkit."""
 import base64
+import os
 from html import unescape
 import json
 import logging
@@ -11,7 +12,9 @@ import pytest
 
 import firebase_auth
 from firebase_auth import FirebaseAuthError, FirebaseConfig, FirebaseConfigError
-from test_streamlit_app import NEW_RECORD, _html, _key, _nav, _seen, app  # noqa: F401  (fixture re-export)
+import notifier
+from access import ACCOUNT_KEY
+from test_streamlit_app import NEW_RECORD, OWNER_PASSWORD, _html, _key, _nav, _seen, app  # noqa: F401  (fixture re-export)
 
 API_KEY = "test-placeholder-firebase-web-api-key"   # deliberately not shaped like a real Google key
 PROJECT = "job-tracker-test"
@@ -292,119 +295,6 @@ def test_session_user():
 
 
 # ---------------------------------------------------------------------------
-# The dashboard (AppTest)
-# ---------------------------------------------------------------------------
-
-@pytest.fixture
-def firebase_env(monkeypatch):
-    monkeypatch.setenv("FIREBASE_WEB_API_KEY", API_KEY)
-    monkeypatch.setenv("FIREBASE_PROJECT_ID", PROJECT)
-
-    def use(reply):
-        fb = FakeFirebase(reply)
-        monkeypatch.setattr(firebase_auth, "_new_client", fb.client)
-        return fb
-    return use
-
-
-def _fb_sign_in(at, email=EMAIL, password=PASSWORD):
-    at.text_input(key="fb_email").set_value(email)
-    at.text_input(key="fb_pw").set_value(password)
-    at.button(key="btn_fb_sign_in").click().run()
-
-
-def _session_dump(at) -> str:
-    return json.dumps(at.session_state.to_dict(), default=str)
-
-
-def test_panel_is_hidden_without_firebase_configuration(app):
-    at = app([], page="settings")
-    assert not at.exception
-    assert "Firebase sign-in" not in _html(at)
-    assert not [t for t in at.text_input if t.key in ("fb_email", "fb_pw")]
-    assert "Owner access" in _html(at)                         # the existing page is unchanged
-
-
-def test_signed_out_panel(app, firebase_env):
-    fb = firebase_env(ok_password_answer())
-    at = app([], page="settings")
-    html = _html(at)
-    assert "Firebase sign-in" in html and "grant any access" in html
-    assert {"btn_fb_sign_in"} <= {b.key for b in at.button}
-    assert "btn_fb_google" not in {b.key for b in at.button}   # no [auth] secrets -> no Google button
-    assert fb.requests == [] and API_KEY not in html
-
-
-def test_successful_sign_in_shows_the_uid(app, firebase_env):
-    fb = firebase_env(ok_password_answer())
-    at = app([], page="settings")
-    _fb_sign_in(at)
-    assert not at.exception and len(fb.requests) == 1
-    user = at.session_state[firebase_auth.SESSION_KEY]
-    assert user["uid"] == UID and user["email"] == EMAIL.lower() and user["provider"] == "password"
-    html = _html(at)
-    assert "Signed in with Firebase" in html and UID in html and EMAIL.lower() in html
-    assert "Email &amp; password" in html
-    # nothing secret is kept or shown
-    dump = _session_dump(at)
-    for secret in (PASSWORD, API_KEY, "refresh-token-xyz"):
-        assert secret not in dump and secret not in html
-    assert all(PASSWORD not in str(v) and API_KEY not in str(v) for v in at.query_params.values())
-
-
-def test_failed_sign_in_shows_a_safe_message(app, firebase_env):
-    firebase_env(error_answer("INVALID_LOGIN_CREDENTIALS"))
-    at = app([], page="settings")
-    _fb_sign_in(at)
-    html = _html(at)
-    assert "Email or password is incorrect." in html
-    assert firebase_auth.SESSION_KEY not in at.session_state
-    assert PASSWORD not in html and API_KEY not in html and PASSWORD not in _session_dump(at)
-
-
-def test_malformed_answer_does_not_sign_in(app, firebase_env):
-    firebase_env(ok_password_answer(idToken=make_id_token(project=OTHER_PROJECT)))
-    at = app([], page="settings")
-    _fb_sign_in(at)
-    assert firebase_auth.SESSION_KEY not in at.session_state
-    assert "project mismatch" in _html(at)
-
-
-def test_repeated_wrong_passwords_are_rate_limited(app, firebase_env):
-    fb = firebase_env(error_answer("INVALID_LOGIN_CREDENTIALS"))
-    at = app([], page="settings")
-    for _ in range(10):
-        _fb_sign_in(at)
-    _fb_sign_in(at)
-    assert len(fb.requests) == 10 and "Too many failed attempts" in _html(at)
-
-
-def test_firebase_sign_in_grants_no_owner_access(app, firebase_env):
-    """The spike only identifies the person; changes still need owner access."""
-    firebase_env(ok_password_answer())
-    at = app([NEW_RECORD], page="settings", owner=False)
-    _fb_sign_in(at)
-    assert at.session_state[firebase_auth.SESSION_KEY]["uid"] == UID
-    _nav(at, "jobs")
-    at.button(key=_key("dismiss", NEW_RECORD)).click().run()
-    assert not _seen(at)[0].get("dismissed") and "Only the owner can" in _html(at)
-
-
-def test_sign_out_and_expiry(app, firebase_env):
-    firebase_env(ok_password_answer())
-    at = app([], page="settings")
-    _fb_sign_in(at)
-    at.button(key="btn_fb_sign_out").click().run()
-    assert firebase_auth.SESSION_KEY not in at.session_state
-    assert "btn_fb_sign_in" in {b.key for b in at.button}
-    _fb_sign_in(at)
-    at.session_state[firebase_auth.SESSION_KEY] = {**at.session_state[firebase_auth.SESSION_KEY],
-                                                   "expires_at": time.time() - 1}
-    at.run()
-    assert "btn_fb_sign_in" in {b.key for b in at.button}       # expired -> signed out again
-
-
-# ---------------------------------------------------------------------------
 # Configuration from Streamlit secrets (the preview's hidden-card bug)
 # ---------------------------------------------------------------------------
 # Only TOP-LEVEL secrets become environment variables. Firebase lines written
@@ -426,6 +316,9 @@ def _without(d, key):
 def no_env(monkeypatch):
     monkeypatch.delenv("FIREBASE_WEB_API_KEY", raising=False)
     monkeypatch.delenv("FIREBASE_PROJECT_ID", raising=False)
+    monkeypatch.delenv("JT_ADMIN_EMAILS", raising=False)
+    yield
+    os.environ.pop("JT_ADMIN_EMAILS", None)     # the app may promote it from st.secrets
 
 
 @pytest.mark.parametrize("secrets", [
@@ -477,31 +370,15 @@ def test_google_token_expiry(token, expired):
     assert firebase_auth.token_expired(token) is expired
 
 
-# --- the dashboard with secrets supplied the way Streamlit Cloud does -------
-
-def test_card_appears_when_firebase_lines_sit_below_auth(app, no_env):
-    """The preview bug, reproduced: Firebase keys inside [auth] only."""
-    at = app([], page="settings", secrets={"auth": {**AUTH_BASE, **GOOGLE_CLIENT, **FB_SECRETS}})
-    assert not at.exception
-    assert "Firebase sign-in" in _html(at) and "btn_fb_sign_in" in {b.key for b in at.button}
-    assert API_KEY not in _html(at)
-
-
-def test_partial_setup_shows_what_is_missing(app, no_env):
-    at = app([], page="settings", secrets={"FIREBASE_WEB_API_KEY": API_KEY})
-    html = _html(at)
-    assert "Firebase sign-in isn" in html and "FIREBASE_PROJECT_ID is missing" in html
-    assert "btn_fb_sign_in" not in {b.key for b in at.button} and API_KEY not in html
-
-
-def test_no_firebase_settings_leave_settings_unchanged(app, no_env):
-    at = app([], page="settings", secrets={"auth": {**AUTH_BASE, **GOOGLE_CLIENT}})
-    assert "Firebase sign-in" not in _html(at) and "btn_fb_google" not in {b.key for b in at.button}
-
-
 class FakeUser:
-    def __init__(self, logged_in=True, token=None):
-        self.is_logged_in, self.tokens = logged_in, ({"id": token} if token else {})
+    """Stand-in for st.user: the identity Streamlit's st.login verified."""
+    def __init__(self, logged_in=True, token=None, email=EMAIL.lower(), verified=True, name="Person Example"):
+        self.is_logged_in = logged_in
+        self.tokens = {"id": token} if token else {}
+        self._claims = {"email": email, "email_verified": verified, "name": name} if logged_in else {}
+
+    def get(self, key, default=None):
+        return self._claims.get(key, default)
 
 
 @pytest.fixture
@@ -514,6 +391,7 @@ def google_env(monkeypatch, no_env):
 
     def fake_logout():
         calls["logout"] += 1
+        monkeypatch.setattr(streamlit, "user", FakeUser(logged_in=False))
     monkeypatch.setattr(streamlit, "logout", fake_logout)
     monkeypatch.setattr(streamlit, "user", FakeUser(logged_in=False))
 
@@ -527,110 +405,8 @@ def google_env(monkeypatch, no_env):
     return {"calls": calls, "set_user": set_user, "firebase": use_firebase}
 
 
-@pytest.mark.parametrize("auth, provider", [
-    ({**AUTH_BASE, **GOOGLE_CLIENT}, None),                       # flat [auth]
-    ({**AUTH_BASE, "google": dict(GOOGLE_CLIENT)}, "google"),     # [auth.google]
-    ({**AUTH_BASE, "corp": dict(GOOGLE_CLIENT)}, "corp"),         # any named provider
-])
-def test_google_button_supports_both_auth_layouts(app, google_env, auth, provider):
-    at = app([], page="settings", secrets={**FB_SECRETS, "auth": auth})
-    assert "btn_fb_google" in {b.key for b in at.button}
-    at.button(key="btn_fb_google").click().run()
-    assert google_env["calls"]["login"] == [provider]
-
-
-@pytest.mark.parametrize("auth, why", [
-    ({**_without(AUTH_BASE, "expose_tokens"), **GOOGLE_CLIENT}, "expose_tokens"),
-    ({**AUTH_BASE, **GOOGLE_CLIENT, "redirect_uri": "https://job-tracker-bot.streamlit.app/"}, "/oauth2callback"),
-    ({**_without(AUTH_BASE, "cookie_secret"), **GOOGLE_CLIENT}, "cookie_secret"),
-])
-def test_incomplete_google_setup_is_explained(app, google_env, auth, why):
-    at = app([], page="settings", secrets={**FB_SECRETS, "auth": auth})
-    assert "btn_fb_google" not in {b.key for b in at.button}
-    assert why in _html(at) and "placeholder-client-value" not in _html(at)
-
-
-def test_google_sign_in_completes_on_the_home_page(app, google_env):
-    """Streamlit returns to the home page after Google sign-in; the Firebase
-    exchange must happen there, not only on Settings."""
-    fb = google_env["firebase"](ok_google_answer())
-    google_token = make_id_token(project="google-issued", uid="google-sub")
-    google_env["set_user"](FakeUser(token=google_token))
-    at = app([], secrets={**FB_SECRETS, "auth": {**AUTH_BASE, **GOOGLE_CLIENT}})     # home page
-    assert not at.exception and at.session_state.page == "home"
-    user = at.session_state[firebase_auth.SESSION_KEY]
-    assert (user["uid"], user["provider"], user["email_verified"]) == (UID, "google.com", True)
-    assert len(fb.requests) == 1 and "Signed in with Google" in _html(at)
-    assert fb.body()["requestUri"] == AUTH_BASE["redirect_uri"]
-    dump = json.dumps(at.session_state.to_dict(), default=str)
-    assert google_token not in dump and "refresh-token-xyz" not in dump and API_KEY not in dump
-    at.run()                                        # later reruns don't call Firebase again
-    assert len(fb.requests) == 1
-    _nav(at, "settings")
-    assert "Firebase UID" in _html(at)
-
-
-def test_expired_google_token_is_never_sent(app, google_env):
-    fb = google_env["firebase"](ok_google_answer())
-    google_env["set_user"](FakeUser(token=make_id_token(exp=time.time() - 60)))
-    at = app([], page="settings", secrets={**FB_SECRETS, "auth": {**AUTH_BASE, **GOOGLE_CLIENT}})
-    assert fb.requests == [] and firebase_auth.SESSION_KEY not in at.session_state
-    assert "Google sign-in has expired" in _html(at) and "btn_fb_google" in {b.key for b in at.button}
-    assert "Google sign-in couldn" not in _html(at)          # no error toast for a routine expiry
-
-
-def test_google_failure_is_reported_once(app, google_env):
-    fb = google_env["firebase"](error_answer("INVALID_IDP_RESPONSE : Invalid Idp Response"))
-    google_env["set_user"](FakeUser(token=make_id_token(project="google-issued")))
-    at = app([], secrets={**FB_SECRETS, "auth": {**AUTH_BASE, **GOOGLE_CLIENT}})
-    assert "Google sign-in couldn" in _html(at) and firebase_auth.SESSION_KEY not in at.session_state
-    at.run()
-    _nav(at, "jobs")
-    assert len(fb.requests) == 1                     # not retried on every rerun
-
-
-def test_google_sign_out_ends_the_google_session(app, google_env):
-    fb = google_env["firebase"](ok_google_answer())
-    google_env["set_user"](FakeUser(token=make_id_token(project="google-issued")))
-    at = app([], page="settings", secrets={**FB_SECRETS, "auth": {**AUTH_BASE, **GOOGLE_CLIENT}})
-    at.button(key="btn_fb_sign_out").click().run()
-    assert google_env["calls"]["logout"] == 1 and firebase_auth.SESSION_KEY not in at.session_state
-    # the Google cookie may still be present until the logout redirect lands:
-    # an explicit sign-out must not bounce straight back in
-    at.run()
-    _nav(at, "home")
-    assert firebase_auth.SESSION_KEY not in at.session_state and len(fb.requests) == 1
-    at.button(key="nav_settings").click().run()
-    at.button(key="btn_fb_google").click().run()          # signing in again is a deliberate click
-    assert google_env["calls"]["login"] == [None]
-
-
-def test_google_sign_in_grants_no_owner_access(app, google_env):
-    google_env["firebase"](ok_google_answer())
-    google_env["set_user"](FakeUser(token=make_id_token(project="google-issued")))
-    at = app([NEW_RECORD], secrets={**FB_SECRETS, "auth": {**AUTH_BASE, **GOOGLE_CLIENT}}, owner=False)
-    assert at.session_state[firebase_auth.SESSION_KEY]["provider"] == "google.com"
-    _nav(at, "jobs")
-    at.button(key=_key("dismiss", NEW_RECORD)).click().run()
-    assert not _seen(at)[0].get("dismissed") and "Only the owner can" in _html(at)
-
-
-def test_password_sign_in_works_with_secrets_only_config(app, no_env, monkeypatch):
-    fb = FakeFirebase(ok_password_answer())
-    monkeypatch.setattr(firebase_auth, "_new_client", fb.client)
-    at = app([], page="settings", secrets={"auth": {**AUTH_BASE, **FB_SECRETS}})
-    _fb_sign_in(at)
-    assert at.session_state[firebase_auth.SESSION_KEY]["uid"] == UID
-    assert fb.requests[0].headers["x-goog-api-key"] == API_KEY
-
-
-# ---------------------------------------------------------------------------
-# After Google sign-in the outcome must stay visible (production report:
-# "back on the normal website, no sign it worked") — previously only a
-# 4-6 second toast on Home said whether it worked or failed.
-# ---------------------------------------------------------------------------
-
 AUTH_GOOGLE = {**AUTH_BASE, **GOOGLE_CLIENT}
+GATED = {**FB_SECRETS, "auth": AUTH_GOOGLE}
 
 
 def _fresh_google_token(**extra):
@@ -647,84 +423,318 @@ def test_token_age_unknown(token):
     assert firebase_auth.token_age(token) is None
 
 
-def test_fresh_google_sign_in_lands_on_settings_with_the_result(app, google_env):
-    google_env["firebase"](ok_google_answer())
-    google_env["set_user"](FakeUser(token=_fresh_google_token()))
-    at = app([], secrets={**FB_SECRETS, "auth": AUTH_GOOGLE})          # Streamlit returns to Home
-    assert not at.exception
-    assert at.session_state.page == "settings"                          # ... the app shows the result
-    assert ".st-key-nav_settings [data-testid^='stBaseButton']" in _html(at)   # sidebar highlights Settings too
+# ---------------------------------------------------------------------------
+# One login: the gate in front of the whole app
+# ---------------------------------------------------------------------------
+
+def _buttons(at):
+    return {b.key for b in at.button}
+
+
+def _dump(at) -> str:
+    return json.dumps(at.session_state.to_dict(), default=str)
+
+
+def _login_page(at) -> bool:
+    return "Sign in to your <em>opportunities</em>" in _html(at)
+
+
+def test_without_firebase_the_app_is_unchanged(app, no_env):
+    at = app([NEW_RECORD])
+    assert not _login_page(at) and "Graduate Software Engineer" in _html(at)
+    _nav(at, "settings")
+    assert "Owner access" in _html(at) and "set_account" not in str(at)
+
+
+def test_visitor_sees_only_the_login_page(app, google_env):
+    at = app([NEW_RECORD], secrets=GATED, owner=False)
+    assert not at.exception and _login_page(at)
     html = _html(at)
-    assert "Firebase UID" in html and UID in html and "Sign-in method</dt><dd>Google" in html
-    assert "Signed in with Google · " + EMAIL.lower() in html             # sidebar line
-    at.run()                                                            # toast gone, still visible
+    assert {"btn_login_google", "btn_login_email"} <= _buttons(at)
+    assert "login_email" in {t.key for t in at.text_input} and "login_pw" in {t.key for t in at.text_input}
+    # nothing of the app is drawn or loaded for a visitor
+    assert "Graduate Software Engineer" not in html and "nav_home" not in _buttons(at)
+    assert "Owner access" not in html and "owner_pw" not in {t.key for t in at.text_input}
+    assert API_KEY not in html
+
+
+def test_partial_setup_keeps_the_app_open_and_says_why(app, no_env):
+    at = app([], page="settings", secrets={"FIREBASE_WEB_API_KEY": API_KEY})
+    assert not _login_page(at)
     html = _html(at)
-    assert "Signed in with Google · " in html and UID in html
+    assert "Sign-in isn’t available yet" in html and "FIREBASE_PROJECT_ID is missing" in html
+    assert "Owner access" in html and API_KEY not in html
 
 
-def test_landing_on_settings_happens_once_per_session(app, google_env):
-    google_env["firebase"](ok_google_answer())
+@pytest.mark.parametrize("auth, provider", [
+    (AUTH_GOOGLE, None),                                      # flat [auth]
+    ({**AUTH_BASE, "google": dict(GOOGLE_CLIENT)}, "google"),  # [auth.google]
+])
+def test_continue_with_google_starts_streamlit_login(app, google_env, auth, provider):
+    at = app([], secrets={**FB_SECRETS, "auth": auth}, owner=False)
+    at.button(key="btn_login_google").click().run()
+    assert google_env["calls"]["login"] == [provider]
+
+
+def test_incomplete_google_setup_hides_the_button_and_explains(app, google_env):
+    at = app([], secrets={**FB_SECRETS, "auth": {**_without(AUTH_BASE, "expose_tokens"), **GOOGLE_CLIENT}}, owner=False)
+    assert _login_page(at) and "btn_login_google" not in _buttons(at)
+    assert "expose_tokens" in _html(at) and "btn_login_email" in _buttons(at)
+
+
+# --- Google ------------------------------------------------------------------
+
+def test_google_sign_in_opens_the_app_with_a_persistent_account_chip(app, google_env):
+    fb = google_env["firebase"](ok_google_answer())
     google_env["set_user"](FakeUser(token=_fresh_google_token()))
-    at = app([], secrets={**FB_SECRETS, "auth": AUTH_GOOGLE})
-    _nav(at, "home")
-    at.run()
-    assert at.session_state.page == "home"
-    assert "Signed in with Google · " in _html(at)                      # still shown on Home
+    at = app([NEW_RECORD], secrets=GATED, owner=False)          # back from Google, on Home
+    assert not at.exception and not _login_page(at) and at.session_state.page == "home"
+    html = _html(at)
+    assert "Graduate Software Engineer" in html                  # the app itself
+    assert 'class="side-acct"' in html and "Person Example" in html and EMAIL.lower() in html
+    assert "btn_account_sign_out" in _buttons(at)
+    assert 'class="jt-toast"' not in html                                 # no fading success message
+    assert len(fb.requests) == 1 and at.session_state[firebase_auth.SESSION_KEY]["uid"] == UID
+    for _ in range(2):                                            # it stays
+        at.run()
+        assert 'class="side-acct"' in _html(at)
+    assert len(fb.requests) == 1
+    _nav(at, "settings")
+    html = _html(at)
+    assert "Signed in with Google" in html and UID in html and "Member — read-only" in html
 
 
-@pytest.mark.parametrize("page", ["home", "jobs"])
-def test_a_specific_page_is_not_overridden_after_sign_in(app, google_env, page):
-    """Only the bare post-login URL lands on Settings; opening ?page=... in a
-    new tab right after signing in stays on that page."""
-    google_env["firebase"](ok_google_answer())
-    google_env["set_user"](FakeUser(token=_fresh_google_token()))
-    at = app([], query={"page": page}, secrets={**FB_SECRETS, "auth": AUTH_GOOGLE})
-    assert at.session_state.page == page and "Signed in with Google · " in _html(at)
-
-
-def test_returning_visitor_is_not_moved_to_settings(app, google_env):
-    """An older (still valid) Google login: no forced navigation, but the
-    sidebar says who is signed in."""
-    google_env["firebase"](ok_google_answer())
-    google_env["set_user"](FakeUser(token=make_id_token(project="google-issued", iat=time.time() - 1200)))
-    at = app([], secrets={**FB_SECRETS, "auth": AUTH_GOOGLE})
-    assert at.session_state.page == "home" and "Signed in with Google · " in _html(at)
+def test_reload_after_an_hour_stays_signed_in_without_google_again(app, google_env):
+    """Streamlit's sign-in cookie lasts 30 days; Google's ID token 1 hour.
+    A new session after the token expired is still signed in — no repeated
+    Google sign-in — and nothing stale is sent to Firebase."""
+    fb = google_env["firebase"](ok_google_answer())
+    google_env["set_user"](FakeUser(token=make_id_token(project="google-issued", exp=time.time() - 600)))
+    at = app([NEW_RECORD], secrets=GATED, owner=False)
+    assert not _login_page(at) and 'class="side-acct"' in _html(at)
+    assert fb.requests == [] and google_env["calls"]["login"] == []
+    assert "expired" not in _html(at).lower()
+    _nav(at, "settings")
+    assert "Linked at your next Google sign-in" in _html(at)
 
 
 @pytest.mark.parametrize("message, code, hint", [
-    ("INVALID_IDP_RESPONSE : Invalid Idp Response: the Google id_token is not allowed to be used with this application",
-     "INVALID_IDP_RESPONSE", "isn't allowed by the Firebase project"),
+    ("INVALID_IDP_RESPONSE : Invalid Idp Response", "INVALID_IDP_RESPONSE", "isn't allowed by the Firebase project"),
     ("OPERATION_NOT_ALLOWED", "OPERATION_NOT_ALLOWED", "Google provider isn't enabled"),
-    ("SOMETHING_ELSE", "SOMETHING_ELSE", ""),
 ])
-def test_google_failure_stays_visible_after_the_toast(app, google_env, message, code, hint):
+def test_firebase_link_failure_never_blocks_and_is_explained(app, google_env, message, code, hint):
     fb = google_env["firebase"](error_answer(message))
     google_env["set_user"](FakeUser(token=_fresh_google_token()))
-    at = app([], secrets={**FB_SECRETS, "auth": AUTH_GOOGLE})
-    assert at.session_state.page == "settings" and firebase_auth.SESSION_KEY not in at.session_state
-    for _ in range(2):                                   # survives the toast and later reruns
-        html = _html(at)
-        assert "but Firebase sign-in failed" in html and f"({code})" in html
-        assert hint in unescape(html)
-        assert "Google sign-in incomplete — see Settings" in html      # sidebar
-        assert API_KEY not in html and "placeholder-client" not in html
+    at = app([], page="settings", secrets=GATED, owner=False)
+    assert not _login_page(at) and 'class="side-acct"' in _html(at)       # still signed in
+    html = unescape(_html(at))
+    assert f"({code})" in html and hint in html and 'class="jt-toast"' not in _html(at)
+    at.run()
+    assert len(fb.requests) == 1                                          # once per session
+
+
+def test_google_sign_out(app, google_env):
+    google_env["firebase"](ok_google_answer())
+    google_env["set_user"](FakeUser(token=_fresh_google_token()))
+    at = app([], secrets=GATED, owner=False)
+    at.button(key="btn_account_sign_out").click().run()
+    assert google_env["calls"]["logout"] == 1
+    at.run()
+    assert _login_page(at)
+    assert ACCOUNT_KEY not in at.session_state and firebase_auth.SESSION_KEY not in at.session_state
+    at.button(key="btn_login_google").click().run()                       # signing in again is a click
+    assert google_env["calls"]["login"] == [None]
+
+
+def test_sign_out_does_not_bounce_back_while_the_cookie_is_cleared(app, google_env, monkeypatch):
+    import streamlit
+    google_env["firebase"](ok_google_answer())
+    google_env["set_user"](FakeUser(token=_fresh_google_token()))
+    monkeypatch.setattr(streamlit, "logout", lambda: None)                 # cookie not cleared (yet)
+    at = app([], secrets=GATED, owner=False)
+    at.button(key="btn_account_sign_out").click().run()
+    at.run()
+    assert _login_page(at)
+
+
+# --- email + password ----------------------------------------------------------
+
+def _login(at, email=EMAIL, password=PASSWORD):
+    at.text_input(key="login_email").set_value(email)
+    at.text_input(key="login_pw").set_value(password)
+    at.button(key="btn_login_email").click().run()
+
+
+def test_email_sign_in_opens_the_app(app, google_env):
+    fb = google_env["firebase"](ok_password_answer())
+    at = app([NEW_RECORD], secrets=GATED, owner=False)
+    _login(at)
+    assert not _login_page(at) and "Graduate Software Engineer" in _html(at)
+    assert 'class="side-acct"' in _html(at) and EMAIL.lower() in _html(at)
+    assert fb.requests[0].headers["x-goog-api-key"] == API_KEY
+    for secret in (PASSWORD, API_KEY, "refresh-token-xyz", ok_password_answer()["idToken"]):
+        assert secret not in _dump(at) and secret not in _html(at)
+
+
+def test_wrong_password_stays_on_the_login_page_with_a_lasting_message(app, google_env):
+    google_env["firebase"](error_answer("INVALID_LOGIN_CREDENTIALS"))
+    at = app([], secrets=GATED, owner=False)
+    _login(at, password="wrong-password-123")
+    for _ in range(2):
+        assert _login_page(at) and "Email or password is incorrect." in _html(at)
+        assert "wrong-password-123" not in _dump(at)
         at.run()
-    assert len(fb.requests) == 1
-    at.button(key="btn_fb_google").click().run()                      # retrying clears the old error
-    assert "_fb_google_error" not in at.session_state and google_env["calls"]["login"] == [None]
 
 
-def test_password_sign_in_shows_the_sidebar_line_and_sign_out_clears_it(app, no_env, monkeypatch):
-    fb = FakeFirebase(ok_password_answer())
-    monkeypatch.setattr(firebase_auth, "_new_client", fb.client)
-    at = app([], page="settings", secrets=FB_SECRETS)
-    assert "Signed in with" not in _html(at)
-    _fb_sign_in(at)
-    assert "Signed in with email · " + EMAIL.lower() in _html(at)
-    at.button(key="btn_fb_sign_out").click().run()
-    assert "Signed in with" not in _html(at)
+def test_password_sign_ins_are_rate_limited(app, google_env):
+    fb = google_env["firebase"](error_answer("INVALID_LOGIN_CREDENTIALS"))
+    at = app([], secrets=GATED, owner=False)
+    for _ in range(11):
+        _login(at, password="nope-nope-nope")
+    assert len(fb.requests) == 10 and "Too many failed attempts" in _html(at)
 
 
-def test_no_sign_in_line_without_firebase(app, no_env):
-    at = app([])
-    assert 'class="side-auth' not in _html(at)
+def test_email_sign_out_and_session_expiry(app, google_env):
+    google_env["firebase"](ok_password_answer())
+    at = app([], secrets=GATED, owner=False)
+    _login(at)
+    at.button(key="btn_account_sign_out").click().run()
+    assert _login_page(at) and google_env["calls"]["logout"] == 0
+    _login(at)
+    at.session_state[firebase_auth.SESSION_KEY] = {**at.session_state[firebase_auth.SESSION_KEY],
+                                                   "expires_at": time.time() - 1}
+    at.run()
+    assert _login_page(at)
+
+
+# --- authorization: one identity, roles from it --------------------------------
+
+@pytest.fixture
+def admins(monkeypatch):
+    def set_admins(value):
+        monkeypatch.setenv("JT_ADMIN_EMAILS", value)
+    return set_admins
+
+
+def test_admin_comes_from_the_signed_in_identity(app, google_env, admins):
+    admins(f"someone@else.example, {EMAIL.upper()}")
+    google_env["firebase"](ok_google_answer())
+    google_env["set_user"](FakeUser(token=_fresh_google_token()))
+    at = app([NEW_RECORD], secrets=GATED, owner=False)
+    assert 'class="role admin"' in _html(at)
+    _nav(at, "jobs")
+    at.button(key=_key("dismiss", NEW_RECORD)).click().run()
+    assert _seen(at)[0]["dismissed"] is True                       # no second password needed
+    _nav(at, "settings")
+    html = _html(at)
+    assert "Admin — can manage" in html
+    assert "owner_pw" not in {t.key for t in at.text_input} and "Owner access" not in html
+
+
+def test_admin_list_works_wherever_it_sits_in_the_secrets(app, google_env):
+    google_env["firebase"](ok_google_answer())
+    google_env["set_user"](FakeUser(token=_fresh_google_token()))
+    at = app([NEW_RECORD], secrets={**FB_SECRETS, "auth": {**AUTH_GOOGLE, "JT_ADMIN_EMAILS": EMAIL}}, owner=False)
+    assert 'class="role admin"' in _html(at)
+
+
+def test_members_are_read_only(app, google_env, admins, monkeypatch):
+    admins("boss@example.org")
+    google_env["firebase"](ok_google_answer())
+    google_env["set_user"](FakeUser(token=_fresh_google_token()))
+    sent = []
+    monkeypatch.setattr(notifier, "test_mail", lambda to: sent.append(to))
+    at = app([NEW_RECORD], secrets=GATED)           # even a leftover owner-password flag doesn't count
+    _nav(at, "jobs")
+    at.button(key=_key("dismiss", NEW_RECORD)).click().run()
+    assert not _seen(at)[0].get("dismissed") and "Only admins can dismiss jobs." in _html(at)
+    _nav(at, "email")
+    at.button(key="btn_test").click().run()
+    assert sent == [] and "Only admins can send test emails." in _html(at)
+
+
+def test_an_unverified_email_is_never_admin(app, google_env, admins):
+    """A fresh email/password account merely claims its address."""
+    admins(EMAIL)
+    google_env["firebase"](ok_password_answer())              # no emailVerified in the answer
+    at = app([NEW_RECORD], secrets=GATED, owner=False)
+    _login(at)
+    assert 'class="role admin"' not in _html(at)
+    _nav(at, "jobs")
+    at.button(key=_key("dismiss", NEW_RECORD)).click().run()
+    assert not _seen(at)[0].get("dismissed")
+
+
+def test_google_identity_without_verified_email_is_not_admin(app, google_env, admins):
+    admins(EMAIL)
+    google_env["firebase"](ok_google_answer(emailVerified=False))
+    google_env["set_user"](FakeUser(token=_fresh_google_token(), verified=False))
+    at = app([], secrets=GATED, owner=False)
+    assert 'class="role admin"' not in _html(at)
+
+
+def test_until_admins_are_set_the_owner_password_is_a_tucked_away_unlock(app, google_env):
+    google_env["firebase"](ok_google_answer())
+    google_env["set_user"](FakeUser(token=_fresh_google_token()))
+    at = app([NEW_RECORD], page="settings", secrets=GATED, owner=False)
+    assert not _login_page(at) and "Owner access" not in _html(at)           # never a second login screen
+    assert "Member — read-only (admins are set with the JT_ADMIN_EMAILS secret)" in _html(at)
+    assert "owner_pw" in {t.key for t in at.text_input}
+    at.text_input(key="owner_pw").set_value(OWNER_PASSWORD)
+    at.button(key="btn_sign_in").click().run()
+    assert "owner_pw" not in at.session_state or not at.session_state["owner_pw"]
+    assert OWNER_PASSWORD not in _dump(at)
+    _nav(at, "jobs")
+    at.button(key=_key("dismiss", NEW_RECORD)).click().run()
+    assert _seen(at)[0]["dismissed"] is True
+
+
+def test_signing_out_also_drops_unlocked_admin_access(app, google_env):
+    google_env["firebase"](ok_password_answer())
+    at = app([], secrets=GATED)                    # the session holds an owner-password sign-in
+    assert not _login_page(at) and "Owner" in _html(at)
+    at.button(key="btn_account_sign_out").click().run()
+    assert _login_page(at)
+    assert "_owner_until" not in at.session_state and ACCOUNT_KEY not in at.session_state
+
+
+def test_owner_password_break_glass_on_the_login_page(app, google_env):
+    """Until admins come from sign-in, the owner can always get in — even if
+    Google/Firebase misbehave — via a collapsed option, never a second login."""
+    at = app([NEW_RECORD], secrets=GATED, owner=False)
+    assert _login_page(at) and "login_owner_pw" in {t.key for t in at.text_input}
+    at.text_input(key="login_owner_pw").set_value("not the owner password")
+    at.button(key="btn_login_owner").click().run()
+    assert _login_page(at) and "That password isn" in _html(at)
+    at.text_input(key="login_owner_pw").set_value(OWNER_PASSWORD)
+    at.button(key="btn_login_owner").click().run()
+    assert not _login_page(at) and 'class="role admin"' in _html(at)
+    assert OWNER_PASSWORD not in _dump(at) and "not the owner password" not in _dump(at)
+    _nav(at, "jobs")
+    at.button(key=_key("dismiss", NEW_RECORD)).click().run()
+    assert _seen(at)[0]["dismissed"] is True
+
+
+def test_break_glass_disappears_once_admins_are_set(app, google_env, admins):
+    admins(EMAIL)
+    at = app([], secrets=GATED)                    # even a leftover owner flag doesn't open the gate
+    assert _login_page(at) and "login_owner_pw" not in {t.key for t in at.text_input}
+
+
+# --- the test-email operation checks the role itself -----------------------------
+
+def test_send_test_email_checks_the_admin_role(monkeypatch):
+    import access
+    monkeypatch.setenv("JT_OWNER_PASSWORD", "a-long-owner-password-123")
+    monkeypatch.setenv("JT_ADMIN_EMAILS", EMAIL)
+    monkeypatch.setenv("ALERT_RECIPIENT", "alerts@example.org")
+    sent = []
+    monkeypatch.setattr(notifier, "_send", lambda to, *a: sent.append(to))
+    admin = {ACCOUNT_KEY: {"email": EMAIL.lower(), "email_verified": True}}
+    member = {ACCOUNT_KEY: {"email": "other@example.org", "email_verified": True}}
+    unverified = {ACCOUNT_KEY: {"email": EMAIL.lower(), "email_verified": False}}
+    legacy_flag = {access.OWNER_SESSION_KEY: time.time() + 3600}       # ignored once admins are set
+    for session in (member, unverified, legacy_flag, {}):
+        with pytest.raises(access.OwnerRequired):
+            access.send_test_email(session, {})
+    assert access.send_test_email(admin, {}) == "alerts@example.org" and sent == ["alerts@example.org"]

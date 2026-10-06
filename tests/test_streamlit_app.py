@@ -45,6 +45,7 @@ def app(tmp_path, monkeypatch):
     monkeypatch.delenv("ALERT_RECIPIENT", raising=False)
     monkeypatch.delenv("FIREBASE_WEB_API_KEY", raising=False)
     monkeypatch.delenv("FIREBASE_PROJECT_ID", raising=False)
+    monkeypatch.delenv("JT_ADMIN_EMAILS", raising=False)
     monkeypatch.setenv("JT_OWNER_PASSWORD", OWNER_PASSWORD)
     for name in APP_FILES:
         shutil.copy(REPO / name, tmp_path / name)

@@ -25,11 +25,14 @@ from notifier import category_label, friendly_reason, safe_url
 from identity import ats_job_id
 import firebase_auth
 from access import (
+    ACCOUNT_KEY,
     OWNER_SESSION_KEY,
     OWNER_SESSION_S,
     AttemptLimiter,
     Cooldown,
     OwnerRequired,
+    account_is_admin,
+    admins_configured,
     alert_recipient,
     mask_email,
     owner_configured,
@@ -91,6 +94,13 @@ st.set_page_config(
 # address — so a deployment can be checked without its logs. It stops before
 # any data is loaded.
 if st.query_params.get("diag") == "auth":
+    def _xsrf_effective():
+        try:
+            from streamlit.web.server.server_util import is_xsrf_enabled
+            return is_xsrf_enabled()
+        except Exception as e:
+            return f"n/a ({type(e).__name__})"
+
     def _auth_diag() -> list[tuple[str, str]]:
         try:
             names = sorted(st.context.cookies.keys())
@@ -120,7 +130,8 @@ if st.query_params.get("diag") == "auth":
             ("Google ID token exposed", str(has_token)),
             ("app embedded in a frame", str(embedded)),
             ("[auth] configured", str(bool(auth))),
-            ("server.enableXsrfProtection", str(st.get_option("server.enableXsrfProtection"))),
+            ("server.enableXsrfProtection (option)", str(st.get_option("server.enableXsrfProtection"))),
+            ("XSRF effective (option or [auth])", str(_xsrf_effective())),
             ("streamlit version", st.__version__),
         ]
 
@@ -553,10 +564,10 @@ _CSS = """
 [data-testid^="stBaseButton"] [data-testid="stMarkdownContainer"] { display: flex !important; align-items: center; margin: 0 !important; padding: 0 !important; }
 [data-testid^="stBaseButton"] p { margin: 0 !important; font-size: 14px !important; line-height: 20px !important; font-weight: 600 !important; white-space: nowrap; }
 [data-testid^="stBaseButton"] [data-testid="stIconMaterial"] { font-size: 18px !important; transition: transform var(--fast) var(--ease); }
-[data-testid="stBaseButton-secondary"] { background: var(--btn2-grad) !important; color: var(--text) !important; border: 1px solid var(--border-strong) !important; box-shadow: var(--hi), var(--btn2-shadow) !important; }
-[data-testid="stBaseButton-secondary"]:hover:not(:disabled) { border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong)) !important; color: var(--accent-text) !important; transform: translateY(-1px);
+[data-testid="stBaseButton-secondary"], [data-testid="stBaseButton-secondaryFormSubmit"] { background: var(--btn2-grad) !important; color: var(--text) !important; border: 1px solid var(--border-strong) !important; box-shadow: var(--hi), var(--btn2-shadow) !important; }
+[data-testid="stBaseButton-secondary"]:hover:not(:disabled), [data-testid="stBaseButton-secondaryFormSubmit"]:hover:not(:disabled) { border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong)) !important; color: var(--accent-text) !important; transform: translateY(-1px);
   background: var(--btn2-grad) !important; box-shadow: var(--hi), var(--btn2-shadow-hover) !important; }
-[data-testid="stBaseButton-secondary"]:active:not(:disabled) { transform: translateY(0) scale(.98); box-shadow: var(--btn2-pressed) !important; }
+[data-testid="stBaseButton-secondary"]:active:not(:disabled), [data-testid="stBaseButton-secondaryFormSubmit"]:active:not(:disabled) { transform: translateY(0) scale(.98); box-shadow: var(--btn2-pressed) !important; }
 [data-testid="stBaseButton-primary"] { color: var(--on-accent) !important; border: 1px solid var(--btn-border) !important;
   background: var(--btn-grad) !important; box-shadow: var(--btn-hi), var(--btn-shadow) !important; text-shadow: 0 1px 0 rgba(20,10,80,.18); }
 [data-testid="stBaseButton-primary"]:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--btn-hi), var(--btn-shadow-hover) !important; }
@@ -783,10 +794,13 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .side-foot::before { content: ""; position: absolute; left: 12px; right: 12px; top: 0; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--tone, var(--green)) 50%, transparent), transparent); }
 .side-foot.failing { --tone: var(--red); } .side-foot.delayed { --tone: var(--amber); } .side-foot.pending, .side-foot.checking { --tone: var(--gray); }
 .side-foot .st { display: flex; align-items: center; gap: 9px; color: var(--text); font-weight: 700; font-size: 13px; }
-.side-auth { margin-top: 8px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border); display: flex; align-items: center; gap: 7px;
-  font-size: 12.5px; color: var(--text-2); min-width: 0; }
-.side-auth .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.side-auth.warn { border-color: color-mix(in srgb, var(--amber) 45%, var(--border)); color: var(--text); }
+.side-acct { margin-top: 10px; padding: 10px 11px; border-radius: 12px; border: 1px solid var(--border); display: flex; align-items: center; gap: 9px; min-width: 0; }
+.side-acct .who { min-width: 0; flex: 1; }
+.side-acct .nm { font-size: 13px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-acct .em { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-acct .role { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 7px; border-radius: 999px;
+  color: var(--muted); background: var(--surface-2); flex: none; }
+.side-acct .role.admin { color: var(--accent-text); background: var(--accent-soft); }
 .side-foot .meta { margin-top: 7px; padding-left: 17px; display: flex; flex-direction: column; gap: 3px; }
 .side-foot .meta .txt { display: flex; align-items: center; gap: 6px; } .side-foot .meta .ms { color: var(--muted); opacity: .8; }
 .st-key-side_foot_wrap { margin-top: auto; padding-top: 16px; }
@@ -1188,8 +1202,12 @@ def owner_only(action: str) -> bool:
     """True for the owner; otherwise explain why ``action`` can't happen."""
     if is_owner():
         return True
-    toast(f"Only the owner can {action}. Sign in under Settings → Owner access." if owner_configured()
-          else f"Changes are turned off: owner access isn't set up, so you can't {action}.", "error")
+    if AUTH_GATE:
+        toast(f"Only admins can {action}." if admins_configured() or not owner_configured()
+              else f"Only admins can {action}. Unlock admin access under Settings → Account.", "error")
+    else:
+        toast(f"Only the owner can {action}. Sign in under Settings → Owner access." if owner_configured()
+              else f"Changes are turned off: owner access isn't set up, so you can't {action}.", "error")
     return False
 
 
@@ -1251,6 +1269,300 @@ def _restore_jobs(keys: set[str]):
                     j["notify_state"] = "skipped"
         return seen
     return _mutate
+
+
+# ── sign-in gate ──────────────────────────────────────────────────────────────
+# When Firebase is configured the whole app sits behind ONE login page:
+# Continue with Google, or email + password. Nothing below this block (data,
+# sidebar, pages) runs for a visitor. Who is signed in:
+#   * email/password — Firebase checked the password (firebase_auth); kept in
+#     server-side session state for ACCOUNT_SESSION_S.
+#   * Google — Streamlit's st.login verified Google's ID token and keeps the
+#     identity in its signed 30-day cookie, so a reload or a new tab is
+#     already signed in. The Firebase account is linked right after sign-in
+#     (while Google's ID token is fresh) to obtain the Firebase UID.
+# Admin rights come from the account (access.JT_ADMIN_EMAILS, verified email).
+# No token, password or secret is ever kept in session state.
+_OIDC_KEYS = ("client_id", "client_secret", "server_metadata_url")
+ACCOUNT_SESSION_S = 12 * 3600
+_FB_CREDENTIAL_ERRORS = {"EMAIL_NOT_FOUND", "INVALID_PASSWORD", "INVALID_LOGIN_CREDENTIALS", "INVALID_EMAIL"}
+_GOOGLE_ERROR_HINTS = {
+    "INVALID_IDP_RESPONSE": "Firebase didn't accept this Google sign-in — usually the Google OAuth client used by "
+                            "this app isn't allowed by the Firebase project's Google provider.",
+    "OPERATION_NOT_ALLOWED": "The Google provider isn't enabled in the Firebase project.",
+    "PROJECT_MISMATCH": "The Firebase project settings don't match the project that answered.",
+}
+
+
+def _secrets_dict() -> dict:
+    """All Streamlit secrets as plain dicts ({} when there is no secrets file)."""
+    try:
+        return st.secrets.to_dict()
+    except Exception:
+        return {}
+
+
+def _promote_admin_setting() -> None:
+    """JT_ADMIN_EMAILS works wherever it sits in the secrets (top level, or —
+    a common TOML slip — below [auth]); access.py reads the environment."""
+    if os.environ.get("JT_ADMIN_EMAILS", "").strip():
+        return
+    secrets = _secrets_dict()
+    for section in (secrets, secrets.get("auth"), secrets.get("admin")):
+        value = section.get("JT_ADMIN_EMAILS") if isinstance(section, dict) else None
+        if isinstance(value, (list, tuple)):
+            value = ",".join(str(v) for v in value)
+        if isinstance(value, str) and value.strip():
+            os.environ["JT_ADMIN_EMAILS"] = value
+            return
+
+
+def _firebase_config():
+    """(config or None, problem, any Firebase setting present)."""
+    secrets = _secrets_dict()
+    config, problem = firebase_auth.config_status(secrets)
+    return config, problem, firebase_auth.any_setting(secrets)
+
+
+def _google_setup() -> tuple[dict | None, str]:
+    """Streamlit's built-in Google sign-in (st.login) as configured in the
+    [auth] secrets: ({"provider": None | name, "redirect_uri": ...}, "") when
+    usable, else (None, why) — why is "" when Google sign-in simply isn't
+    set up. Accepts the flat [auth] layout and [auth.<provider>]."""
+    auth = _secrets_dict().get("auth")
+    if not isinstance(auth, dict):
+        return None, ""
+    if all(auth.get(k) for k in _OIDC_KEYS):
+        provider = None
+    else:
+        named = [n for n, v in auth.items() if isinstance(v, dict) and all(v.get(k) for k in _OIDC_KEYS)]
+        if not named:
+            return None, ""
+        provider = "google" if "google" in named else named[0]
+    missing = [k for k in ("redirect_uri", "cookie_secret") if not auth.get(k)]
+    if missing:
+        return None, f"Google sign-in needs {' and '.join(missing)} in the [auth] secrets."
+    if not str(auth["redirect_uri"]).rstrip("/").endswith("/oauth2callback"):
+        return None, "Google sign-in needs redirect_uri in the [auth] secrets to end with /oauth2callback."
+    tokens = auth.get("expose_tokens")
+    if not (tokens == "id" or (isinstance(tokens, (list, tuple)) and "id" in tokens)):
+        return None, 'Google sign-in needs expose_tokens = "id" in the [auth] secrets.'
+    return {"provider": provider, "redirect_uri": str(auth["redirect_uri"])}, ""
+
+
+def _google_identity() -> dict | None:
+    """The Google account Streamlit's st.login verified (from its signed
+    cookie) — identity claims only, never a token."""
+    try:
+        if not st.user.is_logged_in:
+            return None
+        email = st.user.get("email") if hasattr(st.user, "get") else getattr(st.user, "email", None)
+        verified = st.user.get("email_verified") if hasattr(st.user, "get") else getattr(st.user, "email_verified", None)
+        name = st.user.get("name") if hasattr(st.user, "get") else getattr(st.user, "name", None)
+    except Exception:
+        return None
+    if not isinstance(email, str) or "@" not in email:
+        return None
+    return {"email": email.strip().lower(), "email_verified": verified is True,
+            "name": name if isinstance(name, str) else ""}
+
+
+def _google_id_token() -> str | None:
+    try:
+        token = st.user.tokens["id"]
+    except Exception:
+        return None
+    return token if isinstance(token, str) and token else None
+
+
+def _link_google_to_firebase(google: dict, config) -> None:
+    """Once per session, right after Google sign-in (while Google's ID token
+    is fresh): find/create the Firebase account and keep its UID. The
+    outcome is kept for the Account card; it never blocks the app."""
+    if st.session_state.get("_fb_link_tried"):
+        return
+    st.session_state._fb_link_tried = True
+    token = _google_id_token()
+    if token is None or firebase_auth.token_expired(token):
+        st.session_state._fb_link = {"state": "stale"}
+        print("[auth] google sign-in restored from cookie; firebase link skipped (google token not fresh)", flush=True)
+        return
+    try:
+        user = firebase_auth.sign_in_with_google_id_token(token, google["redirect_uri"], config=config)
+    except firebase_auth.FirebaseAuthError as e:
+        st.session_state._fb_link = {"state": "failed", "code": e.code, "message": str(e)}
+        print(f"[auth] google sign-in ok; firebase link failed code={e.code}", flush=True)
+        return
+    st.session_state._fb_link = {"state": "linked"}
+    st.session_state[firebase_auth.SESSION_KEY] = {**user.as_session(), "expires_at": time.time() + ACCOUNT_SESSION_S}
+    print("[auth] google sign-in ok; firebase linked", flush=True)
+
+
+def resolve_account(google: dict | None, config) -> dict | None:
+    """The signed-in account for this run (also stored, without secrets,
+    under ACCOUNT_KEY for the server-side admin check), or None."""
+    account = None
+    fb_user = firebase_auth.session_user(st.session_state)
+    if not st.session_state.get("_signed_out"):
+        g = _google_identity() if google else None
+        if g:
+            if fb_user is None:
+                _link_google_to_firebase(google, config)
+                fb_user = firebase_auth.session_user(st.session_state)
+            uid = fb_user.get("uid") if fb_user and fb_user.get("email") == g["email"] else ""
+            account = {**g, "uid": uid, "provider": "google.com"}
+        elif fb_user and fb_user.get("provider") == "password":
+            account = {"email": fb_user.get("email") or "", "email_verified": fb_user.get("email_verified") is True,
+                       "name": "", "uid": fb_user["uid"], "provider": "password"}
+    elif fb_user and fb_user.get("provider") == "password":
+        # signed in again with email/password after an explicit sign-out
+        account = {"email": fb_user.get("email") or "", "email_verified": fb_user.get("email_verified") is True,
+                   "name": "", "uid": fb_user["uid"], "provider": "password"}
+    if account is None and not admins_configured() and owner_session_valid(st.session_state):
+        account = {"email": "", "email_verified": False, "name": "Owner", "uid": "", "provider": "owner"}
+    if account:
+        st.session_state[ACCOUNT_KEY] = account
+    else:
+        st.session_state.pop(ACCOUNT_KEY, None)
+    return account
+
+
+def account_sign_out() -> bool:
+    """End this sign-in. Returns True when Streamlit's Google sign-in is
+    being ended too (the browser is then redirected)."""
+    for k in (firebase_auth.SESSION_KEY, ACCOUNT_KEY, OWNER_SESSION_KEY, "_fb_link", "_fb_link_tried", "_login_error"):
+        st.session_state.pop(k, None)
+    st.session_state._signed_out = True
+    if _google_identity() is not None:
+        st.logout()              # clears Streamlit's sign-in cookie, back to the login page
+        return True
+    return False
+
+
+def firebase_sign_in(email: str, password: str) -> tuple[bool, str]:
+    limiter = _guards()["firebase_signin"]
+    wait = limiter.locked_for()
+    if wait:
+        return False, f"Too many failed attempts — try again in {int(wait // 60) + 1} min."
+    if _AUTH_CONFIG is None:
+        return False, _AUTH_PROBLEM
+    try:
+        user = firebase_auth.sign_in_with_password(email, password, config=_AUTH_CONFIG)
+    except firebase_auth.FirebaseAuthError as e:
+        if e.code in _FB_CREDENTIAL_ERRORS:
+            limiter.failed()
+        return False, str(e)
+    st.session_state[firebase_auth.SESSION_KEY] = {**user.as_session(), "expires_at": time.time() + ACCOUNT_SESSION_S}
+    st.session_state.pop("_signed_out", None)
+    return True, ""
+
+
+def _login_submit() -> None:
+    """Login form callback: wipe the password from session state first."""
+    email = st.session_state.get("login_email", "")
+    password = st.session_state.get("login_pw", "")
+    st.session_state.login_pw = ""
+    ok, msg = firebase_sign_in(email, password)
+    if ok:
+        st.session_state.pop("_login_error", None)
+    else:
+        st.session_state._login_error = msg
+
+
+def _login_owner_submit() -> None:
+    """Break-glass owner password on the login page: wipe it first."""
+    password = st.session_state.get("login_owner_pw", "")
+    st.session_state.login_owner_pw = ""
+    ok, msg = sign_in(password)
+    if ok:
+        st.session_state.pop("_signed_out", None)
+        st.session_state.pop("_login_error", None)
+    else:
+        st.session_state._login_error = msg
+
+
+def _login_google() -> None:
+    for k in ("_signed_out", "_login_error", "_fb_link", "_fb_link_tried"):
+        st.session_state.pop(k, None)
+    if _GOOGLE["provider"]:
+        st.login(_GOOGLE["provider"])
+    else:
+        st.login()
+
+
+_LOGIN_CSS = """
+[data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"], .st-key-mnav { display: none !important; }
+.login-head, .login-head *, .st-key-login_card, .st-key-login_card *, .login-foot { font-family: var(--font) !important; }
+.login-head { max-width: 440px; margin: 7vh auto 0; text-align: center; }
+.login-head .lmark { width: 54px; height: 54px; margin: 0 auto 14px; border-radius: 16px; display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow: 0 14px 30px -14px var(--accent); }
+.login-head .lmark img { width: 34px; height: 34px; }
+.login-head .eyebrow { justify-content: center; }
+.login-head h1 { margin: 6px 0 10px; font-size: 30px; font-weight: 800; line-height: 1.15; letter-spacing: -.02em; color: var(--text); }
+.login-head p { margin: 0 auto; max-width: 360px; color: var(--muted); font-size: 14.5px; line-height: 1.55; }
+.st-key-login_card { max-width: 420px; margin: 22px auto 0 !important; padding: 26px 24px 22px !important;
+  border: 1px solid var(--border) !important; border-radius: var(--r-lg) !important; background: var(--surface) !important;
+  box-shadow: var(--shadow-lg, 0 24px 60px -32px rgba(15, 23, 42, .35)) !important; }
+.login-or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .06em; margin: 4px 0; }
+.login-or::before, .login-or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.login-err { display: flex; gap: 9px; align-items: flex-start; padding: 11px 13px; border-radius: 12px; font-size: 13.5px; line-height: 1.5;
+  color: var(--text); background: color-mix(in srgb, var(--red) 9%, transparent); border: 1px solid color-mix(in srgb, var(--red) 35%, var(--border)); }
+.login-foot { max-width: 420px; margin: 14px auto 0; text-align: center; color: var(--muted); font-size: 12.5px; }
+"""
+
+
+def render_login_page() -> None:
+    logo = _logo_data_uri()
+    img = f'<img src="{logo}" alt="">' if logo else ""
+    st.html(f"<style>{_LOGIN_CSS}</style>"
+            f'<div class="login-head"><div class="lmark">{img}</div>'
+            '<div class="eyebrow">Fresher Job Tracker</div>'
+            '<h1>Sign in to your <em>opportunities</em></h1>'
+            '<p>Fresher and entry-level roles in India, read from each company\'s own careers page.</p></div>')
+    with st.container(key="login_card"):
+        err = st.session_state.get("_login_error")
+        if err:
+            st.html(f'<div class="login-err" role="alert">{_ms("error", "s20")}<div>{escape(err)}</div></div>')
+        if _GOOGLE:
+            st.button("Continue with Google", key="btn_login_google", type="primary", use_container_width=True,
+                      icon=":material/account_circle:", on_click=_login_google)
+            st.html('<div class="login-or">or sign in with email</div>')
+        with st.form("login_form", clear_on_submit=True, border=False):
+            st.text_input("Email", key="login_email", autocomplete="email")
+            st.text_input("Password", type="password", key="login_pw", autocomplete="current-password")
+            st.form_submit_button("Sign in", key="btn_login_email", icon=":material/login:",
+                                  use_container_width=True, on_click=_login_submit)
+        if _GOOGLE_PROBLEM and not _GOOGLE:
+            st.html(f'<p class="note">{_ms("info", "s16")} {escape(_GOOGLE_PROBLEM)}</p>')
+        # until admins come from sign-in (JT_ADMIN_EMAILS), the owner can always
+        # get in — even if Google or Firebase misbehaves
+        if owner_configured() and not admins_configured():
+            with st.expander("Trouble signing in? Use the owner password", icon=":material/key:"):
+                with st.form("login_owner_form", clear_on_submit=True, border=False):
+                    st.text_input("Owner password", type="password", key="login_owner_pw",
+                                  autocomplete="current-password")
+                    st.form_submit_button("Sign in as owner", key="btn_login_owner", icon=":material/admin_panel_settings:",
+                                          use_container_width=True, on_click=_login_owner_submit)
+    st.html('<div class="login-foot">Private app — accounts are for invited users.</div>')
+
+
+_AUTH_CONFIG, _AUTH_PROBLEM, _AUTH_PRESENT = _firebase_config()
+AUTH_GATE = _AUTH_CONFIG is not None
+_promote_admin_setting()
+_GOOGLE, _GOOGLE_PROBLEM = _google_setup() if AUTH_GATE else (None, "")
+ACCOUNT: dict | None = None
+if AUTH_GATE:
+    ACCOUNT = resolve_account(_GOOGLE, _AUTH_CONFIG)
+    if ACCOUNT is None:
+        render_login_page()
+        st.stop()
+else:
+    st.session_state.pop(ACCOUNT_KEY, None)
+
+
+def account_label(account: dict) -> str:
+    return (account.get("name") or account.get("email") or "Signed in").strip()
 
 
 # ── data ──────────────────────────────────────────────────────────────────────
@@ -1450,7 +1762,18 @@ with st.sidebar:
           <div class="meta"><span class="txt">{_ms("apartment", "s14")}{_plural(len(companies), 'company', 'companies')} monitored</span>
             <span class="txt num">{_ms("history", "s14")}Last scan {_ago(last_scan, NOW)}</span></div>
         </div>""")
-        _auth_slot = st.empty()      # filled after the Firebase sign-in step (see the router)
+    if ACCOUNT:
+        _admin = account_is_admin(ACCOUNT) or is_owner()
+        with st.container(key="side_account"):
+            st.html(f'<div class="side-acct" title="{escape(ACCOUNT.get("email") or "", quote=True)}">{_avatar(account_label(ACCOUNT), "sm")}'
+                    f'<div class="who"><div class="nm">{escape(account_label(ACCOUNT))}</div>'
+                    f'<div class="em">{escape(ACCOUNT.get("email") or "")}</div></div>'
+                    f'<span class="role {"admin" if _admin else ""}">{"Admin" if _admin else "Member"}</span></div>')
+            if st.button("Sign out", key="btn_account_sign_out", icon=":material/logout:", type="tertiary",
+                         use_container_width=True):
+                if not account_sign_out():
+                    st.rerun()
+                st.stop()
 
 # phones: the sidebar is hidden and this compact bar takes over (CSS decides)
 with st.container(key="mnav"):
@@ -2280,252 +2603,62 @@ def page_email():
                 + '</ol><p class="note" style="font-size:13px;">Mail is sent through the Gmail account configured in the repository\'s GitHub Actions secrets — credentials are never shown here.</p>')
 
 
-# ── Firebase sign-in (technical spike) ───────────────────────────────────────
-# Proves sign-in with the Job Tracker Firebase project and shows the Firebase
-# UID. It grants nothing: owner access above still controls every change.
-# Only the minimum is kept in this session (firebase_auth.FirebaseUser) —
-# never a token or password. Hidden entirely while no Firebase setting exists;
-# an incomplete setup shows which setting is missing (names, never values).
-_FB_CREDENTIAL_ERRORS = {"EMAIL_NOT_FOUND", "INVALID_PASSWORD", "INVALID_LOGIN_CREDENTIALS", "INVALID_EMAIL"}
-_OIDC_KEYS = ("client_id", "client_secret", "server_metadata_url")
-_FRESH_GOOGLE_LOGIN_S = 300
-# what a Firebase refusal of a Google sign-in usually means (shown on the card)
-_GOOGLE_ERROR_HINTS = {
-    "INVALID_IDP_RESPONSE": "Firebase didn't accept this Google sign-in. Usually the Google OAuth client used by "
-                            "this app isn't allowed by the Firebase project's Google provider.",
-    "OPERATION_NOT_ALLOWED": "The Google provider isn't enabled in the Firebase project.",
-    "PROJECT_MISMATCH": "The Firebase project settings don't match the project that answered.",
-}
-
-
-def _secrets_dict() -> dict:
-    """All Streamlit secrets as plain dicts ({} when there is no secrets file)."""
-    try:
-        return st.secrets.to_dict()
-    except Exception:
-        return {}
-
-
-def _firebase_config():
-    """(config or None, problem, any Firebase setting present)."""
-    secrets = _secrets_dict()
-    config, problem = firebase_auth.config_status(secrets)
-    return config, problem, firebase_auth.any_setting(secrets)
-
-
-def _google_setup() -> tuple[dict | None, str]:
-    """Streamlit's built-in Google sign-in (st.login) as configured in the
-    [auth] secrets: ({"provider": None | name, "redirect_uri": ...}, "") when
-    usable, else (None, why) — why is "" when Google sign-in simply isn't
-    set up. Accepts the flat [auth] layout and a named [auth.<provider>]
-    section (e.g. [auth.google])."""
-    auth = _secrets_dict().get("auth")
-    if not isinstance(auth, dict):
-        return None, ""
-    if all(auth.get(k) for k in _OIDC_KEYS):
-        provider = None
-    else:
-        named = [n for n, v in auth.items() if isinstance(v, dict) and all(v.get(k) for k in _OIDC_KEYS)]
-        if not named:
-            return None, ""
-        provider = "google" if "google" in named else named[0]
-    missing = [k for k in ("redirect_uri", "cookie_secret") if not auth.get(k)]
-    if missing:
-        return None, f"Google sign-in needs {' and '.join(missing)} in the [auth] secrets."
-    if not str(auth["redirect_uri"]).rstrip("/").endswith("/oauth2callback"):
-        return None, "Google sign-in needs redirect_uri in the [auth] secrets to end with /oauth2callback."
-    tokens = auth.get("expose_tokens")
-    if not (tokens == "id" or (isinstance(tokens, (list, tuple)) and "id" in tokens)):
-        return None, 'Google sign-in needs expose_tokens = "id" in the [auth] secrets.'
-    return {"provider": provider, "redirect_uri": str(auth["redirect_uri"])}, ""
-
-
-def _google_id_token() -> str | None:
-    try:
-        if not st.user.is_logged_in:
-            return None
-        token = st.user.tokens["id"]
-    except Exception:
-        return None
-    return token if isinstance(token, str) and token else None
-
-
-def firebase_google_exchange() -> None:
-    """Runs on every page: after st.login, Streamlit returns to the home
-    page, so the Google ID token is exchanged for a Firebase user here —
-    once per session; a failure isn't retried on every rerun, and an expired
-    Google token (the login cookie outlives it) is never sent."""
-    if (firebase_auth.session_user(st.session_state) or st.session_state.get("_fb_google_failed")
-            or st.session_state.get("_fb_signed_out")):
-        return
-    config, _, _ = _firebase_config()
-    google, _ = _google_setup()
-    if config is None or google is None:
-        return
-    token = _google_id_token()
-    if token is None:
-        return
-    if firebase_auth.token_expired(token):
-        st.session_state._fb_google_expired = True
-        return
-    # just back from Google's page — Streamlit returns to the bare "/" (no
-    # ?page=) and the token is minutes old: show the result on Settings
-    # instead of leaving the person on Home with only a toast. A visit to a
-    # specific page (?page=...) is left alone.
-    age = firebase_auth.token_age(token)
-    if (age is not None and age < _FRESH_GOOGLE_LOGIN_S and "page" not in st.query_params
-            and not st.session_state.get("_fb_google_landed")):
-        st.session_state._fb_google_landed = True
-        go("settings")
-        st.rerun()      # once: so the sidebar and the page are drawn for Settings together
-    try:
-        user = firebase_auth.sign_in_with_google_id_token(token, google["redirect_uri"], config=config)
-    except firebase_auth.FirebaseAuthError as e:
-        st.session_state._fb_google_failed = True
-        st.session_state._fb_google_error = {"message": str(e), "code": e.code}
-        toast(str(e), "error")
-        return
-    st.session_state.pop("_fb_google_expired", None)
-    st.session_state.pop("_fb_google_error", None)
-    st.session_state[firebase_auth.SESSION_KEY] = user.as_session()
-    toast("Signed in with Google", "success")
-
-
-def firebase_sign_in(email: str, password: str) -> tuple[bool, str]:
-    limiter = _guards()["firebase_signin"]
-    wait = limiter.locked_for()
-    if wait:
-        return False, f"Too many failed attempts — try again in {int(wait // 60) + 1} min."
-    config, problem, _ = _firebase_config()
-    if config is None:
-        return False, problem
-    try:
-        user = firebase_auth.sign_in_with_password(email, password, config=config)
-    except firebase_auth.FirebaseAuthError as e:
-        if e.code in _FB_CREDENTIAL_ERRORS:
-            limiter.failed()
-        return False, str(e)
-    st.session_state[firebase_auth.SESSION_KEY] = user.as_session()
-    return True, "Signed in with Firebase"
-
-
-def _firebase_submit() -> None:
-    """Form callback: try the sign-in, then wipe the password from session
-    state at once (clear_on_submit only clears the browser's copy)."""
-    email = st.session_state.get("fb_email", "")
-    password = st.session_state.get("fb_pw", "")
-    st.session_state.fb_pw = ""
-    ok, msg = firebase_sign_in(email, password)
-    toast(msg, "success" if ok else "error")
-
-
-def firebase_sign_out() -> None:
-    # an explicit sign-out stops the automatic Google exchange for this
-    # session, even while the Google login cookie is still being cleared
-    st.session_state._fb_signed_out = True
-    st.session_state.pop(firebase_auth.SESSION_KEY, None)
-    st.session_state.pop("_fb_google_error", None)
-    st.session_state.pop("_fb_google_failed", None)
-    st.session_state.pop("_fb_google_expired", None)
-
-
-def _firebase_head(icon: str, sub: str) -> None:
-    st.html(f'<div class="set-head"><span class="ic">{_ms(icon)}</span><div>'
-            '<div class="eyebrow">Preview</div><h2 class="section-title">Firebase sign-in</h2>'
-            f'<p class="section-sub">{escape(sub)}</p></div></div>')
-
-
-def firebase_status_line() -> None:
-    """The sidebar's sign-in line: who is signed in, or that a Google
-    sign-in didn't complete. Empty otherwise."""
-    user = firebase_auth.session_user(st.session_state)
-    if user:
-        method = {"google.com": "Google", "password": "email"}.get(user.get("provider"), "Firebase")
-        line = f'Signed in with {method} · {user.get("email") or user["uid"]}'
-        _auth_slot.html(f'<div class="side-auth" role="status" title="{escape(line, quote=True)}">{_ms("account_circle", "s16")}'
-                        f'<span class="txt">{escape(line)}</span></div>')
-    elif st.session_state.get("_fb_google_error"):
-        _auth_slot.html(f'<div class="side-auth warn" role="status">{_ms("warning", "s16")}'
-                        '<span class="txt">Google sign-in incomplete — see Settings</span></div>')
-
-
-def firebase_panel() -> None:
-    config, problem, present = _firebase_config()
-    if not present:
-        return                     # Firebase not set up at all: nothing changes on this page
-    with st.container(key="set_firebase"):
-        if config is None:
-            _firebase_head("key_off", f"Firebase sign-in isn't available yet: {problem}")
-            return
-        google, google_problem = _google_setup()
-        user = firebase_auth.session_user(st.session_state)
-        _firebase_head("verified_user" if user else "key",
-                       "Signed in with the Job Tracker Firebase project. This doesn't change what you can do here — "
-                       "changes still need owner access above." if user else
-                       "Technical preview: sign in with the Job Tracker Firebase project. This doesn't grant any access — "
-                       "changes still need owner access above.")
-        if user:
-            method = {"password": "Email &amp; password", "google.com": "Google"}.get(user.get("provider"), "Unknown")
-            verified = {True: "Yes", False: "No"}.get(user.get("email_verified"), "Not reported")
-            ends = datetime.fromtimestamp(float(user["expires_at"]), timezone.utc)
-            rows = [("Firebase UID", f'<span class="num">{escape(user["uid"])}</span>'),
-                    ("Email", escape(user.get("email") or "—")), ("Sign-in method", method),
-                    ("Email verified", verified), ("Session ends", f'<span class="num">{_ist(ends)}</span>')]
-            st.html('<dl class="kv">' + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in rows) + "</dl>")
-            f1, _f2 = st.columns([1, 3])
-            with f1:
-                if st.button("Sign out of Firebase", key="btn_fb_sign_out", icon=":material/logout:",
-                             use_container_width=True):
-                    firebase_sign_out()
-                    toast("Signed out of Firebase", "success")
-                    if google and _google_id_token() is not None:
-                        st.logout()      # also ends the Google sign-in cookie
-                    st.rerun()
-            return
-        # the submit callback wipes the password from session state right away
-        with st.form("firebase_signin", clear_on_submit=True, border=False):
-            st.text_input("Email", key="fb_email", autocomplete="email")
-            st.text_input("Password", type="password", key="fb_pw", autocomplete="current-password")
-            st.form_submit_button("Sign in with email", key="btn_fb_sign_in", icon=":material/login:",
-                                  on_click=_firebase_submit)
-        failure = st.session_state.get("_fb_google_error")
-        if google and failure:
-            hint = _GOOGLE_ERROR_HINTS.get(failure.get("code"), "")
-            st.html(f'<div class="legend" style="border-color:color-mix(in srgb, var(--amber) 45%, var(--border));">'
-                    f'{_ms("warning", "s20")}<p class="note" style="color:var(--text);"><b>Google sign-in reached the app, '
-                    f'but Firebase sign-in failed:</b> {escape(failure.get("message") or "")} '
-                    f'<span class="num">({escape(failure.get("code") or "unknown")})</span>'
-                    + (f"<br>{escape(hint)}" if hint else "") + "</p></div>")
-        if google:
-            if st.session_state.get("_fb_google_expired"):
-                st.html(f'<p class="note">{_ms("schedule", "s16")} Your Google sign-in has expired — continue with Google again.</p>')
-            if st.button("Continue with Google", key="btn_fb_google", icon=":material/account_circle:"):
-                st.session_state.pop("_fb_google_failed", None)
-                st.session_state.pop("_fb_google_error", None)
-                st.session_state.pop("_fb_google_expired", None)
-                st.session_state.pop("_fb_signed_out", None)
-                if google["provider"]:
-                    st.login(google["provider"])
+# ── Settings → Account (when sign-in is on) ─────────────────────────────────
+def account_card() -> None:
+    admin = is_owner()
+    method = {"google.com": "Google", "password": "email &amp; password",
+              "owner": "the owner password"}.get(ACCOUNT.get("provider"), "Firebase")
+    with st.container(key="set_account"):
+        st.html(f'<div class="set-head">{_avatar(account_label(ACCOUNT))}<div style="min-width:0;">'
+                '<div class="eyebrow">Account</div>'
+                f'<h2 class="section-title">{escape(account_label(ACCOUNT))}</h2>'
+                f'<p class="section-sub">Signed in with {method}'
+                + (f' · {escape(ACCOUNT["email"])}' if ACCOUNT.get("email") else "") + '</p></div></div>')
+        link = st.session_state.get("_fb_link") or {}
+        if ACCOUNT.get("provider") == "owner":
+            fb = "— (owner password; sign in with Google to link your Firebase account)"
+        elif ACCOUNT.get("uid"):
+            fb = f'<span class="num">{escape(ACCOUNT["uid"])}</span>'
+        elif link.get("state") == "failed":
+            fb = (f'Not linked — Firebase refused the Google sign-in <span class="num">({escape(link.get("code") or "")})</span>'
+                  + (f'<span class="kv-note">{escape(_GOOGLE_ERROR_HINTS[link["code"]])}</span>'
+                     if link.get("code") in _GOOGLE_ERROR_HINTS else ""))
+        else:
+            fb = "Linked at your next Google sign-in"
+        if admin:
+            role = "Admin — can manage companies, jobs, checks and email"
+        elif admins_configured():
+            role = "Member — read-only"
+        else:
+            role = "Member — read-only (admins are set with the JT_ADMIN_EMAILS secret)"
+        rows = [("Role", role), ("Email verified", "Yes" if ACCOUNT.get("email_verified") else "No"), ("Firebase account", fb)]
+        st.html('<dl class="kv">' + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in rows) + "</dl>")
+        # Until JT_ADMIN_EMAILS exists the legacy owner password still unlocks
+        # changes — tucked away here, never a second login screen.
+        if not admins_configured() and owner_configured():
+            with st.expander("Admin access (until JT_ADMIN_EMAILS is set)", icon=":material/admin_panel_settings:",
+                             expanded=False):
+                if is_owner():
+                    st.html('<p class="note">Admin access is unlocked for this session.</p>')
+                    if st.button("Lock admin access", key="btn_sign_out", icon=":material/lock:"):
+                        sign_out()
+                        st.rerun()
                 else:
-                    st.login()
-        elif google_problem:
-            st.html(f'<p class="note">{_ms("info", "s16")} {escape(google_problem)}</p>')
-
-
-def page_settings():
-    page_header("Settings", "Preferences and read-only details of how the tracker is configured")
-    with st.container(key="set_appearance"):
-        a1, a2 = st.columns([4, 1], vertical_alignment="center")
+                    with st.form("owner_signin", clear_on_submit=True, border=False):
+                        st.text_input("Owner password", type="password", key="owner_pw", autocomplete="current-password")
+                        st.form_submit_button("Unlock", key="btn_sign_in", icon=":material/lock_open:", type="primary",
+                                              on_click=_owner_submit)
+        a1, _a2 = st.columns([1, 3])
         with a1:
-            st.html(f'<div class="set-head"><span class="ic">{_ms("dark_mode" if st.session_state.dark_mode else "light_mode")}</span><div>'
-                    '<div class="eyebrow">General</div><h2 class="section-title">Appearance</h2><p class="section-sub">'
-                    f'{"Dark" if st.session_state.dark_mode else "Light"} theme · kept in this page’s address, so it survives reloads and bookmarks</p></div></div>')
-        with a2:
-            if st.button("Use light theme" if st.session_state.dark_mode else "Use dark theme", key="btn_theme",
-                         icon=":material/light_mode:" if st.session_state.dark_mode else ":material/dark_mode:",
+            if st.button("Sign out", key="btn_account_sign_out_settings", icon=":material/logout:",
                          use_container_width=True):
-                st.session_state.dark_mode = not st.session_state.dark_mode
-                st.rerun()
+                if not account_sign_out():
+                    st.rerun()
+                st.stop()
+
+
+def owner_card() -> None:
+    """Legacy owner access — used only while Firebase sign-in isn't configured."""
     with st.container(key="set_owner"):
         owner = is_owner()
         if owner:
@@ -2553,7 +2686,31 @@ def page_settings():
                 st.text_input("Owner password", type="password", key="owner_pw", autocomplete="current-password")
                 st.form_submit_button("Sign in", key="btn_sign_in", icon=":material/login:", type="primary",
                                       on_click=_owner_submit)
-    firebase_panel()
+
+
+def page_settings():
+    page_header("Settings", "Preferences and read-only details of how the tracker is configured")
+    with st.container(key="set_appearance"):
+        a1, a2 = st.columns([4, 1], vertical_alignment="center")
+        with a1:
+            st.html(f'<div class="set-head"><span class="ic">{_ms("dark_mode" if st.session_state.dark_mode else "light_mode")}</span><div>'
+                    '<div class="eyebrow">General</div><h2 class="section-title">Appearance</h2><p class="section-sub">'
+                    f'{"Dark" if st.session_state.dark_mode else "Light"} theme · kept in this page’s address, so it survives reloads and bookmarks</p></div></div>')
+        with a2:
+            if st.button("Use light theme" if st.session_state.dark_mode else "Use dark theme", key="btn_theme",
+                         icon=":material/light_mode:" if st.session_state.dark_mode else ":material/dark_mode:",
+                         use_container_width=True):
+                st.session_state.dark_mode = not st.session_state.dark_mode
+                st.rerun()
+    if AUTH_GATE:
+        account_card()
+    elif _AUTH_PRESENT:
+        with st.container(key="set_firebase"):
+            st.html(f'<div class="set-head"><span class="ic">{_ms("key_off")}</span><div><div class="eyebrow">Sign-in</div>'
+                    '<h2 class="section-title">Sign-in isn’t available yet</h2>'
+                    f'<p class="section-sub">{escape(_AUTH_PROBLEM)}</p></div></div>')
+    if not AUTH_GATE:
+        owner_card()
     with st.container(key="set_data"):
         synced = bool(os.environ.get("GITHUB_TOKEN"))
         d1, d2 = st.columns([4, 1], vertical_alignment="center")
@@ -2626,16 +2783,6 @@ def page_settings():
 # ═══════════════════════════════════════════════════════════════════════════════
 # ROUTER
 # ═══════════════════════════════════════════════════════════════════════════════
-# after Google sign-in Streamlit returns to the home page: finish the
-# Firebase exchange on whichever page this session starts on
-try:
-    firebase_google_exchange()
-except Exception as _e:          # never let the preview break a page
-    log.warning("Firebase Google exchange failed: %s", type(_e).__name__)
-try:
-    firebase_status_line()
-except Exception as _e:
-    log.warning("Firebase status line failed: %s", type(_e).__name__)
 page = st.session_state.page
 jobs_by_id = {_jid(j): j for j in all_records}
 if page == "jobs" and st.session_state.job_id:
