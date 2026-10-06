@@ -13,7 +13,7 @@ st_testing = pytest.importorskip("streamlit.testing.v1")
 
 REPO = Path(__file__).resolve().parent.parent
 APP_FILES = ["streamlit_app.py", "config_store.py", "notifier.py", "job_classifier.py", "scraper.py",
-             "sources.py", "identity.py", "locations.py", "repo_sync.py", "access.py"]
+             "sources.py", "identity.py", "locations.py", "repo_sync.py", "access.py", "firebase_auth.py"]
 OWNER_PASSWORD = "correct horse battery staple"
 
 OLD_RECORD = {  # shape written before the classifier existed
@@ -43,6 +43,8 @@ def app(tmp_path, monkeypatch):
     monkeypatch.delenv("GMAIL_ADDRESS", raising=False)
     monkeypatch.delenv("GMAIL_APP_PASSWORD", raising=False)
     monkeypatch.delenv("ALERT_RECIPIENT", raising=False)
+    monkeypatch.delenv("FIREBASE_WEB_API_KEY", raising=False)
+    monkeypatch.delenv("FIREBASE_PROJECT_ID", raising=False)
     monkeypatch.setenv("JT_OWNER_PASSWORD", OWNER_PASSWORD)
     for name in APP_FILES:
         shutil.copy(REPO / name, tmp_path / name)
