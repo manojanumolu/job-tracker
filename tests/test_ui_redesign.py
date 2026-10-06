@@ -256,7 +256,9 @@ def test_no_new_heavy_dependencies():
     imports = set(re.findall(r'@import url\(\'https://fonts\.googleapis\.com/css2\?family=([^:&\']+)', CSS))
     assert imports <= {"Plus+Jakarta+Sans", "Material+Symbols+Rounded"}
     req = (Path(__file__).resolve().parent.parent / "requirements.txt").read_text()
-    assert set(l.split(">=")[0] for l in req.split()) == {"streamlit", "httpx", "PyGithub", "python-dotenv", "playwright"}
+    # Authlib: required by Streamlit's st.login (Google sign-in, Firebase auth spike)
+    assert set(l.split(">=")[0] for l in req.split()) == {"streamlit", "httpx", "PyGithub", "python-dotenv", "playwright",
+                                                          "Authlib"}
 
 
 # ── schedule: read from the workflow's cron (UTC), shown in IST ─────────────
