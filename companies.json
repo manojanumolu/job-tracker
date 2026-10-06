@@ -138,5 +138,14 @@
       "accepted": 0
     },
     "source": "Zoho Recruit career site"
+  },
+  {
+    "id": "c1791284135",
+    "name": "infosys",
+    "url": "https://www.infosys.com/careers/",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
   }
 ]
