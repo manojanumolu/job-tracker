@@ -12,6 +12,41 @@ from urllib.parse import urlparse
 
 import streamlit as st
 
+
+def _reload_changed_local_modules() -> None:
+    """Streamlit (notably on Community Cloud) re-runs this script after a
+    deploy but keeps the app's own helper modules from the previous version
+    in memory. A changed module then stays stale until a reboot — an
+    ImportError for a new name, or a silently failing call. Reload, in
+    dependency order, every local module that is older than its file (and,
+    once per process, any not yet stamped, since it may predate this check)."""
+    import importlib
+    import sys
+
+    base = os.path.dirname(os.path.abspath(__file__))
+    order = ["identity", "locations", "job_classifier", "sources", "scraper", "config_store", "repo_sync",
+             "access", "firebase_auth", "notifier", "alerts"]
+    for name in order:
+        mod = sys.modules.get(name)
+        path = getattr(mod, "__file__", None) if mod else None
+        if not path or os.path.dirname(os.path.abspath(path)) != base:
+            continue                     # not loaded yet, or not this app's copy (tests)
+        try:
+            mtime = os.path.getmtime(path)
+        except OSError:
+            continue
+        stamp = getattr(mod, "_jt_loaded_mtime", None)
+        if stamp is None or mtime > stamp:
+            try:
+                mod = importlib.reload(mod)
+            except Exception as e:      # keep the old module rather than break the page
+                logging.getLogger("streamlit_app").warning("reload of %s failed: %s", name, type(e).__name__)
+                continue
+            mod._jt_loaded_mtime = mtime
+
+
+_reload_changed_local_modules()
+
 from config_store import (
     alert_pending,
     dismiss_jobs,
