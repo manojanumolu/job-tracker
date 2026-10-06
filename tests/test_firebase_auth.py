@@ -829,3 +829,61 @@ def test_diag_page_lists_the_redacted_failure(app, google_env, auth_capture):
     assert "Sign-in diagnostics" in html and "token exchange failed" in html
     assert "OAuthError: invalid_client: The provided client secret is invalid." in unescape(html)
     assert API_KEY not in html
+
+
+# ---------------------------------------------------------------------------
+# ?diag=auth reports where JT_ADMIN_EMAILS is — names/booleans/counts only
+# ---------------------------------------------------------------------------
+
+def _admin_rows(at) -> dict:
+    import re as _re
+    html = _html(at)
+    table = html[html.index("id='admin-diag'"):]
+    return {unescape(a): unescape(b) for a, b in _re.findall(r"<tr><td>(.*?)</td><td><code>(.*?)</code></td></tr>", table)}
+
+
+@pytest.mark.parametrize("secrets, found, top", [
+    ({"JT_ADMIN_EMAILS": EMAIL, **FB_SECRETS}, "<top level>", "True"),
+    ({**FB_SECRETS, "auth": {**AUTH_GOOGLE, "JT_ADMIN_EMAILS": EMAIL}}, "[auth]", "False"),
+    ({**FB_SECRETS, "firebase": {"JT_ADMIN_EMAILS": EMAIL}}, "[firebase]", "False"),
+])
+def test_admin_diag_locates_the_key(app, no_env, secrets, found, top):
+    at = app([], query={"diag": "auth"}, secrets=secrets, owner=False)
+    rows = _admin_rows(at)
+    assert rows["JT_ADMIN_EMAILS found in"] == found
+    assert rows["JT_ADMIN_EMAILS_PRESENT_TOP_LEVEL"] == top
+    assert rows["VALUE_HAS_AT_SIGN"] == "True"
+    assert EMAIL not in _html(at) and EMAIL.lower() not in _html(at) and API_KEY not in _html(at)
+
+
+def test_admin_diag_counts_entries_only_where_the_app_looks(app, no_env):
+    at = app([], query={"diag": "auth"}, secrets={"JT_ADMIN_EMAILS": f"{EMAIL}, other@example.org", **FB_SECRETS}, owner=False)
+    assert _admin_rows(at)["ADMIN_ENTRY_COUNT (in secrets)"] == "2"
+    at = app([], query={"diag": "auth"}, secrets={**FB_SECRETS, "firebase": {"JT_ADMIN_EMAILS": EMAIL}}, owner=False)
+    assert _admin_rows(at)["ADMIN_ENTRY_COUNT (in secrets)"] == "0"      # not a place the app reads
+
+
+@pytest.mark.parametrize("secrets, row, expected", [
+    ({"JT_ADMIN_EMAIL": EMAIL, **FB_SECRETS}, "similar key names (names only)", "JT_ADMIN_EMAIL"),
+    ({"JT_ADMIN_EMAILS": "no-at-sign-here", **FB_SECRETS}, "VALUE_HAS_AT_SIGN", "False"),
+    ({"JT_ADMIN_EMAILS": f" {EMAIL} ", **FB_SECRETS}, "value has leading/trailing spaces", "True"),
+    ({"JT_ADMIN_EMAILS": f"{EMAIL}​", **FB_SECRETS}, "value has non-ASCII / invisible characters", "True"),
+    ({"JT_ADMIN_EMAILS": [EMAIL], **FB_SECRETS}, "value type", "list"),
+    ({**FB_SECRETS}, "JT_ADMIN_EMAILS found in", "nowhere"),
+])
+def test_admin_diag_flags_common_mistakes(app, no_env, secrets, row, expected):
+    at = app([], query={"diag": "auth"}, secrets=secrets, owner=False)
+    assert _admin_rows(at)[row] == expected
+    assert EMAIL not in _html(at) and EMAIL.lower() not in _html(at)
+
+
+def test_admin_diag_signed_in_checks(app, google_env):
+    google_env["set_user"](FakeUser(token=_fresh_google_token()))
+    at = app([], query={"diag": "auth"}, secrets={"JT_ADMIN_EMAILS": EMAIL, **GATED}, owner=False)
+    rows = _admin_rows(at)
+    assert rows["SIGNED_IN_EMAIL_VERIFIED"] == "True" and rows["SIGNED_IN_EMAIL_ON_LIST"] == "True"
+    google_env["set_user"](FakeUser(token=_fresh_google_token(), email="someone@else.example", verified=False))
+    at = app([], query={"diag": "auth"}, secrets={"JT_ADMIN_EMAILS": EMAIL, **GATED}, owner=False)
+    rows = _admin_rows(at)
+    assert rows["SIGNED_IN_EMAIL_VERIFIED"] == "False" and rows["SIGNED_IN_EMAIL_ON_LIST"] == "False"
+    assert "someone@else.example" not in _html(at) and EMAIL.lower() not in _html(at)

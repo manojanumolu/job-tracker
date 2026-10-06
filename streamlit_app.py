@@ -261,8 +261,79 @@ if st.query_params.get("diag") == "auth":
             ("streamlit version", st.__version__),
         ]
 
+    def _admin_diag() -> list[tuple[str, str]]:
+        """Where JT_ADMIN_EMAILS is (or isn't) in what this process received —
+        key/section NAMES, booleans and counts only; a value is inspected for
+        its shape but never shown."""
+        import access as _access
+
+        try:
+            secrets = st.secrets.to_dict()
+            readable = True
+        except Exception:
+            secrets, readable = {}, False
+        key = "JT_ADMIN_EMAILS"
+        found_in, similar, found_vals = [], [], []
+
+        def walk(node, path):
+            for k, v in (node.items() if isinstance(node, dict) else []):
+                name = f"{path}.{k}" if path else str(k)
+                if k == key:
+                    found_in.append(path or "<top level>")
+                    found_vals.append(v)
+                elif "ADMIN" in str(k).upper() or str(k).strip().upper() == key:
+                    similar.append(name)
+                if isinstance(v, dict):
+                    walk(v, f"{path}.{k}" if path else f"[{k}]")
+        walk(secrets, "")
+        value = secrets.get(key)
+        if value is None:
+            for sec in ("auth", "admin"):
+                if isinstance(secrets.get(sec), dict) and key in secrets[sec]:
+                    value = secrets[sec][key]
+                    break
+        usable = ",".join(map(str, value)) if isinstance(value, (list, tuple)) else value
+        entries = [e for e in re.split(r"[,\s;]+", usable) if "@" in e] if isinstance(usable, str) else []
+        # the shape checks describe the value wherever it was found (even a
+        # place the app doesn't read), so a misplaced value can be diagnosed
+        shape = value if value is not None else (found_vals[0] if found_vals else None)
+        text = ",".join(map(str, shape)) if isinstance(shape, (list, tuple)) else shape
+        env = os.environ.get(key, "")
+        rows = [
+            ("secrets readable by the app", str(readable)),
+            ("top-level secret keys (count)", str(sum(1 for v in secrets.values() if not isinstance(v, dict)))),
+            ("secret sections", ", ".join(f"[{k}]" for k, v in secrets.items() if isinstance(v, dict)) or "none"),
+            ("JT_ADMIN_EMAILS_PRESENT_TOP_LEVEL", str(key in secrets)),
+            ("JT_ADMIN_EMAILS found in", ", ".join(found_in) or "nowhere"),
+            ("similar key names (names only)", ", ".join(similar) or "none"),
+            ("value type", type(shape).__name__ if shape is not None else "n/a"),
+            ("VALUE_HAS_AT_SIGN", str(isinstance(text, str) and "@" in text)),
+            ("value has leading/trailing spaces", str(isinstance(text, str) and text != text.strip())),
+            ("value has non-ASCII / invisible characters", str(isinstance(text, str) and any(ord(c) > 126 or ord(c) < 32 for c in text))),
+            ("value wrapped in extra quotes", str(isinstance(text, str) and len(text) > 1 and text.strip()[:1] in "'\"“”")),
+            ("ADMIN_ENTRY_COUNT (in secrets)", str(len(entries))),
+            ("JT_ADMIN_EMAILS_ENV_SET", str(bool(env.strip()))),
+            ("env entries with @ (count)", str(len([e for e in re.split(r"[,\s;]+", env) if "@" in e]))),
+            ("ADMINS_CONFIGURED", str(_access.admins_configured())),
+            ("OWNER_CONFIGURED", str(_access.owner_configured())),
+        ]
+        try:
+            if st.user.is_logged_in:
+                email = (st.user.get("email") or "").strip().lower()
+                on_list = email in {e.strip().lower() for e in entries} or email in _access.admin_emails()
+                rows += [("SIGNED_IN_EMAIL_VERIFIED", str(st.user.get("email_verified") is True)),
+                         ("email_verified claim type", type(st.user.get("email_verified")).__name__),
+                         ("SIGNED_IN_EMAIL_ON_LIST", str(on_list))]
+            else:
+                rows.append(("signed-in checks", "n/a (this browser isn't signed in)"))
+        except Exception as e:
+            rows.append(("signed-in checks", f"error {type(e).__name__}"))
+        return rows
+
     st.html("<h3>Sign-in diagnostics</h3><table>" + "".join(
         f"<tr><td>{a}</td><td><code>{b}</code></td></tr>" for a, b in _auth_diag()) + "</table>"
+        + "<h4>Admin list (names, booleans and counts only)</h4><table id='admin-diag'>" + "".join(
+        f"<tr><td>{escape(a)}</td><td><code>{escape(b)}</code></td></tr>" for a, b in _admin_diag()) + "</table>"
         + "<h4>Recent sign-in events (this server process)</h4><pre id='auth-events'>"
         + (escape("\n".join(_auth_events())) or "none recorded") + "</pre>")
     print("[auth-diag] " + " | ".join(f"{a}={b}" for a, b in _auth_diag()), flush=True)
