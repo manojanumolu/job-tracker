@@ -85,6 +85,50 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ── sign-in diagnostics (read-only) ───────────────────────────────────────────
+# ?diag=auth shows what THIS session's server process can see of the sign-in
+# plumbing — counts, cookie NAMES and booleans only, never a value, token or
+# address — so a deployment can be checked without its logs. It stops before
+# any data is loaded.
+if st.query_params.get("diag") == "auth":
+    def _auth_diag() -> list[tuple[str, str]]:
+        try:
+            names = sorted(st.context.cookies.keys())
+        except Exception as e:
+            names = [f"<unreadable: {type(e).__name__}>"]
+        try:
+            logged_in = bool(st.user.is_logged_in)
+        except Exception as e:
+            logged_in = f"error {type(e).__name__}"
+        try:
+            has_token = "id" in st.user.tokens
+        except Exception:
+            has_token = False
+        try:
+            embedded = bool(st.context.is_embedded)
+        except Exception:
+            embedded = "n/a"
+        try:
+            secrets = st.secrets.to_dict()
+        except Exception:
+            secrets = {}
+        auth = secrets.get("auth") if isinstance(secrets.get("auth"), dict) else {}
+        return [
+            ("cookies seen by the server (count)", str(len(names))),
+            ("cookie names seen", ", ".join(n for n in names if n.startswith("_streamlit") or n.startswith("jt_")) or "none"),
+            ("st.user.is_logged_in", str(logged_in)),
+            ("Google ID token exposed", str(has_token)),
+            ("app embedded in a frame", str(embedded)),
+            ("[auth] configured", str(bool(auth))),
+            ("server.enableXsrfProtection", str(st.get_option("server.enableXsrfProtection"))),
+            ("streamlit version", st.__version__),
+        ]
+
+    st.html("<h3>Sign-in diagnostics</h3><table>" + "".join(
+        f"<tr><td>{a}</td><td><code>{b}</code></td></tr>" for a, b in _auth_diag()) + "</table>")
+    print("[auth-diag] " + " | ".join(f"{a}={b}" for a, b in _auth_diag()), flush=True)
+    st.stop()
+
 # ── theme ─────────────────────────────────────────────────────────────────────
 # Design tokens. Two hand-tuned palettes (dark is designed, not inverted):
 # an indigo-violet primary for intent/actions and a teal "signal" for the
