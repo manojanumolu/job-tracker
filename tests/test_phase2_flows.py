@@ -165,19 +165,25 @@ def test_dismiss_restore_round_trip_keeps_notification_state(app):
 
 # ── email page ───────────────────────────────────────────────────────────────
 
-@pytest.mark.parametrize("value", ["", "not-an-email", "a@b", "  ", "x@@y.com"])
-def test_invalid_recipient_is_not_saved(app, value):
+@pytest.mark.parametrize("secret, settings, shown, source_note", [
+    ("boss@example.com", "me@example.com", "Sending to boss@example.com", "Kept in a private secret"),
+    ("", "me@example.com", "Sending to me@example.com", "Read from settings.json, which is public"),
+    ("   ", "me@example.com", "Sending to me@example.com", "Read from settings.json, which is public"),
+    ("", "", "Add a recipient to turn alerts on", "No recipient is set"),
+    ("boss@example.com", "", "Sending to boss@example.com", "Kept in a private secret"),
+])
+def test_recipient_comes_from_the_secret_first(app, monkeypatch, secret, settings, shown, source_note):
+    monkeypatch.setenv("ALERT_RECIPIENT", secret)
     at = app([], page="email")
-    at.text_input(key="email_input").set_value(value).run()
-    at.button(key="btn_save_email").click().run()
-    assert json.loads((at.tmp_path / "settings.json").read_text())["recipient_email"] == "me@example.com"
+    (at.tmp_path / "settings.json").write_text(json.dumps({"recipient_email": settings}))
+    at.run()
+    html = _html(at)
+    assert shown in html and source_note in html
 
 
-def test_recipient_is_saved_trimmed(app):
+def test_recipient_secret_is_trimmed(app, monkeypatch):
+    monkeypatch.setenv("ALERT_RECIPIENT", "  new.person@example.com  ")
     at = app([], page="email")
-    at.text_input(key="email_input").set_value("  new.person@example.com  ").run()
-    at.button(key="btn_save_email").click().run()
-    assert json.loads((at.tmp_path / "settings.json").read_text())["recipient_email"] == "new.person@example.com"
     assert "Sending to new.person@example.com" in _html(at)
 
 

@@ -29,6 +29,7 @@ NEW = _rec("Source-to-Pay Strategic Support Associate",
 
 @pytest.fixture
 def data(tmp_path, monkeypatch):
+    monkeypatch.delenv("ALERT_RECIPIENT", raising=False)   # settings.json below is the recipient
     monkeypatch.setattr(config_store, "SEEN_FILE", tmp_path / "seen_jobs.json")
     monkeypatch.setattr(config_store, "COMPANIES_FILE", tmp_path / "companies.json")
     monkeypatch.setattr(config_store, "SETTINGS_FILE", tmp_path / "settings.json")
