@@ -2235,48 +2235,91 @@ def page_email():
 # Proves sign-in with the Job Tracker Firebase project and shows the Firebase
 # UID. It grants nothing: owner access above still controls every change.
 # Only the minimum is kept in this session (firebase_auth.FirebaseUser) —
-# never a token or password. Hidden entirely until Firebase is configured.
+# never a token or password. Hidden entirely while no Firebase setting exists;
+# an incomplete setup shows which setting is missing (names, never values).
 _FB_CREDENTIAL_ERRORS = {"EMAIL_NOT_FOUND", "INVALID_PASSWORD", "INVALID_LOGIN_CREDENTIALS", "INVALID_EMAIL"}
+_OIDC_KEYS = ("client_id", "client_secret", "server_metadata_url")
 
 
-def _google_login_settings() -> dict | None:
-    """Streamlit's built-in Google sign-in, when its [auth] secrets are set
-    up to hand the Google ID token to the app (expose_tokens = "id")."""
+def _secrets_dict() -> dict:
+    """All Streamlit secrets as plain dicts ({} when there is no secrets file)."""
     try:
-        auth = st.secrets.get("auth")
-    except Exception:            # no secrets file at all
-        return None
-    if not auth or not hasattr(auth, "get"):
-        return None
-    tokens = auth.get("expose_tokens")
-    exposes_id = tokens == "id" or (isinstance(tokens, (list, tuple)) and "id" in tokens)
-    if not (exposes_id and auth.get("client_id") and auth.get("redirect_uri")):
-        return None
-    return {"redirect_uri": str(auth.get("redirect_uri"))}
-
-
-def _firebase_from_google(google: dict) -> None:
-    """After st.login, exchange the Google ID token for a Firebase user —
-    once per session (a failure isn't retried on every rerun)."""
-    if firebase_auth.session_user(st.session_state) or st.session_state.get("_fb_google_failed"):
-        return
-    try:
-        logged_in = bool(st.user.is_logged_in)
+        return st.secrets.to_dict()
     except Exception:
-        logged_in = False
-    if not logged_in:
-        return
+        return {}
+
+
+def _firebase_config():
+    """(config or None, problem, any Firebase setting present)."""
+    secrets = _secrets_dict()
+    config, problem = firebase_auth.config_status(secrets)
+    return config, problem, firebase_auth.any_setting(secrets)
+
+
+def _google_setup() -> tuple[dict | None, str]:
+    """Streamlit's built-in Google sign-in (st.login) as configured in the
+    [auth] secrets: ({"provider": None | name, "redirect_uri": ...}, "") when
+    usable, else (None, why) — why is "" when Google sign-in simply isn't
+    set up. Accepts the flat [auth] layout and a named [auth.<provider>]
+    section (e.g. [auth.google])."""
+    auth = _secrets_dict().get("auth")
+    if not isinstance(auth, dict):
+        return None, ""
+    if all(auth.get(k) for k in _OIDC_KEYS):
+        provider = None
+    else:
+        named = [n for n, v in auth.items() if isinstance(v, dict) and all(v.get(k) for k in _OIDC_KEYS)]
+        if not named:
+            return None, ""
+        provider = "google" if "google" in named else named[0]
+    missing = [k for k in ("redirect_uri", "cookie_secret") if not auth.get(k)]
+    if missing:
+        return None, f"Google sign-in needs {' and '.join(missing)} in the [auth] secrets."
+    if not str(auth["redirect_uri"]).rstrip("/").endswith("/oauth2callback"):
+        return None, "Google sign-in needs redirect_uri in the [auth] secrets to end with /oauth2callback."
+    tokens = auth.get("expose_tokens")
+    if not (tokens == "id" or (isinstance(tokens, (list, tuple)) and "id" in tokens)):
+        return None, 'Google sign-in needs expose_tokens = "id" in the [auth] secrets.'
+    return {"provider": provider, "redirect_uri": str(auth["redirect_uri"])}, ""
+
+
+def _google_id_token() -> str | None:
     try:
+        if not st.user.is_logged_in:
+            return None
         token = st.user.tokens["id"]
     except Exception:
-        token = None
+        return None
+    return token if isinstance(token, str) and token else None
+
+
+def firebase_google_exchange() -> None:
+    """Runs on every page: after st.login, Streamlit returns to the home
+    page, so the Google ID token is exchanged for a Firebase user here —
+    once per session; a failure isn't retried on every rerun, and an expired
+    Google token (the login cookie outlives it) is never sent."""
+    if (firebase_auth.session_user(st.session_state) or st.session_state.get("_fb_google_failed")
+            or st.session_state.get("_fb_signed_out")):
+        return
+    config, _, _ = _firebase_config()
+    google, _ = _google_setup()
+    if config is None or google is None:
+        return
+    token = _google_id_token()
+    if token is None:
+        return
+    if firebase_auth.token_expired(token):
+        st.session_state._fb_google_expired = True
+        return
     try:
-        user = firebase_auth.sign_in_with_google_id_token(token, google["redirect_uri"])
-    except (firebase_auth.FirebaseAuthError, firebase_auth.FirebaseConfigError) as e:
+        user = firebase_auth.sign_in_with_google_id_token(token, google["redirect_uri"], config=config)
+    except firebase_auth.FirebaseAuthError as e:
         st.session_state._fb_google_failed = True
         toast(str(e), "error")
         return
+    st.session_state.pop("_fb_google_expired", None)
     st.session_state[firebase_auth.SESSION_KEY] = user.as_session()
+    toast("Signed in with Google", "success")
 
 
 def firebase_sign_in(email: str, password: str) -> tuple[bool, str]:
@@ -2284,10 +2327,11 @@ def firebase_sign_in(email: str, password: str) -> tuple[bool, str]:
     wait = limiter.locked_for()
     if wait:
         return False, f"Too many failed attempts — try again in {int(wait // 60) + 1} min."
+    config, problem, _ = _firebase_config()
+    if config is None:
+        return False, problem
     try:
-        user = firebase_auth.sign_in_with_password(email, password)
-    except firebase_auth.FirebaseConfigError as e:
-        return False, str(e)
+        user = firebase_auth.sign_in_with_password(email, password, config=config)
     except firebase_auth.FirebaseAuthError as e:
         if e.code in _FB_CREDENTIAL_ERRORS:
             limiter.failed()
@@ -2307,25 +2351,35 @@ def _firebase_submit() -> None:
 
 
 def firebase_sign_out() -> None:
+    # an explicit sign-out stops the automatic Google exchange for this
+    # session, even while the Google login cookie is still being cleared
+    st.session_state._fb_signed_out = True
     st.session_state.pop(firebase_auth.SESSION_KEY, None)
     st.session_state.pop("_fb_google_failed", None)
+    st.session_state.pop("_fb_google_expired", None)
+
+
+def _firebase_head(icon: str, sub: str) -> None:
+    st.html(f'<div class="set-head"><span class="ic">{_ms(icon)}</span><div>'
+            '<div class="eyebrow">Preview</div><h2 class="section-title">Firebase sign-in</h2>'
+            f'<p class="section-sub">{escape(sub)}</p></div></div>')
 
 
 def firebase_panel() -> None:
-    if not firebase_auth.configured():
-        return
-    google = _google_login_settings()
-    if google:
-        _firebase_from_google(google)
-    user = firebase_auth.session_user(st.session_state)
+    config, problem, present = _firebase_config()
+    if not present:
+        return                     # Firebase not set up at all: nothing changes on this page
     with st.container(key="set_firebase"):
-        sub = ("Signed in with the Job Tracker Firebase project. This doesn't change what you can do here — "
-               "changes still need owner access above." if user else
-               "Technical preview: sign in with the Job Tracker Firebase project. This doesn't grant any access — "
-               "changes still need owner access above.")
-        st.html(f'<div class="set-head"><span class="ic">{_ms("verified_user" if user else "key")}</span><div>'
-                '<div class="eyebrow">Preview</div><h2 class="section-title">Firebase sign-in</h2>'
-                f'<p class="section-sub">{escape(sub)}</p></div></div>')
+        if config is None:
+            _firebase_head("key_off", f"Firebase sign-in isn't available yet: {problem}")
+            return
+        google, google_problem = _google_setup()
+        user = firebase_auth.session_user(st.session_state)
+        _firebase_head("verified_user" if user else "key",
+                       "Signed in with the Job Tracker Firebase project. This doesn't change what you can do here — "
+                       "changes still need owner access above." if user else
+                       "Technical preview: sign in with the Job Tracker Firebase project. This doesn't grant any access — "
+                       "changes still need owner access above.")
         if user:
             method = {"password": "Email &amp; password", "google.com": "Google"}.get(user.get("provider"), "Unknown")
             verified = {True: "Yes", False: "No"}.get(user.get("email_verified"), "Not reported")
@@ -2340,12 +2394,8 @@ def firebase_panel() -> None:
                              use_container_width=True):
                     firebase_sign_out()
                     toast("Signed out of Firebase", "success")
-                    if google:
-                        try:
-                            if st.user.is_logged_in:
-                                st.logout()      # also ends the Google sign-in cookie
-                        except Exception:
-                            pass
+                    if google and _google_id_token() is not None:
+                        st.logout()      # also ends the Google sign-in cookie
                     st.rerun()
             return
         # the submit callback wipes the password from session state right away
@@ -2355,9 +2405,18 @@ def firebase_panel() -> None:
             st.form_submit_button("Sign in with email", key="btn_fb_sign_in", icon=":material/login:",
                                   on_click=_firebase_submit)
         if google:
+            if st.session_state.get("_fb_google_expired"):
+                st.html(f'<p class="note">{_ms("schedule", "s16")} Your Google sign-in has expired — continue with Google again.</p>')
             if st.button("Continue with Google", key="btn_fb_google", icon=":material/account_circle:"):
                 st.session_state.pop("_fb_google_failed", None)
-                st.login()
+                st.session_state.pop("_fb_google_expired", None)
+                st.session_state.pop("_fb_signed_out", None)
+                if google["provider"]:
+                    st.login(google["provider"])
+                else:
+                    st.login()
+        elif google_problem:
+            st.html(f'<p class="note">{_ms("info", "s16")} {escape(google_problem)}</p>')
 
 
 def page_settings():
@@ -2474,6 +2533,12 @@ def page_settings():
 # ═══════════════════════════════════════════════════════════════════════════════
 # ROUTER
 # ═══════════════════════════════════════════════════════════════════════════════
+# after Google sign-in Streamlit returns to the home page: finish the
+# Firebase exchange on whichever page this session starts on
+try:
+    firebase_google_exchange()
+except Exception as _e:          # never let the preview break a page
+    log.warning("Firebase Google exchange failed: %s", type(_e).__name__)
 page = st.session_state.page
 jobs_by_id = {_jid(j): j for j in all_records}
 if page == "jobs" and st.session_state.job_id:

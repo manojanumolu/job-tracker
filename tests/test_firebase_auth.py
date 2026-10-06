@@ -401,3 +401,223 @@ def test_sign_out_and_expiry(app, firebase_env):
                                                    "expires_at": time.time() - 1}
     at.run()
     assert "btn_fb_sign_in" in {b.key for b in at.button}       # expired -> signed out again
+
+
+# ---------------------------------------------------------------------------
+# Configuration from Streamlit secrets (the preview's hidden-card bug)
+# ---------------------------------------------------------------------------
+# Only TOP-LEVEL secrets become environment variables. Firebase lines written
+# below the [auth] section belong to it, so reading only the environment
+# silently hid the whole feature.
+
+GOOGLE_CLIENT = {"client_id": "placeholder-client.apps.example", "client_secret": "placeholder-client-value",
+                 "server_metadata_url": "https://accounts.google.com/.well-known/openid-configuration"}
+AUTH_BASE = {"redirect_uri": "https://job-tracker-bot.streamlit.app/oauth2callback",
+             "cookie_secret": "placeholder-cookie-value", "expose_tokens": "id"}
+FB_SECRETS = {"FIREBASE_WEB_API_KEY": API_KEY, "FIREBASE_PROJECT_ID": PROJECT}
+
+
+def _without(d, key):
+    return {k: v for k, v in d.items() if k != key}
+
+
+@pytest.fixture
+def no_env(monkeypatch):
+    monkeypatch.delenv("FIREBASE_WEB_API_KEY", raising=False)
+    monkeypatch.delenv("FIREBASE_PROJECT_ID", raising=False)
+
+
+@pytest.mark.parametrize("secrets", [
+    dict(FB_SECRETS),                                                       # top level
+    {"auth": {**AUTH_BASE, **FB_SECRETS}},                                  # lines below [auth]
+    {"firebase": {"web_api_key": API_KEY, "project_id": PROJECT}},          # [firebase] section
+    {"firebase": {"api_key": API_KEY, "FIREBASE_PROJECT_ID": PROJECT}},
+])
+def test_config_is_found_in_streamlit_secrets(no_env, secrets):
+    cfg = firebase_auth.load_config(secrets)
+    assert cfg.api_key == API_KEY and cfg.project_id == PROJECT
+    assert firebase_auth.configured(secrets) and firebase_auth.any_setting(secrets)
+
+
+def test_environment_wins_over_secrets(monkeypatch):
+    monkeypatch.setenv("FIREBASE_WEB_API_KEY", API_KEY)
+    monkeypatch.setenv("FIREBASE_PROJECT_ID", PROJECT)
+    cfg = firebase_auth.load_config({"FIREBASE_WEB_API_KEY": "other-placeholder", "FIREBASE_PROJECT_ID": "other-project"})
+    assert (cfg.api_key, cfg.project_id) == (API_KEY, PROJECT)
+
+
+@pytest.mark.parametrize("secrets, expected", [
+    ({}, "isn't configured"),
+    ({"FIREBASE_WEB_API_KEY": API_KEY}, "FIREBASE_PROJECT_ID is missing"),
+    ({"auth": {"FIREBASE_PROJECT_ID": PROJECT}}, "FIREBASE_WEB_API_KEY is missing"),
+    ({"FIREBASE_WEB_API_KEY": API_KEY, "FIREBASE_PROJECT_ID": "Bad Project!"}, "isn't a valid Firebase project ID"),
+    ({"FIREBASE_WEB_API_KEY": "  ", "FIREBASE_PROJECT_ID": 123}, "isn't configured"),
+    (None, "isn't configured"),
+    ("not-a-mapping", "isn't configured"),
+])
+def test_config_problems_name_settings_never_values(no_env, secrets, expected):
+    config, problem = firebase_auth.config_status(secrets)
+    assert config is None and expected in problem
+    assert API_KEY not in problem and PROJECT not in problem and "Bad Project" not in problem
+
+
+def test_any_setting_detects_partial_setup(no_env):
+    assert not firebase_auth.any_setting({}) and not firebase_auth.any_setting({"auth": AUTH_BASE})
+    assert firebase_auth.any_setting({"auth": {"FIREBASE_PROJECT_ID": PROJECT}})
+
+
+@pytest.mark.parametrize("token, expired", [
+    (make_id_token(exp=time.time() + 3600), False),
+    (make_id_token(exp=time.time() + 30), True),          # inside the safety margin
+    (make_id_token(exp=time.time() - 10), True),
+    ("not-a-jwt", True), (None, True), ("", True), ("a." + _b64({"exp": "soon"}) + ".c", True),
+])
+def test_google_token_expiry(token, expired):
+    assert firebase_auth.token_expired(token) is expired
+
+
+# --- the dashboard with secrets supplied the way Streamlit Cloud does -------
+
+def test_card_appears_when_firebase_lines_sit_below_auth(app, no_env):
+    """The preview bug, reproduced: Firebase keys inside [auth] only."""
+    at = app([], page="settings", secrets={"auth": {**AUTH_BASE, **GOOGLE_CLIENT, **FB_SECRETS}})
+    assert not at.exception
+    assert "Firebase sign-in" in _html(at) and "btn_fb_sign_in" in {b.key for b in at.button}
+    assert API_KEY not in _html(at)
+
+
+def test_partial_setup_shows_what_is_missing(app, no_env):
+    at = app([], page="settings", secrets={"FIREBASE_WEB_API_KEY": API_KEY})
+    html = _html(at)
+    assert "Firebase sign-in isn" in html and "FIREBASE_PROJECT_ID is missing" in html
+    assert "btn_fb_sign_in" not in {b.key for b in at.button} and API_KEY not in html
+
+
+def test_no_firebase_settings_leave_settings_unchanged(app, no_env):
+    at = app([], page="settings", secrets={"auth": {**AUTH_BASE, **GOOGLE_CLIENT}})
+    assert "Firebase sign-in" not in _html(at) and "btn_fb_google" not in {b.key for b in at.button}
+
+
+class FakeUser:
+    def __init__(self, logged_in=True, token=None):
+        self.is_logged_in, self.tokens = logged_in, ({"id": token} if token else {})
+
+
+@pytest.fixture
+def google_env(monkeypatch, no_env):
+    """st.login / st.logout / st.user replaced by fakes, Firebase by a
+    FakeFirebase. Nothing reaches Google or Firebase."""
+    import streamlit
+    calls = {"login": [], "logout": 0}
+    monkeypatch.setattr(streamlit, "login", lambda provider=None: calls["login"].append(provider))
+
+    def fake_logout():
+        calls["logout"] += 1
+    monkeypatch.setattr(streamlit, "logout", fake_logout)
+    monkeypatch.setattr(streamlit, "user", FakeUser(logged_in=False))
+
+    def set_user(user):
+        monkeypatch.setattr(streamlit, "user", user)
+
+    def use_firebase(reply):
+        fb = FakeFirebase(reply)
+        monkeypatch.setattr(firebase_auth, "_new_client", fb.client)
+        return fb
+    return {"calls": calls, "set_user": set_user, "firebase": use_firebase}
+
+
+@pytest.mark.parametrize("auth, provider", [
+    ({**AUTH_BASE, **GOOGLE_CLIENT}, None),                       # flat [auth]
+    ({**AUTH_BASE, "google": dict(GOOGLE_CLIENT)}, "google"),     # [auth.google]
+    ({**AUTH_BASE, "corp": dict(GOOGLE_CLIENT)}, "corp"),         # any named provider
+])
+def test_google_button_supports_both_auth_layouts(app, google_env, auth, provider):
+    at = app([], page="settings", secrets={**FB_SECRETS, "auth": auth})
+    assert "btn_fb_google" in {b.key for b in at.button}
+    at.button(key="btn_fb_google").click().run()
+    assert google_env["calls"]["login"] == [provider]
+
+
+@pytest.mark.parametrize("auth, why", [
+    ({**_without(AUTH_BASE, "expose_tokens"), **GOOGLE_CLIENT}, "expose_tokens"),
+    ({**AUTH_BASE, **GOOGLE_CLIENT, "redirect_uri": "https://job-tracker-bot.streamlit.app/"}, "/oauth2callback"),
+    ({**_without(AUTH_BASE, "cookie_secret"), **GOOGLE_CLIENT}, "cookie_secret"),
+])
+def test_incomplete_google_setup_is_explained(app, google_env, auth, why):
+    at = app([], page="settings", secrets={**FB_SECRETS, "auth": auth})
+    assert "btn_fb_google" not in {b.key for b in at.button}
+    assert why in _html(at) and "placeholder-client-value" not in _html(at)
+
+
+def test_google_sign_in_completes_on_the_home_page(app, google_env):
+    """Streamlit returns to the home page after Google sign-in; the Firebase
+    exchange must happen there, not only on Settings."""
+    fb = google_env["firebase"](ok_google_answer())
+    google_token = make_id_token(project="google-issued", uid="google-sub")
+    google_env["set_user"](FakeUser(token=google_token))
+    at = app([], secrets={**FB_SECRETS, "auth": {**AUTH_BASE, **GOOGLE_CLIENT}})     # home page
+    assert not at.exception and at.session_state.page == "home"
+    user = at.session_state[firebase_auth.SESSION_KEY]
+    assert (user["uid"], user["provider"], user["email_verified"]) == (UID, "google.com", True)
+    assert len(fb.requests) == 1 and "Signed in with Google" in _html(at)
+    assert fb.body()["requestUri"] == AUTH_BASE["redirect_uri"]
+    dump = json.dumps(at.session_state.to_dict(), default=str)
+    assert google_token not in dump and "refresh-token-xyz" not in dump and API_KEY not in dump
+    at.run()                                        # later reruns don't call Firebase again
+    assert len(fb.requests) == 1
+    _nav(at, "settings")
+    assert "Firebase UID" in _html(at)
+
+
+def test_expired_google_token_is_never_sent(app, google_env):
+    fb = google_env["firebase"](ok_google_answer())
+    google_env["set_user"](FakeUser(token=make_id_token(exp=time.time() - 60)))
+    at = app([], page="settings", secrets={**FB_SECRETS, "auth": {**AUTH_BASE, **GOOGLE_CLIENT}})
+    assert fb.requests == [] and firebase_auth.SESSION_KEY not in at.session_state
+    assert "Google sign-in has expired" in _html(at) and "btn_fb_google" in {b.key for b in at.button}
+    assert "Google sign-in couldn" not in _html(at)          # no error toast for a routine expiry
+
+
+def test_google_failure_is_reported_once(app, google_env):
+    fb = google_env["firebase"](error_answer("INVALID_IDP_RESPONSE : Invalid Idp Response"))
+    google_env["set_user"](FakeUser(token=make_id_token(project="google-issued")))
+    at = app([], secrets={**FB_SECRETS, "auth": {**AUTH_BASE, **GOOGLE_CLIENT}})
+    assert "Google sign-in couldn" in _html(at) and firebase_auth.SESSION_KEY not in at.session_state
+    at.run()
+    _nav(at, "jobs")
+    assert len(fb.requests) == 1                     # not retried on every rerun
+
+
+def test_google_sign_out_ends_the_google_session(app, google_env):
+    fb = google_env["firebase"](ok_google_answer())
+    google_env["set_user"](FakeUser(token=make_id_token(project="google-issued")))
+    at = app([], page="settings", secrets={**FB_SECRETS, "auth": {**AUTH_BASE, **GOOGLE_CLIENT}})
+    at.button(key="btn_fb_sign_out").click().run()
+    assert google_env["calls"]["logout"] == 1 and firebase_auth.SESSION_KEY not in at.session_state
+    # the Google cookie may still be present until the logout redirect lands:
+    # an explicit sign-out must not bounce straight back in
+    at.run()
+    _nav(at, "home")
+    assert firebase_auth.SESSION_KEY not in at.session_state and len(fb.requests) == 1
+    at.button(key="nav_settings").click().run()
+    at.button(key="btn_fb_google").click().run()          # signing in again is a deliberate click
+    assert google_env["calls"]["login"] == [None]
+
+
+def test_google_sign_in_grants_no_owner_access(app, google_env):
+    google_env["firebase"](ok_google_answer())
+    google_env["set_user"](FakeUser(token=make_id_token(project="google-issued")))
+    at = app([NEW_RECORD], secrets={**FB_SECRETS, "auth": {**AUTH_BASE, **GOOGLE_CLIENT}}, owner=False)
+    assert at.session_state[firebase_auth.SESSION_KEY]["provider"] == "google.com"
+    _nav(at, "jobs")
+    at.button(key=_key("dismiss", NEW_RECORD)).click().run()
+    assert not _seen(at)[0].get("dismissed") and "Only the owner can" in _html(at)
+
+
+def test_password_sign_in_works_with_secrets_only_config(app, no_env, monkeypatch):
+    fb = FakeFirebase(ok_password_answer())
+    monkeypatch.setattr(firebase_auth, "_new_client", fb.client)
+    at = app([], page="settings", secrets={"auth": {**AUTH_BASE, **FB_SECRETS}})
+    _fb_sign_in(at)
+    assert at.session_state[firebase_auth.SESSION_KEY]["uid"] == UID
+    assert fb.requests[0].headers["x-goog-api-key"] == API_KEY

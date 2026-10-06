@@ -17,9 +17,12 @@ response must be issued by this project (aud / iss = FIREBASE_PROJECT_ID)
 for this user (sub = localId). That also catches a Web API key that belongs
 to a different Firebase project.
 
-Configuration comes from the environment (root-level Streamlit secrets are
-exported as environment variables): FIREBASE_WEB_API_KEY and
-FIREBASE_PROJECT_ID. Errors never carry the key, a token or a password:
+Configuration: FIREBASE_WEB_API_KEY and FIREBASE_PROJECT_ID, from the
+environment or, failing that, from Streamlit secrets — top level, a
+[firebase] section, or (a common TOML slip) lines placed below the [auth]
+section, which makes them part of it. Only top-level secrets become
+environment variables, so reading the environment alone hid the feature
+whenever the lines sat below [auth]. Errors never carry the key, a token or a password:
 the key travels in the X-Goog-Api-Key header (never in a URL that HTTP
 logging could print), and transport errors are reduced to a fixed message
 and logged by exception type only.
@@ -35,6 +38,7 @@ import logging
 import os
 import re
 import time
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 
 import httpx
@@ -84,22 +88,57 @@ class FirebaseUser:
         return asdict(self)
 
 
-def load_config() -> FirebaseConfig:
-    key = os.environ.get(API_KEY_ENV, "").strip()
-    project = os.environ.get(PROJECT_ID_ENV, "").strip()
-    if not key or not project:
-        raise FirebaseConfigError("Firebase sign-in isn't configured for this app.")
+# accepted spellings inside a [firebase] secrets section
+_SECTION_ALIASES = {API_KEY_ENV: (API_KEY_ENV, "web_api_key", "api_key"),
+                    PROJECT_ID_ENV: (PROJECT_ID_ENV, "project_id")}
+
+
+def _setting(name: str, secrets: Mapping | None) -> str:
+    """One setting: environment first, then Streamlit secrets (top level,
+    [firebase], or misplaced inside [auth])."""
+    value = os.environ.get(name, "").strip()
+    if value:
+        return value
+    if not isinstance(secrets, Mapping):
+        return ""
+    candidates = [secrets.get(name)]
+    section = secrets.get("firebase")
+    if isinstance(section, Mapping):
+        candidates += [section.get(alias) for alias in _SECTION_ALIASES[name]]
+    auth = secrets.get("auth")
+    if isinstance(auth, Mapping):
+        candidates.append(auth.get(name))
+    return next((c.strip() for c in candidates if isinstance(c, str) and c.strip()), "")
+
+
+def config_status(secrets: Mapping | None = None) -> tuple[FirebaseConfig | None, str]:
+    """(config, problem). ``problem`` names settings, never their values;
+    it is "" when the config is usable."""
+    key, project = _setting(API_KEY_ENV, secrets), _setting(PROJECT_ID_ENV, secrets)
+    if not key and not project:
+        return None, "Firebase sign-in isn't configured for this app."
+    missing = [n for n, v in ((API_KEY_ENV, key), (PROJECT_ID_ENV, project)) if not v]
+    if missing:
+        return None, f"{' and '.join(missing)} {'is' if len(missing) == 1 else 'are'} missing from the app's secrets."
     if not _PROJECT_ID_RE.match(project):
-        raise FirebaseConfigError("The Firebase project ID setting isn't valid.")
-    return FirebaseConfig(key, project)
+        return None, f"{PROJECT_ID_ENV} isn't a valid Firebase project ID."
+    return FirebaseConfig(key, project), ""
 
 
-def configured() -> bool:
-    try:
-        load_config()
-        return True
-    except FirebaseConfigError:
-        return False
+def load_config(secrets: Mapping | None = None) -> FirebaseConfig:
+    config, problem = config_status(secrets)
+    if config is None:
+        raise FirebaseConfigError(problem)
+    return config
+
+
+def configured(secrets: Mapping | None = None) -> bool:
+    return config_status(secrets)[0] is not None
+
+
+def any_setting(secrets: Mapping | None = None) -> bool:
+    """Is any Firebase setting present at all (even an incomplete one)?"""
+    return bool(_setting(API_KEY_ENV, secrets) or _setting(PROJECT_ID_ENV, secrets))
 
 
 # ---------------------------------------------------------------------------
@@ -250,6 +289,17 @@ def sign_in_with_google_id_token(id_token: str, request_uri: str, *, config: Fir
     if user.provider != "google.com":
         raise FirebaseAuthError("Firebase sent an incomplete sign-in answer.", "MALFORMED")
     return user
+
+
+def token_expired(token: object, now: float | None = None, margin_s: float = 60) -> bool:
+    """Is this JWT (e.g. the Google ID token kept by st.login) expired —
+    or unreadable? Streamlit's login cookie outlives the ~1 h Google ID
+    token, so an old token must not be sent to Firebase."""
+    try:
+        exp = float(_jwt_claims(token).get("exp"))
+    except (ValueError, TypeError, UnicodeError):
+        return True
+    return exp <= (time.time() if now is None else now) + margin_s
 
 
 def session_user(session, now: float | None = None) -> dict | None:
