@@ -123,6 +123,58 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ── sign-in event log (read-only, in memory) ─────────────────────────────────
+# Streamlit reports OAuth failures (e.g. a failed Google code exchange) only
+# to the server log, then quietly redirects to "/". Keep the last few such
+# records — level, logger, message and exception TYPE + first line, with
+# emails and long token-like strings redacted — so ?diag=auth can show why a
+# sign-in didn't stick. Never a value from a cookie, secret or token.
+_REDACT_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+|[A-Za-z0-9_\-]{24,}(?:\.[A-Za-z0-9_\-]+)*")
+
+
+def _redact(text: object) -> str:
+    return _REDACT_RE.sub("<redacted>", str(text))[:300]
+
+
+@st.cache_resource(show_spinner=False)
+def _auth_events():
+    import collections
+
+    events = collections.deque(maxlen=40)
+
+    class _Capture(logging.Handler):
+        def emit(self, record):
+            try:
+                exc = ""
+                if record.exc_info and record.exc_info[1] is not None:
+                    e = record.exc_info[1]
+                    exc = f" | {type(e).__name__}: {_redact(str(e).splitlines()[0] if str(e) else '')}"
+                events.append(f"{time.strftime('%H:%M:%S', time.gmtime(record.created))}Z {record.levelname} "
+                              f"{record.name.rsplit('.', 1)[-1]}: {_redact(record.getMessage())}{exc}")
+            except Exception:
+                pass
+
+    handler = _Capture(level=logging.WARNING)
+    # Streamlit's own loggers don't propagate, so attach to the exact ones
+    # that report sign-in problems
+    for name in ("streamlit.web.server.starlette.starlette_auth_routes",
+                 "streamlit.web.server.starlette.starlette_websocket",
+                 "streamlit.web.server.oauth_authlib_routes", "streamlit.web.server.browser_websocket_handler",
+                 "streamlit.auth_util", "authlib"):
+        lg = logging.getLogger(name)
+        lg.addHandler(handler)
+        if lg.level == logging.NOTSET or lg.level > logging.WARNING:
+            lg.setLevel(logging.WARNING)
+    return events
+
+
+def auth_event(message: str) -> None:
+    """Record an app-level sign-in decision (booleans/codes only)."""
+    _auth_events().append(f"{time.strftime('%H:%M:%S', time.gmtime())}Z APP gate: {_redact(message)}")
+
+
+_auth_events()
+
 # ── sign-in diagnostics (read-only) ───────────────────────────────────────────
 # ?diag=auth shows what THIS session's server process can see of the sign-in
 # plumbing — counts, cookie NAMES and booleans only, never a value, token or
@@ -171,7 +223,9 @@ if st.query_params.get("diag") == "auth":
         ]
 
     st.html("<h3>Sign-in diagnostics</h3><table>" + "".join(
-        f"<tr><td>{a}</td><td><code>{b}</code></td></tr>" for a, b in _auth_diag()) + "</table>")
+        f"<tr><td>{a}</td><td><code>{b}</code></td></tr>" for a, b in _auth_diag()) + "</table>"
+        + "<h4>Recent sign-in events (this server process)</h4><pre id='auth-events'>"
+        + (escape("\n".join(_auth_events())) or "none recorded") + "</pre>")
     print("[auth-diag] " + " | ".join(f"{a}={b}" for a, b in _auth_diag()), flush=True)
     st.stop()
 
@@ -1394,9 +1448,11 @@ def _google_identity() -> dict | None:
         email = st.user.get("email") if hasattr(st.user, "get") else getattr(st.user, "email", None)
         verified = st.user.get("email_verified") if hasattr(st.user, "get") else getattr(st.user, "email_verified", None)
         name = st.user.get("name") if hasattr(st.user, "get") else getattr(st.user, "name", None)
-    except Exception:
+    except Exception as e:
+        auth_event(f"reading st.user failed: {type(e).__name__}")
         return None
     if not isinstance(email, str) or "@" not in email:
+        auth_event(f"st.user logged in but no usable email (type {type(email).__name__})")
         return None
     return {"email": email.strip().lower(), "email_verified": verified is True,
             "name": name if isinstance(name, str) else ""}
@@ -1427,8 +1483,10 @@ def _link_google_to_firebase(google: dict, config) -> None:
     except firebase_auth.FirebaseAuthError as e:
         st.session_state._fb_link = {"state": "failed", "code": e.code, "message": str(e)}
         print(f"[auth] google sign-in ok; firebase link failed code={e.code}", flush=True)
+        auth_event(f"google identity ok; firebase link failed code={e.code}")
         return
     st.session_state._fb_link = {"state": "linked"}
+    auth_event("google identity ok; firebase linked")
     st.session_state[firebase_auth.SESSION_KEY] = {**user.as_session(), "expires_at": time.time() + ACCOUNT_SESSION_S}
     print("[auth] google sign-in ok; firebase linked", flush=True)
 
