@@ -7,3 +7,8 @@ backgroundColor = "#f8fafc"
 secondaryBackgroundColor = "#f1f5f9"
 textColor = "#0f172a"
 font = "sans serif"
+
+[client]
+# public visitors see an exception type, never a traceback or message
+# (full details still go to the server log)
+showErrorDetails = "type"

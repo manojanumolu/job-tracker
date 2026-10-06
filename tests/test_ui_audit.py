@@ -74,16 +74,17 @@ def test_restoring_a_never_emailed_job_does_not_email_it_later(app):
     assert not alert_pending(rec)          # the tooltip promises it won't be emailed again
 
 
-def test_test_email_does_not_change_the_saved_recipient(app, monkeypatch):
+def test_test_email_goes_only_to_the_configured_recipient(app, monkeypatch):
+    """No address can be typed in for a test: the system mailbox only ever
+    writes to the configured recipient, and nothing is saved."""
     import notifier
     sent = []
     monkeypatch.setattr(notifier, "test_mail", lambda to: sent.append(to))
     at = app([], page="email")
-    at.text_input(key="email_input").set_value("someone.else@example.com").run()
     at.button(key="btn_test").click().run()
-    settings = json.loads((at.tmp_path / "settings.json").read_text())
-    assert settings["recipient_email"] == "me@example.com"
-    assert "not saved" in _html(at).lower() or "Save" in _html(at)
+    assert sent == ["me@example.com"]
+    assert json.loads((at.tmp_path / "settings.json").read_text())["recipient_email"] == "me@example.com"
+    assert "Test email sent — check me@example.com" in _html(at)
 
 
 def test_dismiss_all_needs_confirmation(app):

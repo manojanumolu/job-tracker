@@ -23,6 +23,15 @@ from config_store import (
 )
 from notifier import category_label, friendly_reason, safe_url
 from identity import ats_job_id
+from access import (
+    OWNER_SESSION_S,
+    AttemptLimiter,
+    Cooldown,
+    alert_recipient,
+    mask_email,
+    owner_configured,
+    password_matches,
+)
 
 log = logging.getLogger("streamlit_app")
 
@@ -1050,7 +1059,10 @@ def _source_label(c: dict) -> str:
 
 
 def _trigger_scrape() -> tuple[bool, str]:
-    """Ask GitHub Actions to run check_jobs.yml right now (workflow_dispatch)."""
+    """Ask GitHub Actions to run check_jobs.yml right now (workflow_dispatch).
+    Owner only, and at most once per cooldown for the whole app."""
+    if not is_owner():
+        return False, "Only the owner can start a check."
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
         return False, "Can't start a check — no GitHub token is configured for this app."
@@ -1066,6 +1078,62 @@ def _trigger_scrape() -> tuple[bool, str]:
         if getattr(e, "status", None) == 403:
             return False, "The app's GitHub token isn't allowed to start checks (needs Actions: write)."
         return False, f"Couldn't start a check. {friendly_github_error(e)}"
+
+
+# ── owner access ──────────────────────────────────────────────────────────────
+# Interim protection until real sign-in: browsing is open (the data is public
+# in the repository anyway), every change needs the owner password. The
+# sign-in is remembered server-side in this browser session only — never in
+# the URL, a cookie or a widget — and expires after OWNER_SESSION_S.
+_CHECK_COOLDOWN_S = 300
+_REFRESH_COOLDOWN_S = 15
+
+
+@st.cache_resource(show_spinner=False)
+def _guards() -> dict:
+    """Limits shared by every session of this server process."""
+    return {"signin": AttemptLimiter(), "check": Cooldown(_CHECK_COOLDOWN_S),
+            "refresh": Cooldown(_REFRESH_COOLDOWN_S)}
+
+
+def is_owner() -> bool:
+    return owner_configured() and st.session_state.get("_owner_until", 0) > time.time()
+
+
+def sign_in(password: str) -> tuple[bool, str]:
+    limiter = _guards()["signin"]
+    wait = limiter.locked_for()
+    if wait:
+        return False, f"Too many failed attempts — try again in {int(wait // 60) + 1} min."
+    if not owner_configured():
+        return False, "Owner access isn't set up for this app."
+    if not password_matches(password):
+        limiter.failed()
+        log.warning("failed owner sign-in")
+        return False, "That password isn't right."
+    limiter.succeeded()
+    st.session_state._owner_until = time.time() + OWNER_SESSION_S
+    return True, "Signed in as the owner"
+
+
+def sign_out() -> None:
+    st.session_state.pop("_owner_until", None)
+
+
+def owner_only(action: str) -> bool:
+    """True for the owner; otherwise explain why ``action`` can't happen."""
+    if is_owner():
+        return True
+    toast(f"Only the owner can {action}. Sign in under Settings → Owner access." if owner_configured()
+          else f"Changes are turned off: owner access isn't set up, so you can't {action}.", "error")
+    return False
+
+
+def _refresh_data() -> None:
+    """Reload from GitHub — at most every few seconds for the whole app, so
+    repeated clicks can't spend the token's API quota."""
+    if _guards()["refresh"].try_start():
+        _remote_snapshot.clear()
 
 
 # Latest data straight from GitHub, shared by all sessions and refreshed at
@@ -1087,7 +1155,12 @@ def _load_synced(name: str, default):
 
 
 def _save_change(name: str, mutate, default, message: str):
-    """Apply one change to the latest copy of ``name`` (merge-safe)."""
+    """Apply one change to the latest copy of ``name`` (merge-safe).
+    Every write goes through here, so the owner check is repeated here: a
+    button that forgot its own check still can't change anything."""
+    if not is_owner():
+        log.warning("blocked a change to %s from a session without owner access", name)
+        return None, False, "Only the owner can make changes."
     data, saved, err = update_json(BASE / name, name, mutate, default, message)
     _remote_snapshot.clear()
     return data, saved, err
@@ -1141,8 +1214,6 @@ active_jobs: list[dict] = visible_jobs(all_records)                             
 dismissed_jobs: list[dict] = [j for j in reversed(all_records) if j.get("dismissed")]  # newest-first
 
 NOW = datetime.now(timezone.utc)
-_EMAIL_RE = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+$")
-_CHECK_COOLDOWN_S = 300
 # cron asks for every 3 h, but GitHub starts scheduled runs late: measured
 # gaps were median 5 h, 90th percentile 7.5 h, max 9 h — so a scan only
 # counts as "delayed" once it is overdue by more than that
@@ -1154,7 +1225,7 @@ _CATEGORY_PILL = {"FRESHER": "fresher", "ENTRY_LEVEL": "entry"}
 LEGACY_LABEL = "Keyword match"  # records from before the classifier existed
 
 for _k, _v in (("toast", None), ("toast_kind", "success"), ("jobs_page", 0), ("test_status", None),
-               ("email_val", settings.get("recipient_email", "")), ("confirm_remove", None),
+               ("confirm_remove", None),
                ("just_added", None), ("job_from", "jobs"), ("confirm_clear", False)):
     if _k not in st.session_state:
         st.session_state[_k] = _v
@@ -1233,7 +1304,9 @@ for j in reversed(all_records):
         jobs_by_company_id.setdefault(str(j["company_id"]), []).append(j)
     else:
         jobs_by_company.setdefault((j.get("company") or "").strip(), []).append(j)
-recipient = (settings.get("recipient_email") or "").strip()
+# the ALERT_RECIPIENT secret, else the legacy (public) settings.json field;
+# shown in full only to the owner
+recipient, recipient_source = alert_recipient(settings)
 
 
 def company_jobs(c: dict) -> list[dict]:
@@ -1354,19 +1427,23 @@ def scan_actions():
     a, b = st.columns(2)
     with a:
         if st.button("Refresh", key="btn_refresh", icon=":material/refresh:", help="Reload the latest jobs and portal status"):
-            _remote_snapshot.clear()
+            _refresh_data()
             toast("Showing the latest data", "success")
             st.rerun()
     with b:
         if st.button("Run check", key="btn_run_check", icon=":material/travel_explore:", type="primary",
                      help="Ask GitHub Actions to scan every portal now (takes a few minutes)"):
-            since = time.time() - st.session_state.get("last_check_trigger", 0)
-            if since < _CHECK_COOLDOWN_S:
-                toast(f"A check was just started — try again in {int((_CHECK_COOLDOWN_S - since) // 60) + 1} min", "error")
+            cooldown = _guards()["check"]
+            if not owner_only("start a check"):
+                pass
+            elif not cooldown.try_start():
+                toast(f"A check was just started — try again in {int(cooldown.remaining() // 60) + 1} min", "error")
             else:
                 ok, msg = _trigger_scrape()
                 if ok:
                     st.session_state.last_check_trigger = time.time()
+                else:
+                    cooldown.cancel()
                 toast(msg, "success" if ok else "error")
             st.rerun()
 
@@ -1483,12 +1560,16 @@ def job_row(j: dict, idx: str, origin: str):
             if j.get("dismissed"):
                 if st.button("Restore", icon=":material/undo:", key=_widget_key("restore", jkey),
                              help="Restore to active jobs (it won't be emailed again)"):
+                    if not owner_only("restore jobs"):
+                        st.rerun()
                     _, saved, err = _save_change("seen_jobs.json", _restore_jobs({jkey}), [], "chore: restore 1 alert(s)")
                     toast("Job restored" if saved else f"Restored here, but not saved permanently. {err}",
                           "success" if saved else "error")
                     st.rerun()
             elif st.button("Dismiss", icon=":material/close:", key=_widget_key("dismiss", jkey),
                            help="Dismiss — hide this job (it won't be emailed again)"):
+                if not owner_only("dismiss jobs"):
+                    st.rerun()
                 _, saved, err = _save_change("seen_jobs.json", dismiss_jobs({jkey}), [], "chore: dismiss 1 alert(s)")
                 toast("Removed 1 alert(s)" if saved else f"Removed here, but not saved permanently. {err}",
                       "success" if saved else "error")
@@ -1695,6 +1776,8 @@ def page_job_detail(j: dict):
             with a[1]:
                 if j.get("dismissed"):
                     if st.button("Restore", key="detail_restore", icon=":material/undo:"):
+                        if not owner_only("restore jobs"):
+                            st.rerun()
                         _, saved, err = _save_change("seen_jobs.json", _restore_jobs({jkey}), [], "chore: restore 1 alert(s)")
                         toast("Job restored" if saved else f"Restored here, but not saved permanently. {err}",
                               "success" if saved else "error")
@@ -1703,6 +1786,8 @@ def page_job_detail(j: dict):
                     with st.container(key="danger"):
                         dismiss = st.button("Dismiss", key="detail_dismiss", icon=":material/close:")
                     if dismiss:
+                        if not owner_only("dismiss jobs"):
+                            st.rerun()
                         _, saved, err = _save_change("seen_jobs.json", dismiss_jobs({jkey}), [], "chore: dismiss 1 alert(s)")
                         toast("Removed 1 alert(s)" if saved else f"Removed here, but not saved permanently. {err}",
                               "success" if saved else "error")
@@ -1868,7 +1953,9 @@ def page_add_company():
             st.button("Cancel", key="btn_cancel_add", on_click=go, args=("companies",))
     if submit:
         n, u, w = name.strip(), url.strip(), site.strip()
-        if not n:
+        if not owner_only("add companies"):
+            pass
+        elif not n:
             toast("Company name is required", "error")
         elif not safe_url(u):
             toast("Enter the full career page URL, starting with https://", "error")
@@ -1926,7 +2013,8 @@ def page_company_detail(c: dict):
             with st.container(key="danger"):
                 if st.session_state.confirm_remove != c.get("id"):
                     if st.button("Stop tracking", key="btn_remove_company", icon=":material/delete:"):
-                        st.session_state.confirm_remove = c.get("id")
+                        if owner_only("remove companies"):
+                            st.session_state.confirm_remove = c.get("id")
                         st.rerun()
     if st.session_state.confirm_remove == c.get("id"):
         with st.container(key="danger_confirm"):
@@ -1934,6 +2022,9 @@ def page_company_detail(c: dict):
             y, n_ = st.columns([1, 4])
             with y:
                 if st.button("Yes, stop tracking", key="btn_remove", type="primary"):
+                    if not owner_only("remove companies"):
+                        st.session_state.confirm_remove = None
+                        st.rerun()
                     cid = c.get("id")
                     _, saved, err = _save_change("companies.json", lambda latest: [x for x in latest if x.get("id") != cid],
                                                  [], f"chore: remove {name}")
@@ -2036,22 +2127,15 @@ def page_email():
     sent_times = [(_parse_iso(j.get("notified_at") or ""), found[id(j)]) for j in notified]
     last_mail, last_is_sent = max(((a or b, bool(a)) for a, b in sent_times if a or b), default=(None, False))
     pending = [j for j in all_records if alert_pending(j)]
+    # the full address is personal: only the owner sees it
+    shown = recipient if is_owner() else mask_email(recipient)
     page_header("Email & Notifications", (
         f'<span class="pill {"on" if recipient else "off"}"><i></i>{"Alerts on" if recipient else "Alerts off"}</span>'
-        + (f'<span>Sending to {escape(recipient)}</span>' if recipient else '<span>Add a recipient to turn alerts on</span>')))
-
-    def _set_recipient(addr: str) -> tuple[bool, str]:
-        def _mutate(latest: dict) -> dict:
-            latest = latest if isinstance(latest, dict) else {}
-            latest["recipient_email"] = addr
-            return latest
-        data, saved, err = _save_change("settings.json", _mutate, {}, "chore: update recipient email")
-        settings.update(data)
-        return saved, err
+        + (f'<span>Sending to {escape(shown)}</span>' if recipient else '<span>Add a recipient to turn alerts on</span>')))
 
     with st.container(key="mail_status"):
         if not recipient:
-            headline, sub = "Alerts are off", "Add a recipient below and new fresher jobs will be emailed after each check."
+            headline, sub = "Alerts are off", "Set the alert recipient (see below) and new fresher jobs will be emailed after each check."
         elif pending:
             headline, sub = "Alerts are on", f"{_plural(len(pending), 'job')} waiting — sent after the next check."
         else:
@@ -2066,32 +2150,25 @@ def page_email():
             <div><dt>Waiting to send</dt><dd class="num">{f"{len(pending)} — sent after the next check" if pending else "0"}</dd></div>
           </dl>""")
 
+    # The recipient is read-only here: the repository is public, so the
+    # address lives in the ALERT_RECIPIENT secret rather than in a file the
+    # app could write. (Per-user alert addresses arrive with real sign-in.)
     with st.container(key="email_form"):
-        st.html(f'<div><h2 class="section-title">{_ms("alternate_email")}Recipient</h2><p class="section-sub">Where new-job alerts are delivered.</p></div>')
-        i1, i2 = st.columns([4, 1], vertical_alignment="bottom")
-        with i1:
-            email_val = st.text_input("Recipient email", value=st.session_state.email_val, placeholder="you@example.com",
-                                      key="email_input")
-            st.session_state.email_val = email_val
-        with i2:
-            save = st.button("Save", key="btn_save_email", type="primary", use_container_width=True)
-        synced = bool(os.environ.get("GITHUB_TOKEN"))
-        if email_val.strip() and email_val.strip() != recipient:
-            st.html(f'<p class="note" style="color:var(--amber);">{_ms("edit", "s16")} Not saved yet — alerts still go to '
-                    f'{escape(recipient) or "nobody"} until you press Save.</p>')
-        st.html(f'<p class="note">{_ms("cloud_done" if synced else "cloud_off", "s16")} '
-                + ("Saved to settings.json in the GitHub repository, which the scraper reads on every run."
-                   if synced else "No GitHub token — changes are saved on this server only and the scraper won't see them.")
-                + "</p>")
-    if save:
-        e = email_val.strip()
-        if not _EMAIL_RE.match(e):
-            toast("Enter a valid email address", "error")
+        st.html(f'<div><h2 class="section-title">{_ms("alternate_email")}Recipient</h2><p class="section-sub">Where new-job alerts are delivered.</p></div>'
+                f'<div class="detail-chips"><span class="chip num">{_ms("mail", "s16")}<span>{escape(shown) or "No recipient set"}</span></span></div>')
+        how = ("update the <span class=\"num\">ALERT_RECIPIENT</span> secret in the GitHub repository "
+               "(Settings → Secrets → Actions) and in this app's Streamlit secrets")
+        if recipient_source == "secret":
+            note = (f'{_ms("lock", "s16")} Kept in a private secret, so it never appears in the public repository. '
+                    f"To change it, {how}.")
+        elif recipient_source == "settings.json":
+            note = (f'<span style="color:var(--amber);">{_ms("warning", "s16")} Read from settings.json, which is public in the '
+                    f"GitHub repository. To keep it private, {how}, then remove it from settings.json.</span>")
         else:
-            saved, err = _set_recipient(e)
-            toast(f"Saved — alerts go to {e}" if saved else f"Saved here, but not saved permanently. {err}",
-                  "success" if saved else "error")
-            st.rerun()
+            note = f'{_ms("info", "s16")} No recipient is set. To turn alerts on, {how}.'
+        if not is_owner() and recipient:
+            note += " Only the owner sees the full address."
+        st.html(f'<p class="note">{note}</p>')
 
     with st.container(key="test_panel"):
         ts = st.session_state.test_status
@@ -2099,30 +2176,31 @@ def page_email():
                   f"Sent at {ts[1]} UTC" if ts[0] else f"Failed at {ts[1]} UTC")
         t1, t2 = st.columns([4, 1], vertical_alignment="center")
         with t1:
-            st.html(f'<div><h2 class="section-title">{_ms("send")}Test delivery</h2><p class="section-sub">Send a sample alert to confirm emails arrive. '
+            st.html(f'<div><h2 class="section-title">{_ms("send")}Test delivery</h2><p class="section-sub">Send a sample alert to the recipient above to confirm emails arrive. '
                     f'<span class="num" style="color:var({"--green" if ts and ts[0] else "--red" if ts else "--muted"});">{status}</span></p></div>')
         with t2:
             test = st.button("Send test email", key="btn_test", icon=":material/send:", use_container_width=True)
     if test:
-        to = email_val.strip()
         stamp = datetime.now(timezone.utc).strftime("%H:%M")
-        if not _EMAIL_RE.match(to):
-            toast("Enter a valid recipient email first", "error")
+        # owner only, and only ever to the configured recipient — never to an
+        # address typed in here, so the system mailbox can't be used to send
+        # mail to anyone else
+        if not owner_only("send test emails"):
+            pass
+        elif not recipient:
+            toast("No alert recipient is set — see Recipient above", "error")
         else:
-            # a test never changes where real alerts go — that's what Save is for
-            unsaved = (settings.get("recipient_email") or "").strip() != to
             try:
                 from notifier import test_mail
-                test_mail(to)
+                test_mail(recipient)
             except Exception as ex:
-                log.warning("test mail failed: %s", ex)
+                log.warning("test mail failed: %s", type(ex).__name__)
                 st.session_state.test_status = (False, stamp)
                 toast("Email isn't configured for this app (Gmail address / app password missing)." if "GMAIL_" in str(ex)
                       else "Couldn't send the test email. Check the Gmail app password and try again.", "error")
             else:
                 st.session_state.test_status = (True, stamp)
-                toast(f"Test email sent to {to}. This address is not saved as the alert recipient — press Save to use it."
-                      if unsaved else f"Test email sent — check {to}", "success")
+                toast(f"Test email sent — check {recipient}", "success")
         st.rerun()
 
     with st.container(key="set_behavior"):
@@ -2149,6 +2227,36 @@ def page_settings():
                          use_container_width=True):
                 st.session_state.dark_mode = not st.session_state.dark_mode
                 st.rerun()
+    with st.container(key="set_owner"):
+        owner = is_owner()
+        if owner:
+            left = max(0, int(st.session_state.get("_owner_until", 0) - time.time()))
+            sub = (f"Signed in as the owner in this browser session · ends in {left // 3600} h {left % 3600 // 60:02d} min. "
+                   "Changes (dismiss, companies, Run check, test email) are enabled.")
+        elif owner_configured():
+            sub = "Anyone with the link can browse. Sign in with the owner password to make changes."
+        else:
+            sub = ("Changes are turned off: no owner password is set. Add a JT_OWNER_PASSWORD secret "
+                   "(12+ characters) to this app's Streamlit secrets to enable them.")
+        st.html(f'<div class="set-head"><span class="ic">{_ms("admin_panel_settings" if owner else "lock")}</span><div>'
+                '<div class="eyebrow">Security</div><h2 class="section-title">Owner access</h2>'
+                f'<p class="section-sub">{escape(sub)}</p></div></div>')
+        if owner:
+            o1, _o2 = st.columns([1, 3])
+            with o1:
+                if st.button("Sign out", key="btn_sign_out", icon=":material/logout:", use_container_width=True):
+                    sign_out()
+                    toast("Signed out", "success")
+                    st.rerun()
+        elif owner_configured():
+            # a form clears the field on submit, so the password isn't kept in session state
+            with st.form("owner_signin", clear_on_submit=True, border=False):
+                pw = st.text_input("Owner password", type="password", key="owner_pw", autocomplete="current-password")
+                go_in = st.form_submit_button("Sign in", key="btn_sign_in", icon=":material/login:", type="primary")
+            if go_in:
+                ok, msg = sign_in(pw)
+                toast(msg, "success" if ok else "error")
+                st.rerun()
     with st.container(key="set_data"):
         synced = bool(os.environ.get("GITHUB_TOKEN"))
         d1, d2 = st.columns([4, 1], vertical_alignment="center")
@@ -2160,7 +2268,7 @@ def page_settings():
                     + "</p></div></div>")
         with d2:
             if st.button("Reload data", key="btn_reload", icon=":material/refresh:", use_container_width=True):
-                _remote_snapshot.clear()
+                _refresh_data()
                 toast("Showing the latest data", "success")
                 st.rerun()
     with st.container(key="set_engine"):
@@ -2191,7 +2299,8 @@ def page_settings():
                 with st.container(key="danger"):
                     if st.button(f"Dismiss all {len(active_jobs)} jobs", key="btn_clear_all", disabled=not active_jobs,
                                  use_container_width=True):
-                        st.session_state.confirm_clear = True
+                        if owner_only("dismiss jobs"):
+                            st.session_state.confirm_clear = True
                         st.rerun()
         else:
             unsent = sum(1 for j in active_jobs if alert_pending(j))
@@ -2204,6 +2313,8 @@ def page_settings():
                 with y:
                     if st.button("Yes, dismiss all", key="btn_clear_all_confirm", type="primary", use_container_width=True):
                         st.session_state.confirm_clear = False
+                        if not owner_only("dismiss jobs"):
+                            st.rerun()
                         _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(None), [], "chore: dismiss all alerts")
                         toast("All alerts cleared" if saved else f"Cleared here, but not saved permanently. {err}",
                               "success" if saved else "error")

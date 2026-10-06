@@ -3,6 +3,7 @@ temp directory, with no GitHub token, so production JSON is never touched."""
 import hashlib
 import json
 import shutil
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -12,7 +13,8 @@ st_testing = pytest.importorskip("streamlit.testing.v1")
 
 REPO = Path(__file__).resolve().parent.parent
 APP_FILES = ["streamlit_app.py", "config_store.py", "notifier.py", "job_classifier.py", "scraper.py",
-             "sources.py", "identity.py", "locations.py", "repo_sync.py"]
+             "sources.py", "identity.py", "locations.py", "repo_sync.py", "access.py"]
+OWNER_PASSWORD = "correct horse battery staple"
 
 OLD_RECORD = {  # shape written before the classifier existed
     "title": "Junior Associate - Evidence Synthesis",
@@ -40,6 +42,8 @@ def app(tmp_path, monkeypatch):
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     monkeypatch.delenv("GMAIL_ADDRESS", raising=False)
     monkeypatch.delenv("GMAIL_APP_PASSWORD", raising=False)
+    monkeypatch.delenv("ALERT_RECIPIENT", raising=False)
+    monkeypatch.setenv("JT_OWNER_PASSWORD", OWNER_PASSWORD)
     for name in APP_FILES:
         shutil.copy(REPO / name, tmp_path / name)
     shutil.copytree(REPO / "assets", tmp_path / "assets")
@@ -48,11 +52,16 @@ def app(tmp_path, monkeypatch):
 
     import streamlit as st
     st.cache_data.clear()  # the app's GitHub snapshot cache is process-wide
+    st.cache_resource.clear()  # ... and so are its sign-in / Run check limits
 
-    def make(seen, page=None, query=None):
+    def make(seen, page=None, query=None, owner=True):
+        """owner=True starts the session signed in as the owner (the
+        behaviour tests are about the dashboard, not the sign-in)."""
         (tmp_path / "seen_jobs.json").write_text(json.dumps(seen))
         at = st_testing.AppTest.from_file(str(tmp_path / "streamlit_app.py"), default_timeout=30)
         at.tmp_path = tmp_path
+        if owner:
+            at.session_state["_owner_until"] = time.time() + 3600
         for k, v in (query or {}).items():
             at.query_params[k] = v
         at.run()
@@ -443,22 +452,23 @@ def test_test_mail_errors_are_friendly(app):
 
 def test_toast_is_shown_once_without_blocking(app):
     at = app([], page="email")
-    at.text_input(key="email_input").set_value("not-an-email").run()
-    at.button(key="btn_save_email").click().run()
-    assert "Enter a valid email address" in _html(at)
+    at.button(key="btn_test").click().run()              # no Gmail credentials -> error toast
+    assert "Email isn't configured for this app" in _html(at)
     at.run()                                             # next interaction: toast gone
-    assert "Enter a valid email address" not in _html(at)
+    assert "Email isn't configured for this app" not in _html(at)
 
 
-def test_save_email_without_token_saves_locally(app):
+def test_recipient_is_read_only_and_never_written(app):
+    """The repository is public, so the app no longer writes the alert
+    address anywhere; it only shows where alerts go and how to change it."""
     at = app([], page="email")
-    assert "Alerts on" in _html(at) and "me@example.com" in _html(at)
-    at.text_input(key="email_input").set_value("new@example.com").run()
-    at.button(key="btn_save_email").click().run()
     assert not at.exception
-    assert json.loads((at.tmp_path / "settings.json").read_text("utf-8"))["recipient_email"] == "new@example.com"
-    assert "not saved permanently" in _html(at)
-    assert "No GitHub token" in _html(at)
+    assert not [t for t in at.text_input if t.key == "email_input"]
+    assert "btn_save_email" not in {b.key for b in at.button}
+    html = _html(at)
+    assert "Alerts on" in html and "Sending to me@example.com" in html
+    assert "Read from settings.json, which is public" in html and "ALERT_RECIPIENT" in html
+    assert json.loads((at.tmp_path / "settings.json").read_text("utf-8")) == {"recipient_email": "me@example.com"}
 
 
 def test_delivery_summary_uses_notified_flags(app):

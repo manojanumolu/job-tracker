@@ -49,6 +49,9 @@ jobs:
         env:
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          # private alert address; until this secret exists alerts.py falls
+          # back to settings.json, so delivery never stops
+          ALERT_RECIPIENT: ${{ secrets.ALERT_RECIPIENT }}
           PUBLISH_BRANCH: ${{ github.ref_name }}
         run: |
           git config user.name  "github-actions[bot]"

@@ -6,6 +6,8 @@ from email.mime.text import MIMEText
 from html import escape
 from urllib.parse import urlparse
 
+from access import mask_email
+
 
 def _smtp_creds() -> tuple[str, str]:
     addr = os.environ.get("GMAIL_ADDRESS", "")
@@ -289,13 +291,14 @@ def build_test_email() -> tuple[str, str, str]:
 def test_mail(recipient: str = "") -> None:
     recipient = recipient.strip()
     if not recipient:
+        from access import alert_recipient
         from config_store import load_settings
-        recipient = load_settings().get("recipient_email", "").strip()
+        recipient, _ = alert_recipient(load_settings())
     if not recipient:
         raise RuntimeError("No recipient email configured")
     subject, html, text = build_test_email()
     _send(recipient, subject, html, text)
-    print(f"[notifier] Test mail sent to {recipient}")
+    print(f"[notifier] Test mail sent to {mask_email(recipient)}")
 
 
 # keep pytest from collecting the sender above as a test when it imports this module
@@ -307,7 +310,7 @@ def send_alerts(jobs: list[dict], recipient: str) -> None:
         return
     subject, html, text = build_alert_email(jobs)
     _send(recipient, subject, html, text)
-    print(f"[notifier] Alert sent to {recipient} with {len(jobs)} job(s)")
+    print(f"[notifier] Alert sent to {mask_email(recipient)} with {len(jobs)} job(s)")
 
 
 if __name__ == "__main__":
