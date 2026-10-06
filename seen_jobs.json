@@ -997,10 +997,11 @@
     "date": "Oct 6, 05:26",
     "first_seen": "2026-10-06T05:26:57.018937+00:00",
     "id": "Accenture_ISSRRN000656_-_Infra_Tech_Support_Practi",
-    "notified": false,
+    "notified": true,
     "company_id": "accenture",
-    "notify_state": "claimed",
-    "claimed_at": "2026-10-06T05:27:02.759250+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-10-06T05:27:02.759250+00:00",
+    "notified_at": "2026-10-06T05:27:06.251097+00:00"
   },
   {
     "title": "ISSRRN000733 - Infra Tech Support Practitioner",
@@ -1037,9 +1038,10 @@
     "date": "Oct 6, 05:26",
     "first_seen": "2026-10-06T05:26:57.018937+00:00",
     "id": "Accenture_ISSRRN000733_-_Infra_Tech_Support_Practi",
-    "notified": false,
+    "notified": true,
     "company_id": "accenture",
-    "notify_state": "claimed",
-    "claimed_at": "2026-10-06T05:27:02.759250+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-10-06T05:27:02.759250+00:00",
+    "notified_at": "2026-10-06T05:27:06.251097+00:00"
   }
 ]
