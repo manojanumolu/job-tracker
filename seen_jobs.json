@@ -1043,5 +1043,48 @@
     "notify_state": "sent",
     "claimed_at": "2026-10-06T05:27:02.759250+00:00",
     "notified_at": "2026-10-06T05:27:06.251097+00:00"
+  },
+  {
+    "title": "IN_Specialist 3_ Frontend Developer_AppTech_Advisory_Pune",
+    "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Pune/IN-Specialist-3--Frontend-Developer-AppTech-Advisory-Pune_DB_006073-2",
+    "company": "PwC",
+    "location": "Pune · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-2+ years'",
+    "evidence": {
+      "experience": [
+        "0-2+ years",
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "We are seeking a talented and enthusiastic Front-End Developer with 0-2+ years of experience. The ideal candidate will be responsible for building high-quality,",
+        "0-2 years",
+        "Experience in working with RESTful APIs and third-party libraries.",
+        "Hands-on experience in developing cross-platform mobile applications using Flutter."
+      ],
+      "fresher_evidence": "0-2+ years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:006073-2",
+      "canonical_url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Pune/IN-Specialist-3--Frontend-Developer-AppTech-Advisory-Pune_DB_006073-2",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "pwc|workday:006073-2",
+    "date": "Oct 6, 13:01",
+    "first_seen": "2026-10-06T13:01:59.564250+00:00",
+    "id": "PwC_IN_Specialist_3__Frontend_Developer_AppT",
+    "notified": false,
+    "company_id": "pwc",
+    "notify_state": "claimed",
+    "claimed_at": "2026-10-06T13:02:08.597436+00:00"
   }
 ]
