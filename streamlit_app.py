@@ -67,10 +67,13 @@ from access import (
     Cooldown,
     OwnerRequired,
     account_is_admin,
+    account_matches_source,
+    admin_emails,
     admins_configured,
     alert_recipient,
     mask_email,
     owner_configured,
+    owner_password_enabled,
     owner_session_valid,
     password_matches,
     send_test_email,
@@ -192,10 +195,10 @@ def auth_event(message: str) -> None:
     _auth_events().append(f"{time.strftime('%H:%M:%S', time.gmtime())}Z APP gate: {_redact(message)}")
 
 
-# what a failed Google code exchange means, for the login page
+# what a failed Google code exchange means, for the login page — said to
+# visitors, so the error code at most, never how the app is configured
 _EXCHANGE_HINTS = {
-    "invalid_client": ("Google rejected this app's sign-in credentials (invalid_client). "
-                       "The app owner needs to update the Google OAuth client secret in the app's settings."),
+    "invalid_client": "Google sign-in isn't working right now (invalid_client). Please try again later.",
     "invalid_grant": "That Google sign-in had expired or was already used. Please continue with Google again.",
 }
 _EXCHANGE_NOTICE_S = 300
@@ -208,18 +211,18 @@ def recent_google_failure(now: float | None = None) -> str:
     if not ex.get("at") or (time.time() if now is None else now) - ex["at"] > _EXCHANGE_NOTICE_S:
         return ""
     code = ex.get("code") or "unknown"
-    return _EXCHANGE_HINTS.get(code, f"Google sign-in couldn't be completed ({code}). Please try again; if it keeps "
-                                     "happening, the app owner should check the Google sign-in settings.")
+    return _EXCHANGE_HINTS.get(code, f"Google sign-in couldn't be completed ({code}). Please try again.")
 
 
 _auth_capture()
 
-# ── sign-in diagnostics (read-only) ───────────────────────────────────────────
+# ── sign-in diagnostics (read-only, admins only) ─────────────────────────────
 # ?diag=auth shows what THIS session's server process can see of the sign-in
 # plumbing — counts, cookie NAMES and booleans only, never a value, token or
-# address — so a deployment can be checked without its logs. It stops before
-# any data is loaded.
-if st.query_params.get("diag") == "auth":
+# address — so a deployment can be checked without its logs. It runs only
+# after the sign-in gate, for an admin (visitors get the login page, members
+# the normal app), and stops before any data is loaded.
+def render_auth_diag() -> None:
     def _xsrf_effective():
         try:
             from streamlit.web.server.server_util import is_xsrf_enabled
@@ -337,7 +340,7 @@ if st.query_params.get("diag") == "auth":
         + "<h4>Recent sign-in events (this server process)</h4><pre id='auth-events'>"
         + (escape("\n".join(_auth_events())) or "none recorded") + "</pre>")
     print("[auth-diag] " + " | ".join(f"{a}={b}" for a, b in _auth_diag()), flush=True)
-    st.stop()
+
 
 # ── theme ─────────────────────────────────────────────────────────────────────
 # Design tokens. Two hand-tuned palettes (dark is designed, not inverted):
@@ -1364,7 +1367,18 @@ def _guards() -> dict:
 
 
 def is_owner() -> bool:
-    return owner_session_valid(st.session_state)
+    """May this session make changes right now? Every protected operation
+    calls this immediately before acting. Behind the sign-in gate the role
+    stored by this run's gate must also still match its source: Streamlit's
+    verified Google identity, or an unexpired Firebase password sign-in for
+    the same account."""
+    if not owner_session_valid(st.session_state):
+        return False
+    if not AUTH_GATE:
+        return True                       # legacy owner password, no sign-in configured
+    google = None if st.session_state.get("_signed_out") else _google_identity()
+    return account_matches_source(st.session_state.get(ACCOUNT_KEY), google,
+                                  firebase_auth.session_user(st.session_state))
 
 
 def sign_in(password: str) -> tuple[bool, str]:
@@ -1374,6 +1388,9 @@ def sign_in(password: str) -> tuple[bool, str]:
         return False, f"Too many failed attempts — try again in {int(wait // 60) + 1} min."
     if not owner_configured():
         return False, "Owner access isn't set up for this app."
+    if not owner_password_enabled():
+        # admins come from sign-in now: the old password grants nothing
+        return False, "Sign in with your account instead."
     if not password_matches(password):
         limiter.failed()
         log.warning("failed owner sign-in")
@@ -1583,6 +1600,9 @@ def _link_google_to_firebase(google: dict, config) -> None:
     if st.session_state.get("_fb_link_tried"):
         return
     st.session_state._fb_link_tried = True
+    if config is None:
+        st.session_state._fb_link = {"state": "unavailable"}
+        return
     token = _google_id_token()
     if token is None or firebase_auth.token_expired(token):
         st.session_state._fb_link = {"state": "stale"}
@@ -1625,6 +1645,12 @@ def resolve_account(google: dict | None, config) -> dict | None:
         account = {"email": "", "email_verified": False, "name": "Owner", "uid": "", "provider": "owner"}
     if account:
         st.session_state[ACCOUNT_KEY] = account
+        if not st.session_state.get("_auth_logged"):
+            # once per sign-in, for the server log only (?diag=auth is admins-only,
+            # so a broken admin list is diagnosed here): booleans and counts, no address
+            st.session_state._auth_logged = True
+            print(f"[auth] signed in: provider={account['provider']} email_verified={account['email_verified']} "
+                  f"admin={account_is_admin(account)} admin_list_entries={len(admin_emails())}", flush=True)
     else:
         st.session_state.pop(ACCOUNT_KEY, None)
     return account
@@ -1632,11 +1658,17 @@ def resolve_account(google: dict | None, config) -> dict | None:
 
 def account_sign_out() -> bool:
     """End this sign-in. Returns True when Streamlit's Google sign-in is
-    being ended too (the browser is then redirected)."""
-    for k in (firebase_auth.SESSION_KEY, ACCOUNT_KEY, OWNER_SESSION_KEY, "_fb_link", "_fb_link_tried", "_login_error"):
-        st.session_state.pop(k, None)
+    being ended too (the browser is then redirected).
+    Everything this browser session held for the account is dropped — the
+    sign-in itself, admin unlocks, and per-user leftovers such as the last
+    test-email result or form contents — so whoever signs in next in this
+    tab starts clean. Only the theme survives."""
+    google = _google_identity() is not None
+    for k in list(st.session_state.keys()):
+        if k != "dark_mode":
+            del st.session_state[k]
     st.session_state._signed_out = True
-    if _google_identity() is not None:
+    if google:
         st.logout()              # clears Streamlit's sign-in cookie, back to the login page
         return True
     return False
@@ -1648,7 +1680,7 @@ def firebase_sign_in(email: str, password: str) -> tuple[bool, str]:
     if wait:
         return False, f"Too many failed attempts — try again in {int(wait // 60) + 1} min."
     if _AUTH_CONFIG is None:
-        return False, _AUTH_PROBLEM
+        return False, "Email sign-in is unavailable right now."
     try:
         user = firebase_auth.sign_in_with_password(email, password, config=_AUTH_CONFIG)
     except firebase_auth.FirebaseAuthError as e:
@@ -1670,6 +1702,7 @@ def _login_submit() -> None:
         st.session_state.pop("_login_error", None)
     else:
         st.session_state._login_error = msg
+        st.session_state._login_error_from = "email"     # keeps the email form open
 
 
 def _login_owner_submit() -> None:
@@ -1682,6 +1715,7 @@ def _login_owner_submit() -> None:
         st.session_state.pop("_login_error", None)
     else:
         st.session_state._login_error = msg
+        st.session_state._login_error_from = "owner"
 
 
 def _login_google() -> None:
@@ -1695,35 +1729,48 @@ def _login_google() -> None:
 
 _LOGIN_CSS = """
 [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"], .st-key-mnav { display: none !important; }
+[data-testid="stMainBlockContainer"], .block-container { margin: 0 auto !important; }
 .login-head, .login-head *, .st-key-login_card, .login-foot,
 .st-key-login_card *:not([data-testid="stIconMaterial"]):not([data-testid="stExpanderIcon"]):not(.ms) { font-family: var(--font) !important; }
-.login-head { max-width: 440px; margin: 7vh auto 0; text-align: center; }
-.login-head .lmark { width: 54px; height: 54px; margin: 0 auto 14px; border-radius: 16px; display: grid; place-items: center;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow: 0 14px 30px -14px var(--accent); }
-.login-head .lmark img { width: 34px; height: 34px; }
+.login-head { max-width: 460px; margin: 8vh auto 0; text-align: center; }
+.login-head .lmark { display: block; width: 56px; height: 56px; margin: 0 auto 18px; border-radius: 16px;
+  box-shadow: 0 14px 30px -12px var(--accent), 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
 .login-head .eyebrow { justify-content: center; }
-.login-head h1 { margin: 6px 0 10px; font-size: 30px; font-weight: 800; line-height: 1.15; letter-spacing: -.02em; color: var(--text); }
-.login-head p { margin: 0 auto; max-width: 360px; color: var(--muted); font-size: 14.5px; line-height: 1.55; }
-.st-key-login_card { max-width: 420px; margin: 22px auto 0 !important; padding: 26px 24px 22px !important;
-  border: 1px solid var(--border) !important; border-radius: var(--r-lg) !important; background: var(--surface) !important;
-  box-shadow: var(--shadow-lg, 0 24px 60px -32px rgba(15, 23, 42, .35)) !important; }
-.login-or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; font-weight: 600;
-  text-transform: uppercase; letter-spacing: .06em; margin: 4px 0; }
-.login-or::before, .login-or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.stApp .login-head h1 { margin: 10px 0 12px !important; font-size: 34px; line-height: 1.15; font-weight: 800;
+  letter-spacing: -0.028em; word-spacing: .06em; text-wrap: balance; color: var(--text); }
+.login-head h1 em { font-style: normal; background: linear-gradient(92deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.login-head p { margin: 0 auto; max-width: 380px; color: var(--text-2); font-size: 15px; line-height: 1.6; }
+.st-key-login_card { max-width: 420px; margin: 28px auto 0 !important; padding: 26px 24px 22px !important; gap: 14px !important;
+  border: 1px solid var(--border) !important; border-radius: var(--r-xl) !important; background: var(--surface) !important;
+  box-shadow: var(--hi), var(--shadow-lg) !important; }
+.st-key-login_card [data-testid^="stBaseButton"] { min-height: 46px; border-radius: var(--r) !important; font-weight: 700 !important; }
+.login-hint { margin: -4px 0 2px; text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.st-key-login_card [data-testid="stExpander"] details { background: var(--surface-2) !important; }
+.st-key-login_card [data-testid="stExpander"] summary p { font-size: 13.5px !important; color: var(--text-2) !important; }
 .login-err { display: flex; gap: 9px; align-items: flex-start; padding: 11px 13px; border-radius: 12px; font-size: 13.5px; line-height: 1.5;
   color: var(--text); background: color-mix(in srgb, var(--red) 9%, transparent); border: 1px solid color-mix(in srgb, var(--red) 35%, var(--border)); }
-.login-foot { max-width: 420px; margin: 14px auto 0; text-align: center; color: var(--muted); font-size: 12.5px; }
+.login-err .ms { color: var(--red); }
+.login-off { display: flex; gap: 9px; align-items: flex-start; color: var(--text-2); font-size: 13.5px; line-height: 1.5; margin: 0; }
+.login-foot { max-width: 420px; margin: 18px auto 0; display: flex; justify-content: center; align-items: center; gap: 6px;
+  color: var(--muted); font-size: 12.5px; }
+@media (max-width: 640px) {
+  .login-head { margin-top: 3vh; } .stApp .login-head h1 { font-size: 28px; }
+  .st-key-login_card { padding: 22px 18px 18px !important; }
+}
 """
 
 
 def render_login_page() -> None:
+    """The only thing a visitor ever sees. Messages here are for people,
+    not operators: what exactly is misconfigured goes to the server log."""
     logo = _logo_data_uri()
-    img = f'<img src="{logo}" alt="">' if logo else ""
     st.html(f"<style>{_LOGIN_CSS}</style>"
-            f'<div class="login-head"><div class="lmark">{img}</div>'
-            '<div class="eyebrow">Fresher Job Tracker</div>'
+            '<div class="login-head">' + (f'<img class="lmark" src="{logo}" alt="">' if logo else "")
+            + '<div class="eyebrow sparked">Fresher Job Tracker</div>'
             '<h1>Sign in to your <em>opportunities</em></h1>'
             '<p>Fresher and entry-level roles in India, read from each company\'s own careers page.</p></div>')
+    email_ok = _AUTH_CONFIG is not None
     with st.container(key="login_card"):
         err = st.session_state.get("_login_error") or (recent_google_failure() if _GOOGLE else "")
         if err:
@@ -1731,30 +1778,50 @@ def render_login_page() -> None:
         if _GOOGLE:
             st.button("Continue with Google", key="btn_login_google", type="primary", use_container_width=True,
                       icon=":material/account_circle:", on_click=_login_google)
-            st.html('<div class="login-or">or sign in with email</div>')
-        with st.form("login_form", clear_on_submit=True, border=False):
-            st.text_input("Email", key="login_email", autocomplete="email")
-            st.text_input("Password", type="password", key="login_pw", autocomplete="current-password")
-            st.form_submit_button("Sign in", key="btn_login_email", icon=":material/login:",
-                                  use_container_width=True, on_click=_login_submit)
-        if _GOOGLE_PROBLEM and not _GOOGLE:
-            st.html(f'<p class="note">{_ms("info", "s16")} {escape(_GOOGLE_PROBLEM)}</p>')
-        # until admins come from sign-in (JT_ADMIN_EMAILS), the owner can always
-        # get in — even if Google or Firebase misbehaves
-        if owner_configured() and not admins_configured():
-            with st.expander("Trouble signing in? Use the owner password"):
+            st.html('<p class="login-hint">Uses your Google account — no new password to remember.</p>')
+        elif _GOOGLE_PROBLEM:
+            st.html(f'<p class="login-off">{_ms("info", "s20")}<span>Google sign-in is unavailable right now.</span></p>')
+        if email_ok:
+            # Google is the main way in; email + password stays one click away
+            open_form = not _GOOGLE or st.session_state.get("_login_error_from") == "email"
+            box = (st.expander("Sign in with email and password", icon=":material/mail:", expanded=open_form)
+                   if _GOOGLE else st.container())
+            with box:
+                with st.form("login_form", clear_on_submit=True, border=False):
+                    st.text_input("Email", key="login_email", autocomplete="email")
+                    st.text_input("Password", type="password", key="login_pw", autocomplete="current-password")
+                    st.form_submit_button("Sign in", key="btn_login_email", icon=":material/login:",
+                                          type="secondary" if _GOOGLE else "primary",
+                                          use_container_width=True, on_click=_login_submit)
+        elif not _GOOGLE:
+            st.html(f'<p class="login-off">{_ms("info", "s20")}<span>Sign-in is unavailable right now. '
+                    "Please try again later.</span></p>")
+        # break-glass, only until admins come from sign-in (JT_ADMIN_EMAILS):
+        # the owner can get in even if Google or Firebase misbehaves
+        if owner_password_enabled():
+            with st.expander("Trouble signing in? Use the owner password", icon=":material/key:",
+                             expanded=st.session_state.get("_login_error_from") == "owner"):
                 with st.form("login_owner_form", clear_on_submit=True, border=False):
                     st.text_input("Owner password", type="password", key="login_owner_pw",
                                   autocomplete="current-password")
                     st.form_submit_button("Sign in as owner", key="btn_login_owner", icon=":material/admin_panel_settings:",
                                           use_container_width=True, on_click=_login_owner_submit)
-    st.html('<div class="login-foot">Private app — accounts are for invited users.</div>')
+    st.html(f'<div class="login-foot">{_ms("lock", "s16")}<span>Private workspace · for invited users only</span></div>')
 
 
 _AUTH_CONFIG, _AUTH_PROBLEM, _AUTH_PRESENT = _firebase_config()
-AUTH_GATE = _AUTH_CONFIG is not None
 _promote_admin_setting()
+# Fail closed: once ANY part of sign-in is set up — a Firebase setting,
+# Google's [auth] section or the admin list — nothing of the app is shown
+# without signing in. A typo in one secret makes a sign-in method
+# unavailable; it never opens the app to everyone.
+AUTH_GATE = (_AUTH_CONFIG is not None or _AUTH_PRESENT or isinstance(_secrets_dict().get("auth"), dict)
+             or admins_configured())
 _GOOGLE, _GOOGLE_PROBLEM = _google_setup() if AUTH_GATE else (None, "")
+if AUTH_GATE and _AUTH_CONFIG is None:
+    log.warning("email sign-in unavailable: %s", _AUTH_PROBLEM)       # names settings, never values
+if _GOOGLE_PROBLEM:
+    log.warning("Google sign-in unavailable: %s", _GOOGLE_PROBLEM)
 ACCOUNT: dict | None = None
 if AUTH_GATE:
     ACCOUNT = resolve_account(_GOOGLE, _AUTH_CONFIG)
@@ -1763,6 +1830,10 @@ if AUTH_GATE:
         st.stop()
 else:
     st.session_state.pop(ACCOUNT_KEY, None)
+
+if st.query_params.get("diag") == "auth" and is_owner():
+    render_auth_diag()
+    st.stop()
 
 
 def account_label(account: dict) -> str:
@@ -2750,7 +2821,11 @@ def page_email():
                 f'<div class="detail-chips"><span class="chip num">{_ms("mail", "s16")}<span>{escape(shown) or "No recipient set"}</span></span></div>')
         how = ("update the <span class=\"num\">ALERT_RECIPIENT</span> secret in the GitHub repository "
                "(Settings → Secrets → Actions) and in this app's Streamlit secrets")
-        if recipient_source == "secret":
+        if not is_owner():
+            # where the address is configured is admin business
+            note = (f'{_ms("lock", "s16")} Managed by an admin. Only admins see the full address.' if recipient
+                    else f'{_ms("info", "s16")} Alerts are off until an admin sets a recipient.')
+        elif recipient_source == "secret":
             note = (f'{_ms("lock", "s16")} Kept in a private secret, so it never appears in the public repository. '
                     f"To change it, {how}.")
         elif recipient_source == "settings.json":
@@ -2758,8 +2833,6 @@ def page_email():
                     f"GitHub repository. To keep it private, {how}, then remove it from settings.json.</span>")
         else:
             note = f'{_ms("info", "s16")} No recipient is set. To turn alerts on, {how}.'
-        if not is_owner() and recipient:
-            note += " Only the owner sees the full address."
         st.html(f'<p class="note">{note}</p>')
 
     with st.container(key="test_panel"):
@@ -2818,28 +2891,27 @@ def account_card() -> None:
                 f'<h2 class="section-title">{escape(account_label(ACCOUNT))}</h2>'
                 f'<p class="section-sub">Signed in with {method}'
                 + (f' · {escape(ACCOUNT["email"])}' if ACCOUNT.get("email") else "") + '</p></div></div>')
+        # Firebase IDs and the reasons a link failed are for admins; a member
+        # sees only whether their account is linked
         link = st.session_state.get("_fb_link") or {}
         if ACCOUNT.get("provider") == "owner":
             fb = "— (owner password; sign in with Google to link your Firebase account)"
         elif ACCOUNT.get("uid"):
-            fb = f'<span class="num">{escape(ACCOUNT["uid"])}</span>'
-        elif link.get("state") == "failed":
+            fb = f'<span class="num">{escape(ACCOUNT["uid"])}</span>' if admin else "Linked"
+        elif link.get("state") == "failed" and admin:
             fb = (f'Not linked — Firebase refused the Google sign-in <span class="num">({escape(link.get("code") or "")})</span>'
                   + (f'<span class="kv-note">{escape(_GOOGLE_ERROR_HINTS[link["code"]])}</span>'
                      if link.get("code") in _GOOGLE_ERROR_HINTS else ""))
+        elif link.get("state") in ("failed", "unavailable"):
+            fb = "Not linked"
         else:
             fb = "Linked at your next Google sign-in"
-        if admin:
-            role = "Admin — can manage companies, jobs, checks and email"
-        elif admins_configured():
-            role = "Member — read-only"
-        else:
-            role = "Member — read-only (admins are set with the JT_ADMIN_EMAILS secret)"
+        role = "Admin — can manage companies, jobs, checks and email" if admin else "Member — read-only"
         rows = [("Role", role), ("Email verified", "Yes" if ACCOUNT.get("email_verified") else "No"), ("Firebase account", fb)]
         st.html('<dl class="kv">' + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in rows) + "</dl>")
         # Until JT_ADMIN_EMAILS exists the legacy owner password still unlocks
         # changes — tucked away here, never a second login screen.
-        if not admins_configured() and owner_configured():
+        if owner_password_enabled():
             with st.expander("Admin access (until JT_ADMIN_EMAILS is set)", icon=":material/admin_panel_settings:",
                              expanded=False):
                 if is_owner():
@@ -2908,12 +2980,7 @@ def page_settings():
                 st.rerun()
     if AUTH_GATE:
         account_card()
-    elif _AUTH_PRESENT:
-        with st.container(key="set_firebase"):
-            st.html(f'<div class="set-head"><span class="ic">{_ms("key_off")}</span><div><div class="eyebrow">Sign-in</div>'
-                    '<h2 class="section-title">Sign-in isn’t available yet</h2>'
-                    f'<p class="section-sub">{escape(_AUTH_PROBLEM)}</p></div></div>')
-    if not AUTH_GATE:
+    else:
         owner_card()
     with st.container(key="set_data"):
         synced = bool(os.environ.get("GITHUB_TOKEN"))
