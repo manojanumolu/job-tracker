@@ -458,12 +458,17 @@ def test_visitor_sees_only_the_login_page(app, google_env):
     assert API_KEY not in html
 
 
-def test_partial_setup_keeps_the_app_open_and_says_why(app, no_env):
-    at = app([], page="settings", secrets={"FIREBASE_WEB_API_KEY": API_KEY})
-    assert not _login_page(at)
+def test_partial_setup_fails_closed_without_naming_settings(app, no_env):
+    """A half-configured Firebase never opens the app to everyone (it used
+    to); visitors are told sign-in is unavailable, not which setting is off."""
+    at = app([NEW_RECORD], secrets={"FIREBASE_WEB_API_KEY": API_KEY}, owner=False)
+    assert _login_page(at)
     html = _html(at)
-    assert "Sign-in isn’t available yet" in html and "FIREBASE_PROJECT_ID is missing" in html
-    assert "Owner access" in html and API_KEY not in html
+    assert "Graduate Software Engineer" not in html and "nav_home" not in _buttons(at)
+    assert "Sign-in is unavailable right now" in html and "btn_login_email" not in _buttons(at)
+    assert "FIREBASE_PROJECT_ID" not in html and API_KEY not in html
+    # the owner break-glass still works while no admin list exists
+    assert "login_owner_pw" in {t.key for t in at.text_input}
 
 
 @pytest.mark.parametrize("auth, provider", [
@@ -476,10 +481,14 @@ def test_continue_with_google_starts_streamlit_login(app, google_env, auth, prov
     assert google_env["calls"]["login"] == [provider]
 
 
-def test_incomplete_google_setup_hides_the_button_and_explains(app, google_env):
-    at = app([], secrets={**FB_SECRETS, "auth": {**_without(AUTH_BASE, "expose_tokens"), **GOOGLE_CLIENT}}, owner=False)
+def test_incomplete_google_setup_hides_the_button_and_explains(app, google_env, caplog):
+    with caplog.at_level(logging.WARNING, logger="streamlit_app"):
+        at = app([], secrets={**FB_SECRETS, "auth": {**_without(AUTH_BASE, "expose_tokens"), **GOOGLE_CLIENT}}, owner=False)
     assert _login_page(at) and "btn_login_google" not in _buttons(at)
-    assert "expose_tokens" in _html(at) and "btn_login_email" in _buttons(at)
+    html = _html(at)
+    assert "Google sign-in is unavailable right now" in html and "btn_login_email" in _buttons(at)
+    assert "expose_tokens" not in html                       # the details are for the server log
+    assert "expose_tokens" in caplog.text
 
 
 # --- Google ------------------------------------------------------------------
@@ -501,7 +510,16 @@ def test_google_sign_in_opens_the_app_with_a_persistent_account_chip(app, google
     assert len(fb.requests) == 1
     _nav(at, "settings")
     html = _html(at)
-    assert "Signed in with Google" in html and UID in html and "Member — read-only" in html
+    assert "Signed in with Google" in html and "Member — read-only" in html
+    assert UID not in html and "<dd>Linked</dd>" in html          # Firebase IDs are for admins
+
+
+def test_admin_sees_the_firebase_uid(app, google_env, monkeypatch):
+    monkeypatch.setenv("JT_ADMIN_EMAILS", EMAIL)
+    google_env["firebase"](ok_google_answer())
+    google_env["set_user"](FakeUser(token=_fresh_google_token()))
+    at = app([], page="settings", secrets=GATED, owner=False)
+    assert UID in _html(at) and "Admin — can manage" in _html(at)
 
 
 def test_reload_after_an_hour_stays_signed_in_without_google_again(app, google_env):
@@ -522,7 +540,8 @@ def test_reload_after_an_hour_stays_signed_in_without_google_again(app, google_e
     ("INVALID_IDP_RESPONSE : Invalid Idp Response", "INVALID_IDP_RESPONSE", "isn't allowed by the Firebase project"),
     ("OPERATION_NOT_ALLOWED", "OPERATION_NOT_ALLOWED", "Google provider isn't enabled"),
 ])
-def test_firebase_link_failure_never_blocks_and_is_explained(app, google_env, message, code, hint):
+def test_firebase_link_failure_never_blocks_and_is_explained(app, google_env, monkeypatch, message, code, hint):
+    monkeypatch.setenv("JT_ADMIN_EMAILS", EMAIL)                          # the explanation is for admins
     fb = google_env["firebase"](error_answer(message))
     google_env["set_user"](FakeUser(token=_fresh_google_token()))
     at = app([], page="settings", secrets=GATED, owner=False)
@@ -531,6 +550,15 @@ def test_firebase_link_failure_never_blocks_and_is_explained(app, google_env, me
     assert f"({code})" in html and hint in html and 'class="jt-toast"' not in _html(at)
     at.run()
     assert len(fb.requests) == 1                                          # once per session
+
+
+def test_firebase_link_failure_is_not_explained_to_members(app, google_env):
+    google_env["firebase"](error_answer("INVALID_IDP_RESPONSE : Invalid Idp Response"))
+    google_env["set_user"](FakeUser(token=_fresh_google_token()))
+    at = app([], page="settings", secrets=GATED, owner=False)
+    html = unescape(_html(at))
+    assert not _login_page(at) and "<dd>Not linked</dd>" in html
+    assert "INVALID_IDP_RESPONSE" not in html and "Firebase project" not in html
 
 
 def test_google_sign_out(app, google_env):
@@ -678,7 +706,7 @@ def test_until_admins_are_set_the_owner_password_is_a_tucked_away_unlock(app, go
     google_env["set_user"](FakeUser(token=_fresh_google_token()))
     at = app([NEW_RECORD], page="settings", secrets=GATED, owner=False)
     assert not _login_page(at) and "Owner access" not in _html(at)           # never a second login screen
-    assert "Member — read-only (admins are set with the JT_ADMIN_EMAILS secret)" in _html(at)
+    assert "Member — read-only" in _html(at) and "JT_ADMIN_EMAILS" not in _html(at)
     assert "owner_pw" in {t.key for t in at.text_input}
     at.text_input(key="owner_pw").set_value(OWNER_PASSWORD)
     at.button(key="btn_sign_in").click().run()
@@ -785,8 +813,8 @@ def test_invalid_client_is_explained_on_the_login_page(app, google_env, auth_cap
         at.run()
         html = unescape(_html(at))
         assert _login_page(at)
-        assert "Google rejected this app's sign-in credentials (invalid_client)" in html
-        assert "update the Google OAuth client secret" in html
+        assert "Google sign-in isn't working right now (invalid_client)" in html
+        assert "client secret" not in html.lower()               # how the app is configured stays private
         assert 'class="jt-toast"' not in _html(at)
 
 
@@ -821,10 +849,10 @@ def test_no_notice_without_a_failure(app, google_env, auth_capture):
     assert 'class="login-err"' not in _html(at)
 
 
-def test_diag_page_lists_the_redacted_failure(app, google_env, auth_capture):
+def test_diag_page_lists_the_redacted_failure(app, google_env, auth_capture, monkeypatch):
     at = app([], secrets=GATED, owner=False)
     _streamlit_reports_failed_exchange("invalid_client: The provided client secret is invalid.")
-    diag = app([], query={"diag": "auth"}, secrets=GATED, owner=False)
+    diag = _diag_as_admin(app, google_env, monkeypatch, GATED)
     html = _html(diag)
     assert "Sign-in diagnostics" in html and "token exchange failed" in html
     assert "OAuthError: invalid_client: The provided client secret is invalid." in unescape(html)
@@ -832,8 +860,39 @@ def test_diag_page_lists_the_redacted_failure(app, google_env, auth_capture):
 
 
 # ---------------------------------------------------------------------------
-# ?diag=auth reports where JT_ADMIN_EMAILS is — names/booleans/counts only
+# ?diag=auth is for admins only: it runs after the sign-in gate
 # ---------------------------------------------------------------------------
+
+DIAG_ADMIN = "diag-admin@example.net"
+
+
+def _diag_as_admin(app, google_env, monkeypatch, secrets):
+    """Open ?diag=auth as a signed-in admin. The admin list comes from the
+    environment (it wins over st.secrets), so the secrets under test are
+    only inspected by the page, never used to grant the viewer access."""
+    monkeypatch.setenv("JT_ADMIN_EMAILS", DIAG_ADMIN)
+    google_env["firebase"](ok_google_answer())            # Firebase is never contacted
+    google_env["set_user"](FakeUser(token=_fresh_google_token(), email=DIAG_ADMIN))
+    return app([], query={"diag": "auth"}, secrets={**GATED, **secrets}, owner=False)
+
+
+def test_visitors_never_see_the_diag_page(app, google_env, auth_capture):
+    _streamlit_reports_failed_exchange("invalid_client: The provided client secret is invalid.")
+    at = app([], query={"diag": "auth"}, secrets={"JT_ADMIN_EMAILS": EMAIL, **GATED}, owner=False)
+    html = _html(at)
+    assert _login_page(at) and "Sign-in diagnostics" not in html
+    assert "admin-diag" not in html and "auth-events" not in html and "[auth]" not in html
+
+
+def test_members_never_see_the_diag_page(app, google_env, admins):
+    admins("boss@example.org")
+    google_env["firebase"](ok_google_answer())
+    google_env["set_user"](FakeUser(token=_fresh_google_token()))
+    at = app([NEW_RECORD], query={"diag": "auth"}, secrets=GATED, owner=False)
+    html = _html(at)
+    assert not _login_page(at) and "Sign-in diagnostics" not in html and "admin-diag" not in html
+    assert "Graduate Software Engineer" in html                       # just the normal app
+
 
 def _admin_rows(at) -> dict:
     import re as _re
@@ -843,12 +902,12 @@ def _admin_rows(at) -> dict:
 
 
 @pytest.mark.parametrize("secrets, found, top", [
-    ({"JT_ADMIN_EMAILS": EMAIL, **FB_SECRETS}, "<top level>", "True"),
-    ({**FB_SECRETS, "auth": {**AUTH_GOOGLE, "JT_ADMIN_EMAILS": EMAIL}}, "[auth]", "False"),
-    ({**FB_SECRETS, "firebase": {"JT_ADMIN_EMAILS": EMAIL}}, "[firebase]", "False"),
+    ({"JT_ADMIN_EMAILS": EMAIL}, "<top level>", "True"),
+    ({"auth": {**AUTH_GOOGLE, "JT_ADMIN_EMAILS": EMAIL}}, "[auth]", "False"),
+    ({"firebase": {"JT_ADMIN_EMAILS": EMAIL}}, "[firebase]", "False"),
 ])
-def test_admin_diag_locates_the_key(app, no_env, secrets, found, top):
-    at = app([], query={"diag": "auth"}, secrets=secrets, owner=False)
+def test_admin_diag_locates_the_key(app, google_env, monkeypatch, secrets, found, top):
+    at = _diag_as_admin(app, google_env, monkeypatch, secrets)
     rows = _admin_rows(at)
     assert rows["JT_ADMIN_EMAILS found in"] == found
     assert rows["JT_ADMIN_EMAILS_PRESENT_TOP_LEVEL"] == top
@@ -856,34 +915,42 @@ def test_admin_diag_locates_the_key(app, no_env, secrets, found, top):
     assert EMAIL not in _html(at) and EMAIL.lower() not in _html(at) and API_KEY not in _html(at)
 
 
-def test_admin_diag_counts_entries_only_where_the_app_looks(app, no_env):
-    at = app([], query={"diag": "auth"}, secrets={"JT_ADMIN_EMAILS": f"{EMAIL}, other@example.org", **FB_SECRETS}, owner=False)
+def test_admin_diag_counts_entries_only_where_the_app_looks(app, google_env, monkeypatch):
+    at = _diag_as_admin(app, google_env, monkeypatch, {"JT_ADMIN_EMAILS": f"{EMAIL}, other@example.org"})
     assert _admin_rows(at)["ADMIN_ENTRY_COUNT (in secrets)"] == "2"
-    at = app([], query={"diag": "auth"}, secrets={**FB_SECRETS, "firebase": {"JT_ADMIN_EMAILS": EMAIL}}, owner=False)
+    at = _diag_as_admin(app, google_env, monkeypatch, {"firebase": {"JT_ADMIN_EMAILS": EMAIL}})
     assert _admin_rows(at)["ADMIN_ENTRY_COUNT (in secrets)"] == "0"      # not a place the app reads
 
 
 @pytest.mark.parametrize("secrets, row, expected", [
-    ({"JT_ADMIN_EMAIL": EMAIL, **FB_SECRETS}, "similar key names (names only)", "JT_ADMIN_EMAIL"),
-    ({"JT_ADMIN_EMAILS": "no-at-sign-here", **FB_SECRETS}, "VALUE_HAS_AT_SIGN", "False"),
-    ({"JT_ADMIN_EMAILS": f" {EMAIL} ", **FB_SECRETS}, "value has leading/trailing spaces", "True"),
-    ({"JT_ADMIN_EMAILS": f"{EMAIL}​", **FB_SECRETS}, "value has non-ASCII / invisible characters", "True"),
-    ({"JT_ADMIN_EMAILS": [EMAIL], **FB_SECRETS}, "value type", "list"),
-    ({**FB_SECRETS}, "JT_ADMIN_EMAILS found in", "nowhere"),
+    ({"JT_ADMIN_EMAIL": EMAIL}, "similar key names (names only)", "JT_ADMIN_EMAIL"),
+    ({"JT_ADMIN_EMAILS": "no-at-sign-here"}, "VALUE_HAS_AT_SIGN", "False"),
+    ({"JT_ADMIN_EMAILS": f" {EMAIL} "}, "value has leading/trailing spaces", "True"),
+    ({"JT_ADMIN_EMAILS": f"{EMAIL}​"}, "value has non-ASCII / invisible characters", "True"),
+    ({"JT_ADMIN_EMAILS": [EMAIL]}, "value type", "list"),
+    ({}, "JT_ADMIN_EMAILS found in", "nowhere"),
 ])
-def test_admin_diag_flags_common_mistakes(app, no_env, secrets, row, expected):
-    at = app([], query={"diag": "auth"}, secrets=secrets, owner=False)
+def test_admin_diag_flags_common_mistakes(app, google_env, monkeypatch, secrets, row, expected):
+    at = _diag_as_admin(app, google_env, monkeypatch, secrets)
     assert _admin_rows(at)[row] == expected
     assert EMAIL not in _html(at) and EMAIL.lower() not in _html(at)
 
 
-def test_admin_diag_signed_in_checks(app, google_env):
-    google_env["set_user"](FakeUser(token=_fresh_google_token()))
-    at = app([], query={"diag": "auth"}, secrets={"JT_ADMIN_EMAILS": EMAIL, **GATED}, owner=False)
+def test_admin_diag_signed_in_checks(app, google_env, monkeypatch):
+    at = _diag_as_admin(app, google_env, monkeypatch, {})
     rows = _admin_rows(at)
     assert rows["SIGNED_IN_EMAIL_VERIFIED"] == "True" and rows["SIGNED_IN_EMAIL_ON_LIST"] == "True"
-    google_env["set_user"](FakeUser(token=_fresh_google_token(), email="someone@else.example", verified=False))
-    at = app([], query={"diag": "auth"}, secrets={"JT_ADMIN_EMAILS": EMAIL, **GATED}, owner=False)
-    rows = _admin_rows(at)
-    assert rows["SIGNED_IN_EMAIL_VERIFIED"] == "False" and rows["SIGNED_IN_EMAIL_ON_LIST"] == "False"
-    assert "someone@else.example" not in _html(at) and EMAIL.lower() not in _html(at)
+    assert DIAG_ADMIN not in _html(at)
+
+
+def test_signin_is_logged_with_booleans_only(app, google_env, admins, capsys):
+    """With ?diag=auth admins-only, the server log is where a broken admin
+    list is diagnosed: one line per sign-in, no address."""
+    admins("boss@example.org")
+    google_env["firebase"](ok_google_answer())
+    google_env["set_user"](FakeUser(token=_fresh_google_token()))
+    at = app([], secrets=GATED, owner=False)
+    at.run()
+    out = capsys.readouterr().out
+    assert out.count("[auth] signed in: provider=google.com email_verified=True admin=False admin_list_entries=1") == 1
+    assert EMAIL.lower() not in out and "boss@example.org" not in out

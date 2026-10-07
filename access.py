@@ -5,18 +5,17 @@ Admin rights, in order of preference:
   * Signed in (Firebase / Google) with a VERIFIED email listed in the
     JT_ADMIN_EMAILS secret. Once that secret is set it is the only way:
     there is no second password to type.
-  * Until it is set: the legacy owner password (JT_OWNER_PASSWORD).
+  * Until it is set: the legacy owner password (JT_OWNER_PASSWORD), a
+    break-glass only. Once JT_ADMIN_EMAILS is set the password is inert:
+    it can neither sign in nor grant anything.
 
 The signed-in account lives in server-side session state under
 ACCOUNT_KEY (written by the app's sign-in gate each run, never by the
 browser). Everyone else — visitors and signed-in non-admins — is read-only.
 
-Until real sign-in exists, the dashboard is readable by anyone with the URL
-(everything it shows is already public in the GitHub repository), but every
-change — dismiss/restore, adding or removing a company, dismissing all, Run
-check, test email — needs the owner password from the JT_OWNER_PASSWORD
-secret. The check is made on the server where each operation happens, not
-just by hiding buttons.
+Every change — dismiss/restore, adding or removing a company, dismissing
+all, Run check, test email — needs admin rights. The check is made on the
+server where each operation happens, not just by hiding buttons.
 
 The alert recipient is personal, and the repository is public, so it comes
 from the ALERT_RECIPIENT secret. The ``recipient_email`` field in
@@ -78,15 +77,46 @@ def admins_configured() -> bool:
     return bool(admin_emails())
 
 
-def account_is_admin(account) -> bool:
+def owner_password_enabled() -> bool:
+    """The legacy owner password works only while no admin list exists."""
+    return owner_configured() and not admins_configured()
+
+
+def account_is_admin(account, now: float | None = None) -> bool:
     """A signed-in account whose email is verified and on the allowlist.
     An unverified email (e.g. a fresh email/password account that merely
-    claims an address) never counts."""
+    claims an address) never counts, nor does a sign-in past its expiry."""
     if not isinstance(account, dict):
         return False
+    if "expires_at" in account:
+        try:
+            if float(account["expires_at"]) <= (time.time() if now is None else now):
+                return False
+        except (TypeError, ValueError):
+            return False
     email = account.get("email")
     return (account.get("email_verified") is True and isinstance(email, str)
             and email.strip().lower() in admin_emails())
+
+
+def account_matches_source(account, google, firebase_user) -> bool:
+    """Is ``account`` (what the sign-in gate stored for this session) still
+    backed by where it came from? Asked again right before a protected
+    operation, so stored session state alone never carries a role.
+    ``google`` is the identity Streamlit's st.login vouches for now (None if
+    signed out); ``firebase_user`` this session's unexpired Firebase sign-in."""
+    if not isinstance(account, dict):
+        return False
+    provider = account.get("provider")
+    if provider == "google.com":
+        return isinstance(google, dict) and bool(google.get("email")) and google.get("email") == account.get("email")
+    if provider == "password":
+        return (isinstance(firebase_user, dict) and firebase_user.get("provider") == "password"
+                and bool(firebase_user.get("uid")) and firebase_user.get("uid") == account.get("uid")
+                and firebase_user.get("email") == account.get("email"))
+    if provider == "owner":
+        return owner_password_enabled()
+    return False
 
 
 def owner_session_valid(session, now: float | None = None) -> bool:

@@ -335,7 +335,8 @@ def test_visitors_never_see_the_full_recipient(app, monkeypatch, page):
     html = _html(at)
     assert SECRET_ADDR not in html and "me@example.com" not in html
     if page == "email":
-        assert "p•••@example.org" in html and "Only the owner sees the full address" in html
+        assert "p•••@example.org" in html and "Only admins see the full address" in html
+        assert "ALERT_RECIPIENT" not in html                     # where it is configured is admin business
 
 
 def test_owner_sees_the_recipient_and_test_mail_uses_the_secret(app, monkeypatch):
