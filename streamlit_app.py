@@ -3036,7 +3036,7 @@ def my_alerts_card() -> None:
                 else "your sign-in email isn't verified, so personal alerts can't be turned on")
         st.html(f'<div class="set-head"><span class="ic">{_ms("person")}</span><div><div class="eyebrow">Your account</div>'
                 f'<h2 class="section-title">My alerts</h2><p class="section-sub">Saved to your own account. Sent to {dest}. '
-                'Personal delivery starts in a later update.</p></div></div>')
+                'New matching jobs are emailed after each scheduled scan, once each.</p></div></div>')
         with st.form("my_alerts_form", border=False):
             enabled = st.toggle("Email me new jobs", value=prefs["enabled"], key="my_alerts_on",
                                 disabled=not prefs["email"])

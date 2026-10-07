@@ -9,6 +9,7 @@ Safety: they refuse to run unless both hosts are on this machine and the
 project is a "demo-" project (Firebase never connects demo projects to real
 resources). Without the emulators they are skipped.
 """
+import hashlib
 import json
 import os
 import threading
@@ -62,8 +63,10 @@ def emu():
     r = httpx.put(f"http://{FS_HOST}/emulator/v1/projects/{PROJECT}:securityRules",
                   json={"rules": {"files": [{"name": "firestore.rules", "content": rules}]}}, timeout=10)
     assert r.status_code == 200, r.text                       # the repository's rules, as deployed
-    store, problem = user_store.configure({"firebase_service_account": _throwaway_service_account()}, PROJECT)
+    sa = _throwaway_service_account()
+    store, problem = user_store.configure({"firebase_service_account": sa}, PROJECT)
     assert store is not None and problem == ""
+    store.test_service_account_json = json.dumps(sa)        # the same credential, as the workflow passes it
     yield store
     firebase_admin.delete_app(store.identity.app)
 
@@ -341,3 +344,80 @@ def test_the_app_creates_and_reuses_the_profile_on_the_emulator(app, google_env,
     at.session_state["_acct_state"] = {**at.session_state["_acct_state"], "at": 0}
     at.run()
     assert _login_page(at) and "This account has been disabled." in _html(at)
+
+
+# --- the workflow's personal step, end to end on the emulators ---------------------
+
+def _workflow_env(emu, **extra):
+    env = {k: v for k, v in os.environ.items() if k not in ("GMAIL_ADDRESS", "GMAIL_APP_PASSWORD", "FIREBASE_PROJECT_ID")}
+    env.update({"FIREBASE_SERVICE_ACCOUNT": emu.test_service_account_json, "PYTHONWARNINGS": "ignore",
+                "FIRESTORE_EMULATOR_HOST": FS_HOST, "FIREBASE_AUTH_EMULATOR_HOST": AUTH_HOST}, **extra)
+    return env
+
+
+def test_the_workflow_step_with_failing_email_releases_and_touches_nothing_shared(emu):
+    """`python user_alerts.py --send` exactly as the step runs it, with no
+    Gmail credentials: every send fails, the claims are released for the
+    next run, the shared data file is untouched, and the log is counts only."""
+    import subprocess
+    import sys
+    seen_file = REPO / "seen_jobs.json"
+    before = hashlib.sha256(seen_file.read_bytes()).hexdigest()
+    _subscriber(emu, A, "alice@example.org")
+    emu.backend.set(f"users/{A}", {"notifications": {"enabled": True, "mode": "general",
+                                                     "enabled_at": "2000-01-01T00:00:00Z"}}, merge=True)
+    r = subprocess.run([sys.executable, "user_alerts.py", "--send"], cwd=REPO, env=_workflow_env(emu),
+                       capture_output=True, text=True, timeout=180)
+    out = r.stdout + r.stderr
+    assert r.returncode == 1 and '"failed": 1' in out and "Traceback" not in out
+    assert "alice@example.org" not in out and A not in out and "PRIVATE KEY" not in out
+    states = {d["fields"]["state"]["stringValue"] for d in _docs(f"users/{A}/deliveries").get("documents", [])}
+    assert states == {"pending"}                                          # released, retried next run
+    assert hashlib.sha256(seen_file.read_bytes()).hexdigest() == before
+
+
+def _cli_world(emu, tmp_path, monkeypatch, jobs):
+    import notifier
+    monkeypatch.setenv("FIREBASE_SERVICE_ACCOUNT", emu.test_service_account_json)
+    monkeypatch.delenv("FIREBASE_PROJECT_ID", raising=False)
+    monkeypatch.setattr(user_alerts, "BASE", tmp_path)
+    (tmp_path / "seen_jobs.json").write_text(json.dumps(jobs), "utf-8")
+    mail = Mailer()
+    monkeypatch.setattr(notifier, "send_alerts", mail)
+    return mail
+
+
+def test_the_cli_end_to_end_people_filters_and_account_states(emu, tmp_path, monkeypatch):
+    _subscriber(emu, A, "a@example.org")
+    emu.for_uid(A).watch("sanofi", {"sanofi", "pwc"})
+    emu.for_uid(A).set_watch_all(False)                                   # company scope: sanofi
+    _subscriber(emu, B, "b@example.org")
+    emu.for_uid(B).set_preferences("tailored", ["Data & analytics"], [], [])
+    emu.backend.set(f"users/{B}", {"notifications": {"enabled": True, "mode": "tailored",
+                                                     "enabled_at": "2030-01-01T00:00:00Z"}}, merge=True)
+    gone, off = "EmuGoneaaaaaaaaaaaaaaaaaaaaa3", "EmuOffaaaaaaaaaaaaaaaaaaaaaa4"
+    _subscriber(emu, gone, "gone@example.org")
+    auth.delete_user(gone, app=emu.identity.app)
+    _subscriber(emu, off, "off@example.org")
+    auth.update_user(off, disabled=True, app=emu.identity.app)
+    jobs = [_job(1, "pwc"), _job(2, "sanofi"), _job(3, "pwc", title="Data Analyst"),
+            {**_job(4, "sanofi"), "first_seen": "2029-12-01T00:00:00+00:00"}]          # before the cutoff
+    mail = _cli_world(emu, tmp_path, monkeypatch, jobs)
+    assert user_alerts.main(["--send"]) == 0
+    assert sorted(mail.sent) == [("a@example.org", [job_key(jobs[1])]), ("b@example.org", [job_key(jobs[2])])]
+    assert user_alerts.main(["--send"]) == 0 and len(mail.sent) == 2      # nothing twice
+
+
+def test_concurrent_cli_runs_on_the_emulator_send_once(emu, tmp_path, monkeypatch):
+    for i in range(3):
+        _subscriber(emu, f"EmuCli{i}aaaaaaaaaaaaaaaaaaaaa", f"cli{i}@example.org")
+    jobs = [_job(n) for n in range(3)]
+    mail = _cli_world(emu, tmp_path, monkeypatch, jobs)
+    threads = [threading.Thread(target=user_alerts.main, args=(["--send"],)) for _ in range(4)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    per = {}
+    for to, keys in mail.sent:
+        per.setdefault(to, []).extend(keys)
+    assert {to: sorted(k) for to, k in per.items()} == {f"cli{i}@example.org": sorted(job_key(j) for j in jobs)
+                                                        for i in range(3)}

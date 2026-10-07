@@ -227,8 +227,9 @@ def test_a_failed_send_is_retried_and_does_not_touch_anyone_else(store):
 def test_failed_send_errors_never_log_the_address(store, caplog):
     _person(store, A, "alice@example.org")
     user_alerts.run(store, [job(1)], Mailer(fail_for={"alice@example.org"}))
-    assert "personal alert for UserAa" in caplog.text and "released for the next run" in caplog.text
-    assert "alice@example.org" not in caplog.text and "a•••@example.org" in caplog.text
+    assert "a personal alert email failed (RuntimeError) — released for the next run" in caplog.text
+    assert "alice@example.org" not in caplog.text and "a•••" not in caplog.text and A not in caplog.text
+    assert "SMTP refused" not in caplog.text                              # never the exception message
 
 
 def test_concurrent_runs_never_send_twice(store):
@@ -294,8 +295,7 @@ def test_cli_with_a_broken_service_account_fails_without_leaking(monkeypatch, ca
 
 
 def test_the_shared_notifier_is_untouched():
-    """alerts.py (the shared notifier) keeps its own gate and ledger."""
+    """alerts.py (the shared notifier) keeps its own gate and ledger and
+    knows nothing of the personal one."""
     src = (REPO / "alerts.py").read_text("utf-8")
     assert "user_alerts" not in src and "user_store" not in src
-    wf = (REPO / ".github" / "workflows" / "check_jobs.yml").read_text("utf-8")
-    assert "user_alerts" not in wf                                        # not wired into any workflow yet

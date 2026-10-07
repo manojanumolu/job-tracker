@@ -36,9 +36,9 @@ Account state (Firebase Authentication is the source of truth, by UID):
             never reattached (UIDs are never reused, and email is never
             used to find data). They come back as a Member; admin rights
             still follow JT_ADMIN_EMAILS (a verified email), exactly as for
-            anyone else. Whether a deleted person should be ALLOWED back is a
-            policy decision that isn't made here: disabling (not deleting)
-            is the way to keep someone out.
+            anyone else. Policy (approved by the owner, 2026-10-07):
+            deleting an account is a RESET, not a block — disabling is the
+            way to keep someone out, and there is no deletion blocklist.
 
 No Streamlit import here, so this is unit-testable on its own.
 """

@@ -57,3 +57,20 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           python alerts.py
+
+      # Personal alerts (per-user, Phase 3): one email per person who turned
+      # alerts on, from their own ledger in Firestore (claim -> send ->
+      # finalize, so a job reaches each person at most once). It runs after
+      # the shared step above and can never fail this job:
+      # continue-on-error, a time limit, and one person's failure never stops
+      # another. Until the FIREBASE_SERVICE_ACCOUNT secret exists it does
+      # nothing and exits 0. Its log shows counts only — no address or UID.
+      - name: Send personal email alerts
+        if: ${{ !cancelled() && steps.scrape.outcome == 'success' }}
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: python user_alerts.py --send

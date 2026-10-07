@@ -18,9 +18,17 @@ between claim and finalize leaves the claim in place: that job is then
 never sent rather than sent twice (the shared notifier makes the same
 choice). One person's state never touches another's.
 
-The shared notifier (alerts.py) is unchanged and keeps running; this one
-is not wired into any workflow yet. ``python user_alerts.py`` is a dry run
-(counts only, nothing claimed or sent) unless ``--send`` is given.
+The shared notifier (alerts.py) is unchanged and keeps running. This one
+runs as the LAST step of check_jobs.yml ("Send personal email alerts"),
+after the shared step, with continue-on-error: whatever happens here, the
+scan and the shared alerts have already finished and the job stays green.
+Its only credential is the FIREBASE_SERVICE_ACCOUNT secret (the Firebase
+service-account JSON key); without it the step does nothing and exits 0.
+The Actions log of this public repository shows counts only — never an
+address, a UID or an exception message.
+
+``python user_alerts.py`` is a dry run (counts only, nothing claimed or
+sent) unless ``--send`` is given.
 """
 
 from __future__ import annotations
@@ -36,7 +44,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import job_filters
-from access import redact_emails
 from config_store import job_key
 from user_store import UserStore, UserStoreError, configure
 
@@ -98,7 +105,8 @@ def run_for_user(store: UserStore, uid: str, seen: list[dict], send, run_id: str
         ok = True
     except Exception as e:
         ok = False
-        log.error("personal alert for %s… failed: %s — released for the next run", uid[:6], redact_emails(e))
+        # a public log: the exception TYPE only (an SMTP error can echo the address)
+        log.error("a personal alert email failed (%s) — released for the next run", type(e).__name__)
     for j in claimed:
         user.finalize_delivery(job_key(j), run_id, ok)
     return ("sent" if ok else "failed"), len(claimed)
@@ -128,11 +136,15 @@ def main(argv=None) -> int:
     if store is None:
         log.info("Per-user alerts are not set up%s — nothing to do", f" ({problem})" if problem else "")
         return 1 if problem else 0
-    seen = json.loads((BASE / "seen_jobs.json").read_text("utf-8"))
-    send = None
-    if args.send:
-        from notifier import send_alerts as send
-    stats = run(store, seen if isinstance(seen, list) else [], send, dry_run=not args.send)
+    try:
+        seen = json.loads((BASE / "seen_jobs.json").read_text("utf-8"))
+        send = None
+        if args.send:
+            from notifier import send_alerts as send
+        stats = run(store, seen if isinstance(seen, list) else [], send, dry_run=not args.send)
+    except Exception as e:                    # never a traceback (it could carry data) — and never a crash
+        log.error("personal alerts stopped: %s", type(e).__name__)
+        return 1
     log.info("%s: %s", "sent" if args.send else "dry run", json.dumps(stats, sort_keys=True))
     return 1 if stats.get("failed") or stats.get("error") else 0
 
