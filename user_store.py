@@ -6,7 +6,7 @@ Personal (here), one tree per person:
 
   users/{uid}                    profile: email, display_name, created_at,
                                  last_login_at, onboarding, notifications,
-                                 preferences
+                                 preferences, watch_all
   users/{uid}/companies/{id}     watchlist: company IDs from the shared catalogue
   users/{uid}/dismissed/{id}     jobs this person dismissed (job_key inside)
   users/{uid}/deliveries/{id}    per-user email ledger: claim -> send -> finalize
@@ -24,6 +24,22 @@ access stays denied by the Firestore security rules (firestore.rules).
 Failures never fall back to shared data: every Firestore error surfaces as
 UserStoreError with a message that is safe to show.
 
+Account state (Firebase Authentication is the source of truth, by UID):
+  disabled  refused at sign-in (Firebase itself refuses a fresh sign-in),
+            and an open session is signed out at its next check (every
+            few minutes); the notifier skips the account
+  deleted   no personal data is read or written for that UID any more and
+            the notifier skips it; existing data stays, unreachable
+  deleted, then signs in with Google again
+            Firebase creates a NEW account with a NEW UID, so the person
+            starts with an empty profile — the old users/{old uid} data is
+            never reattached (UIDs are never reused, and email is never
+            used to find data). They come back as a Member; admin rights
+            still follow JT_ADMIN_EMAILS (a verified email), exactly as for
+            anyone else. Whether a deleted person should be ALLOWED back is a
+            policy decision that isn't made here: disabling (not deleting)
+            is the way to keep someone out.
+
 No Streamlit import here, so this is unit-testable on its own.
 """
 
@@ -33,6 +49,7 @@ import functools
 import hashlib
 import json
 import logging
+import random
 import re
 import threading
 import time
@@ -54,6 +71,12 @@ UNAVAILABLE = "Your personal data is unavailable right now."
 
 class UserStoreError(Exception):
     """The personal-data store failed. ``str(e)`` is safe to show."""
+
+
+class InvalidInput(ValueError):
+    """A value this module refuses (unknown company, bad preference, ...).
+    Only these pass through as ValueError: any other error — including a
+    ValueError raised inside the Firebase SDK — becomes UserStoreError."""
 
 
 def _hash_id(value: str) -> str:
@@ -119,6 +142,23 @@ class MemoryBackend:
             return True
 
 
+_ABORT_RETRIES = 8
+
+
+def _retry_aborted(attempt):
+    """Run ``attempt()`` again when Firestore aborts it for contention (its
+    documented "retry" signal), with jittered backoff. Each attempt re-reads
+    state, so a loser ends with a clean "not mine" instead of an error."""
+    from google.api_core.exceptions import Aborted
+    for n in range(_ABORT_RETRIES):
+        try:
+            return attempt()
+        except Aborted:
+            if n == _ABORT_RETRIES - 1:
+                raise
+            time.sleep(random.uniform(0.01, 0.05) * (n + 1))
+
+
 class FirestoreBackend:
     """The same operations on a google.cloud.firestore client (from the
     Firebase Admin SDK). create() is atomic (fails if the document exists);
@@ -133,11 +173,14 @@ class FirestoreBackend:
 
     def create(self, path, data):
         from google.api_core.exceptions import AlreadyExists
-        try:
-            self.client.document(path).create(data)
-        except AlreadyExists:
-            return False
-        return True
+
+        def attempt():
+            try:
+                self.client.document(path).create(data)
+            except AlreadyExists:
+                return False
+            return True
+        return _retry_aborted(attempt)
 
     def set(self, path, data, merge=False):
         self.client.document(path).set(data, merge=merge)
@@ -149,18 +192,24 @@ class FirestoreBackend:
         return {s.id: s.to_dict() for s in self.client.collection(collection).stream()}
 
     def update_if(self, path, expected, data):
-        from firebase_admin import firestore
+        """Compare-and-set on one document: read, check, then write only if
+        nobody changed it since (a last_update_time precondition). Of
+        several concurrent writers exactly one commits; the rest get False.
+        Nothing is locked, so contention never leaves everyone empty-handed."""
+        from google.api_core.exceptions import FailedPrecondition, NotFound
         ref = self.client.document(path)
 
-        @firestore.transactional
-        def _txn(tx):
-            snap = ref.get(transaction=tx)
+        def attempt():
+            snap = ref.get()
             cur = snap.to_dict() if snap.exists else None
             if cur is None or any(cur.get(k) != v for k, v in expected.items()):
                 return False
-            tx.update(ref, data)
+            try:
+                ref.update(data, option=self.client.write_option(last_update_time=snap.update_time))
+            except (FailedPrecondition, NotFound):
+                return False
             return True
-        return _txn(self.client.transaction())
+        return _retry_aborted(attempt)
 
 
 class FirebaseIdentity:
@@ -178,6 +227,17 @@ class FirebaseIdentity:
             return {"uid": user.uid, "disabled": bool(user.disabled)}
         return None
 
+    def account(self, uid: str) -> dict | None:
+        """The Firebase account with this UID: {"uid", "email",
+        "email_verified", "disabled"}, or None if it no longer exists."""
+        from firebase_admin import auth
+        try:
+            user = auth.get_user(uid, app=self.app)
+        except auth.UserNotFoundError:
+            return None
+        return {"uid": user.uid, "email": (user.email or "").strip().lower(),
+                "email_verified": bool(user.email_verified), "disabled": bool(user.disabled)}
+
 
 # ---------------------------------------------------------------------------
 # One person's data
@@ -190,7 +250,7 @@ def _guard(method):
     def wrapper(self, *args, **kwargs):
         try:
             return method(self, *args, **kwargs)
-        except (UserStoreError, ValueError):
+        except (UserStoreError, InvalidInput):
             raise
         except Exception as e:
             log.warning("user store %s failed: %s", method.__name__, type(e).__name__)
@@ -200,15 +260,15 @@ def _guard(method):
 
 def _clean_list(values: object) -> list[str]:
     if not isinstance(values, (list, tuple, set, frozenset)):
-        raise ValueError("expected a list")
+        raise InvalidInput("expected a list")
     out = []
     for v in values:
         if not isinstance(v, str) or not v.strip() or len(v) > MAX_PREF_LEN:
-            raise ValueError("invalid preference value")
+            raise InvalidInput("invalid preference value")
         if v.strip() not in out:
             out.append(v.strip())
     if len(out) > MAX_PREF_ITEMS:
-        raise ValueError("too many preference values")
+        raise InvalidInput("too many preference values")
     return out
 
 
@@ -217,7 +277,7 @@ class UserData:
 
     def __init__(self, backend, uid: str):
         if not valid_uid(uid):
-            raise ValueError("not a Firebase UID")
+            raise InvalidInput("not a Firebase UID")
         self._backend, self.uid = backend, uid
         self._root = f"users/{uid}"
 
@@ -234,8 +294,9 @@ class UserData:
                     "email_verified": email_verified is True, "last_login_at": stamp}
         fresh = {"uid": self.uid, "schema": SCHEMA_VERSION, "created_at": stamp, **identity,
                  "onboarding": {"status": ONBOARDING_PENDING},
-                 "notifications": {"enabled": False, "mode": "general"},
-                 "preferences": {"mode": "general", "job_families": [], "locations": [], "experience": []}}
+                 "notifications": {"enabled": False, "mode": "general", "enabled_at": None},
+                 "preferences": {"mode": "general", "job_families": [], "locations": [], "experience": []},
+                 "watch_all": True}
         if self._backend.create(self._root, fresh):
             return fresh, True
         self._backend.set(self._root, identity, merge=True)
@@ -261,9 +322,15 @@ class UserData:
         """Follow a company. Only IDs in the shared catalogue are accepted;
         the catalogue itself is never copied."""
         if not isinstance(company_id, str) or company_id not in set(catalogue_ids):
-            raise ValueError("unknown company")
+            raise InvalidInput("unknown company")
         self._backend.set(f"{self._root}/companies/{_hash_id(company_id)}",
                           {"company_id": company_id, "added_at": _now_iso(now)})
+
+    @_guard
+    def set_watch_all(self, watch_all: bool) -> None:
+        """Company scope: every tracked company (True, the default) or only
+        the companies in the watchlist (False)."""
+        self._backend.set(self._root, {"watch_all": watch_all is True}, merge=True)
 
     @_guard
     def unwatch(self, company_id: str) -> None:
@@ -304,26 +371,51 @@ class UserData:
     @_guard
     def set_notifications(self, enabled: bool, mode: str = "general") -> dict:
         if mode not in NOTIFY_MODES:
-            raise ValueError("unknown notification mode")
+            raise InvalidInput("unknown notification mode")
         prof = self._backend.get(self._root) or {}
         if enabled and prof.get("email_verified") is not True:
-            raise ValueError("alerts need a verified email address")
-        self._backend.set(self._root, {"notifications": {"enabled": enabled is True, "mode": mode}}, merge=True)
+            raise InvalidInput("alerts need a verified email address")
+        old = prof.get("notifications") if isinstance(prof.get("notifications"), dict) else {}
+        # alerts cover jobs found from the moment they were turned on — never a
+        # backlog of everything found before
+        since = old.get("enabled_at") if old.get("enabled") is True and old.get("enabled_at") else _now_iso()
+        self._backend.set(self._root, {"notifications": {"enabled": enabled is True, "mode": mode,
+                                                         "enabled_at": since if enabled is True else None}},
+                          merge=True)
         return self.notification_settings()
 
     # -- general / tailored preferences ----------------------------------------
     @_guard
     def set_preferences(self, mode: str = "general", job_families=(), locations=(), experience=()) -> None:
         if mode not in NOTIFY_MODES:
-            raise ValueError("unknown preference mode")
-        self._backend.set(self._root, {"preferences": {
-            "mode": mode, "job_families": _clean_list(job_families), "locations": _clean_list(locations),
-            "experience": _clean_list(experience)}}, merge=True)
+            raise InvalidInput("unknown preference mode")
+        from job_filters import VOCABULARY
+        chosen = {"job_families": _clean_list(job_families), "locations": _clean_list(locations),
+                  "experience": _clean_list(experience)}
+        for field, values in chosen.items():
+            if any(v not in VOCABULARY[field] for v in values):
+                raise InvalidInput(f"unknown {field} value")
+        self._backend.set(self._root, {"preferences": {"mode": mode, **chosen}}, merge=True)
+
+    @_guard
+    def personal_view(self) -> dict:
+        """What this person asked to see: {"mode", "prefs", "watch_all",
+        "watchlist", "notifications"}. Missing fields get the defaults."""
+        prof = self._backend.get(self._root) or {}
+        prefs = prof.get("preferences") if isinstance(prof.get("preferences"), dict) else {}
+        notif = prof.get("notifications") if isinstance(prof.get("notifications"), dict) else {}
+        mode = notif.get("mode") if notif.get("mode") in NOTIFY_MODES else "general"
+        return {"mode": mode,
+                "prefs": {k: [v for v in prefs.get(k) or [] if isinstance(v, str)]
+                          for k in ("job_families", "locations", "experience")},
+                "watch_all": prof.get("watch_all") is not False,
+                "watchlist": self.watchlist() if prof.get("watch_all") is False else set(),
+                "notifications": notif}
 
     # -- per-user delivery ledger: claim -> send -> finalize --------------------
     def _delivery_path(self, job_key: str) -> str:
         if not isinstance(job_key, str) or not job_key:
-            raise ValueError("job_key required")
+            raise InvalidInput("job_key required")
         return f"{self._root}/deliveries/{_hash_id(job_key)}"
 
     @_guard
@@ -361,6 +453,25 @@ class UserStore:
         """Only the app's sign-in gate calls this, with the uid of the
         server-side signed-in account."""
         return UserData(self.backend, uid)
+
+    def account(self, uid: str) -> dict | None:
+        """Firebase's current state of the account with this UID (Admin SDK):
+        None if it was deleted. Raises UserStoreError if it can't be read."""
+        if self.identity is None or not valid_uid(uid):
+            raise UserStoreError(UNAVAILABLE)
+        try:
+            return self.identity.account(uid)
+        except Exception as e:
+            log.warning("Firebase account lookup failed: %s", type(e).__name__)
+            raise UserStoreError(UNAVAILABLE) from None
+
+    def user_ids(self) -> list[str]:
+        """Every users/{uid} document (for the notifier, a server process)."""
+        try:
+            return sorted(uid for uid in self.backend.list("users") if valid_uid(uid))
+        except Exception as e:
+            log.warning("listing users failed: %s", type(e).__name__)
+            raise UserStoreError(UNAVAILABLE) from None
 
     def google_account(self, google_sub: str) -> dict | None:
         if self.identity is None or not isinstance(google_sub, str) or not google_sub:
@@ -407,14 +518,18 @@ def configure(secrets: Mapping | None, project_id: str = "") -> tuple[UserStore 
         return None, "the Firebase service account secret is incomplete"
     if project_id and info.get("project_id") != project_id:
         return None, "the Firebase service account belongs to a different project"
+    # one Admin SDK app per credential (keyed by its identity, never by the key
+    # itself), so a different credential can never reuse an app built from another
+    fingerprint = _hash_id("|".join(str(info.get(k) or "") for k in ("project_id", "client_email", "private_key_id")))
+    name = f"{APP_NAME}-{fingerprint[:16]}"
     try:
         import firebase_admin
         from firebase_admin import credentials, firestore
         try:
-            app = firebase_admin.get_app(APP_NAME)
+            app = firebase_admin.get_app(name)
         except ValueError:
             app = firebase_admin.initialize_app(credentials.Certificate(info),
-                                                {"projectId": info.get("project_id")}, name=APP_NAME)
+                                                {"projectId": info.get("project_id")}, name=name)
         client = firestore.client(app=app)
     except Exception as e:
         log.warning("Firestore unavailable: %s", type(e).__name__)

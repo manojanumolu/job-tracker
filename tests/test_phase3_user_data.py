@@ -88,7 +88,7 @@ def test_two_users_have_separate_data(backend):
     a.dismiss({"job-1|https://x"})
     a.watch("sanofi", {"sanofi", "metlife"})
     a.set_notifications(True, "tailored")
-    a.set_preferences("tailored", ["Software"], ["Bengaluru"], ["fresher"])
+    a.set_preferences("tailored", ["Software engineering"], ["Bengaluru"], ["fresher"])
     assert b.dismissed() == set() and b.watchlist() == set()
     assert b.notification_settings() == {"enabled": False, "mode": "general", "email": B_MAIL}
     assert b.profile()["preferences"]["job_families"] == []
@@ -131,7 +131,8 @@ def test_notification_address_is_the_verified_identity(backend):
     assert unverified.notification_settings() == {"enabled": False, "mode": "general", "email": ""}
 
 
-@pytest.mark.parametrize("bad", [["x" * 81], [""], [1], "not-a-list", [f"v{i}" for i in range(51)]])
+@pytest.mark.parametrize("bad", [["x" * 81], [""], [1], "not-a-list", [f"v{i}" for i in range(51)],
+                                 ["Rocket science"], ["software engineering"]])          # only the shared vocabulary
 def test_preferences_are_validated(backend, bad):
     with pytest.raises(ValueError):
         _user(backend).set_preferences("tailored", job_families=bad)
@@ -139,8 +140,8 @@ def test_preferences_are_validated(backend, bad):
 
 def test_general_and_tailored_preferences_are_kept(backend):
     a = _user(backend)
-    a.set_preferences("tailored", ["Software", "Software", " Data "], ["Pune"], [])
-    assert a.profile()["preferences"] == {"mode": "tailored", "job_families": ["Software", "Data"],
+    a.set_preferences("tailored", ["Software engineering", "Software engineering", " Testing & QA "], ["Pune"], [])
+    assert a.profile()["preferences"] == {"mode": "tailored", "job_families": ["Software engineering", "Testing & QA"],
                                           "locations": ["Pune"], "experience": []}
 
 
@@ -199,6 +200,23 @@ def test_storage_failures_surface_as_a_safe_error(caplog):
                 call()
             assert str(e.value) == user_store.UNAVAILABLE
     assert "RuntimeError" in caplog.text and A_UID not in caplog.text and "secret-ish" not in caplog.text
+
+
+def test_sdk_value_errors_are_storage_errors_not_validation():
+    """The Firebase SDK raises ValueError for some failures (e.g. a
+    transaction that couldn't commit). Those must surface as the safe
+    UserStoreError — only this module's own validation is a ValueError."""
+    class SdkFailure(MemoryBackend):
+        def update_if(self, *a, **k):
+            raise ValueError("Failed to commit transaction in 5 attempts.")
+    u = UserData(SdkFailure(), A_UID)
+    u.ensure_profile(A_MAIL)
+    assert u.claim_delivery("k", "r1") is True                       # create path: fine
+    with pytest.raises(UserStoreError):
+        u.finalize_delivery("k", "r1", sent=True)
+    with pytest.raises(ValueError) as e:
+        u.watch("not-tracked", {"sanofi"})
+    assert isinstance(e.value, user_store.InvalidInput)
 
 
 def test_identity_lookup_failures_are_safe():
@@ -528,3 +546,131 @@ def test_firestore_rules_deny_all_client_access():
     from test_streamlit_app import REPO
     rules = (REPO / "firestore.rules").read_text("utf-8")
     assert "allow read, write: if false;" in rules and "if true" not in rules and "request.auth" not in rules
+
+
+# ---------------------------------------------------------------------------
+# Phase 3b: personal views, account state, admin non-access
+# ---------------------------------------------------------------------------
+
+PWC_JOB = {**NEW_RECORD, "company_id": "pwc"}                                    # Software, Pune, ENTRY_LEVEL
+METLIFE_JOB = {**FRESHER_RECORD, "company_id": "metlife", "title": "Trainee Data Analyst"}   # Data, Hyderabad
+
+
+class AccountIdentity(FakeIdentity):
+    """FakeIdentity that also answers Firebase account state by UID."""
+    def __init__(self):
+        super().__init__()
+        self.states = {}
+
+    def account(self, uid):
+        return self.states.get(uid, {"uid": uid, "email": "", "email_verified": True, "disabled": False})
+
+
+@pytest.fixture
+def store2(monkeypatch):
+    s = UserStore(MemoryBackend(), AccountIdentity())
+    monkeypatch.setattr(user_store, "configure", lambda secrets, project_id="": (s, ""))
+    return s
+
+
+def test_views_follow_the_persons_company_scope(app, google_env, store2):
+    a = _sign_in(app, google_env, A_UID, A_MAIL, seen=(PWC_JOB, METLIFE_JOB))
+    store2.for_uid(A_UID).watch("metlife", {"metlife", "pwc"})
+    store2.for_uid(A_UID).set_watch_all(False)
+    _nav(a, "jobs")
+    html = _html(a)
+    assert "Trainee Data Analyst" in html and "Graduate Software Engineer" not in html
+    assert "Showing 1 followed company" in html
+    b = _sign_in(app, google_env, B_UID, B_MAIL, seen=(PWC_JOB, METLIFE_JOB), page="jobs")
+    assert "Trainee Data Analyst" in _html(b) and "Graduate Software Engineer" in _html(b)
+
+
+def test_views_follow_tailored_preferences(app, google_env, store2):
+    a = _sign_in(app, google_env, A_UID, A_MAIL, seen=(PWC_JOB, METLIFE_JOB))
+    store2.for_uid(A_UID).set_preferences("tailored", ["Software engineering"], [], [])
+    store2.for_uid(A_UID).set_notifications(False, "tailored")
+    _nav(a, "jobs")
+    assert "Graduate Software Engineer" in _html(a) and "Trainee Data Analyst" not in _html(a)
+    assert "your tailored preferences" in _html(a)
+
+
+def test_my_alerts_saves_scope_and_preferences(app, google_env, store2):
+    a = _sign_in(app, google_env, A_UID, A_MAIL, page="email")
+    a.toggle(key="my_alerts_on").set_value(True)
+    a.radio(key="my_alerts_scope").set_value("followed")
+    a.radio(key="my_alerts_mode").set_value("tailored")
+    a.multiselect(key="my_pref_families").set_value(["Data & analytics"])
+    a.multiselect(key="my_pref_locations").set_value(["Hyderabad", "Remote"])
+    a.multiselect(key="my_pref_experience").set_value(["fresher"])
+    a.button(key="btn_my_alerts").click().run()
+    view = store2.for_uid(A_UID).personal_view()
+    assert view["watch_all"] is False and view["mode"] == "tailored"
+    assert view["prefs"] == {"job_families": ["Data & analytics"], "locations": ["Hyderabad", "Remote"],
+                             "experience": ["fresher"]}
+    assert view["notifications"]["enabled"] is True and view["notifications"]["enabled_at"]
+    assert store2.for_uid(B_UID).profile() is None                        # nobody else touched
+
+
+def test_admin_dismiss_all_still_counts_every_job(app, google_env, store2, admins):
+    admins(A_MAIL)
+    a = _sign_in(app, google_env, A_UID, A_MAIL, seen=(PWC_JOB, METLIFE_JOB))
+    store2.for_uid(A_UID).set_watch_all(False)                            # follows nothing -> sees nothing
+    _nav(a, "settings")
+    assert "btn_clear_all" in _buttons(a) and "Dismiss all 2 jobs" in {b.label for b in a.button}
+
+
+def test_a_disabled_account_is_signed_out_within_minutes(app, google_env, store2):
+    a = _sign_in(app, google_env, A_UID, A_MAIL)
+    store2.identity.states[A_UID] = {"uid": A_UID, "email": A_MAIL, "email_verified": True, "disabled": True}
+    a.run()
+    assert not _login_page(a)                                             # still within the check interval
+    a.session_state["_acct_state"] = {**a.session_state["_acct_state"], "at": 0}   # the interval has passed
+    a.run()
+    assert _login_page(a) and "This account has been disabled." in _html(a)
+    _login(a, email=A_MAIL)                                               # signing in again doesn't help
+    assert _login_page(a)
+
+
+def test_a_deleted_account_gets_no_personal_data(app, google_env, store2):
+    store2.identity.states[A_UID] = None                                  # deleted in Firebase
+    a = _sign_in(app, google_env, A_UID, A_MAIL)
+    assert f"users/{A_UID}" not in _profiles(store2)                       # nothing written for a deleted UID
+    _nav(a, "jobs")
+    a.button(key=_key("dismiss", NEW_RECORD)).click().run()
+    assert "Your account was removed" in _html(a) and store2.backend.docs == {}
+    assert not _seen(a)[0].get("dismissed")
+
+
+def test_unknown_account_state_never_blocks(app, google_env, monkeypatch):
+    """If Firebase can't be asked, nobody is locked out and nothing changes."""
+    class Down(AccountIdentity):
+        def account(self, uid):
+            raise RuntimeError("firebase down")
+    s = UserStore(MemoryBackend(), Down())
+    monkeypatch.setattr(user_store, "configure", lambda secrets, project_id="": (s, ""))
+    a = _sign_in(app, google_env, A_UID, A_MAIL)
+    assert not _login_page(a) and f"users/{A_UID}" in _profiles(s)
+
+
+def test_admin_rights_never_reach_another_persons_data(app, google_env, store2, admins):
+    store2.for_uid(B_UID).ensure_profile(B_MAIL)
+    store2.for_uid(B_UID).dismiss({"secret-job|https://b.example"})
+    admins(A_MAIL)
+    a = _sign_in(app, google_env, A_UID, A_MAIL, query={"uid": B_UID, "user": B_UID})
+    assert 'class="role admin"' in _html(a)
+    for page in ("home", "jobs", "email", "settings"):
+        _nav(a, page)
+        assert B_MAIL not in _html(a) and "secret-job" not in _html(a) and B_UID not in _html(a)
+    _nav(a, "jobs")
+    a.button(key=_key("dismiss", NEW_RECORD)).click().run()
+    assert store2.for_uid(B_UID).dismissed() == {"secret-job|https://b.example"}
+
+
+def test_the_app_binds_personal_data_in_exactly_one_place():
+    """Static guard: the only UserData the app ever creates is for the
+    gate's own account UID; nothing else in the app names a uid path."""
+    import re
+    from test_streamlit_app import REPO
+    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    assert re.findall(r"for_uid\((.*?)\)", src) == ['ACCOUNT["uid"]']
+    assert "users/" not in src and "UserData(" not in src
