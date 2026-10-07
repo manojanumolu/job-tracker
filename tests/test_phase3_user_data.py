@@ -265,10 +265,18 @@ class GoogleUser(FakeUser):
             self._claims["sub"] = sub
 
 
+def _use_store(monkeypatch, s, problem=""):
+    """As in production: a Firebase service account is configured, and
+    configure() yields ``s`` (or ``problem``). The app only consults
+    configure() once a service account is present."""
+    monkeypatch.setattr(user_store, "configured", lambda secrets: True)
+    monkeypatch.setattr(user_store, "configure", lambda secrets, project_id="": (s, problem))
+
+
 @pytest.fixture
 def store(monkeypatch):
     s = UserStore(MemoryBackend(), FakeIdentity())
-    monkeypatch.setattr(user_store, "configure", lambda secrets, project_id="": (s, ""))
+    _use_store(monkeypatch, s)
     return s
 
 
@@ -476,7 +484,7 @@ def test_google_user_without_a_firebase_account_gets_no_personal_data(app, googl
 
 def test_firestore_outage_never_falls_back_to_shared_data(app, google_env, monkeypatch, admins):
     broken = UserStore(BrokenBackend(), FakeIdentity())
-    monkeypatch.setattr(user_store, "configure", lambda secrets, project_id="": (broken, ""))
+    _use_store(monkeypatch, broken)
     at = _sign_in(app, google_env, A_UID, A_MAIL)
     assert not at.exception and "Graduate Software Engineer" in _html(at)  # the app still works
     _nav(at, "jobs")
@@ -487,7 +495,7 @@ def test_firestore_outage_never_falls_back_to_shared_data(app, google_env, monke
 
 
 def test_a_store_that_cannot_start_fails_safely(app, google_env, monkeypatch, admins):
-    monkeypatch.setattr(user_store, "configure", lambda secrets, project_id="": (None, "Firestore couldn't be started"))
+    _use_store(monkeypatch, None, "Firestore couldn't be started")
     admins(A_MAIL)
     at = _sign_in(app, google_env, A_UID, A_MAIL)
     assert not at.exception and 'class="role admin"' in _html(at)
@@ -569,7 +577,7 @@ class AccountIdentity(FakeIdentity):
 @pytest.fixture
 def store2(monkeypatch):
     s = UserStore(MemoryBackend(), AccountIdentity())
-    monkeypatch.setattr(user_store, "configure", lambda secrets, project_id="": (s, ""))
+    _use_store(monkeypatch, s)
     return s
 
 
@@ -647,7 +655,7 @@ def test_unknown_account_state_never_blocks(app, google_env, monkeypatch):
         def account(self, uid):
             raise RuntimeError("firebase down")
     s = UserStore(MemoryBackend(), Down())
-    monkeypatch.setattr(user_store, "configure", lambda secrets, project_id="": (s, ""))
+    _use_store(monkeypatch, s)
     a = _sign_in(app, google_env, A_UID, A_MAIL)
     assert not _login_page(a) and f"users/{A_UID}" in _profiles(s)
 

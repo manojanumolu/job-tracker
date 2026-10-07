@@ -328,6 +328,7 @@ from test_streamlit_app import NEW_RECORD, _html, _key, _nav, app  # noqa: E402,
 
 
 def test_the_app_creates_and_reuses_the_profile_on_the_emulator(app, google_env, emu, monkeypatch):
+    monkeypatch.setattr(user_store, "configured", lambda secrets: True)       # a service account is set
     monkeypatch.setattr(user_store, "configure", lambda secrets, project_id="": (emu, ""))
     _account(emu, A, "alice@example.org")
     for attempt in range(2):                                                # first and repeat sign-in
@@ -421,3 +422,55 @@ def test_concurrent_cli_runs_on_the_emulator_send_once(emu, tmp_path, monkeypatc
         per.setdefault(to, []).extend(keys)
     assert {to: sorted(k) for to, k in per.items()} == {f"cli{i}@example.org": sorted(job_key(j) for j in jobs)
                                                         for i in range(3)}
+
+
+# --- the rules against AUTHENTICATED clients ---------------------------------------
+
+def _client_token(uid: str, email: str) -> str:
+    """An unsigned Firebase ID token: the emulator evaluates rules with it
+    (it doesn't verify signatures), so a client's identity can be simulated."""
+    import base64
+
+    def b64(o):
+        return base64.urlsafe_b64encode(json.dumps(o).encode()).decode().rstrip("=")
+    now = int(time.time())
+    claims = {"iss": f"https://securetoken.google.com/{PROJECT}", "aud": PROJECT, "sub": uid, "user_id": uid,
+              "iat": now, "exp": now + 3600, "auth_time": now, "email": email, "email_verified": True,
+              "firebase": {"sign_in_provider": "google.com", "identities": {}}}
+    return f"{b64({'alg': 'none', 'typ': 'JWT'})}.{b64(claims)}."
+
+
+def _load_rules(text: str):
+    r = httpx.put(f"http://{FS_HOST}/emulator/v1/projects/{PROJECT}:securityRules",
+                  json={"rules": {"files": [{"name": "firestore.rules", "content": text}]}}, timeout=10)
+    assert r.status_code == 200, r.text
+
+
+def test_even_the_signed_in_owner_and_admins_get_no_client_access(emu):
+    """Stricter than owner-scoped rules: only the server's Admin SDK reads
+    personal data, so a browser — even the data's own owner, even an admin —
+    gets nothing. Control first: the emulator does evaluate client tokens."""
+    emu.for_uid(A).ensure_profile("a@example.org")
+    emu.for_uid(B).ensure_profile("b@example.org")
+    emu.for_uid(A).claim_delivery("job-1", "r1")
+    base = f"http://{FS_HOST}/v1/projects/{PROJECT}/databases/(default)/documents"
+    owner = {"Authorization": f"Bearer {_client_token(A, 'a@example.org')}"}
+    admin = {"Authorization": f"Bearer {_client_token(B, 'boss@example.org')}"}
+    try:
+        _load_rules("rules_version='2'; service cloud.firestore { match /databases/{d}/documents { "
+                    "match /users/{uid} { allow read: if request.auth != null && request.auth.uid == uid; } } }")
+        assert httpx.get(f"{base}/users/{A}", headers=owner, timeout=10).status_code == 200      # tokens work
+        assert httpx.get(f"{base}/users/{B}", headers=owner, timeout=10).status_code == 403
+    finally:
+        _load_rules((REPO / "firestore.rules").read_text("utf-8"))                               # the real rules
+    attempts = {
+        "owner reads own profile": httpx.get(f"{base}/users/{A}", headers=owner, timeout=10),
+        "owner writes own profile": httpx.patch(f"{base}/users/{A}", headers=owner, timeout=10,
+                                                json={"fields": {"notifications": {"stringValue": "x"}}}),
+        "owner reads own deliveries": httpx.get(f"{base}/users/{A}/deliveries", headers=owner, timeout=10),
+        "owner reads someone else": httpx.get(f"{base}/users/{B}", headers=owner, timeout=10),
+        "admin reads someone else": httpx.get(f"{base}/users/{A}", headers=admin, timeout=10),
+        "owner lists all users": httpx.get(f"{base}/users", headers=owner, timeout=10),
+    }
+    assert {k: r.status_code for k, r in attempts.items()} == {k: 403 for k in attempts}
+    assert emu.for_uid(A).profile()["email"] == "a@example.org"                                  # untouched
