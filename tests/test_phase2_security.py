@@ -412,7 +412,10 @@ def test_shared_caches_hold_no_per_user_data():
                 if "cache_data" in src or "cache_resource" in src:
                     cached[node.name] = [a.arg for a in node.args.args]
     # _source_label takes a company record (shared data), never anything per-user
-    assert cached == {"_logo_data_uri": [], "_source_label": ["c"], "_guards": [], "_remote_snapshot": []}, cached
+    # _user_store is the Firestore client (Phase 3): it holds no one's data; every
+    # per-user read goes through a UserData bound to the session's own uid
+    assert cached == {"_logo_data_uri": [], "_source_label": ["c"], "_guards": [], "_remote_snapshot": [],
+                      "_user_store": []}, cached
 
 
 # ---------------------------------------------------------------------------
