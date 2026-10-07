@@ -1125,10 +1125,11 @@
     "date": "Oct 7, 18:41",
     "first_seen": "2026-10-07T18:41:21.416755+00:00",
     "id": "PwC_IN-Associate_IA_Internal_Audit_Services_",
-    "notified": false,
+    "notified": true,
     "company_id": "pwc",
-    "notify_state": "claimed",
-    "claimed_at": "2026-10-07T18:41:29.941374+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-10-07T18:41:29.941374+00:00",
+    "notified_at": "2026-10-07T18:41:33.683014+00:00"
   },
   {
     "title": "IN_Associate_Metal & Mining_Fuels & Resources S&O_Advisory_Gurgaon",
@@ -1165,9 +1166,10 @@
     "date": "Oct 7, 18:41",
     "first_seen": "2026-10-07T18:41:21.416755+00:00",
     "id": "PwC_IN_Associate_Metal_&_Mining_Fuels_&_Reso",
-    "notified": false,
+    "notified": true,
     "company_id": "pwc",
-    "notify_state": "claimed",
-    "claimed_at": "2026-10-07T18:41:29.941374+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-10-07T18:41:29.941374+00:00",
+    "notified_at": "2026-10-07T18:41:33.683014+00:00"
   }
 ]
