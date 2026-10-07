@@ -142,7 +142,7 @@ def test_general_and_tailored_preferences_are_kept(backend):
     a = _user(backend)
     a.set_preferences("tailored", ["Software engineering", "Software engineering", " Testing & QA "], ["Pune"], [])
     assert a.profile()["preferences"] == {"mode": "tailored", "job_families": ["Software engineering", "Testing & QA"],
-                                          "locations": ["Pune"], "experience": []}
+                                          "locations": ["Pune"], "experience": [], "job_types": [], "work_modes": []}
 
 
 # --- per-user delivery ledger -------------------------------------------------
@@ -285,13 +285,24 @@ def _password(uid, email, verified=True):
                               emailVerified=verified)
 
 
-def _sign_in(app, google_env, uid, email, seen=(NEW_RECORD,), verified=True, page=None, **kw):
+def _sign_in(app, google_env, uid, email, seen=(NEW_RECORD,), verified=True, page=None, onboard=False, **kw):
+    """Sign in; a first sign-in's onboarding is skipped unless ``onboard``."""
     google_env["firebase"](_password(uid, email, verified))
     at = app(list(seen), secrets=GATED, owner=False, **kw)
     _login(at, email=email)
     assert not _login_page(at), _html(at)[-400:]
+    if not onboard and "btn_onboarding_skip" in _buttons(at):
+        at.button(key="btn_onboarding_skip").click().run()
     if page:
-        _nav(at, page)
+        _go(at, page)
+    return at
+
+
+def _go(at, page):
+    """Open a page the way this viewer can: the sidebar, else the account menu."""
+    keys = _buttons(at)
+    at.button(key=f"nav_{page}" if f"nav_{page}" in keys else f"acct_{page}").click().run()
+    assert not at.exception and at.session_state.page == page
     return at
 
 
@@ -306,21 +317,22 @@ def test_without_a_service_account_nothing_changes(app, google_env):
     _nav(at, "jobs")
     at.button(key=_key("dismiss", NEW_RECORD)).click().run()
     assert "Only admins can dismiss jobs." in _html(at) and not _seen(at)[0].get("dismissed")
-    for page in ("home", "email", "settings"):
+    assert "nav_email" not in _buttons(at) and "nav_alerts" not in _buttons(at)    # admin page / needs a store
+    for page in ("home", "settings"):
         _nav(at, page)
-        assert "Your account is ready" not in _html(at) and "My alerts" not in _html(at)
+        assert "Where do you want to work?" not in _html(at) and "My alerts" not in _html(at)
         assert "Personal data" not in _html(at)
 
 
 def test_first_sign_in_creates_a_member_account_automatically(app, google_env, store):
-    at = _sign_in(app, google_env, A_UID, A_MAIL)
+    at = _sign_in(app, google_env, A_UID, A_MAIL, onboard=True)
     assert list(_profiles(store)) == [f"users/{A_UID}"]
     profile = _profiles(store)[f"users/{A_UID}"]
     assert profile["email"] == A_MAIL and profile["uid"] == A_UID and profile["email_verified"] is True
     assert 'class="role admin"' not in _html(at)                           # a member, no approval needed
-    assert "Your account is ready" in _html(at)
-    at.button(key="btn_onboarding_done").click().run()
-    assert "Your account is ready" not in _html(at)
+    assert "Where do you want to work?" in _html(at)
+    at.button(key="btn_onboarding_skip").click().run()
+    assert "Where do you want to work?" not in _html(at)
     assert store.backend.get(f"users/{A_UID}")["onboarding"]["status"] == "complete"
 
 
@@ -328,10 +340,10 @@ def test_repeat_sign_in_returns_the_same_profile(app, google_env, store):
     _sign_in(app, google_env, A_UID, A_MAIL)
     created = store.backend.get(f"users/{A_UID}")["created_at"]
     store.backend.set(f"users/{A_UID}", {"onboarding": {"status": "complete"}}, merge=True)
-    at = _sign_in(app, google_env, A_UID, A_MAIL)                         # a new session
+    at = _sign_in(app, google_env, A_UID, A_MAIL, onboard=True)          # a new session
     assert list(_profiles(store)) == [f"users/{A_UID}"]
     assert store.backend.get(f"users/{A_UID}")["created_at"] == created
-    assert "Your account is ready" not in _html(at)
+    assert "Where do you want to work?" not in _html(at)
 
 
 def test_a_members_dismissal_is_theirs_alone(app, google_env, store):
@@ -364,6 +376,13 @@ def test_an_admins_dismissal_also_feeds_the_shared_alerts(app, google_env, store
     assert store.for_uid(B_UID).dismissed() == {_job_key(NEW_RECORD)}
 
 
+def _company(at, cid):
+    """A company's page (a first sign-in's onboarding ends on Home)."""
+    at.session_state["page"], at.session_state["company_id"] = "companies", cid
+    at.run()
+    assert not at.exception
+
+
 def _job_key(j):
     from config_store import job_key
     return job_key(j)
@@ -371,29 +390,31 @@ def _job_key(j):
 
 def test_watchlists_are_per_user(app, google_env, store):
     a = _sign_in(app, google_env, A_UID, A_MAIL, query={"page": "companies", "company": "sanofi"})
+    _company(a, "sanofi")
     a.button(key="btn_follow").click().run()
     assert store.for_uid(A_UID).watchlist() == {"sanofi"} and "Following" in {b.label for b in a.button}
     b = _sign_in(app, google_env, B_UID, B_MAIL, query={"page": "companies", "company": "sanofi"})
+    _company(b, "sanofi")
     assert store.for_uid(B_UID).watchlist() == set() and "Follow" in {x.label for x in b.button}
     a.button(key="btn_follow").click().run()
     assert store.for_uid(A_UID).watchlist() == set()
 
 
 def test_notification_settings_are_per_user_and_go_to_the_verified_email(app, google_env, store):
-    a = _sign_in(app, google_env, A_UID, A_MAIL, page="email")
+    a = _sign_in(app, google_env, A_UID, A_MAIL, page="alerts")
     assert "My alerts" in _html(a) and A_MAIL in _html(a)
     assert not [t for t in a.text_input if "mail" in (t.key or "")]         # no address field to type into
     a.toggle(key="my_alerts_on").set_value(True)
     a.radio(key="my_alerts_mode").set_value("tailored")
     a.button(key="btn_my_alerts").click().run()
     assert store.for_uid(A_UID).notification_settings() == {"enabled": True, "mode": "tailored", "email": A_MAIL}
-    b = _sign_in(app, google_env, B_UID, B_MAIL, page="email")
+    b = _sign_in(app, google_env, B_UID, B_MAIL, page="alerts")
     assert store.for_uid(B_UID).notification_settings()["enabled"] is False
     assert A_MAIL not in _html(b) and B_MAIL in _html(b)
 
 
 def test_an_unverified_email_cannot_turn_alerts_on(app, google_env, store):
-    at = _sign_in(app, google_env, A_UID, A_MAIL, verified=False, page="email")
+    at = _sign_in(app, google_env, A_UID, A_MAIL, verified=False, page="alerts")
     assert at.toggle(key="my_alerts_on").disabled
     assert store.for_uid(A_UID).notification_settings()["enabled"] is False
 
@@ -434,12 +455,11 @@ def test_admin_stays_admin_and_member_stays_member(app, google_env, store, admin
     a = _sign_in(app, google_env, A_UID, A_MAIL, page="email")
     a.button(key="btn_test").click().run()
     assert sent == ["alerts@example.org"]
-    b = _sign_in(app, google_env, B_UID, B_MAIL, page="email")
-    b.button(key="btn_test").click().run()
-    assert sent == ["alerts@example.org"] and "Only admins can send test emails." in _html(b)
+    b = _sign_in(app, google_env, B_UID, B_MAIL, query={"page": "email"})   # by its address
+    assert b.session_state.page == "home" and "btn_test" not in _buttons(b) and "nav_email" not in _buttons(b)
+    assert sent == ["alerts@example.org"]
     _nav(b, "settings")
-    b.button(key="btn_clear_all").click().run()
-    assert "btn_clear_all_confirm" not in _buttons(b) and not any(r.get("dismissed") for r in _seen(b))
+    assert "btn_clear_all" not in _buttons(b) and not any(r.get("dismissed") for r in _seen(b))
 
 
 # --- Google: the uid when the 1-hour token is too old to link -----------------
@@ -513,6 +533,7 @@ def test_sign_out_then_another_person_uses_their_own_data(app, google_env, store
     at.button(key="btn_account_sign_out").click().run()
     google_env["firebase"](_password(B_UID, B_MAIL))
     _login(at, email=B_MAIL)
+    at.button(key="btn_onboarding_skip").click().run()                  # Bob's own first sign-in
     _nav(at, "jobs")
     assert "Graduate Software Engineer" in _html(at) and at.session_state["_profile_uid"] == B_UID
     assert A_UID not in json.dumps(at.session_state.to_dict(), default=str)
@@ -582,39 +603,43 @@ def store2(monkeypatch):
 
 
 def test_views_follow_the_persons_company_scope(app, google_env, store2):
-    a = _sign_in(app, google_env, A_UID, A_MAIL, seen=(PWC_JOB, METLIFE_JOB))
+    store2.for_uid(A_UID).ensure_profile(A_MAIL)                       # chosen earlier (or on another device)
     store2.for_uid(A_UID).watch("metlife", {"metlife", "pwc"})
     store2.for_uid(A_UID).set_watch_all(False)
+    a = _sign_in(app, google_env, A_UID, A_MAIL, seen=(PWC_JOB, METLIFE_JOB))
     _nav(a, "jobs")
     html = _html(a)
     assert "Trainee Data Analyst" in html and "Graduate Software Engineer" not in html
-    assert "Showing 1 followed company" in html
+    assert a.multiselect(key="j_pco").value == ["metlife"]             # followed companies: the default filter
     b = _sign_in(app, google_env, B_UID, B_MAIL, seen=(PWC_JOB, METLIFE_JOB), page="jobs")
     assert "Trainee Data Analyst" in _html(b) and "Graduate Software Engineer" in _html(b)
 
 
 def test_views_follow_tailored_preferences(app, google_env, store2):
-    a = _sign_in(app, google_env, A_UID, A_MAIL, seen=(PWC_JOB, METLIFE_JOB))
+    store2.for_uid(A_UID).ensure_profile(A_MAIL)
     store2.for_uid(A_UID).set_preferences("tailored", ["Software engineering"], [], [])
     store2.for_uid(A_UID).set_notifications(False, "tailored")
+    a = _sign_in(app, google_env, A_UID, A_MAIL, seen=(PWC_JOB, METLIFE_JOB))
     _nav(a, "jobs")
     assert "Graduate Software Engineer" in _html(a) and "Trainee Data Analyst" not in _html(a)
-    assert "your tailored preferences" in _html(a)
+    assert a.multiselect(key="j_pfam").value == ["Software engineering"]   # saved preferences: the defaults
 
 
 def test_my_alerts_saves_scope_and_preferences(app, google_env, store2):
-    a = _sign_in(app, google_env, A_UID, A_MAIL, page="email")
+    a = _sign_in(app, google_env, A_UID, A_MAIL, page="preferences")
+    for field, value in (("job_families", ["Data & analytics"]), ("locations", ["Hyderabad", "Remote"]),
+                         ("experience", ["fresher"])):
+        next(b for b in a.button_group if b.key == f"pref_{field}").set_value(value)
+    a.button(key="btn_prefs_save").click().run()
+    _go(a, "alerts")
     a.toggle(key="my_alerts_on").set_value(True)
-    a.radio(key="my_alerts_scope").set_value("followed")
+    a.radio(key="my_alerts_scope").set_value("all")
     a.radio(key="my_alerts_mode").set_value("tailored")
-    a.multiselect(key="my_pref_families").set_value(["Data & analytics"])
-    a.multiselect(key="my_pref_locations").set_value(["Hyderabad", "Remote"])
-    a.multiselect(key="my_pref_experience").set_value(["fresher"])
     a.button(key="btn_my_alerts").click().run()
     view = store2.for_uid(A_UID).personal_view()
-    assert view["watch_all"] is False and view["mode"] == "tailored"
+    assert view["watch_all"] is True and view["mode"] == "tailored"
     assert view["prefs"] == {"job_families": ["Data & analytics"], "locations": ["Hyderabad", "Remote"],
-                             "experience": ["fresher"]}
+                             "experience": ["fresher"], "job_types": [], "work_modes": []}
     assert view["notifications"]["enabled"] is True and view["notifications"]["enabled_at"]
     assert store2.for_uid(B_UID).profile() is None                        # nobody else touched
 

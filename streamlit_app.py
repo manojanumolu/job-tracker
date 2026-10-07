@@ -25,7 +25,7 @@ def _reload_changed_local_modules() -> None:
 
     base = os.path.dirname(os.path.abspath(__file__))
     order = ["identity", "locations", "job_classifier", "sources", "scraper", "config_store", "repo_sync",
-             "access", "firebase_auth", "job_filters", "user_store", "notifier", "alerts"]
+             "access", "firebase_auth", "job_filters", "user_store", "snapshot_cache", "notifier", "alerts"]
     for name in order:
         mod = sys.modules.get(name)
         path = getattr(mod, "__file__", None) if mod else None
@@ -60,6 +60,7 @@ from notifier import category_label, friendly_reason, safe_url
 from identity import ats_job_id
 import firebase_auth
 import job_filters
+import snapshot_cache
 import user_store
 from access import (
     ACCOUNT_KEY,
@@ -99,6 +100,10 @@ PAGES = {
     "monitoring": ("Monitoring", ":material/monitor_heart:"),
     "email": ("Email & Notifications", ":material/mail:"),
     "settings": ("Settings", ":material/settings:"),
+    # personal pages (every signed-in person)
+    "alerts": ("My alerts", ":material/notifications:"),
+    "preferences": ("Job preferences", ":material/tune:"),
+    "onboarding": ("Welcome", ":material/waving_hand:"),
 }
 NAV_GROUPS = [("Discover", ["home", "jobs", "companies", "monitoring"]),
               ("Management", ["email", "settings"])]
@@ -113,7 +118,7 @@ if "page" not in st.session_state or (
     st.session_state.page = qp.get("page") if qp.get("page") in PAGES else "home"
     st.session_state.job_id = qp.get("job") or None
     st.session_state.company_id = qp.get("company") or None
-    st.session_state.company_view = "add" if qp.get("view") == "add" else None
+    st.session_state.company_view = qp.get("view") if qp.get("view") in ("add", "mine") else None
     st.session_state.confirm_remove = None
     if "dark_mode" in st.session_state:
         st.session_state.dark_mode = qp.get("theme") == "dark"
@@ -429,6 +434,10 @@ _CSS = """
 .stDeployButton, [data-testid="stToolbar"], [data-testid="stDecoration"] { display: none !important; }
 [data-testid="stSidebarHeader"], [data-testid="stSidebarCollapseButton"], [data-testid="stSidebarCollapsedControl"],
 [data-testid="stExpandSidebarButton"], [data-testid="stSidebarResizeHandle"] { display: none !important; }
+/* The handle's own wrapper (8 px, right: -6px) still stuck 5 px out of the
+   fixed-width sidebar; that overflow showed as a white bar at the sidebar's
+   edge while pages redrew. The width is fixed, so there is nothing to resize. */
+section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]) { display: none !important; }
 /* visual depth: two soft lights and a faint dot grid that fades out down the page */
 .stApp, [data-testid="stAppViewContainer"] {
   background:
@@ -659,6 +668,10 @@ _CSS = """
 [class*="st-key-filters_"] [data-testid="stColumn"] { flex: 1 1 140px !important; width: auto !important; min-width: 130px !important; max-width: 230px; }
 [class*="st-key-filters_"] [data-testid="stColumn"]:first-child { flex: 1 1 100% !important; max-width: none; }
 [class*="st-key-filters_"] [data-testid="stColumn"]:last-child { flex: 0 0 auto !important; min-width: 0 !important; margin-left: auto; }
+/* the personal filters' second row: four equal fields that wrap on narrow screens */
+[class*="st-key-filters_"] [class*="st-key-prow_"] [data-testid="stColumn"]:nth-child(n) { flex: 1 1 180px !important;
+  min-width: 160px !important; max-width: none !important; margin-left: 0 !important; }
+[class*="st-key-filters_"] [class*="st-key-prow_"] [data-testid="stHorizontalBlock"] { gap: 10px !important; align-items: flex-start !important; }
 :is(.st-key-h_q, .st-key-j_q) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]) { min-height: 48px !important; border-radius: var(--r) !important; background: var(--surface-2) !important; }
 :is(.st-key-h_q, .st-key-j_q) input { font-size: 15px !important; }
 :is(.st-key-h_q, .st-key-j_q, .st-key-co_q) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])::before {
@@ -1140,7 +1153,90 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   .oc, .oc::after, .opps > .glow-bg { animation: none !important; }
   .oc.d { transform: rotate(6deg); }
   .btn.primary::after, [data-testid="stBaseButton-primary"]::after { display: none; }
+  .st-key-onboard { animation: none !important; }
 }
+
+/* ── account menu, top right ── */
+.st-key-acct_bar { flex-direction: row !important; justify-content: flex-end; margin-bottom: -16px; position: relative; z-index: 6; }
+.st-key-acct_bar > div { width: auto !important; flex: 0 0 auto !important; }
+.st-key-acct_menu [data-testid="stPopoverButton"] { min-height: 42px !important; padding: 4px 12px 4px 5px !important; border-radius: 999px !important;
+  gap: 9px; background: var(--surface) !important; border: 1px solid var(--border) !important; box-shadow: var(--hi), var(--shadow) !important; }
+.st-key-acct_menu [data-testid="stPopoverButton"]:hover { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)) !important;
+  box-shadow: var(--hi), var(--btn2-shadow-hover) !important; transform: translateY(-1px); }
+.st-key-acct_menu [data-testid="stPopoverButton"]::before { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+  flex-shrink: 0; font-weight: 800; font-size: 14px; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+.st-key-acct_menu [data-testid="stPopoverButton"] p { font-size: 14px !important; font-weight: 600 !important; color: var(--text) !important; }
+.st-key-acct_menu strong { margin-left: 6px; padding: 2px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 700 !important;
+  letter-spacing: .08em; color: var(--accent-text); background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent); }
+.acct-head { display: flex; align-items: center; gap: 10px; padding: 2px 2px 12px; margin-bottom: 4px; min-width: 250px;
+  border-bottom: 1px solid var(--border); }
+.acct-head .who { min-width: 0; flex: 1; }
+.acct-head .nm { font-size: 14.5px; font-weight: 700; color: var(--text); }
+.acct-head .em { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-head .role { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 7px;
+  border-radius: 999px; color: var(--accent-text); background: var(--accent-soft); }
+.acct-sep { height: 1px; background: var(--border); margin: 4px 0; }
+/* the menu's items: left-aligned rows with a quick hover tint */
+:is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts, .st-key-btn_account_sign_out)
+  [data-testid^="stBaseButton"] { justify-content: flex-start !important; min-height: 40px !important; padding: 0 10px !important;
+  border-radius: 10px !important; transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease); }
+:is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts, .st-key-btn_account_sign_out)
+  [data-testid^="stBaseButton"] > div { justify-content: flex-start !important; gap: 10px !important; }
+:is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts)
+  [data-testid^="stBaseButton"]:hover { background: var(--accent-soft) !important; color: var(--accent-text) !important; }
+.st-key-btn_account_sign_out [data-testid^="stBaseButton"]:hover { background: var(--red-soft) !important; color: var(--red) !important; }
+@media (max-width: 767px) {
+  .st-key-acct_bar { margin: 8px 0 -8px; }
+  .st-key-acct_menu [data-testid="stPopoverButton"] p { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+/* ── member home ── */
+.st-key-mh_hero { position: relative; overflow: hidden; padding: 28px 30px !important; border-radius: var(--r-xl) !important;
+  border: 1px solid var(--border) !important; box-shadow: var(--hi), var(--shadow) !important;
+  background: radial-gradient(520px 220px at 92% -20%, var(--glow-1), transparent 70%), var(--surface) !important; }
+.mh-hero .page-title { font-size: 34px; line-height: 1.15; font-weight: 800; letter-spacing: -.028em; margin-top: 10px; }
+.mh-hero .page-title em { font-style: normal; background: linear-gradient(92deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+[class*="st-key-set_mh_"] { height: 100%; justify-content: space-between; }
+.mh-card .h { display: flex; align-items: center; gap: 8px; color: var(--accent-text); }
+.mh-card .h b { color: var(--text); font-size: 15px; }
+.mh-card ul { list-style: none; padding: 0 !important; margin: 10px 0 0 !important; }
+.mh-card li { font-size: 14px; line-height: 1.6; color: var(--text-2); margin: 0; }
+.mh-card li.muted, .ob-summary li.muted { color: var(--muted); }
+.mh-card li.pg, .ob-summary li.pg { margin-top: 10px; font-size: 11px; line-height: 1.5; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--muted); }
+.mh-card li.pg:first-child, .ob-summary li.pg:first-child { margin-top: 0; }
+.pref-group.later { margin-top: 14px; padding-top: 16px; border-top: 1px solid var(--border); }
+.pref-group p { margin: 2px 0 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
+
+/* ── preferences, filters, companies ── */
+.filter-note { margin: 2px 2px 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.pref-q { margin-top: 8px; }
+.pref-q b { display: block; font-size: 15px; color: var(--text); }
+.pref-q span { display: block; font-size: 13px; line-height: 1.5; color: var(--muted); margin-top: 2px; }
+.co-mini { display: flex; align-items: center; gap: 12px; }
+.co-mini b { display: block; font-size: 15px; color: var(--text); }
+.co-mini span { font-size: 13px; color: var(--muted); }
+[class*="st-key-fol_"], [class*="st-key-add_"] { padding: 8px 0; border-top: 1px solid var(--border); }
+
+/* ── onboarding ── */
+.st-key-onboard { max-width: 760px; margin: 3vh auto 0 !important; padding: 34px 36px 30px !important; gap: 18px !important;
+  border: 1px solid var(--border) !important; border-radius: 28px !important; background: var(--surface) !important;
+  box-shadow: var(--hi), var(--shadow-lg) !important; animation: jt-rise .5s var(--ease) both; }
+.ob-dots { display: flex; gap: 6px; margin: 14px 0 4px; }
+.ob-dots i { width: 30px; height: 5px; border-radius: 5px; background: var(--border-strong); transition: background var(--normal) var(--ease); }
+.ob-dots i.on { background: var(--accent); }
+.ob-dots i.now { background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+.stApp .ob-title { margin: 12px 0 6px !important; font-size: 30px; line-height: 1.15; font-weight: 800; letter-spacing: -.025em; color: var(--text); }
+.ob-sub { margin: 0; font-size: 15px; line-height: 1.6; color: var(--muted); }
+.ob-done { width: 56px; height: 56px; border-radius: 18px; display: grid; place-items: center; margin-top: 16px;
+  color: var(--green); background: var(--green-soft); }
+.ob-summary { list-style: none; margin: 16px 0 0 !important; padding: 14px 18px !important; border-radius: 16px;
+  background: var(--surface-2); border: 1px solid var(--border); }
+.ob-summary li { font-size: 15px; line-height: 1.8; color: var(--text); margin: 0; }
+.st-key-onboard button[data-variant="pills"] { min-height: 40px; padding: 0 16px !important; font-size: 14.5px !important; }
+.st-key-ob_actions { align-items: center; gap: 10px; margin-top: 6px; }
 """
 
 # @import rules only count at the very top of a stylesheet, so the design
@@ -1430,17 +1526,28 @@ def owner_only(action: str) -> bool:
 
 
 def _refresh_data() -> None:
-    """Reload from GitHub — at most every few seconds for the whole app, so
-    repeated clicks can't spend the token's API quota."""
+    """Reload from GitHub now (an explicit Refresh waits for it) — at most
+    every few seconds for the whole app, so repeated clicks can't spend the
+    token's API quota."""
     if _guards()["refresh"].try_start():
-        _remote_snapshot.clear()
+        _shared_data().refresh_now()
 
 
-# Latest data straight from GitHub, shared by all sessions and refreshed at
-# most every 5 minutes (or on Refresh) — the local checkout can be hours old.
-@st.cache_data(ttl=300, show_spinner=False)
+_SHARED_FILES = ["companies.json", "settings.json", "seen_jobs.json"]
+
+
+@st.cache_resource(show_spinner=False)
+def _shared_data() -> snapshot_cache.SnapshotCache:
+    """The shared files as last read from GitHub, for every session of this
+    process (no one's personal data). A click is answered from the current
+    copy at once; a copy older than 5 minutes is refreshed in the
+    background (it took ~2.5 s, which used to freeze that click)."""
+    return snapshot_cache.SnapshotCache(lambda: fetch_remote_json(_SHARED_FILES), ttl_s=300)
+
+
 def _remote_snapshot() -> dict:
-    return fetch_remote_json(["companies.json", "settings.json", "seen_jobs.json"])
+    """Latest data straight from GitHub — the local checkout can be hours old."""
+    return _shared_data().get()
 
 
 def _load_synced(name: str, default):
@@ -1462,7 +1569,8 @@ def _save_change(name: str, mutate, default, message: str):
         log.warning("blocked a change to %s from a session without owner access", name)
         return None, False, "Only the owner can make changes."
     data, saved, err = update_json(BASE / name, name, mutate, default, message)
-    _remote_snapshot.clear()
+    if data is not None:
+        _shared_data().put(name, data)        # show the saved version at once
     return data, saved, err
 
 
@@ -1857,29 +1965,32 @@ _GOOGLE_G_URI = "data:image/svg+xml;base64," + base64.b64encode(_GOOGLE_G_SVG.en
 _LOGIN_CSS = """
 [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"], .st-key-mnav { display: none !important; }
 [data-testid="stMainBlockContainer"], .block-container { max-width: 1240px !important; margin: 0 auto !important;
-  padding: 40px 48px 48px !important; }
+  padding: 24px 48px !important; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+/* the page's own block must not stretch, or there is nothing left to centre */
+:is([data-testid="stMainBlockContainer"], .block-container) > [data-testid="stVerticalBlock"] { flex: 0 0 auto; }
 .lp, .lp *:not(.ms), .st-key-login_card,
 .st-key-login_card *:not([data-testid="stIconMaterial"]):not([data-testid="stExpanderIcon"]):not(.ms) { font-family: var(--font) !important; }
 
 /* ── left: the product ── */
-.lp-brand { display: flex; align-items: center; gap: 14px; }
+.lp-brand { display: flex; align-items: center; gap: 14px; animation: jt-rise .45s var(--ease) both; }
+.lp-brand img { animation: jt-pop .5s var(--ease) both; }
 .lp-brand img { width: 56px; height: 56px; border-radius: 16px; display: block;
   box-shadow: 0 12px 26px -12px var(--accent), 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent); }
 .lp-brand .n { font-size: 21px; line-height: 26px; font-weight: 800; letter-spacing: -.02em; color: var(--text); }
 .lp-brand .s { font-size: 11.5px; line-height: 16px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase;
   color: var(--muted); margin-top: 3px; }
 .lp-hero { display: grid; grid-template-columns: minmax(0, 1fr) 312px; column-gap: 24px;
-  grid-template-areas: "eyebrow eyebrow" "title title" "copy stage"; margin-top: 44px; }
-.lp-hero > .eyebrow { grid-area: eyebrow; }
-.stApp .lp-title { grid-area: title; margin: 14px 0 0 !important; font-size: 58px; line-height: 1.04; font-weight: 800;
-  letter-spacing: -.035em; word-spacing: .02em; color: var(--text); }
+  grid-template-areas: "eyebrow eyebrow" "title title" "copy stage"; margin-top: 26px; }
+.lp-hero > .eyebrow { grid-area: eyebrow; animation: jt-rise .45s var(--ease) .06s both; }
+.stApp .lp-title { grid-area: title; margin: 10px 0 0 !important; font-size: 54px; line-height: 1.04; font-weight: 800;
+  letter-spacing: -.035em; word-spacing: .02em; color: var(--text); animation: jt-rise .5s var(--ease) .12s both; }
 .lp-title em { font-style: normal; background: linear-gradient(92deg, var(--accent), var(--accent-2));
   -webkit-background-clip: text; background-clip: text; color: transparent; }
-.lp-copy { grid-area: copy; min-width: 0; }
-.lp-sub { margin: 20px 0 0; max-width: 440px; font-size: 16.5px; line-height: 1.65; color: var(--text-2); }
-.lp-benefits { list-style: none; margin: 30px 0 0 !important; padding: 0 !important; display: grid; gap: 16px; }
+.lp-copy { grid-area: copy; min-width: 0; animation: jt-rise .5s var(--ease) .2s both; }
+.lp-sub { margin: 14px 0 0; max-width: 440px; font-size: 16px; line-height: 1.6; color: var(--text-2); }
+.lp-benefits { list-style: none; margin: 20px 0 0 !important; padding: 0 !important; display: grid; gap: 12px; }
 .lp-benefits li { display: flex; align-items: center; gap: 14px; margin: 0; }
-.lp-benefits .ic { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; flex-shrink: 0;
+.lp-benefits .ic { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; flex-shrink: 0;
   box-shadow: var(--hi); }
 .lp-benefits .ic.violet { color: var(--accent-text); background: var(--accent-soft); }
 .lp-benefits .ic.green { color: var(--green); background: var(--green-soft); }
@@ -1889,18 +2000,30 @@ _LOGIN_CSS = """
 .lp-benefits .t { display: block; font-size: 14px; line-height: 20px; color: var(--muted); }
 
 /* the floating opportunity cards: decorative artwork, never data */
-.lp-stage { grid-area: stage; position: relative; height: 400px; }
+.lp-stage { grid-area: stage; position: relative; height: 352px; margin-top: 10px; }
 .lp-glow { position: absolute; inset: 0 -14% 4% -24%; border-radius: 50%; pointer-events: none;
   background: radial-gradient(closest-side, var(--glow-1), transparent 72%),
               radial-gradient(closest-side at 72% 78%, var(--glow-2), transparent 70%);
   animation: jt-glow-drift 16s ease-in-out infinite alternate; }
-.lp-arc { position: absolute; width: 400px; height: 400px; top: -70px; left: -40px; border-radius: 50%; pointer-events: none;
+.lp-arc { position: absolute; width: 380px; height: 380px; top: -60px; left: -40px; border-radius: 50%; pointer-events: none;
   border: 1px solid color-mix(in srgb, var(--accent) 13%, transparent); }
-.lp-card { position: absolute; width: 322px; display: flex; align-items: center; gap: 12px; padding: 14px;
+.lp-card { position: absolute; width: 322px; }
+.lp-card-in { position: relative; display: flex; align-items: center; gap: 12px; padding: 14px;
   border-radius: 18px; background: var(--oc-bg); border: 1px solid var(--oc-border); box-shadow: var(--oc-shadow);
-  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
-  transition: box-shadow var(--normal) var(--ease), border-color var(--normal) var(--ease); }
-.lp-card:hover { border-color: color-mix(in srgb, var(--accent) 34%, transparent); box-shadow: var(--shadow-lg); }
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); will-change: transform;
+  transition: transform .45s var(--ease), box-shadow .45s var(--ease), border-color .45s var(--ease); }
+/* four invisible quarters: the card leans 2–4 px toward the one under the cursor */
+.lp-card .z { position: absolute; z-index: 2; width: 50%; height: 50%; }
+.lp-card .z1 { top: 0; left: 0; } .lp-card .z2 { top: 0; right: 0; }
+.lp-card .z3 { bottom: 0; left: 0; } .lp-card .z4 { bottom: 0; right: 0; }
+.lp-card:hover .lp-card-in { transform: translate3d(0, -4px, 0); box-shadow: var(--shadow-lg);
+  border-color: color-mix(in srgb, var(--accent) 34%, transparent); }
+.lp-card .z1:hover ~ .lp-card-in { transform: translate3d(-3px, -5px, 0); }
+.lp-card .z2:hover ~ .lp-card-in { transform: translate3d(3px, -5px, 0); }
+.lp-card .z3:hover ~ .lp-card-in { transform: translate3d(-3px, -2px, 0); }
+.lp-card .z4:hover ~ .lp-card-in { transform: translate3d(3px, -2px, 0); }
+.lp-card-in .logo { transition: box-shadow .45s var(--ease), filter .45s var(--ease); }
+.lp-card:hover .lp-card-in .logo { filter: saturate(1.25); box-shadow: 0 6px 16px -8px var(--accent); }
 .lp-card .logo { width: 40px; height: 40px; border-radius: 12px; font-size: 17px; }
 .lp-card .tx { min-width: 0; flex: 1; }
 .lp-card .t { font-size: 13.5px; line-height: 18px; font-weight: 700; color: var(--text); overflow: hidden;
@@ -1911,39 +2034,39 @@ _LOGIN_CSS = """
 .lp-card .go { color: var(--muted); flex-shrink: 0; }
 .lp-card.c1 { top: 0; left: 14px; --tilt: -1.4deg;
   animation: jt-rise .8s var(--ease) .15s backwards, jt-float-s 9s ease-in-out 1s infinite; }
-.lp-card.c2 { top: 134px; left: -28px;
+.lp-card.c2 { top: 116px; left: -28px;
   animation: jt-rise .8s var(--ease) .3s backwards, jt-float 10s ease-in-out 1.6s infinite; }
-.lp-card.c3 { top: 270px; left: 0; --tilt: 1deg;
+.lp-card.c3 { top: 232px; left: 0; --tilt: 1deg;
   animation: jt-rise .8s var(--ease) .45s backwards, jt-float-s 11s ease-in-out 2.2s infinite; }
 .lp-chip { position: absolute; width: 56px; height: 56px; border-radius: 18px; display: grid; place-items: center;
   background: var(--oc-bg); border: 1px solid var(--oc-border); box-shadow: var(--oc-shadow); color: var(--accent-text);
   animation: jt-pop .7s var(--ease) .7s backwards, jt-float 8s ease-in-out 1.5s infinite; }
-.lp-chip.k1 { top: -82px; right: 26px; }
-.lp-chip.k2 { top: 180px; left: -78px; color: color-mix(in srgb, var(--accent) 50%, var(--accent-2)); animation-delay: .8s, 2.4s; }
-.lp-chip.k3 { top: 380px; right: -14px; color: var(--accent-2); animation-delay: .9s, 3.1s; }
+.lp-chip.k1 { top: -70px; right: 26px; }
+.lp-chip.k2 { top: 160px; left: -78px; color: color-mix(in srgb, var(--accent) 50%, var(--accent-2)); animation-delay: .8s, 2.4s; }
+.lp-chip.k3 { top: 336px; right: -14px; color: var(--accent-2); animation-delay: .9s, 3.1s; }
 .lp-dot { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
 .lp-dot::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: inherit;
   animation: jt-pulse 3.6s ease-out infinite; }
-.lp-dot.d1 { top: -58px; left: 96px; }
+.lp-dot.d1 { top: -50px; left: 96px; }
 .lp-dot.d2 { top: 42px; right: -16px; background: var(--accent-2); }
 .lp-dot.d2::after { animation-delay: 1.2s; }
-.lp-dot.d3 { top: 262px; left: -54px; background: color-mix(in srgb, var(--accent) 50%, var(--accent-2)); }
+.lp-dot.d3 { top: 216px; left: -36px; background: color-mix(in srgb, var(--accent) 50%, var(--accent-2)); }
 .lp-dot.d3::after { animation-delay: 2.1s; }
-.lp-dot.d4 { top: 412px; left: 92px; background: var(--accent-2); }
+.lp-dot.d4 { top: 362px; left: 92px; background: var(--accent-2); }
 .lp-dot.d4::after { animation-delay: .6s; }
 
 /* ── right: the sign-in card ── */
-.st-key-login_card { max-width: 448px; margin: 0 0 0 auto !important; padding: 36px 36px 28px !important; gap: 16px !important;
+.st-key-login_card { max-width: 448px; margin: 0 0 0 auto !important; padding: 30px 34px 24px !important; gap: 12px !important;
   border: 1px solid var(--border) !important; border-radius: 28px !important; background: var(--surface) !important;
-  box-shadow: var(--hi), var(--shadow-lg) !important; animation: jt-rise .7s var(--ease) both; }
-.lp-head img { width: 56px; height: 56px; border-radius: 16px; display: block;
+  box-shadow: var(--hi), var(--shadow-lg) !important; animation: jt-rise .5s var(--ease) .1s both; }
+.lp-head img { width: 48px; height: 48px; border-radius: 14px; display: block;
   box-shadow: 0 12px 26px -12px var(--accent), 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent); }
-.stApp .lp-welcome { margin: 22px 0 8px !important; font-size: 34px; line-height: 1.1; font-weight: 800;
+.stApp .lp-welcome { margin: 16px 0 6px !important; font-size: 32px; line-height: 1.1; font-weight: 800;
   letter-spacing: -.03em; color: var(--text); }
-.lp-head p { margin: 0; max-width: 330px; font-size: 16px; line-height: 1.55; color: var(--muted); }
+.lp-head p { margin: 0; max-width: 340px; font-size: 15px; line-height: 1.5; color: var(--muted); }
 .st-key-login_card [data-testid="stWidgetLabel"] p { font-size: 14.5px !important; font-weight: 600 !important;
   color: var(--text) !important; }
-.st-key-login_card :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]) { min-height: 52px; border-radius: 14px !important;
+.st-key-login_card :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]) { min-height: 48px; border-radius: 14px !important;
   border: 1px solid var(--border-strong) !important; background: var(--surface-2) !important;
   transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease), background var(--fast) var(--ease); }
 .st-key-login_card :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]):focus-within { border-color: var(--accent) !important; box-shadow: var(--ring) !important;
@@ -1957,10 +2080,10 @@ _LOGIN_CSS = """
 :is(.st-key-login_email, .st-key-login_pw) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]):focus-within::before { color: var(--accent-text); }
 .st-key-login_email :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])::before { content: "mail"; }
 .st-key-login_pw :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])::before { content: "lock"; }
-.st-key-login_card [data-testid="stForm"] { gap: 14px; }
-.st-key-btn_login_email [data-testid^="stBaseButton"] { min-height: 54px !important; border-radius: 14px !important; font-size: 16px !important;
+.st-key-login_card [data-testid="stForm"] { gap: 10px; }
+.st-key-btn_login_email [data-testid^="stBaseButton"] { min-height: 50px !important; border-radius: 14px !important; font-size: 16px !important;
   font-weight: 700 !important; margin-top: 6px; }
-.st-key-btn_login_google [data-testid^="stBaseButton"] { min-height: 54px !important; border-radius: 14px !important; font-weight: 700 !important;
+.st-key-btn_login_google [data-testid^="stBaseButton"] { min-height: 50px !important; border-radius: 14px !important; font-weight: 700 !important;
   background: var(--surface) !important; border: 1px solid var(--border-strong) !important; gap: 10px; }
 .st-key-btn_login_email [data-testid^="stBaseButton"]:hover:not(:disabled) { transform: translateY(-1px); }
 .st-key-btn_login_google [data-testid^="stBaseButton"]:hover { border-color: color-mix(in srgb, var(--accent) 35%, var(--border-strong)) !important;
@@ -1993,6 +2116,7 @@ _LOGIN_CSS = """
   .lp-hero { grid-template-columns: minmax(0, 1fr) 250px; }
   .stApp .lp-title { font-size: 48px; }
   .lp-card { width: 250px; } .lp-card .tags .pill:nth-child(2) { display: none; }
+  .stApp .lp-title { font-size: 46px; }
   .lp-chip.k2, .lp-chip.k3, .lp-dot.d3 { display: none; }
   .lp-card.c1 { left: 6px; } .lp-card.c2 { left: -4px; } .lp-card.c3 { left: 4px; }
 }
@@ -2003,14 +2127,17 @@ _LOGIN_CSS = """
   .stApp .lp-title { font-size: 40px; }
 }
 @media (max-width: 640px) {
-  [data-testid="stMainBlockContainer"], .block-container { padding: 24px 16px 32px !important; }
+  [data-testid="stMainBlockContainer"], .block-container { padding: 20px 16px 28px !important; min-height: 0; }
   .lp-hero { margin-top: 20px; } .lp-hero > .eyebrow, .lp-sub { display: none; }
   .stApp .lp-title { font-size: 30px; margin-top: 0 !important; }
   .st-key-login_card { margin: 8px auto 0 !important; padding: 26px 20px 22px !important; border-radius: 22px !important; }
   .lp-head img { display: none; } .stApp .lp-welcome { margin-top: 0 !important; font-size: 28px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .lp-card, .lp-chip, .lp-glow, .lp-dot::after, .st-key-login_card { animation: none !important; }
+  .lp-card, .lp-chip, .lp-glow, .lp-dot::after, .st-key-login_card, .lp-brand, .lp-brand img, .lp-hero > .eyebrow,
+  .lp-title, .lp-copy { animation: none !important; }
+  .lp-card-in, .lp-card-in .logo { transition: none !important; }
+  .lp-card:hover .lp-card-in, .lp-card .z:hover ~ .lp-card-in { transform: none !important; }
   .lp-card.c1 { transform: rotate(-1.4deg); } .lp-card.c3 { transform: rotate(1deg); }
 }
 """.replace("GOOGLE_G_URI", _GOOGLE_G_URI)
@@ -2029,11 +2156,13 @@ def _login_art() -> str:
     floating cards. Static and generic — the same for every visitor."""
     logo = _logo_data_uri()
     cards = "".join(
-        f'<div class="lp-card {cls}"><div class="logo" style="--h:{hue}">{escape(company[0])}</div>'
+        f'<div class="lp-card {cls}"><span class="z z1"></span><span class="z z2"></span><span class="z z3"></span>'
+        '<span class="z z4"></span>'
+        f'<div class="lp-card-in"><div class="logo" style="--h:{hue}">{escape(company[0])}</div>'
         f'<div class="tx"><div class="t">{escape(title)}</div><div class="m">{escape(company)} · {escape(city)}</div>'
         '<div class="tags">' + "".join(f'<span class="pill {k}">{"<i></i>" if k == "on" else ""}{escape(v)}</span>'
                                        for k, v in tags) + "</div></div>"
-        f'<span class="go">{_ms("chevron_right", "s20")}</span></div>'
+        f'<span class="go">{_ms("chevron_right", "s20")}</span></div></div>'
         for cls, company, hue, title, city, tags in _LOGIN_CARDS)
     benefits = [("violet", "search", "Fresh opportunities", "From top companies"),
                 ("green", "bolt", "Stay ahead", "Get notified early"),
@@ -2170,11 +2299,65 @@ if ACCOUNT and ACCOUNT.get("provider") in ("google.com", "password") and (_STORE
         try:
             USER = _STORE.for_uid(ACCOUNT["uid"])
             if st.session_state.get("_profile_uid") != USER.uid:      # once per sign-in
-                USER.ensure_profile(ACCOUNT.get("email") or "", ACCOUNT.get("name") or "",
-                                    ACCOUNT.get("email_verified") is True)
+                _profile, _created = USER.ensure_profile(ACCOUNT.get("email") or "", ACCOUNT.get("name") or "",
+                                                         ACCOUNT.get("email_verified") is True)
                 st.session_state._profile_uid = USER.uid
+                if _created:     # nothing to read back: a new profile follows and dismissed nothing
+                    st.session_state._pcache = {"uid": USER.uid, "at": time.time(), "profile": _profile,
+                                                "dismissed": set(), "watchlist": set()}
         except user_store.UserStoreError as e:
             USER, USER_PROBLEM, USER_PROBLEM_DETAIL = None, str(e), e.kind
+
+
+# This viewer's own data, read once and kept in THIS browser session for a
+# minute: clicks no longer re-read Firestore for the same data (2–4 round
+# trips per click before). Every change made here refreshes it; a change
+# made on another device shows up within the minute.
+_PERSONAL_TTL_S = 60
+
+
+def _personal_snapshot() -> dict:
+    cached = st.session_state.get("_pcache")
+    if (isinstance(cached, dict) and cached.get("uid") == USER.uid
+            and time.time() - cached.get("at", 0) < _PERSONAL_TTL_S):
+        return cached
+    snap = {"uid": USER.uid, "at": time.time(), **USER.snapshot()}
+    st.session_state._pcache = snap
+    return snap
+
+
+def personal_changed() -> None:
+    """Call after any write to this viewer's data: the next read is fresh."""
+    st.session_state.pop("_pcache", None)
+
+
+ME: dict | None = None
+if USER is not None:
+    try:
+        ME = _personal_snapshot()
+    except user_store.UserStoreError as _e:
+        USER, USER_PROBLEM, USER_PROBLEM_DETAIL = None, str(_e), _e.kind
+
+# Roles, decided on the server once per run (the real checks still happen in
+# every protected operation). A member never gets the admin's dashboard; the
+# legacy no-sign-in mode keeps its old behaviour.
+IS_ADMIN = is_owner()
+MEMBER_VIEW = bool(AUTH_GATE and ACCOUNT and not IS_ADMIN)
+ADMIN_PAGES = {"monitoring", "email"}
+PERSONAL_PAGES = {"alerts", "preferences", "onboarding"}
+
+# A member who opens an admin page by its address lands on Home: nothing of
+# it is drawn (the operations themselves stay admin-checked regardless).
+if MEMBER_VIEW and (st.session_state.page in ADMIN_PAGES or st.session_state.get("company_view") == "add"):
+    st.session_state.page, st.session_state.company_view = "home", None
+if st.session_state.page in PERSONAL_PAGES and USER is None:
+    st.session_state.page = "home"
+# first sign-in: a short setup before anything else
+ONBOARDING = (ME is not None and (ME["profile"].get("onboarding") or {}).get("status") == user_store.ONBOARDING_PENDING)
+if ONBOARDING:
+    st.session_state.page = "onboarding"
+elif st.session_state.page == "onboarding":
+    st.session_state.page = "home"
 
 
 def account_label(account: dict) -> str:
@@ -2205,13 +2388,8 @@ for _j in _load_synced("seen_jobs.json", []):
 # With personal data, "dismissed" means dismissed BY THIS VIEWER (an admin's
 # view also includes the shared dismissals that today's alert emails follow);
 # one person's dismissal never hides a job from anyone else.
-_HIDDEN: set[str] | None = None
-if USER is not None:
-    try:
-        _HIDDEN = USER.dismissed()
-    except user_store.UserStoreError as _e:
-        USER, USER_PROBLEM, USER_PROBLEM_DETAIL = None, str(_e), _e.kind
-if _HIDDEN is not None and is_owner():
+_HIDDEN: set[str] | None = set(ME["dismissed"]) if ME is not None else None
+if _HIDDEN is not None and IS_ADMIN:
     _HIDDEN |= {job_key(j) for j in all_records if j.get("dismissed")}
 
 
@@ -2222,35 +2400,33 @@ def is_dismissed(j: dict) -> bool:
 _all_active_jobs: list[dict] = (visible_jobs(all_records) if _HIDDEN is None              # newest-first
                                 else [j for j in reversed(all_records) if isinstance(j, dict) and not is_dismissed(j)])
 
-# What this viewer asked to see (General: their companies; Tailored: also
-# their preferences). It only narrows the list — company pages and the
-# admin's "dismiss all" still work on everything.
-_VIEW: dict | None = None
-if USER is not None:
-    try:
-        _VIEW = USER.personal_view()
-    except user_store.UserStoreError as _e:
-        USER, USER_PROBLEM, USER_PROBLEM_DETAIL = None, str(_e), _e.kind
+# What this viewer asked to see. Saved preferences are the DEFAULTS of the
+# job lists (the viewer can change them while browsing, see filter_jobs);
+# the same model applies to admins and members. Followed companies narrow
+# the lists only once some are chosen — a new person sees every company.
+_VIEW: dict | None = user_store.view_from(ME["profile"], ME["watchlist"]) if ME is not None else None
+
+
+def my_defaults() -> dict | None:
+    """The job-list filters this viewer saved: {"locations", "families",
+    "experience", "companies" (None = every company)}."""
+    if _VIEW is None:
+        return None
+    follows = None if _VIEW["watch_all"] or not _VIEW["watchlist"] else sorted(_VIEW["watchlist"])
+    return {"locations": _VIEW["prefs"]["locations"], "families": _VIEW["prefs"]["job_families"],
+            "experience": _VIEW["prefs"]["experience"], "companies": follows}
 
 
 def for_me(jobs: list[dict]) -> list[dict]:
-    if _VIEW is None:
+    """The jobs matching this viewer's saved preferences (Home)."""
+    d = my_defaults()
+    if d is None:
         return jobs
-    return [j for j in jobs if job_filters.for_person(j, mode=_VIEW["mode"], prefs=_VIEW["prefs"],
-                                                      watch_all=_VIEW["watch_all"], watchlist=_VIEW["watchlist"])]
+    return [j for j in jobs if job_filters.matches_view(j, **d)]
 
 
-def personal_filter_note() -> str:
-    """A short line when the lists are narrowed for this viewer."""
-    if _VIEW is None or (_VIEW["watch_all"] and _VIEW["mode"] != "tailored"):
-        return ""
-    parts = ([] if _VIEW["watch_all"] else [_plural(len(_VIEW["watchlist"]), "followed company", "followed companies")]) \
-        + (["your tailored preferences"] if _VIEW["mode"] == "tailored" else [])
-    return "Showing " + " and ".join(parts) + " · change under Email &amp; Notifications"
-
-
-active_jobs: list[dict] = for_me(_all_active_jobs)
-dismissed_jobs: list[dict] = for_me([j for j in reversed(all_records) if is_dismissed(j)])  # newest-first
+active_jobs: list[dict] = _all_active_jobs
+dismissed_jobs: list[dict] = [j for j in reversed(all_records) if is_dismissed(j)]  # newest-first
 
 NOW = datetime.now(timezone.utc)
 # cron asks for every 3 h, but GitHub starts scheduled runs late: measured
@@ -2293,6 +2469,8 @@ def change_dismissal(keys: set[str], dismiss: bool):
         except user_store.UserStoreError as e:
             toast(str(e), "error")
             return None
+        finally:
+            personal_changed()
         if not is_owner():
             return True, ""
     _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(keys) if dismiss else _restore_jobs(keys), [],
@@ -2436,50 +2614,86 @@ st.html(f"<style>{_nav_on}, {_nav_on}:hover {{"
         f".st-key-mob_{current} [data-testid='stIconMaterial'] {{background: var(--accent-soft); color: var(--accent-text) !important;}}"
         f".st-key-mob_{current} p {{font-weight: 700 !important;}}</style>")
 
+def nav_groups() -> list[tuple[str, list[str]]]:
+    """The destinations of this viewer: a member gets their own job search,
+    an admin also the tracker's management pages."""
+    if MEMBER_VIEW:
+        return [("Discover", ["home", "jobs", "companies"]),
+                ("Your account", (["alerts"] if USER is not None else []) + ["settings"])]
+    return NAV_GROUPS
+
+
+def nav_label(key: str) -> str:
+    return "My companies" if key == "companies" and MEMBER_VIEW else PAGES[key][0]
+
+
 with st.sidebar:
     logo = _logo_data_uri()
-    st.html(f"""<div class="brand"><div class="mark {overall[0]}">{f'<img src="{logo}" alt="">' if logo else ''}</div>
+    st.html(f"""<div class="brand"><div class="mark {overall[0] if not MEMBER_VIEW else 'healthy'}">{f'<img src="{logo}" alt="">' if logo else ''}</div>
       <div><div class="n">Fresher Job Tracker</div><div class="s">Fresher opportunities</div></div></div>""")
-    for gi, (group, items) in enumerate(NAV_GROUPS):
+    for gi, (group, items) in enumerate(nav_groups()):
         st.html(f'<div class="nav-group{" first" if gi == 0 else ""}">{group}</div>')
         for key in items:
-            label, icon = PAGES[key]
-            st.button(label, key=f"nav_{key}", icon=icon, type="tertiary", use_container_width=True,
+            st.button(nav_label(key), key=f"nav_{key}", icon=PAGES[key][1], type="tertiary", use_container_width=True,
                       on_click=go, args=(key,))
-    with st.container(key="side_foot_wrap"):
-        st.html(f"""<div class="side-foot {overall[0]}" role="status">
-          <div class="st" title="{escape(overall[1], quote=True)}"><span class="dot {overall[0]}"></span><span class="txt">{escape(overall[1])}</span></div>
-          <div class="meta"><span class="txt">{_ms("apartment", "s14")}{_plural(len(companies), 'company', 'companies')} monitored</span>
-            <span class="txt num">{_ms("history", "s14")}Last scan {_ago(last_scan, NOW)}</span></div>
-        </div>""")
-    if ACCOUNT:
-        _admin = account_is_admin(ACCOUNT) or is_owner()
-        with st.container(key="side_account"):
-            st.html(f'<div class="side-acct" title="{escape(ACCOUNT.get("email") or "", quote=True)}">{_avatar(account_label(ACCOUNT), "sm")}'
-                    f'<div class="who"><div class="nm">{escape(account_label(ACCOUNT))}</div>'
-                    f'<div class="em">{escape(ACCOUNT.get("email") or "")}</div></div>'
-                    f'<span class="role {"admin" if _admin else ""}">{"Admin" if _admin else "Member"}</span></div>')
+    if not MEMBER_VIEW:                 # the scanner's state is the admin's business
+        with st.container(key="side_foot_wrap"):
+            st.html(f"""<div class="side-foot {overall[0]}" role="status">
+              <div class="st" title="{escape(overall[1], quote=True)}"><span class="dot {overall[0]}"></span><span class="txt">{escape(overall[1])}</span></div>
+              <div class="meta"><span class="txt">{_ms("apartment", "s14")}{_plural(len(companies), 'company', 'companies')} monitored</span>
+                <span class="txt num">{_ms("history", "s14")}Last scan {_ago(last_scan, NOW)}</span></div>
+            </div>""")
+
+# phones: the sidebar is hidden and this compact bar takes over (CSS decides)
+_MOB_LABELS = {"email": "Email", "monitoring": "Monitor", "companies": "Companies", "alerts": "Alerts"}
+with st.container(key="mnav"):
+    _mob = [k for _, items in nav_groups() for k in items]
+    cols = st.columns(len(_mob))
+    for col, key in zip(cols, _mob):
+        with col:
+            st.button(_MOB_LABELS.get(key, nav_label(key)), key=f"mob_{key}", icon=PAGES[key][1], on_click=go, args=(key,))
+
+
+# ── the account, top right ───────────────────────────────────────────────────
+def account_menu() -> None:
+    """Who is signed in, and their own destinations: name, an initial avatar
+    and — for admins only — an ADMIN badge. Admin tools stay in the
+    sidebar's Management group, never in this menu."""
+    name = account_label(ACCOUNT)
+    initial = next((ch for ch in name if ch.isalnum()), "?").upper()
+    label = re.sub(r"([\\`*_{}\[\]()#+!|~<>-])", r"\\\1", name) + (" **ADMIN**" if IS_ADMIN else "")
+    st.html(f'<style>.st-key-acct_menu [data-testid="stPopoverButton"]::before {{ content: "{initial}"; }}</style>')
+    with st.container(key="acct_bar"):
+        with st.popover(label, key="acct_menu"):
+            badge_html = '<span class="role admin">Admin</span>' if IS_ADMIN else ""
+            st.html(f'<div class="acct-head">{_avatar(name, "sm")}<div class="who"><div class="nm">{escape(name)}</div>'
+                    f'<div class="em">{escape(ACCOUNT.get("email") or "")}</div></div>{badge_html}</div>')
+            items = [("settings", "Account", ":material/account_circle:", {})]
+            if USER is not None:
+                items += [("preferences", "Job preferences", ":material/tune:", {}),
+                          ("companies", "My companies", ":material/apartment:", {"view": "mine"}),
+                          ("alerts", "My alerts", ":material/notifications:", {})]
+            for dest, text, icon, kw in items:
+                st.button(text, key=f"acct_{dest}", icon=icon, type="tertiary", use_container_width=True,
+                          on_click=go, args=(dest,), kwargs=kw)
+            st.html('<div class="acct-sep"></div>')
             if st.button("Sign out", key="btn_account_sign_out", icon=":material/logout:", type="tertiary",
                          use_container_width=True):
                 if not account_sign_out():
                     st.rerun()
                 st.stop()
 
-# phones: the sidebar is hidden and this compact bar takes over (CSS decides)
-with st.container(key="mnav"):
-    cols = st.columns(len(PAGES))
-    for col, key in zip(cols, PAGES):
-        with col:
-            label, icon = PAGES[key]
-            st.button({"email": "Email", "monitoring": "Monitor", "companies": "Companies"}.get(key, label), key=f"mob_{key}",
-                      icon=icon, on_click=go, args=(key,))
+
+if ACCOUNT:
+    account_menu()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SHARED PIECES
 # ═══════════════════════════════════════════════════════════════════════════════
 def _eyebrow(page: str) -> str:
-    return next((g for g, items in NAV_GROUPS if page in items), "Discover")
+    return next((g for g, items in nav_groups() if page in items),
+                "Your account" if page in PERSONAL_PAGES else "Discover")
 
 
 def page_header(title: str, sub_html: str = "", actions=None, eyebrow: str | None = None):
@@ -2537,7 +2751,10 @@ def apply_link(j: dict, label: str = "Apply") -> str:
 
 
 def filter_jobs(prefix: str, jobs: list[dict]) -> list[dict]:
-    """Search · location · category · company · sort · clear."""
+    """Search · location · category · company · sort · clear. With personal
+    data, the viewer's saved preferences are the defaults instead."""
+    if my_defaults() is not None:
+        return _filter_jobs_personal(prefix, jobs, my_defaults())
     locs = sorted({loc for j in jobs for loc in job_locations(j)}, key=str.lower)
     comps = sorted({(j.get("company") or "").strip() for j in jobs if (j.get("company") or "").strip()}, key=str.lower)
     cats = {"all": "All categories", "FRESHER": "Fresher", "ENTRY_LEVEL": "Entry level", "legacy": LEGACY_LABEL}
@@ -2597,6 +2814,75 @@ def filter_jobs(prefix: str, jobs: list[dict]) -> list[dict]:
         out.sort(key=lambda j: found[id(j)] or epoch, reverse=True)
     st.session_state[f"{prefix}_filtered_sig"] = (q, loc, cat, co, sort)
     return out, active, _clear
+
+
+def _filter_jobs_personal(prefix: str, jobs: list[dict], saved: dict):
+    """Location · job family · experience · company, starting from what the
+    viewer saved. Changing them here is for this browse only — the saved
+    preferences change on the Job preferences page."""
+    names = {str(c.get("id")): (c.get("name") or "").strip() or "Unnamed" for c in companies
+             if not str(c.get("id", "")).startswith("_row")}
+    sorts = {"new": "Newest first", "old": "Oldest first", "company": "Company A–Z", "title": "Title A–Z"}
+    k = {f: f"{prefix}_{f}" for f in ("q", "sort", "ploc", "pfam", "pexp", "pco")}
+    base = {"q": "", "sort": "new", "ploc": list(saved["locations"]), "pfam": list(saved["families"]),
+            "pexp": list(saved["experience"]), "pco": [c for c in (saved["companies"] or []) if c in names]}
+    sig = json.dumps(base, sort_keys=True)
+    if st.session_state.get(f"{prefix}_psig") != sig:      # first view, or the saved preferences changed
+        for f, v in base.items():
+            st.session_state[k[f]] = v
+        st.session_state[f"{prefix}_psig"] = sig
+    for f, v in base.items():       # Streamlit drops a widget's state on runs that don't draw it
+        st.session_state.setdefault(k[f], v)
+    for f in ("pco",):                                     # a company removed from the catalogue
+        st.session_state[k[f]] = [c for c in st.session_state[k[f]] if c in names]
+    active = any(st.session_state[k[f]] != v for f, v in base.items())
+
+    def _reset():
+        for f, v in base.items():
+            st.session_state[k[f]] = v
+
+    def _show_all():                 # "Clear filters": every job, whatever was saved
+        for f in ("q", "ploc", "pfam", "pexp", "pco"):
+            st.session_state[k[f]] = "" if f == "q" else []
+
+    with st.container(key=f"filters_{prefix}"):
+        r1 = st.columns([2.6, 1.1, 1.1], vertical_alignment="bottom")
+        with r1[0]:
+            q = st.text_input("Search", key=k["q"], placeholder="Search title, company or location",
+                              label_visibility="collapsed").strip().lower()
+        with r1[1]:
+            sort = st.selectbox("Sort", list(sorts), key=k["sort"], format_func=sorts.get, label_visibility="collapsed")
+        with r1[2]:
+            st.button("My preferences", key=f"{prefix}_clear", on_click=_reset, disabled=not active,
+                      icon=":material/restart_alt:", help="Back to your saved job preferences", use_container_width=True)
+        with st.container(key=f"prow_{prefix}"):
+            r2 = st.columns(4)
+        with r2[0]:
+            locs = st.multiselect("Location", list(job_filters.LOCATIONS), key=k["ploc"], placeholder="Any location")
+        with r2[1]:
+            fams = st.multiselect("Job family", list(job_filters.JOB_FAMILIES), key=k["pfam"], placeholder="Any family")
+        with r2[2]:
+            exp = st.multiselect("Experience", list(job_filters.EXPERIENCE), key=k["pexp"], placeholder="Any level",
+                                 format_func=job_filters.EXPERIENCE_LABELS.get)
+        with r2[3]:
+            cos = st.multiselect("Company", list(names), key=k["pco"], placeholder="Any company", format_func=names.get)
+        st.html('<p class="filter-note">Starts from your job preferences — changes here aren’t saved. Job type and work '
+                'mode aren’t stated in the postings the tracker reads, so they can’t be filtered on yet.</p>')
+
+    out = [j for j in jobs if job_filters.matches_view(j, locations=locs, families=fams, experience=exp,
+                                                      companies=cos or None)
+           and (not q or q in " ".join(str(j.get(f) or "") for f in ("title", "company", "location", "reason")).lower())]
+    epoch = datetime.min.replace(tzinfo=timezone.utc)
+    if sort == "old":
+        out.sort(key=lambda j: found[id(j)] or epoch)
+    elif sort == "company":
+        out.sort(key=lambda j: ((j.get("company") or "").lower(), (j.get("title") or "").lower()))
+    elif sort == "title":
+        out.sort(key=lambda j: (j.get("title") or "").lower())
+    else:
+        out.sort(key=lambda j: found[id(j)] or epoch, reverse=True)
+    st.session_state[f"{prefix}_filtered_sig"] = (q, sort, tuple(locs), tuple(fams), tuple(exp), tuple(cos))
+    return out, active, _show_all
 
 
 def badge(cls: str, label: str) -> str:
@@ -2683,34 +2969,7 @@ def _opportunity_cards() -> str:
             '</div></div>')
 
 
-def onboarding_card() -> None:
-    """Shown on Home after a person's first sign-in, until they dismiss it."""
-    if USER is None:
-        return
-    try:
-        profile = USER.profile() or {}
-    except user_store.UserStoreError:
-        return
-    if (profile.get("onboarding") or {}).get("status") != user_store.ONBOARDING_PENDING:
-        return
-    with st.container(key="set_onboarding"):
-        c1, c2 = st.columns([4, 1], vertical_alignment="center")
-        with c1:
-            st.html(f'<div class="set-head"><span class="ic">{_ms("waving_hand")}</span><div><div class="eyebrow">Welcome</div>'
-                    '<h2 class="section-title">Your account is ready</h2><p class="section-sub">Jobs you dismiss, companies '
-                    'you follow and your alert settings are saved to your own account — nobody else sees or changes them. '
-                    'Follow companies from their pages; set alerts under Email &amp; Notifications.</p></div></div>')
-        with c2:
-            if st.button("Got it", key="btn_onboarding_done", type="primary", use_container_width=True):
-                try:
-                    USER.complete_onboarding()
-                except user_store.UserStoreError as e:
-                    toast(str(e), "error")
-                st.rerun()
-
-
 def page_home():
-    onboarding_card()
     with st.container(key="hero"):
         st.html(f"""<div class="hero"><div>
           <div class="eyebrow sparked">Discover jobs</div>
@@ -2774,9 +3033,8 @@ def page_home():
 
 
 def page_jobs():
-    note = personal_filter_note()
     page_header("Jobs", f"{_plural(len(all_records), 'job')} found by the tracker · {len(active_jobs)} active · "
-                        f"{len(dismissed_jobs)} dismissed" + (f'<br><span class="muted">{note}</span>' if note else ""))
+                        f"{len(dismissed_jobs)} dismissed")
     st.session_state.setdefault("jobs_tab", "active")
     with st.container(key="jobs_tab_wrap"):
         tab = st.pills("Show", ["active", "dismissed"], key="jobs_tab", label_visibility="collapsed",
@@ -3088,26 +3346,32 @@ def page_add_company():
         st.rerun()
 
 
-def follow_button(c: dict) -> None:
-    """Follow / Unfollow for the signed-in viewer's own watchlist. The
-    company must be a real entry of the shared catalogue."""
-    cid = c.get("id")
-    catalogue = {str(x.get("id")) for x in companies if not str(x.get("id", "")).startswith("_row")}
-    if USER is None or cid not in catalogue:
-        return
+def _catalogue_ids() -> set[str]:
+    return {str(x.get("id")) for x in companies if not str(x.get("id", "")).startswith("_row")}
+
+
+def set_following(cid: str, follow: bool, name: str = "") -> None:
+    """Follow / unfollow in the viewer's own watchlist (only IDs from the
+    shared catalogue; the catalogue itself never changes)."""
     try:
-        following = cid in USER.watchlist()
-    except user_store.UserStoreError:
+        USER.watch(cid, _catalogue_ids()) if follow else USER.unwatch(cid)
+        toast(f"Following {name}" if follow else f"Unfollowed {name}", "success")
+    except (user_store.UserStoreError, user_store.InvalidInput) as e:
+        toast(str(e) if isinstance(e, user_store.UserStoreError) else "That company can't be followed.", "error")
+    finally:
+        personal_changed()
+
+
+def follow_button(c: dict) -> None:
+    """Follow / Unfollow for the signed-in viewer's own watchlist."""
+    cid = c.get("id")
+    if ME is None or cid not in _catalogue_ids():
         return
-    if st.button("Following" if following else "Follow", key="btn_follow",
-                 icon=":material/check:" if following else ":material/add:", type="secondary" if following else "primary",
-                 help="Unfollow" if following else "Follow this company in your account"):
-        try:
-            USER.unwatch(cid) if following else USER.watch(cid, catalogue)
-            toast(f"Unfollowed {c.get('name')}" if following else f"Following {c.get('name')}", "success")
-        except user_store.UserStoreError as e:
-            toast(str(e), "error")
-        st.rerun()
+    following = cid in ME["watchlist"]
+    st.button("Following" if following else "Follow", key="btn_follow",
+              icon=":material/check:" if following else ":material/add:", type="secondary" if following else "primary",
+              help="Unfollow" if following else "Follow this company in your account",
+              on_click=set_following, args=(cid, not following, c.get("name") or ""))
 
 
 def page_company_detail(c: dict):
@@ -3122,7 +3386,7 @@ def page_company_detail(c: dict):
     hero.html(f"""<div class="detail-head">{_avatar(name, "lg")}<div style="min-width:0;">
       <div class="eyebrow">Tracked company</div>
       <h1 class="detail-title">{escape(name)}</h1>
-      <div class="detail-chips"><span class="pill {k}"><i></i>{lbl}</span>
+      <div class="detail-chips">{"" if MEMBER_VIEW else f'<span class="pill {k}"><i></i>{lbl}</span>'}
         {'<span class="tag">Core</span>' if c.get('locked') else ''}
         <span class="chip">{_ms("work")}<span>{company_active(c)} active · {sum(1 for j in jobs if is_dismissed(j))} dismissed</span></span>
         <span class="chip num">{_ms("schedule")}Checked {_ago(_parse_iso(c.get("last_checked", "")), NOW)}</span></div></div></div>""")
@@ -3138,7 +3402,7 @@ def page_company_detail(c: dict):
             follow_button(c)
         with a[2]:
             with st.container(key="danger"):
-                if st.session_state.confirm_remove != c.get("id"):
+                if not MEMBER_VIEW and st.session_state.confirm_remove != c.get("id"):
                     if st.button("Stop tracking", key="btn_remove_company", icon=":material/delete:"):
                         if owner_only("remove companies"):
                             st.session_state.confirm_remove = c.get("id")
@@ -3176,9 +3440,10 @@ def page_company_detail(c: dict):
             if k == "failing":
                 why = escape(c.get("status_reason") or "The last scan failed.")
                 health.append(("Problem", f'{why} <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">See the Actions log</a>'))
-            st.html(f'<h2 class="section-title">{_ms("monitor_heart")}Portal health</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
-                    + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in health) + "</dl>")
-            st.html('<div class="divider"></div>')
+            if not MEMBER_VIEW:
+                st.html(f'<h2 class="section-title">{_ms("monitor_heart")}Portal health</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
+                        + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in health) + "</dl>")
+                st.html('<div class="divider"></div>')
             cats = {"FRESHER": 0, "ENTRY_LEVEL": 0, "legacy": 0}
             for j in jobs:
                 cats[j.get("category") if j.get("category") in _CATEGORY_PILL else "legacy"] += 1
@@ -3249,50 +3514,43 @@ def page_monitoring():
 
 
 def my_alerts_card() -> None:
-    """The viewer's own alert settings: on/off (to their verified sign-in
-    email only), General or Tailored, company scope, and preferences. They
-    also narrow the viewer's job lists."""
-    if USER is None or _VIEW is None:
+    """The viewer's own alert emails: on/off (to their verified sign-in
+    email only), General or Tailored, and which companies they cover."""
+    if USER is None or ME is None:
         return
-    try:
-        prefs = USER.notification_settings()
-        followed = USER.watchlist()
-    except user_store.UserStoreError:
-        return
+    prefs = user_store.notification_settings_from(ME["profile"])
+    followed = ME["watchlist"]
     with st.container(key="set_my_alerts"):
         dest = (f'<span class="num">{escape(prefs["email"])}</span> (your verified sign-in email)' if prefs["email"]
                 else "your sign-in email isn't verified, so personal alerts can't be turned on")
-        st.html(f'<div class="set-head"><span class="ic">{_ms("person")}</span><div><div class="eyebrow">Your account</div>'
-                f'<h2 class="section-title">My alerts</h2><p class="section-sub">Saved to your own account. Sent to {dest}. '
-                'New matching jobs are emailed after each scheduled scan, once each.</p></div></div>')
+        st.html(f'<div class="set-head"><span class="ic">{_ms("notifications")}</span><div><div class="eyebrow">Your account</div>'
+                f'<h2 class="section-title">Alert emails</h2><p class="section-sub">Sent to {dest}. New matching jobs are '
+                'emailed after each scheduled scan, once each — never the backlog from before you turned them on.</p></div></div>')
         with st.form("my_alerts_form", border=False):
             enabled = st.toggle("Email me new jobs", value=prefs["enabled"], key="my_alerts_on",
                                 disabled=not prefs["email"])
-            scope = st.radio("Companies", ["all", "followed"], index=0 if _VIEW["watch_all"] else 1,
-                             key="my_alerts_scope", horizontal=True,
-                             format_func=lambda v: {"all": "All tracked companies",
-                                                    "followed": f"Only companies I follow ({len(followed)})"}[v])
             mode = st.radio("Which jobs", ["general", "tailored"], index=["general", "tailored"].index(prefs["mode"]),
-                            key="my_alerts_mode", horizontal=True,
-                            format_func=lambda m: {"general": "General — every qualifying job",
-                                                   "tailored": "Tailored — only my preferences below"}[m])
-            fams = st.multiselect("Job families", list(job_filters.JOB_FAMILIES), default=_VIEW["prefs"]["job_families"],
-                                  key="my_pref_families", placeholder="Any")
-            locs = st.multiselect("Locations", list(job_filters.LOCATIONS), default=_VIEW["prefs"]["locations"],
-                                  key="my_pref_locations", placeholder="Any")
-            exp = st.multiselect("Experience", list(job_filters.EXPERIENCE), default=_VIEW["prefs"]["experience"],
-                                 key="my_pref_experience", placeholder="Any",
-                                 format_func=lambda e: job_filters.EXPERIENCE_LABELS[e])
-            if st.form_submit_button("Save", key="btn_my_alerts", icon=":material/save:"):
+                            key="my_alerts_mode",
+                            format_func=lambda m: {"general": "General — every qualifying job from my companies",
+                                                   "tailored": "Tailored — only jobs matching my job preferences"}[m])
+            scope = st.radio("Companies", ["followed", "all"], index=0 if not _VIEW["watch_all"] else 1,
+                             key="my_alerts_scope", horizontal=True,
+                             format_func=lambda v: {"all": "Every tracked company",
+                                                    "followed": f"Only companies I follow ({len(followed)})"}[v])
+            if st.form_submit_button("Save", key="btn_my_alerts", type="primary", icon=":material/save:"):
                 try:
-                    USER.set_preferences(mode, fams, locs, exp)
                     USER.set_watch_all(scope == "all")
                     USER.set_notifications(bool(enabled) and bool(prefs["email"]), mode)
                     toast("Alert settings saved", "success")
                 except (user_store.UserStoreError, ValueError) as e:
                     toast(str(e) if isinstance(e, user_store.UserStoreError) else "Those settings couldn't be saved.",
                           "error")
+                finally:
+                    personal_changed()
                 st.rerun()
+        if scope == "followed" and not followed:
+            st.html(f'<p class="note">{_ms("info", "s16")} You don’t follow any companies yet, so General alerts '
+                    'have nothing to cover; Tailored alerts use your job preferences across every company.</p>')
 
 
 def page_email():
@@ -3345,8 +3603,6 @@ def page_email():
         else:
             note = f'{_ms("info", "s16")} No recipient is set. To turn alerts on, {how}.'
         st.html(f'<p class="note">{note}</p>')
-
-    my_alerts_card()
 
     with st.container(key="test_panel"):
         ts = st.session_state.test_status
@@ -3419,8 +3675,12 @@ def account_card() -> None:
             fb = "Not linked"
         else:
             fb = "Linked at your next Google sign-in"
-        role = "Admin — can manage companies, jobs, checks and email" if admin else "Member — read-only"
-        rows = [("Role", role), ("Email verified", "Yes" if ACCOUNT.get("email_verified") else "No"), ("Firebase account", fb)]
+        role = ("Admin — can manage companies, jobs, checks and email" if admin
+                else "Member — your own job search, companies and alerts" if USER is not None
+                else "Member — read-only")
+        rows = [("Role", role), ("Email verified", "Yes" if ACCOUNT.get("email_verified") else "No")]
+        if admin:                        # sign-in internals are the admin's business
+            rows.append(("Firebase account", fb))
         if USER is not None:
             rows.append(("Personal data", "Saved to your own account"))
         elif USER_PROBLEM:
@@ -3486,7 +3746,13 @@ def owner_card() -> None:
 
 
 def page_settings():
-    page_header("Settings", "Preferences and read-only details of how the tracker is configured")
+    page_header("Settings", "Your account, your job search and how the app looks"
+                + ("" if MEMBER_VIEW else " — plus how the tracker is configured"))
+    if AUTH_GATE:
+        account_card()
+    else:
+        owner_card()
+    personal_summary_card()
     with st.container(key="set_appearance"):
         a1, a2 = st.columns([4, 1], vertical_alignment="center")
         with a1:
@@ -3499,10 +3765,9 @@ def page_settings():
                          use_container_width=True):
                 st.session_state.dark_mode = not st.session_state.dark_mode
                 st.rerun()
-    if AUTH_GATE:
-        account_card()
-    else:
-        owner_card()
+    if MEMBER_VIEW:                      # the tracker's own settings are the admin's
+        st.html('<div class="app-foot"><span>Fresher Job Tracker</span><span>Fresher and entry-level roles in India</span></div>')
+        return
     with st.container(key="set_data"):
         synced = bool(os.environ.get("GITHUB_TOKEN"))
         d1, d2 = st.columns([4, 1], vertical_alignment="center")
@@ -3579,6 +3844,301 @@ def page_settings():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# PERSONAL PAGES — the same for admins and members
+# ═══════════════════════════════════════════════════════════════════════════════
+PREF_STEPS = ["locations", "job_types", "job_families", "experience", "work_modes"]
+_PREF_INFO = {   # question · short label · {value: label} · hint
+    "locations": ("Where do you want to work?", "Locations", {v: v for v in job_filters.LOCATIONS},
+                  "Pick any — leave it empty for anywhere in India."),
+    "job_types": ("What type of roles are you looking for?", "Job types", job_filters.JOB_TYPES,
+                  "Saved for later: postings don’t state the job type yet, so jobs aren’t filtered by it."),
+    "job_families": ("What kind of work interests you?", "Job families", {v: v for v in job_filters.JOB_FAMILIES},
+                     "Matched against each job’s title."),
+    "experience": ("What’s your experience level?", "Experience", job_filters.EXPERIENCE_LABELS,
+                   "As the tracker read it from each posting."),
+    "work_modes": ("How do you prefer to work?", "Work mode", job_filters.WORK_MODES,
+                   "Saved for later: postings don’t say remote or hybrid yet, so jobs aren’t filtered by it."),
+}
+
+
+# What the job lists and Tailored alerts really match on, and what is only
+# kept until the postings carry it (see job_filters' module note).
+MATCHED_PREFS = ("locations", "job_families", "experience")
+SAVED_ONLY_PREFS = ("job_types", "work_modes")
+SAVED_ONLY_NOTE = "Saved for later — not used for matching yet"
+
+
+def pref_lines(prefs: dict, fields=tuple(PREF_STEPS)) -> list[str]:
+    """"Hyderabad · Bengaluru", "Software engineering", … — one per chosen field."""
+    return [" · ".join(_PREF_INFO[f][2].get(v, v) for v in prefs.get(f) or []) for f in fields if prefs.get(f)]
+
+
+def pref_list_html(prefs: dict, empty: str) -> str:
+    """<li> rows for a summary: what is used to match jobs, then what is
+    only saved for later (never presented as a match)."""
+    used, saved = pref_lines(prefs, MATCHED_PREFS), pref_lines(prefs, SAVED_ONLY_PREFS)
+    html = '<li class="pg">Used to match jobs</li>' + ("".join(f"<li>{escape(x)}</li>" for x in used)
+                                                       or f'<li class="muted">{escape(empty)}</li>')
+    if saved:
+        html += f'<li class="pg">{SAVED_ONLY_NOTE}</li>' + "".join(f'<li class="muted">{escape(x)}</li>' for x in saved)
+    return html
+
+
+def save_preferences(values: dict) -> bool:
+    try:
+        USER.set_preferences(_VIEW["mode"] if _VIEW else "general", values.get("job_families") or [],
+                             values.get("locations") or [], values.get("experience") or [],
+                             values.get("job_types") or [], values.get("work_modes") or [])
+        return True
+    except (user_store.UserStoreError, ValueError) as e:
+        toast(str(e) if isinstance(e, user_store.UserStoreError) else "Those preferences couldn't be saved.", "error")
+        return False
+    finally:
+        personal_changed()
+
+
+def _personal_unavailable() -> bool:
+    if USER is not None and ME is not None:
+        return False
+    empty_state("cloud_off", "Personal settings are unavailable",
+                USER_PROBLEM or "Personal data isn't switched on for this app yet.")
+    return True
+
+
+def page_preferences():
+    page_header("Job preferences", "Used as the starting filters of your job lists and for Tailored alerts. "
+                                   "The same for everyone — admins included.", eyebrow="Your account")
+    if _personal_unavailable():
+        return
+    with st.container(key="set_prefs"):
+        with st.form("prefs_form", border=False):
+            picks = {}
+            for cls, group, sub, fields in (
+                    ("", "Used to match jobs", "Your job lists start from these, and Tailored alerts use them.",
+                     MATCHED_PREFS),
+                    ("later", SAVED_ONLY_NOTE, "Postings don’t state these yet, so no job is filtered by them.",
+                     SAVED_ONLY_PREFS)):
+                st.html(f'<div class="pref-group {cls}"><div class="eyebrow">{escape(group)}</div><p>{escape(sub)}</p></div>')
+                for f in fields:
+                    question, short, options, hint = _PREF_INFO[f]
+                    st.html(f'<div class="pref-q"><b>{escape(short)}</b><span>{escape(hint)}</span></div>')
+                    picks[f] = st.pills(short, list(options), selection_mode="multi",
+                                        default=_VIEW["prefs"].get(f) or [], key=f"pref_{f}", format_func=options.get,
+                                        label_visibility="collapsed")
+            if st.form_submit_button("Save preferences", key="btn_prefs_save", type="primary", icon=":material/check:"):
+                if save_preferences(picks):
+                    toast("Preferences saved", "success")
+                st.rerun()
+
+
+def page_alerts():
+    page_header("My alerts", "Emails about new jobs, sent to your own verified address", eyebrow="Your account")
+    if _personal_unavailable():
+        return
+    my_alerts_card()
+    a, b, _c = st.columns([1, 1, 2])
+    with a:
+        st.button("Job preferences", key="btn_alerts_prefs", icon=":material/tune:", on_click=go, args=("preferences",),
+                  use_container_width=True)
+    with b:
+        st.button("My companies", key="btn_alerts_cos", icon=":material/apartment:", on_click=go,
+                  args=("companies",), kwargs={"view": "mine"}, use_container_width=True)
+
+
+def _onboarding_next(step: int, field: str | None) -> None:
+    vals = st.session_state.setdefault("ob_values", {})
+    if field:
+        vals[field] = list(st.session_state.get(f"ob_{field}") or [])
+    st.session_state.ob_step = step
+
+
+def _onboarding_finish(with_preferences: bool) -> None:
+    vals = st.session_state.get("ob_values", {}) if with_preferences else {}
+    if with_preferences and not save_preferences(vals):
+        return
+    try:
+        USER.complete_onboarding()
+    except user_store.UserStoreError as e:
+        toast(str(e), "error")
+        return
+    finally:
+        personal_changed()
+    for key in ("ob_values", "ob_step"):
+        st.session_state.pop(key, None)
+    go("home")
+    toast("You're all set" if with_preferences else "You can set your preferences anytime from your account menu",
+          "success")
+
+
+def page_onboarding():
+    """First sign-in: five quick questions, then a summary. Nothing here is
+    required, and alerts stay off until the person turns them on."""
+    st.html('<style>[data-testid="stSidebar"], .st-key-mnav { display: none !important; }</style>')
+    step = int(st.session_state.get("ob_step", 0))
+    vals = st.session_state.setdefault("ob_values", {})
+    first = account_label(ACCOUNT).split(" ")[0] if ACCOUNT else ""
+    with st.container(key="onboard"):
+        dots = "".join(f'<i class="{"on" if i < step else "now" if i == step else ""}"></i>' for i in range(len(PREF_STEPS) + 1))
+        if step < len(PREF_STEPS):
+            field = PREF_STEPS[step]
+            question, short, options, hint = _PREF_INFO[field]
+            st.html(f'<div class="ob-head"><div class="eyebrow sparked">Welcome{", " + escape(first) if first else ""}'
+                    f'</div><div class="ob-dots" aria-label="Step {step + 1} of {len(PREF_STEPS)}">{dots}</div>'
+                    f'<h1 class="ob-title">{escape(question)}</h1><p class="ob-sub">{escape(hint)}</p></div>')
+            st.pills(short, list(options), selection_mode="multi", default=vals.get(field) or [], key=f"ob_{field}",
+                     format_func=options.get, label_visibility="collapsed")
+            with st.container(key="ob_actions", horizontal=True):
+                if step:
+                    st.button("Back", key="btn_ob_back", icon=":material/arrow_back:", on_click=_onboarding_next,
+                              args=(step - 1, field))
+                st.button("Continue", key="btn_ob_next", type="primary", icon=":material/arrow_forward:",
+                          icon_position="right", on_click=_onboarding_next, args=(step + 1, field))
+                st.button("Skip for now", key="btn_onboarding_skip", type="tertiary", on_click=_onboarding_finish,
+                          args=(False,))
+        else:
+            summary = pref_list_html(vals, "No preferences — you’ll see every qualifying fresher job.")
+            st.html(f'<div class="ob-head"><div class="ob-dots">{dots}</div><div class="ob-done">{_ms("task_alt", "s28")}</div>'
+                    '<h1 class="ob-title">You’re ready</h1><p class="ob-sub">Your job lists start from these. Change them '
+                    'anytime from your account menu. Alert emails stay off until you turn them on.</p>'
+                    f'<ul class="ob-summary">{summary}</ul></div>')
+            with st.container(key="ob_actions", horizontal=True):
+                st.button("Back", key="btn_ob_back", icon=":material/arrow_back:", on_click=_onboarding_next,
+                          args=(step - 1, None))
+                st.button("Start discovering jobs", key="btn_ob_finish", type="primary", icon=":material/arrow_forward:",
+                          icon_position="right", on_click=_onboarding_finish, args=(True,))
+
+
+def page_my_companies():
+    """The companies THIS person follows — chosen from the shared catalogue,
+    which itself never changes here."""
+    following = sorted((c for c in companies if str(c.get("id")) in (ME["watchlist"] if ME else set())),
+                       key=lambda c: (c.get("name") or "").lower())
+    page_header("My companies",
+                "Companies you follow narrow your job lists and General alerts. "
+                "The tracker's company list itself isn't changed.", eyebrow="Your account" if not MEMBER_VIEW else None)
+    if _personal_unavailable():
+        return
+    if not MEMBER_VIEW:
+        st.button("All tracked companies", key="btn_cos_all", icon=":material/arrow_back:", type="tertiary",
+                  on_click=go, args=("companies",))
+    if following:
+        with st.container(key="set_following"):
+            st.html(f'<h2 class="section-title">{_ms("check_circle")}Following {len(following)}</h2>')
+            for c in following:
+                cid = str(c.get("id"))
+                with st.container(key=f"fol_{_widget_key('f', cid)}"):
+                    r1, r2, r3 = st.columns([5, 1.2, 1.2], vertical_alignment="center")
+                    with r1:
+                        st.html(f'<div class="co-mini">{_avatar(c.get("name") or "")}<div><b>{escape(c.get("name") or "")}</b>'
+                                f'<span>{_plural(company_active(c), "active job")}</span></div></div>')
+                    with r2:
+                        st.button("View", key=f"fv_{_widget_key('f', cid)}", on_click=go, args=("companies",),
+                                  kwargs={"company": cid}, use_container_width=True)
+                    with r3:
+                        st.button("Unfollow", key=f"fu_{_widget_key('f', cid)}", on_click=set_following,
+                                  args=(cid, False, c.get("name") or ""), use_container_width=True)
+    picking = bool(following) or st.session_state.get("co_pick")
+    if not following and not picking:
+        empty_state("apartment", "You aren't following any companies yet.",
+                    "Follow the companies you care about — your job lists and General alerts will focus on them.",
+                    lambda: st.button("Choose companies", key="btn_co_pick", type="primary", icon=":material/add:",
+                                      on_click=lambda: st.session_state.update(co_pick=True)))
+        return
+    rest = [c for c in companies if str(c.get("id")) in _catalogue_ids() and c not in following]
+    if rest:
+        with st.container(key="set_co_add"):
+            st.html(f'<h2 class="section-title">{_ms("add_circle")}Add companies</h2>'
+                    '<p class="section-sub">Companies the tracker monitors.</p>')
+            for c in sorted(rest, key=lambda c: (c.get("name") or "").lower()):
+                cid = str(c.get("id"))
+                with st.container(key=f"add_{_widget_key('a', cid)}"):
+                    r1, r2 = st.columns([5, 1.2], vertical_alignment="center")
+                    with r1:
+                        st.html(f'<div class="co-mini">{_avatar(c.get("name") or "")}<div><b>{escape(c.get("name") or "")}</b>'
+                                f'<span>{_plural(company_active(c), "active job")}</span></div></div>')
+                    with r2:
+                        st.button("Follow", key=f"fa_{_widget_key('a', cid)}", type="primary", icon=":material/add:",
+                                  on_click=set_following, args=(cid, True, c.get("name") or ""), use_container_width=True)
+
+
+def page_member_home():
+    """A member's Home: their own job search — no scanner, no admin tools."""
+    first = account_label(ACCOUNT).split(" ")[0] if ACCOUNT else ""
+    mine = for_me(active_jobs)
+    with st.container(key="mh_hero"):
+        st.html(f'<div class="mh-hero"><div class="eyebrow sparked">Your job search</div>'
+                f'<h1 class="page-title">Hi{", " + escape(first) if first else ""} — here are your <em>matches</em></h1>'
+                f'<p class="hero-sub">{_plural(len(mine), "job")} match your preferences right now.</p></div>')
+    if ME is not None:
+        notif = user_store.notification_settings_from(ME["profile"])
+        cols = st.columns(3)
+        cards = [
+            ("set_mh_prefs", "tune", "Job preferences",
+             pref_list_html(_VIEW["prefs"], "None yet — every qualifying job is shown."),
+             "Edit preferences", ("preferences",), {}),
+            ("set_mh_companies", "apartment", "Companies",
+             (f'<li>Following {len(ME["watchlist"])}</li>' if ME["watchlist"] else '<li class="muted">Not following any yet</li>'),
+             "Choose companies", ("companies",), {"view": "mine"}),
+            ("set_mh_alerts", "notifications", "Alert emails",
+             (f'<li>On · {"Tailored" if notif["mode"] == "tailored" else "General"}</li>' if notif["enabled"]
+              else '<li class="muted">Off</li>'), "Manage alerts", ("alerts",), {}),
+        ]
+        for col, (key, icon, title, body, cta, args, kw) in zip(cols, cards):
+            with col, st.container(key=key):
+                st.html(f'<div class="mh-card"><div class="h">{_ms(icon, "s20")}<b>{title}</b></div><ul>{body}</ul></div>')
+                st.button(cta, key=f"btn_{key}", on_click=go, args=args, kwargs=kw, use_container_width=True)
+    elif USER_PROBLEM:
+        st.html(f'<p class="note">{_ms("info", "s16")} {escape(USER_PROBLEM)}</p>')
+    st.html('<div class="sec-head"><div><div class="eyebrow sparked">Matching jobs</div><h2 class="section-title">Your matches</h2>'
+            '<p class="section-sub">Newest fresher and entry-level roles that fit your preferences</p></div></div>')
+    if not mine:
+        empty_state("search_off", "No jobs match your preferences right now",
+                    "New roles appear after each scan. You can widen your preferences or browse every job.",
+                    lambda: st.button("Browse all jobs", key="btn_mh_all", on_click=go, args=("jobs",)))
+        return
+    with st.container(key="joblist_home"):
+        for i, j in enumerate(mine[:HOME_LIMIT]):
+            job_row(j, f"m{i}", "home")
+        with st.container(key="list_foot_h"):
+            f1, f2 = st.columns([3, 1], vertical_alignment="center")
+            with f1:
+                st.html(f'<span class="muted num" style="font-size:13px;">Showing {min(HOME_LIMIT, len(mine))} of '
+                        f'{_plural(len(mine), "match", "matches")}</span>')
+            with f2:
+                st.button("View all jobs", key="btn_all_jobs", icon=":material/arrow_forward:", icon_position="right",
+                          on_click=go, args=("jobs",))
+
+
+def personal_summary_card() -> None:
+    """Settings: what this person has chosen, with a way to each page."""
+    if ME is None:
+        return
+    notif = user_store.notification_settings_from(ME["profile"])
+    used, saved = pref_lines(_VIEW["prefs"], MATCHED_PREFS), pref_lines(_VIEW["prefs"], SAVED_ONLY_PREFS)
+    with st.container(key="set_personal"):
+        st.html(f'<div class="set-head"><span class="ic">{_ms("person_search")}</span><div><div class="eyebrow">Job discovery</div>'
+                '<h2 class="section-title">Your job search</h2><p class="section-sub">Saved to your own account.</p></div></div>'
+                '<dl class="kv">'
+                f'<dt>Used to match jobs</dt><dd>{"<br>".join(escape(x) for x in used) or "None yet"}</dd>'
+                + (f'<dt>Saved for later</dt><dd>{"<br>".join(escape(x) for x in saved)}'
+                   '<span class="kv-note">Not used for matching yet — postings don’t state job type or work mode.</span></dd>'
+                   if saved else "") +
+                f'<dt>Companies</dt><dd>{"Following " + str(len(ME["watchlist"])) if ME["watchlist"] else "Not following any yet"}</dd>'
+                f'<dt>Alert emails</dt><dd>{("On · " + ("Tailored" if notif["mode"] == "tailored" else "General")) if notif["enabled"] else "Off"}</dd>'
+                '</dl>')
+        a, b, c = st.columns(3)
+        with a:
+            st.button("Edit preferences", key="btn_set_prefs", icon=":material/tune:", on_click=go, args=("preferences",),
+                      use_container_width=True)
+        with b:
+            st.button("My companies", key="btn_set_cos", icon=":material/apartment:", on_click=go,
+                      args=("companies",), kwargs={"view": "mine"}, use_container_width=True)
+        with c:
+            st.button("My alerts", key="btn_set_alerts", icon=":material/notifications:", on_click=go, args=("alerts",),
+                      use_container_width=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # ROUTER
 # ═══════════════════════════════════════════════════════════════════════════════
 page = st.session_state.page
@@ -3592,6 +4152,8 @@ if page == "jobs" and st.session_state.job_id:
         page_jobs()
 elif page == "companies" and st.session_state.company_view == "add":
     page_add_company()
+elif page == "companies" and (MEMBER_VIEW or st.session_state.company_view == "mine") and not st.session_state.company_id:
+    page_my_companies()
 elif page == "companies" and st.session_state.company_id:
     comp = next((c for c in companies if str(c.get("id")) == str(st.session_state.company_id)), None)
     if comp:
@@ -3600,8 +4162,9 @@ elif page == "companies" and st.session_state.company_id:
         st.session_state.company_id = None
         page_companies()
 else:
-    {"home": page_home, "jobs": page_jobs, "companies": page_companies, "monitoring": page_monitoring,
-     "email": page_email, "settings": page_settings}[page]()
+    {"home": page_member_home if MEMBER_VIEW else page_home, "jobs": page_jobs, "companies": page_companies,
+     "monitoring": page_monitoring, "email": page_email, "settings": page_settings, "alerts": page_alerts,
+     "preferences": page_preferences, "onboarding": page_onboarding}[page]()
 st.session_state.page_before = st.session_state.page
 
 # mirror the view into the URL (only when it changed, so no extra reruns)

@@ -139,8 +139,11 @@ def test_members_cannot_change_anything(app, google_env, admins, monkeypatch, ac
     if action == "run_check":
         monkeypatch.setenv("GITHUB_TOKEN", "test-token")
         monkeypatch.setattr(config_store, "fetch_remote_json", lambda *a, **k: {})
+    by_address = {"remove_company": {"page": "companies", "company": "sanofi"},
+                  "add_company": {"page": "companies", "view": "add"},
+                  "test_email": {"page": "email"}, "run_check": {"page": "monitoring"}}
     at = _member(app, google_env, admins, [NEW_RECORD, DISMISSED],
-                 **({"query": {"page": "companies", "company": "sanofi"}} if action == "remove_company" else {}))
+                 **({"query": by_address[action]} if action in by_address else {}))
     assert 'class="role admin"' not in _html(at)
     seen, companies = _seen(at), _companies(at)
     if action == "row_dismiss":
@@ -157,27 +160,27 @@ def test_members_cannot_change_anything(app, google_env, admins, monkeypatch, ac
             at.pills(key="jobs_tab").set_value("dismissed").run()
         at.button(key=_key("crit", rec)).click().run()
         at.button(key=action).click().run()
+    # Admin controls are not even drawn for a member, also when the page is
+    # opened by its address (the operations keep their own server checks,
+    # see test_admin_test_email_rechecks_the_role_at_send_time).
     elif action == "dismiss_all":
         _nav(at, "settings")
-        at.button(key="btn_clear_all").click().run()
-        assert "btn_clear_all_confirm" not in _buttons(at)
+        assert not {"btn_clear_all", "btn_clear_all_confirm"} & _buttons(at)
     elif action == "add_company":
+        assert at.session_state.page == "home" and not {"btn_open_add", "btn_add"} & _buttons(at)
         _nav(at, "companies")
-        at.button(key="btn_open_add").click().run()
-        at.text_input(key="new_name").set_value("Evil Corp").run()
-        at.text_input(key="new_url").set_value("https://evil.example/jobs").run()
-        at.button(key="btn_add").click().run()
+        assert not {"btn_open_add", "btn_add"} & _buttons(at)
+        assert not {"new_name", "new_url"} & {t.key for t in at.text_input}
     elif action == "remove_company":
-        at.button(key="btn_remove_company").click().run()
-        assert "btn_remove" not in _buttons(at)
+        assert not {"btn_remove_company", "btn_remove"} & _buttons(at)
     elif action == "test_email":
-        _nav(at, "email")
-        at.button(key="btn_test").click().run()
+        assert at.session_state.page == "home" and "btn_test" not in _buttons(at) and "nav_email" not in _buttons(at)
     elif action == "run_check":
-        _nav(at, "monitoring")
-        at.button(key="btn_run_check").click().run()
+        assert at.session_state.page == "home" and "btn_run_check" not in _buttons(at)
+        assert "nav_monitoring" not in _buttons(at)
     assert not at.exception
-    assert "Only admins can" in _html(at)
+    if action in ("row_dismiss", "row_restore", "detail_dismiss", "detail_restore"):
+        assert "Only admins can" in _html(at)
     assert _seen(at) == seen and _companies(at) == companies
     assert sent == [] and dispatched == []
 
@@ -186,12 +189,14 @@ def test_members_see_no_internal_details(app, google_env, admins, monkeypatch):
     monkeypatch.setenv("ALERT_RECIPIENT", RECIPIENT)
     at = _member(app, google_env, admins, [NEW_RECORD])
     for page in ("home", "jobs", "companies", "monitoring", "email", "settings"):
-        _nav(at, page)
+        at.session_state["page"] = page              # admin pages too, as if opened by address
+        at.run()
+        assert not at.exception
+        assert at.session_state.page == ("home" if page in ("monitoring", "email") else page)
         html = _html(at)
         _no_internals(html)
-        assert RECIPIENT not in html and UID not in html and "owner_pw" not in {t.key for t in at.text_input}
-        if page == "email":
-            assert access.mask_email(RECIPIENT) in html and "Managed by an admin" in html
+        assert RECIPIENT not in html and access.mask_email(RECIPIENT) not in html and UID not in html
+        assert "owner_pw" not in {t.key for t in at.text_input}
 
 
 def test_forged_session_state_never_grants_a_role(app, google_env, admins):
@@ -282,7 +287,7 @@ def test_admin_test_email_rechecks_the_role_at_send_time(app, google_env, admins
     at = _admin(app, google_env, admins, [], page="email")
     monkeypatch.setenv("JT_ADMIN_EMAILS", BOSS)                    # removed from the list meanwhile
     at.button(key="btn_test").click().run()
-    assert sent == [] and "Only admins can send test emails." in _html(at)
+    assert sent == [] and at.session_state.page == "home"           # now a member: the page itself is gone
 
 
 # ---------------------------------------------------------------------------
@@ -395,9 +400,10 @@ def test_sign_out_leaves_nothing_for_the_next_person_in_the_tab(app, google_env,
     _login(at, email=member)
     html = _html(at)
     assert not _login_page(at) and 'class="role admin"' not in html and ADMIN not in html
-    _nav(at, "email")
+    assert "nav_email" not in _buttons(at)                             # the admin's email page is gone
+    _nav(at, "settings")
     html = _html(at)
-    assert "Not sent this session" in html and RECIPIENT not in html and UID not in _dump(at)
+    assert RECIPIENT not in html and UID not in _dump(at)
 
 
 def test_shared_caches_hold_no_per_user_data():
@@ -417,7 +423,10 @@ def test_shared_caches_hold_no_per_user_data():
     # holds no one's data; its key is a non-secret credential fingerprint and
     # the project ID; every per-user read goes through a UserData bound to the
     # session's own uid. ("Not configured" and failures are never cached.)
-    assert cached == {"_logo_data_uri": [], "_source_label": ["c"], "_guards": [], "_remote_snapshot": [],
+    # _shared_data holds the shared GitHub files (companies, settings, seen
+    # jobs) — the same for everyone; per-user data is cached only in the
+    # session's own st.session_state.
+    assert cached == {"_logo_data_uri": [], "_source_label": ["c"], "_guards": [], "_shared_data": [],
                       "_user_store_for": ["fingerprint", "project_id"]}, cached
 
 
