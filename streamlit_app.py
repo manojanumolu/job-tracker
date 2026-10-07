@@ -25,7 +25,7 @@ def _reload_changed_local_modules() -> None:
 
     base = os.path.dirname(os.path.abspath(__file__))
     order = ["identity", "locations", "job_classifier", "sources", "scraper", "config_store", "repo_sync",
-             "access", "firebase_auth", "notifier", "alerts"]
+             "access", "firebase_auth", "job_filters", "user_store", "notifier", "alerts"]
     for name in order:
         mod = sys.modules.get(name)
         path = getattr(mod, "__file__", None) if mod else None
@@ -59,6 +59,8 @@ from config_store import (
 from notifier import category_label, friendly_reason, safe_url
 from identity import ats_job_id
 import firebase_auth
+import job_filters
+import user_store
 from access import (
     ACCOUNT_KEY,
     OWNER_SESSION_KEY,
@@ -1540,6 +1542,67 @@ def _firebase_config():
     return config, problem, firebase_auth.any_setting(secrets)
 
 
+@st.cache_resource(show_spinner=False)
+def _user_store():
+    """(store, problem): the per-user data store, shared by every session
+    of this process (a Firestore client — it holds no one's data). (None,
+    "") until a Firebase service account is configured; the app then works
+    exactly as without personal data."""
+    secrets = _secrets_dict()
+    fb = firebase_auth.config_status(secrets)[0]
+    return user_store.configure(secrets, fb.project_id if fb else "")
+
+
+def _google_firebase_account(sub: str) -> dict | None:
+    """The Firebase account linked to this Google account, looked up on the
+    server (Admin SDK) by Google's stable subject ID — used when Google's
+    1-hour token was too old to link at sign-in. Once per session; None if
+    per-user data isn't set up or the lookup failed."""
+    store = _user_store()[0]
+    if store is None or not sub:
+        return None
+    cached = st.session_state.get("_fb_lookup")
+    if isinstance(cached, dict) and cached.get("sub") == sub:
+        return cached.get("account")
+    try:
+        found = store.google_account(sub)
+    except user_store.UserStoreError:
+        return None                      # not cached: retried on the next run
+    st.session_state._fb_lookup = {"sub": sub, "account": found}
+    return found
+
+
+_ACCOUNT_CHECK_S = 300
+
+
+def _firebase_account_state(uid: str) -> str:
+    """Firebase's current state of the signed-in account, by UID:
+    "ok", "disabled", "deleted" — or "unknown" when per-user data isn't set
+    up or Firebase couldn't be asked (never treated as a problem by itself).
+    Re-checked every few minutes, so disabling someone takes effect within
+    minutes even for a session that is already open."""
+    store = _user_store()[0]
+    if store is None or not user_store.valid_uid(uid):
+        return "unknown"
+    cached = st.session_state.get("_acct_state")
+    if isinstance(cached, dict) and cached.get("uid") == uid and time.time() - cached.get("at", 0) < _ACCOUNT_CHECK_S:
+        return cached["state"]
+    try:
+        acct = store.account(uid)
+    except user_store.UserStoreError:
+        return "unknown"
+    state = "deleted" if acct is None else "disabled" if acct.get("disabled") else "ok"
+    st.session_state._acct_state = {"uid": uid, "state": state, "at": time.time()}
+    return state
+
+
+def _blocked_account() -> None:
+    """A Firebase account the owner disabled: no access, whatever Google says."""
+    st.session_state._login_error = "This account has been disabled."
+    auth_event("google identity ok; firebase account disabled — refused")
+    return None
+
+
 def _google_setup() -> tuple[dict | None, str]:
     """Streamlit's built-in Google sign-in (st.login) as configured in the
     [auth] secrets: ({"provider": None | name, "redirect_uri": ...}, "") when
@@ -1575,6 +1638,7 @@ def _google_identity() -> dict | None:
         email = st.user.get("email") if hasattr(st.user, "get") else getattr(st.user, "email", None)
         verified = st.user.get("email_verified") if hasattr(st.user, "get") else getattr(st.user, "email_verified", None)
         name = st.user.get("name") if hasattr(st.user, "get") else getattr(st.user, "name", None)
+        sub = st.user.get("sub") if hasattr(st.user, "get") else getattr(st.user, "sub", None)
     except Exception as e:
         auth_event(f"reading st.user failed: {type(e).__name__}")
         return None
@@ -1582,7 +1646,7 @@ def _google_identity() -> dict | None:
         auth_event(f"st.user logged in but no usable email (type {type(email).__name__})")
         return None
     return {"email": email.strip().lower(), "email_verified": verified is True,
-            "name": name if isinstance(name, str) else ""}
+            "name": name if isinstance(name, str) else "", "sub": sub if isinstance(sub, str) else ""}
 
 
 def _google_id_token() -> str | None:
@@ -1632,7 +1696,16 @@ def resolve_account(google: dict | None, config) -> dict | None:
             if fb_user is None:
                 _link_google_to_firebase(google, config)
                 fb_user = firebase_auth.session_user(st.session_state)
+            if (st.session_state.get("_fb_link") or {}).get("code") == "USER_DISABLED":
+                st.session_state.pop(ACCOUNT_KEY, None)
+                return _blocked_account()
             uid = fb_user.get("uid") if fb_user and fb_user.get("email") == g["email"] else ""
+            if not uid:
+                found = _google_firebase_account(g.get("sub", ""))
+                if found and found.get("disabled"):
+                    st.session_state.pop(ACCOUNT_KEY, None)
+                    return _blocked_account()
+                uid = found.get("uid", "") if found else ""
             account = {**g, "uid": uid, "provider": "google.com"}
         elif fb_user and fb_user.get("provider") == "password":
             account = {"email": fb_user.get("email") or "", "email_verified": fb_user.get("email_verified") is True,
@@ -1641,6 +1714,17 @@ def resolve_account(google: dict | None, config) -> dict | None:
         # signed in again with email/password after an explicit sign-out
         account = {"email": fb_user.get("email") or "", "email_verified": fb_user.get("email_verified") is True,
                    "name": "", "uid": fb_user["uid"], "provider": "password"}
+    if account and account.get("uid"):
+        state = _firebase_account_state(account["uid"])
+        if state == "disabled":
+            st.session_state.pop(ACCOUNT_KEY, None)
+            st.session_state.pop(firebase_auth.SESSION_KEY, None)
+            return _blocked_account()
+        if state == "deleted":
+            # the Firebase account behind this sign-in no longer exists: no
+            # personal data is read or written for it (whether a deleted person
+            # may come back is a policy decision — see user_store docs)
+            account = {**account, "uid": "", "account_deleted": True}
     if account is None and not admins_configured() and owner_session_valid(st.session_state):
         account = {"email": "", "email_verified": False, "name": "Owner", "uid": "", "provider": "owner"}
     if account:
@@ -1835,6 +1919,35 @@ if st.query_params.get("diag") == "auth" and is_owner():
     render_auth_diag()
     st.stop()
 
+# ── personal data ─────────────────────────────────────────────────────────────
+# USER is this viewer's own data, bound to the Firebase UID of the account
+# the gate resolved on the server — never to anything from the URL, a form
+# or the browser. None when per-user data isn't set up (the app then works
+# as before) or unavailable (USER_PROBLEM says why; nothing falls back to
+# shared data for a member).
+USER: user_store.UserData | None = None
+USER_PROBLEM = ""
+_STORE, _STORE_PROBLEM = _user_store() if AUTH_GATE else (None, "")
+if _STORE_PROBLEM:
+    log.warning("personal data unavailable: %s", _STORE_PROBLEM)
+if ACCOUNT and ACCOUNT.get("provider") in ("google.com", "password") and (_STORE is not None or _STORE_PROBLEM):
+    if _STORE is None:
+        USER_PROBLEM = user_store.UNAVAILABLE
+    elif ACCOUNT.get("account_deleted"):
+        USER_PROBLEM = "Your account was removed, so personal data is off for this session."
+    elif not user_store.valid_uid(ACCOUNT.get("uid")):
+        USER_PROBLEM = ("Your personal data needs a linked Firebase account — sign out, then continue with "
+                        "Google again.")
+    else:
+        try:
+            USER = _STORE.for_uid(ACCOUNT["uid"])
+            if st.session_state.get("_profile_uid") != USER.uid:      # once per sign-in
+                USER.ensure_profile(ACCOUNT.get("email") or "", ACCOUNT.get("name") or "",
+                                    ACCOUNT.get("email_verified") is True)
+                st.session_state._profile_uid = USER.uid
+        except user_store.UserStoreError as e:
+            USER, USER_PROBLEM = None, str(e)
+
 
 def account_label(account: dict) -> str:
     return (account.get("name") or account.get("email") or "Signed in").strip()
@@ -1861,8 +1974,55 @@ for _j in _load_synced("seen_jobs.json", []):
     if isinstance(_j, dict) and job_key(_j) not in _seen_keys:
         _seen_keys.add(job_key(_j))
         all_records.append(_j)
-active_jobs: list[dict] = visible_jobs(all_records)                                   # newest-first
-dismissed_jobs: list[dict] = [j for j in reversed(all_records) if j.get("dismissed")]  # newest-first
+# With personal data, "dismissed" means dismissed BY THIS VIEWER (an admin's
+# view also includes the shared dismissals that today's alert emails follow);
+# one person's dismissal never hides a job from anyone else.
+_HIDDEN: set[str] | None = None
+if USER is not None:
+    try:
+        _HIDDEN = USER.dismissed()
+    except user_store.UserStoreError as _e:
+        USER, USER_PROBLEM = None, str(_e)
+if _HIDDEN is not None and is_owner():
+    _HIDDEN |= {job_key(j) for j in all_records if j.get("dismissed")}
+
+
+def is_dismissed(j: dict) -> bool:
+    return job_key(j) in _HIDDEN if _HIDDEN is not None else bool(j.get("dismissed"))
+
+
+_all_active_jobs: list[dict] = (visible_jobs(all_records) if _HIDDEN is None              # newest-first
+                                else [j for j in reversed(all_records) if isinstance(j, dict) and not is_dismissed(j)])
+
+# What this viewer asked to see (General: their companies; Tailored: also
+# their preferences). It only narrows the list — company pages and the
+# admin's "dismiss all" still work on everything.
+_VIEW: dict | None = None
+if USER is not None:
+    try:
+        _VIEW = USER.personal_view()
+    except user_store.UserStoreError as _e:
+        USER, USER_PROBLEM = None, str(_e)
+
+
+def for_me(jobs: list[dict]) -> list[dict]:
+    if _VIEW is None:
+        return jobs
+    return [j for j in jobs if job_filters.for_person(j, mode=_VIEW["mode"], prefs=_VIEW["prefs"],
+                                                      watch_all=_VIEW["watch_all"], watchlist=_VIEW["watchlist"])]
+
+
+def personal_filter_note() -> str:
+    """A short line when the lists are narrowed for this viewer."""
+    if _VIEW is None or (_VIEW["watch_all"] and _VIEW["mode"] != "tailored"):
+        return ""
+    parts = ([] if _VIEW["watch_all"] else [_plural(len(_VIEW["watchlist"]), "followed company", "followed companies")]) \
+        + (["your tailored preferences"] if _VIEW["mode"] == "tailored" else [])
+    return "Showing " + " and ".join(parts) + " · change under Email &amp; Notifications"
+
+
+active_jobs: list[dict] = for_me(_all_active_jobs)
+dismissed_jobs: list[dict] = for_me([j for j in reversed(all_records) if is_dismissed(j)])  # newest-first
 
 NOW = datetime.now(timezone.utc)
 # cron asks for every 3 h, but GitHub starts scheduled runs late: measured
@@ -1883,6 +2043,33 @@ for _k, _v in (("toast", None), ("toast_kind", "success"), ("jobs_page", 0), ("t
 if st.session_state.pop("_clear_add_form", False):
     for _k in ("new_name", "new_url", "new_website"):
         st.session_state[_k] = ""
+
+
+def change_dismissal(keys: set[str], dismiss: bool):
+    """Dismiss or restore jobs for the signed-in viewer: (saved, error), or
+    None when refused (the reason is already shown).
+    With personal data, the viewer's OWN list changes — members included,
+    never anyone else's — and an admin's change also goes to the shared
+    record that today's alert emails follow. Without personal data only the
+    shared record exists, and only admins may change it."""
+    action = "dismiss jobs" if dismiss else "restore jobs"
+    if USER is None:
+        if USER_PROBLEM and not is_owner():
+            toast(USER_PROBLEM, "error")
+            return None
+        if not owner_only(action):
+            return None
+    else:
+        try:
+            (USER.dismiss if dismiss else USER.restore)(keys)
+        except user_store.UserStoreError as e:
+            toast(str(e), "error")
+            return None
+        if not is_owner():
+            return True, ""
+    _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(keys) if dismiss else _restore_jobs(keys), [],
+                                 f"chore: {'dismiss' if dismiss else 'restore'} {len(keys)} alert(s)")
+    return saved, err
 
 
 def toast(msg: str, kind: str = "success"):
@@ -1969,7 +2156,7 @@ def company_jobs(c: dict) -> list[dict]:
 
 
 def company_active(c: dict) -> int:
-    return sum(1 for j in company_jobs(c) if not j.get("dismissed"))
+    return sum(1 for j in company_jobs(c) if not is_dismissed(j))
 
 
 def find_company(name: str, company_id: str | None = None) -> dict | None:
@@ -2220,22 +2407,20 @@ def job_row(j: dict, idx: str, origin: str):
             st.html(apply_link(j))
             st.button("Details", key=_widget_key("crit", jkey), on_click=go, args=("jobs",),
                       kwargs={"job": _jid(j), "origin": origin})
-            if j.get("dismissed"):
+            if is_dismissed(j):
                 if st.button("Restore", icon=":material/undo:", key=_widget_key("restore", jkey),
                              help="Restore to active jobs (it won't be emailed again)"):
-                    if not owner_only("restore jobs"):
-                        st.rerun()
-                    _, saved, err = _save_change("seen_jobs.json", _restore_jobs({jkey}), [], "chore: restore 1 alert(s)")
-                    toast("Job restored" if saved else f"Restored here, but not saved permanently. {err}",
-                          "success" if saved else "error")
+                    res = change_dismissal({jkey}, dismiss=False)
+                    if res:
+                        toast("Job restored" if res[0] else f"Restored here, but not saved permanently. {res[1]}",
+                              "success" if res[0] else "error")
                     st.rerun()
             elif st.button("Dismiss", icon=":material/close:", key=_widget_key("dismiss", jkey),
                            help="Dismiss — hide this job (it won't be emailed again)"):
-                if not owner_only("dismiss jobs"):
-                    st.rerun()
-                _, saved, err = _save_change("seen_jobs.json", dismiss_jobs({jkey}), [], "chore: dismiss 1 alert(s)")
-                toast("Removed 1 alert(s)" if saved else f"Removed here, but not saved permanently. {err}",
-                      "success" if saved else "error")
+                res = change_dismissal({jkey}, dismiss=True)
+                if res:
+                    toast("Removed 1 alert(s)" if res[0] else f"Removed here, but not saved permanently. {res[1]}",
+                          "success" if res[0] else "error")
                 st.rerun()
 
 
@@ -2270,7 +2455,34 @@ def _opportunity_cards() -> str:
             '</div></div>')
 
 
+def onboarding_card() -> None:
+    """Shown on Home after a person's first sign-in, until they dismiss it."""
+    if USER is None:
+        return
+    try:
+        profile = USER.profile() or {}
+    except user_store.UserStoreError:
+        return
+    if (profile.get("onboarding") or {}).get("status") != user_store.ONBOARDING_PENDING:
+        return
+    with st.container(key="set_onboarding"):
+        c1, c2 = st.columns([4, 1], vertical_alignment="center")
+        with c1:
+            st.html(f'<div class="set-head"><span class="ic">{_ms("waving_hand")}</span><div><div class="eyebrow">Welcome</div>'
+                    '<h2 class="section-title">Your account is ready</h2><p class="section-sub">Jobs you dismiss, companies '
+                    'you follow and your alert settings are saved to your own account — nobody else sees or changes them. '
+                    'Follow companies from their pages; set alerts under Email &amp; Notifications.</p></div></div>')
+        with c2:
+            if st.button("Got it", key="btn_onboarding_done", type="primary", use_container_width=True):
+                try:
+                    USER.complete_onboarding()
+                except user_store.UserStoreError as e:
+                    toast(str(e), "error")
+                st.rerun()
+
+
 def page_home():
+    onboarding_card()
     with st.container(key="hero"):
         st.html(f"""<div class="hero"><div>
           <div class="eyebrow sparked">Discover jobs</div>
@@ -2334,8 +2546,9 @@ def page_home():
 
 
 def page_jobs():
+    note = personal_filter_note()
     page_header("Jobs", f"{_plural(len(all_records), 'job')} found by the tracker · {len(active_jobs)} active · "
-                        f"{len(dismissed_jobs)} dismissed")
+                        f"{len(dismissed_jobs)} dismissed" + (f'<br><span class="muted">{note}</span>' if note else ""))
     st.session_state.setdefault("jobs_tab", "active")
     with st.container(key="jobs_tab_wrap"):
         tab = st.pills("Show", ["active", "dismissed"], key="jobs_tab", label_visibility="collapsed",
@@ -2429,7 +2642,7 @@ def page_job_detail(j: dict):
             <div class="eyebrow">{escape(company or 'Unknown company')}</div>
             <h1 class="detail-title">{escape(title)}</h1>
             <div class="detail-chips">{badge(pill_cls, pill_label)}
-              {'<span class="pill neutral">Dismissed</span>' if j.get('dismissed') else ''}{"".join(chips)}</div>
+              {'<span class="pill neutral">Dismissed</span>' if is_dismissed(j) else ''}{"".join(chips)}</div>
           </div>
         </div>""")
         with st.container(key="job_actions"):
@@ -2437,23 +2650,22 @@ def page_job_detail(j: dict):
             with a[0]:
                 st.html(apply_link(j, "Apply on company site"))
             with a[1]:
-                if j.get("dismissed"):
+                if is_dismissed(j):
                     if st.button("Restore", key="detail_restore", icon=":material/undo:"):
-                        if not owner_only("restore jobs"):
-                            st.rerun()
-                        _, saved, err = _save_change("seen_jobs.json", _restore_jobs({jkey}), [], "chore: restore 1 alert(s)")
-                        toast("Job restored" if saved else f"Restored here, but not saved permanently. {err}",
-                              "success" if saved else "error")
+                        res = change_dismissal({jkey}, dismiss=False)
+                        if res:
+                            toast("Job restored" if res[0] else f"Restored here, but not saved permanently. {res[1]}",
+                                  "success" if res[0] else "error")
                         st.rerun()
                 else:
                     with st.container(key="danger"):
                         dismiss = st.button("Dismiss", key="detail_dismiss", icon=":material/close:")
                     if dismiss:
-                        if not owner_only("dismiss jobs"):
+                        res = change_dismissal({jkey}, dismiss=True)
+                        if not res:
                             st.rerun()
-                        _, saved, err = _save_change("seen_jobs.json", dismiss_jobs({jkey}), [], "chore: dismiss 1 alert(s)")
-                        toast("Removed 1 alert(s)" if saved else f"Removed here, but not saved permanently. {err}",
-                              "success" if saved else "error")
+                        toast("Removed 1 alert(s)" if res[0] else f"Removed here, but not saved permanently. {res[1]}",
+                              "success" if res[0] else "error")
                         go(back, **back_kwargs)
                         st.rerun()
             with a[2]:
@@ -2501,7 +2713,7 @@ def page_job_detail(j: dict):
                     ("Category", escape(pill_label)),
                     ("Experience", experience),
                     ("Found", f'<span class="num">{escape(j.get("date") or "—")} UTC</span>' + (f' <span class="muted">({_ago(d, NOW)})</span>' if d else "")),
-                    ("Status", "Dismissed" if j.get("dismissed") else "Active")]
+                    ("Status", "Dismissed" if is_dismissed(j) else "Active")]
             st.html('<div class="divider"></div><div class="eyebrow">Posting information</div>'
                     '<h2 class="section-title" style="margin-top:4px;">Job overview</h2><dl class="kv">'
                     + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in rows) + "</dl>")
@@ -2648,6 +2860,28 @@ def page_add_company():
         st.rerun()
 
 
+def follow_button(c: dict) -> None:
+    """Follow / Unfollow for the signed-in viewer's own watchlist. The
+    company must be a real entry of the shared catalogue."""
+    cid = c.get("id")
+    catalogue = {str(x.get("id")) for x in companies if not str(x.get("id", "")).startswith("_row")}
+    if USER is None or cid not in catalogue:
+        return
+    try:
+        following = cid in USER.watchlist()
+    except user_store.UserStoreError:
+        return
+    if st.button("Following" if following else "Follow", key="btn_follow",
+                 icon=":material/check:" if following else ":material/add:", type="secondary" if following else "primary",
+                 help="Unfollow" if following else "Follow this company in your account"):
+        try:
+            USER.unwatch(cid) if following else USER.watch(cid, catalogue)
+            toast(f"Unfollowed {c.get('name')}" if following else f"Following {c.get('name')}", "success")
+        except user_store.UserStoreError as e:
+            toast(str(e), "error")
+        st.rerun()
+
+
 def page_company_detail(c: dict):
     st.button("Back to Companies", key="btn_back", icon=":material/arrow_back:", type="tertiary",
               on_click=go, args=("companies",))
@@ -2662,7 +2896,7 @@ def page_company_detail(c: dict):
       <h1 class="detail-title">{escape(name)}</h1>
       <div class="detail-chips"><span class="pill {k}"><i></i>{lbl}</span>
         {'<span class="tag">Core</span>' if c.get('locked') else ''}
-        <span class="chip">{_ms("work")}<span>{company_active(c)} active · {sum(1 for j in jobs if j.get("dismissed"))} dismissed</span></span>
+        <span class="chip">{_ms("work")}<span>{company_active(c)} active · {sum(1 for j in jobs if is_dismissed(j))} dismissed</span></span>
         <span class="chip num">{_ms("schedule")}Checked {_ago(_parse_iso(c.get("last_checked", "")), NOW)}</span></div></div></div>""")
     with hero, st.container(key="co_actions"):
         a = st.columns(4)
@@ -2672,6 +2906,8 @@ def page_company_detail(c: dict):
         with a[1]:
             if site:
                 st.html(f'<a class="btn ghost" href="{escape(site, quote=True)}" target="_blank" rel="noopener">Website {_ms("arrow_outward", "s16")}</a>')
+        with a[3]:
+            follow_button(c)
         with a[2]:
             with st.container(key="danger"):
                 if st.session_state.confirm_remove != c.get("id"):
@@ -2726,7 +2962,7 @@ def page_company_detail(c: dict):
                     + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in info) + "</dl>")
     with main:
         st.html(f'<div class="sec-head"><div><div class="eyebrow">Openings</div><h2 class="section-title">Recent jobs from {escape(name)}</h2>'
-                f'<p class="section-sub">{_plural(len(jobs), "job")} found · {sum(1 for j in jobs if j.get("dismissed"))} dismissed</p></div></div>')
+                f'<p class="section-sub">{_plural(len(jobs), "job")} found · {sum(1 for j in jobs if is_dismissed(j))} dismissed</p></div></div>')
         if jobs:
             with st.container(key="joblist_company"):
                 for i, j in enumerate(jobs[:10]):
@@ -2784,6 +3020,53 @@ def page_monitoring():
             f'<b>Pending</b> = not scanned yet. Full run logs: <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">GitHub Actions</a>.</p></div>')
 
 
+def my_alerts_card() -> None:
+    """The viewer's own alert settings: on/off (to their verified sign-in
+    email only), General or Tailored, company scope, and preferences. They
+    also narrow the viewer's job lists."""
+    if USER is None or _VIEW is None:
+        return
+    try:
+        prefs = USER.notification_settings()
+        followed = USER.watchlist()
+    except user_store.UserStoreError:
+        return
+    with st.container(key="set_my_alerts"):
+        dest = (f'<span class="num">{escape(prefs["email"])}</span> (your verified sign-in email)' if prefs["email"]
+                else "your sign-in email isn't verified, so personal alerts can't be turned on")
+        st.html(f'<div class="set-head"><span class="ic">{_ms("person")}</span><div><div class="eyebrow">Your account</div>'
+                f'<h2 class="section-title">My alerts</h2><p class="section-sub">Saved to your own account. Sent to {dest}. '
+                'New matching jobs are emailed after each scheduled scan, once each.</p></div></div>')
+        with st.form("my_alerts_form", border=False):
+            enabled = st.toggle("Email me new jobs", value=prefs["enabled"], key="my_alerts_on",
+                                disabled=not prefs["email"])
+            scope = st.radio("Companies", ["all", "followed"], index=0 if _VIEW["watch_all"] else 1,
+                             key="my_alerts_scope", horizontal=True,
+                             format_func=lambda v: {"all": "All tracked companies",
+                                                    "followed": f"Only companies I follow ({len(followed)})"}[v])
+            mode = st.radio("Which jobs", ["general", "tailored"], index=["general", "tailored"].index(prefs["mode"]),
+                            key="my_alerts_mode", horizontal=True,
+                            format_func=lambda m: {"general": "General — every qualifying job",
+                                                   "tailored": "Tailored — only my preferences below"}[m])
+            fams = st.multiselect("Job families", list(job_filters.JOB_FAMILIES), default=_VIEW["prefs"]["job_families"],
+                                  key="my_pref_families", placeholder="Any")
+            locs = st.multiselect("Locations", list(job_filters.LOCATIONS), default=_VIEW["prefs"]["locations"],
+                                  key="my_pref_locations", placeholder="Any")
+            exp = st.multiselect("Experience", list(job_filters.EXPERIENCE), default=_VIEW["prefs"]["experience"],
+                                 key="my_pref_experience", placeholder="Any",
+                                 format_func=lambda e: job_filters.EXPERIENCE_LABELS[e])
+            if st.form_submit_button("Save", key="btn_my_alerts", icon=":material/save:"):
+                try:
+                    USER.set_preferences(mode, fams, locs, exp)
+                    USER.set_watch_all(scope == "all")
+                    USER.set_notifications(bool(enabled) and bool(prefs["email"]), mode)
+                    toast("Alert settings saved", "success")
+                except (user_store.UserStoreError, ValueError) as e:
+                    toast(str(e) if isinstance(e, user_store.UserStoreError) else "Those settings couldn't be saved.",
+                          "error")
+                st.rerun()
+
+
 def page_email():
     notified = [j for j in all_records if j.get("notified")]
     # when the email actually went out (older records only know when the job was found)
@@ -2834,6 +3117,8 @@ def page_email():
         else:
             note = f'{_ms("info", "s16")} No recipient is set. To turn alerts on, {how}.'
         st.html(f'<p class="note">{note}</p>')
+
+    my_alerts_card()
 
     with st.container(key="test_panel"):
         ts = st.session_state.test_status
@@ -2908,6 +3193,10 @@ def account_card() -> None:
             fb = "Linked at your next Google sign-in"
         role = "Admin — can manage companies, jobs, checks and email" if admin else "Member — read-only"
         rows = [("Role", role), ("Email verified", "Yes" if ACCOUNT.get("email_verified") else "No"), ("Firebase account", fb)]
+        if USER is not None:
+            rows.append(("Personal data", "Saved to your own account"))
+        elif USER_PROBLEM:
+            rows.append(("Personal data", escape(USER_PROBLEM)))
         st.html('<dl class="kv">' + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in rows) + "</dl>")
         # Until JT_ADMIN_EMAILS exists the legacy owner password still unlocks
         # changes — tucked away here, never a second login screen.
@@ -3022,15 +3311,15 @@ def page_settings():
             m1, _m2 = st.columns([1, 3])
             with m1:
                 with st.container(key="danger"):
-                    if st.button(f"Dismiss all {len(active_jobs)} jobs", key="btn_clear_all", disabled=not active_jobs,
+                    if st.button(f"Dismiss all {len(_all_active_jobs)} jobs", key="btn_clear_all", disabled=not _all_active_jobs,
                                  use_container_width=True):
                         if owner_only("dismiss jobs"):
                             st.session_state.confirm_clear = True
                         st.rerun()
         else:
-            unsent = sum(1 for j in active_jobs if alert_pending(j))
+            unsent = sum(1 for j in _all_active_jobs if alert_pending(j))
             with st.container(key="danger_confirm"):
-                st.html(f'<p class="note" style="color:var(--text);">Dismiss all <b>{len(active_jobs)}</b> active jobs?'
+                st.html(f'<p class="note" style="color:var(--text);">Dismiss all <b>{len(_all_active_jobs)}</b> active jobs?'
                         + (f" This also cancels <b>{unsent}</b> alert{'s' if unsent != 1 else ''} that haven't been emailed yet "
                            "— they won't be emailed." if unsent else " They stay in the history and are never emailed again.")
                         + "</p>")
@@ -3040,6 +3329,12 @@ def page_settings():
                         st.session_state.confirm_clear = False
                         if not owner_only("dismiss jobs"):
                             st.rerun()
+                        if USER is not None:
+                            try:
+                                USER.dismiss({job_key(j) for j in _all_active_jobs})
+                            except user_store.UserStoreError as e:
+                                toast(str(e), "error")
+                                st.rerun()
                         _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(None), [], "chore: dismiss all alerts")
                         toast("All alerts cleared" if saved else f"Cleared here, but not saved permanently. {err}",
                               "success" if saved else "error")
