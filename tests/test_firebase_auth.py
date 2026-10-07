@@ -436,7 +436,7 @@ def _dump(at) -> str:
 
 
 def _login_page(at) -> bool:
-    return "Sign in to your <em>opportunities</em>" in _html(at)
+    return 'class="lp-welcome"' in _html(at)          # the sign-in card's "Welcome back" heading
 
 
 def test_without_firebase_the_app_is_unchanged(app, no_env):
