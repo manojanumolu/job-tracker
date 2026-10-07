@@ -317,12 +317,6 @@ def test_expired_password_sign_in_loses_admin_rights(app, google_env, admins):
 # Login failures: a lasting, human message; nothing retained
 # ---------------------------------------------------------------------------
 
-def _email_form(at):
-    # AppTest lists an expander that has an icon as a "status" element
-    (form,) = [e.proto for e in [*at.expander, *at.get("status")] if e.proto.label == "Sign in with email and password"]
-    return form
-
-
 @pytest.mark.parametrize("reply, shown", [
     (error_answer("USER_DISABLED"), "This account has been disabled."),
     (error_answer("TOO_MANY_ATTEMPTS_TRY_LATER : Access disabled"), "Too many attempts"),
@@ -337,12 +331,18 @@ def test_login_failures(app, google_env, reply, shown):
     assert _login_page(at) and shown in html and "Graduate Software Engineer" not in html
     assert "a-wrong-password-1" not in _dump(at) and "identitytoolkit" not in html
     assert ACCOUNT_KEY not in at.session_state and firebase_auth.SESSION_KEY not in at.session_state
-    assert _email_form(at).expanded
+    assert {"login_email", "login_pw"} <= {i.key for i in at.text_input}          # the form stays ready to retry
 
 
-def test_email_form_is_tucked_away_behind_google(app, google_env):
+def test_email_sign_in_comes_first_and_google_is_secondary(app, google_env):
+    """The login card (redesign): email + password, the primary "Sign in",
+    then "Continue with Google" as the secondary action."""
     at = app([], secrets=GATED, owner=False)
-    assert not _email_form(at).expanded and "btn_login_google" in _buttons(at)
+    buttons = [b for b in at.button]
+    keys = [b.key for b in buttons]
+    assert keys.index("btn_login_email") < keys.index("btn_login_google")
+    kinds = {b.key: b.proto.type for b in buttons}
+    assert kinds["btn_login_email"] == "primary" and kinds["btn_login_google"] == "secondary"
 
 
 # ---------------------------------------------------------------------------
@@ -386,7 +386,8 @@ def test_sign_out_leaves_nothing_for_the_next_person_in_the_tab(app, google_env,
     # the theme, the sign-out marker, routing read back from the URL and the
     # (empty) login form — nothing that belonged to the account
     allowed = {"dark_mode", "_signed_out", "page", "job_id", "company_id", "company_view", "confirm_remove",
-               "login_email", "login_pw", "login_owner_pw", "btn_login_email", "btn_login_google", "btn_login_owner"}
+               "login_email", "login_pw", "login_owner_pw", "btn_login_email", "btn_login_google", "btn_login_owner",
+               "btn_login_signup"}
     assert {k for k in left if not k.startswith("$$")} <= allowed, left
     assert not left.get("login_email") and not left.get("login_pw")
     member = "member@example.org"

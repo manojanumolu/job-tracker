@@ -1839,73 +1839,260 @@ def _login_google() -> None:
         st.login()
 
 
+# Google's "G" mark for the Google button. Inline <svg> elements don't paint
+# in this app's hosting (see the design-system note above), so it is drawn
+# as a CSS background image instead.
+_GOOGLE_G_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">'
+    '<path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 '
+    '2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>'
+    '<path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 '
+    '7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>'
+    '<path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 '
+    '0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>'
+    '<path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 '
+    '0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>')
+_GOOGLE_G_URI = "data:image/svg+xml;base64," + base64.b64encode(_GOOGLE_G_SVG.encode("utf-8")).decode("ascii")
+
 _LOGIN_CSS = """
 [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"], .st-key-mnav { display: none !important; }
-[data-testid="stMainBlockContainer"], .block-container { margin: 0 auto !important; }
-.login-head, .login-head *, .st-key-login_card, .login-foot,
+[data-testid="stMainBlockContainer"], .block-container { max-width: 1240px !important; margin: 0 auto !important;
+  padding: 40px 48px 48px !important; }
+.lp, .lp *:not(.ms), .st-key-login_card,
 .st-key-login_card *:not([data-testid="stIconMaterial"]):not([data-testid="stExpanderIcon"]):not(.ms) { font-family: var(--font) !important; }
-.login-head { max-width: 460px; margin: 8vh auto 0; text-align: center; }
-.login-head .lmark { display: block; width: 56px; height: 56px; margin: 0 auto 18px; border-radius: 16px;
-  box-shadow: 0 14px 30px -12px var(--accent), 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
-.login-head .eyebrow { justify-content: center; }
-.stApp .login-head h1 { margin: 10px 0 12px !important; font-size: 34px; line-height: 1.15; font-weight: 800;
-  letter-spacing: -0.028em; word-spacing: .06em; text-wrap: balance; color: var(--text); }
-.login-head h1 em { font-style: normal; background: linear-gradient(92deg, var(--accent), var(--accent-2));
+
+/* ── left: the product ── */
+.lp-brand { display: flex; align-items: center; gap: 14px; }
+.lp-brand img { width: 56px; height: 56px; border-radius: 16px; display: block;
+  box-shadow: 0 12px 26px -12px var(--accent), 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent); }
+.lp-brand .n { font-size: 21px; line-height: 26px; font-weight: 800; letter-spacing: -.02em; color: var(--text); }
+.lp-brand .s { font-size: 11.5px; line-height: 16px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--muted); margin-top: 3px; }
+.lp-hero { display: grid; grid-template-columns: minmax(0, 1fr) 312px; column-gap: 24px;
+  grid-template-areas: "eyebrow eyebrow" "title title" "copy stage"; margin-top: 44px; }
+.lp-hero > .eyebrow { grid-area: eyebrow; }
+.stApp .lp-title { grid-area: title; margin: 14px 0 0 !important; font-size: 58px; line-height: 1.04; font-weight: 800;
+  letter-spacing: -.035em; word-spacing: .02em; color: var(--text); }
+.lp-title em { font-style: normal; background: linear-gradient(92deg, var(--accent), var(--accent-2));
   -webkit-background-clip: text; background-clip: text; color: transparent; }
-.login-head p { margin: 0 auto; max-width: 380px; color: var(--text-2); font-size: 15px; line-height: 1.6; }
-.st-key-login_card { max-width: 420px; margin: 28px auto 0 !important; padding: 26px 24px 22px !important; gap: 14px !important;
-  border: 1px solid var(--border) !important; border-radius: var(--r-xl) !important; background: var(--surface) !important;
-  box-shadow: var(--hi), var(--shadow-lg) !important; }
-.st-key-login_card [data-testid^="stBaseButton"] { min-height: 46px; border-radius: var(--r) !important; font-weight: 700 !important; }
-.login-hint { margin: -4px 0 2px; text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.lp-copy { grid-area: copy; min-width: 0; }
+.lp-sub { margin: 20px 0 0; max-width: 440px; font-size: 16.5px; line-height: 1.65; color: var(--text-2); }
+.lp-benefits { list-style: none; margin: 30px 0 0 !important; padding: 0 !important; display: grid; gap: 16px; }
+.lp-benefits li { display: flex; align-items: center; gap: 14px; margin: 0; }
+.lp-benefits .ic { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; flex-shrink: 0;
+  box-shadow: var(--hi); }
+.lp-benefits .ic.violet { color: var(--accent-text); background: var(--accent-soft); }
+.lp-benefits .ic.green { color: var(--green); background: var(--green-soft); }
+.lp-benefits .ic.blue { color: color-mix(in srgb, var(--accent) 50%, var(--accent-2));
+  background: color-mix(in srgb, var(--accent-soft) 55%, var(--green-soft)); }
+.lp-benefits b { display: block; font-size: 16px; line-height: 22px; font-weight: 700; color: var(--text); }
+.lp-benefits .t { display: block; font-size: 14px; line-height: 20px; color: var(--muted); }
+
+/* the floating opportunity cards: decorative artwork, never data */
+.lp-stage { grid-area: stage; position: relative; height: 400px; }
+.lp-glow { position: absolute; inset: 0 -14% 4% -24%; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, var(--glow-1), transparent 72%),
+              radial-gradient(closest-side at 72% 78%, var(--glow-2), transparent 70%);
+  animation: jt-glow-drift 16s ease-in-out infinite alternate; }
+.lp-arc { position: absolute; width: 400px; height: 400px; top: -70px; left: -40px; border-radius: 50%; pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--accent) 13%, transparent); }
+.lp-card { position: absolute; width: 322px; display: flex; align-items: center; gap: 12px; padding: 14px;
+  border-radius: 18px; background: var(--oc-bg); border: 1px solid var(--oc-border); box-shadow: var(--oc-shadow);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  transition: box-shadow var(--normal) var(--ease), border-color var(--normal) var(--ease); }
+.lp-card:hover { border-color: color-mix(in srgb, var(--accent) 34%, transparent); box-shadow: var(--shadow-lg); }
+.lp-card .logo { width: 40px; height: 40px; border-radius: 12px; font-size: 17px; }
+.lp-card .tx { min-width: 0; flex: 1; }
+.lp-card .t { font-size: 13.5px; line-height: 18px; font-weight: 700; color: var(--text); overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.lp-card .m { font-size: 12.5px; line-height: 17px; color: var(--muted); margin-top: 2px; }
+.lp-card .tags { display: flex; gap: 6px; margin-top: 8px; }
+.lp-card .tags .pill { font-size: 11px; line-height: 16px; padding: 1px 8px; }
+.lp-card .go { color: var(--muted); flex-shrink: 0; }
+.lp-card.c1 { top: 0; left: 14px; --tilt: -1.4deg;
+  animation: jt-rise .8s var(--ease) .15s backwards, jt-float-s 9s ease-in-out 1s infinite; }
+.lp-card.c2 { top: 134px; left: -28px;
+  animation: jt-rise .8s var(--ease) .3s backwards, jt-float 10s ease-in-out 1.6s infinite; }
+.lp-card.c3 { top: 270px; left: 0; --tilt: 1deg;
+  animation: jt-rise .8s var(--ease) .45s backwards, jt-float-s 11s ease-in-out 2.2s infinite; }
+.lp-chip { position: absolute; width: 56px; height: 56px; border-radius: 18px; display: grid; place-items: center;
+  background: var(--oc-bg); border: 1px solid var(--oc-border); box-shadow: var(--oc-shadow); color: var(--accent-text);
+  animation: jt-pop .7s var(--ease) .7s backwards, jt-float 8s ease-in-out 1.5s infinite; }
+.lp-chip.k1 { top: -82px; right: 26px; }
+.lp-chip.k2 { top: 180px; left: -78px; color: color-mix(in srgb, var(--accent) 50%, var(--accent-2)); animation-delay: .8s, 2.4s; }
+.lp-chip.k3 { top: 380px; right: -14px; color: var(--accent-2); animation-delay: .9s, 3.1s; }
+.lp-dot { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.lp-dot::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: inherit;
+  animation: jt-pulse 3.6s ease-out infinite; }
+.lp-dot.d1 { top: -58px; left: 96px; }
+.lp-dot.d2 { top: 42px; right: -16px; background: var(--accent-2); }
+.lp-dot.d2::after { animation-delay: 1.2s; }
+.lp-dot.d3 { top: 262px; left: -54px; background: color-mix(in srgb, var(--accent) 50%, var(--accent-2)); }
+.lp-dot.d3::after { animation-delay: 2.1s; }
+.lp-dot.d4 { top: 412px; left: 92px; background: var(--accent-2); }
+.lp-dot.d4::after { animation-delay: .6s; }
+
+/* ── right: the sign-in card ── */
+.st-key-login_card { max-width: 448px; margin: 0 0 0 auto !important; padding: 36px 36px 28px !important; gap: 16px !important;
+  border: 1px solid var(--border) !important; border-radius: 28px !important; background: var(--surface) !important;
+  box-shadow: var(--hi), var(--shadow-lg) !important; animation: jt-rise .7s var(--ease) both; }
+.lp-head img { width: 56px; height: 56px; border-radius: 16px; display: block;
+  box-shadow: 0 12px 26px -12px var(--accent), 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent); }
+.stApp .lp-welcome { margin: 22px 0 8px !important; font-size: 34px; line-height: 1.1; font-weight: 800;
+  letter-spacing: -.03em; color: var(--text); }
+.lp-head p { margin: 0; max-width: 330px; font-size: 16px; line-height: 1.55; color: var(--muted); }
+.st-key-login_card [data-testid="stWidgetLabel"] p { font-size: 14.5px !important; font-weight: 600 !important;
+  color: var(--text) !important; }
+.st-key-login_card :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]) { min-height: 52px; border-radius: 14px !important;
+  border: 1px solid var(--border-strong) !important; background: var(--surface-2) !important;
+  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease), background var(--fast) var(--ease); }
+.st-key-login_card :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]):focus-within { border-color: var(--accent) !important; box-shadow: var(--ring) !important;
+  background: var(--surface) !important; }
+.st-key-login_card :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]) > div, .st-key-login_card :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]) input { background: transparent !important; }
+.st-key-login_card input { font-size: 15px !important; }
+:is(.st-key-login_email, .st-key-login_pw) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])::before {
+  font-family: 'Material Symbols Rounded' !important; font-feature-settings: 'liga'; font-weight: 400;
+  font-size: 20px; width: 20px; overflow: hidden; white-space: nowrap; flex-shrink: 0;
+  color: var(--muted); margin-left: 15px; align-self: center; line-height: 1; box-sizing: content-box; transition: color var(--fast); }
+:is(.st-key-login_email, .st-key-login_pw) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]):focus-within::before { color: var(--accent-text); }
+.st-key-login_email :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])::before { content: "mail"; }
+.st-key-login_pw :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])::before { content: "lock"; }
+.st-key-login_card [data-testid="stForm"] { gap: 14px; }
+.st-key-btn_login_email [data-testid^="stBaseButton"] { min-height: 54px !important; border-radius: 14px !important; font-size: 16px !important;
+  font-weight: 700 !important; margin-top: 6px; }
+.st-key-btn_login_google [data-testid^="stBaseButton"] { min-height: 54px !important; border-radius: 14px !important; font-weight: 700 !important;
+  background: var(--surface) !important; border: 1px solid var(--border-strong) !important; gap: 10px; }
+.st-key-btn_login_email [data-testid^="stBaseButton"]:hover:not(:disabled) { transform: translateY(-1px); }
+.st-key-btn_login_google [data-testid^="stBaseButton"]:hover { border-color: color-mix(in srgb, var(--accent) 35%, var(--border-strong)) !important;
+  box-shadow: var(--btn2-shadow-hover) !important; transform: translateY(-1px); }
+.st-key-btn_login_google [data-testid^="stBaseButton"]::before { content: ""; width: 20px; height: 20px; flex-shrink: 0;
+  background: url("GOOGLE_G_URI") center / contain no-repeat; }
+.lp-or { display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 12.5px; font-weight: 600;
+  letter-spacing: .08em; margin: 2px 0; }
+.lp-or::before, .lp-or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.st-key-lp_links { justify-content: space-between; align-items: center; flex-wrap: wrap; row-gap: 4px; margin-top: 4px; }
+.st-key-btn_login_signup [data-testid^="stBaseButton"], .st-key-lp_forgot [data-testid^="stBaseButton"] {
+  min-height: 0 !important; padding: 2px 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
+.st-key-btn_login_signup p, .st-key-lp_forgot p { font-size: 14px !important; font-weight: 500 !important; color: var(--muted) !important; }
+.st-key-btn_login_signup strong { color: var(--accent-text) !important; font-weight: 700 !important; }
+.st-key-lp_forgot p { color: var(--accent-text) !important; font-weight: 600 !important; }
+.st-key-lp_forgot [data-testid="stIconMaterial"] { display: none; }
+.st-key-btn_login_signup [data-testid^="stBaseButton"]:hover strong, .st-key-lp_forgot [data-testid^="stBaseButton"]:hover p {
+  text-decoration: underline; text-underline-offset: 3px; }
+.lp-help { margin: 0; font-family: var(--font) !important; font-size: 14px; line-height: 1.55; color: var(--text-2);
+  max-width: 280px; }   /* the popover renders outside the card, so it needs the font itself */
 .st-key-login_card [data-testid="stExpander"] details { background: var(--surface-2) !important; }
 .st-key-login_card [data-testid="stExpander"] summary p { font-size: 13.5px !important; color: var(--text-2) !important; }
 .login-err { display: flex; gap: 9px; align-items: flex-start; padding: 11px 13px; border-radius: 12px; font-size: 13.5px; line-height: 1.5;
   color: var(--text); background: color-mix(in srgb, var(--red) 9%, transparent); border: 1px solid color-mix(in srgb, var(--red) 35%, var(--border)); }
 .login-err .ms { color: var(--red); }
 .login-off { display: flex; gap: 9px; align-items: flex-start; color: var(--text-2); font-size: 13.5px; line-height: 1.5; margin: 0; }
-.login-foot { max-width: 420px; margin: 18px auto 0; display: flex; justify-content: center; align-items: center; gap: 6px;
-  color: var(--muted); font-size: 12.5px; }
-@media (max-width: 640px) {
-  .login-head { margin-top: 3vh; } .stApp .login-head h1 { font-size: 28px; }
-  .st-key-login_card { padding: 22px 18px 18px !important; }
+
+/* tablet: a smaller stage */
+@media (max-width: 1180px) {
+  .lp-hero { grid-template-columns: minmax(0, 1fr) 250px; }
+  .stApp .lp-title { font-size: 48px; }
+  .lp-card { width: 250px; } .lp-card .tags .pill:nth-child(2) { display: none; }
+  .lp-chip.k2, .lp-chip.k3, .lp-dot.d3 { display: none; }
+  .lp-card.c1 { left: 6px; } .lp-card.c2 { left: -4px; } .lp-card.c3 { left: 4px; }
 }
-"""
+/* narrow: the form is what matters — the artwork steps aside */
+@media (max-width: 960px) {
+  .lp-hero { grid-template-columns: minmax(0, 1fr); grid-template-areas: "eyebrow" "title" "copy"; margin-top: 28px; }
+  .lp-stage, .lp-benefits { display: none; }
+  .stApp .lp-title { font-size: 40px; }
+}
+@media (max-width: 640px) {
+  [data-testid="stMainBlockContainer"], .block-container { padding: 24px 16px 32px !important; }
+  .lp-hero { margin-top: 20px; } .lp-hero > .eyebrow, .lp-sub { display: none; }
+  .stApp .lp-title { font-size: 30px; margin-top: 0 !important; }
+  .st-key-login_card { margin: 8px auto 0 !important; padding: 26px 20px 22px !important; border-radius: 22px !important; }
+  .lp-head img { display: none; } .stApp .lp-welcome { margin-top: 0 !important; font-size: 28px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-card, .lp-chip, .lp-glow, .lp-dot::after, .st-key-login_card { animation: none !important; }
+  .lp-card.c1 { transform: rotate(-1.4deg); } .lp-card.c3 { transform: rotate(1deg); }
+}
+""".replace("GOOGLE_G_URI", _GOOGLE_G_URI)
+
+# decorative opportunity cards for the login artwork — fixed example content,
+# not job data: nothing here is read from the tracker or any account
+_LOGIN_CARDS = (
+    ("c1", "Google", 250, "Software Engineer Intern", "Bengaluru", (("on", "New"), ("entry", "Internship"))),
+    ("c2", "Microsoft", 175, "SDE – New Grad", "Hyderabad", (("fresher", "Fresher"), ("entry", "Full-time"))),
+    ("c3", "Amazon", 25, "Software Development Engineer", "Bengaluru", (("fresher", "Fresher"), ("entry", "Full-time"))),
+)
+
+
+def _login_art() -> str:
+    """The left side of the login page: brand, headline, benefits and the
+    floating cards. Static and generic — the same for every visitor."""
+    logo = _logo_data_uri()
+    cards = "".join(
+        f'<div class="lp-card {cls}"><div class="logo" style="--h:{hue}">{escape(company[0])}</div>'
+        f'<div class="tx"><div class="t">{escape(title)}</div><div class="m">{escape(company)} · {escape(city)}</div>'
+        '<div class="tags">' + "".join(f'<span class="pill {k}">{"<i></i>" if k == "on" else ""}{escape(v)}</span>'
+                                       for k, v in tags) + "</div></div>"
+        f'<span class="go">{_ms("chevron_right", "s20")}</span></div>'
+        for cls, company, hue, title, city, tags in _LOGIN_CARDS)
+    benefits = [("violet", "search", "Fresh opportunities", "From top companies"),
+                ("green", "bolt", "Stay ahead", "Get notified early"),
+                ("blue", "apartment", "Track what matters", "Follow your preferred companies")]
+    return ('<div class="lp">'
+            '<div class="lp-brand">' + (f'<img src="{logo}" alt="">' if logo else "")
+            + '<div><div class="n">Fresher Job Tracker</div><div class="s">Fresher opportunities</div></div></div>'
+            '<div class="lp-hero">'
+            '<div class="eyebrow sparked">Discover jobs</div>'
+            '<h1 class="lp-title">Discover your next<br><em>opportunity.</em></h1>'
+            '<div class="lp-copy"><p class="lp-sub">Fresher and entry-level roles in India, found across the companies '
+            'you track — each one parsed from its own posting before it reaches you.</p>'
+            '<ul class="lp-benefits">' + "".join(
+                f'<li><span class="ic {tone}">{_ms(icon, "s20")}</span><div><b>{escape(head)}</b>'
+                f'<span class="t">{escape(sub)}</span></div></li>' for tone, icon, head, sub in benefits)
+            + '</ul></div>'
+            '<div class="lp-stage" aria-hidden="true"><span class="lp-glow"></span><span class="lp-arc"></span>'
+            '<span class="lp-dot d1"></span><span class="lp-dot d2"></span><span class="lp-dot d3"></span>'
+            '<span class="lp-dot d4"></span>'
+            f'<span class="lp-chip k1">{_ms("school", "s24")}</span>'
+            f'<span class="lp-chip k2">{_ms("apartment", "s24")}</span>'
+            f'<span class="lp-chip k3">{_ms("trending_up", "s24")}</span>'
+            + cards + '</div></div></div>')
 
 
 def render_login_page() -> None:
-    """The only thing a visitor ever sees. Messages here are for people,
-    not operators: what exactly is misconfigured goes to the server log."""
-    logo = _logo_data_uri()
-    st.html(f"<style>{_LOGIN_CSS}</style>"
-            '<div class="login-head">' + (f'<img class="lmark" src="{logo}" alt="">' if logo else "")
-            + '<div class="eyebrow sparked">Fresher Job Tracker</div>'
-            '<h1>Sign in to your <em>opportunities</em></h1>'
-            '<p>Fresher and entry-level roles in India, read from each company\'s own careers page.</p></div>')
+    """The only thing a visitor ever sees: generic artwork on the left, the
+    sign-in card on the right. Every control calls the existing handlers
+    (_login_submit, _login_google, _login_owner_submit). Messages here are
+    for people, not operators: what exactly is misconfigured goes to the
+    server log."""
+    st.html(f"<style>{_LOGIN_CSS}</style>")
     email_ok = _AUTH_CONFIG is not None
-    with st.container(key="login_card"):
+    art, side = st.columns([1.42, 1], gap="large", vertical_alignment="center")
+    with art:
+        st.html(_login_art())
+    with side, st.container(key="login_card"):
+        logo = _logo_data_uri()
+        st.html('<div class="lp-head">' + (f'<img src="{logo}" alt="">' if logo else "")
+                + '<h2 class="lp-welcome">Welcome back</h2>'
+                '<p>Sign in to continue discovering fresher opportunities.</p></div>')
         err = st.session_state.get("_login_error") or (recent_google_failure() if _GOOGLE else "")
         if err:
             st.html(f'<div class="login-err" role="alert">{_ms("error", "s20")}<div>{escape(err)}</div></div>')
+        if email_ok:
+            with st.form("login_form", clear_on_submit=True, border=False):
+                st.text_input("Email address", key="login_email", autocomplete="email", placeholder="you@example.com")
+                st.text_input("Password", type="password", key="login_pw", autocomplete="current-password",
+                              placeholder="Enter your password")
+                st.form_submit_button("Sign in", key="btn_login_email", type="primary", icon=":material/arrow_forward:",
+                                      icon_position="right", use_container_width=True, on_click=_login_submit)
         if _GOOGLE:
-            st.button("Continue with Google", key="btn_login_google", type="primary", use_container_width=True,
-                      icon=":material/account_circle:", on_click=_login_google)
-            st.html('<p class="login-hint">Uses your Google account — no new password to remember.</p>')
+            if email_ok:
+                st.html('<div class="lp-or">OR</div>')
+            st.button("Continue with Google", key="btn_login_google", type="secondary", use_container_width=True,
+                      on_click=_login_google)
         elif _GOOGLE_PROBLEM:
             st.html(f'<p class="login-off">{_ms("info", "s20")}<span>Google sign-in is unavailable right now.</span></p>')
-        if email_ok:
-            # Google is the main way in; email + password stays one click away
-            open_form = not _GOOGLE or st.session_state.get("_login_error_from") == "email"
-            box = (st.expander("Sign in with email and password", icon=":material/mail:", expanded=open_form)
-                   if _GOOGLE else st.container())
-            with box:
-                with st.form("login_form", clear_on_submit=True, border=False):
-                    st.text_input("Email", key="login_email", autocomplete="email")
-                    st.text_input("Password", type="password", key="login_pw", autocomplete="current-password")
-                    st.form_submit_button("Sign in", key="btn_login_email", icon=":material/login:",
-                                          type="secondary" if _GOOGLE else "primary",
-                                          use_container_width=True, on_click=_login_submit)
-        elif not _GOOGLE:
+        if not email_ok and not _GOOGLE:
             st.html(f'<p class="login-off">{_ms("info", "s20")}<span>Sign-in is unavailable right now. '
                     "Please try again later.</span></p>")
         # break-glass, only until admins come from sign-in (JT_ADMIN_EMAILS):
@@ -1918,7 +2105,19 @@ def render_login_page() -> None:
                                   autocomplete="current-password")
                     st.form_submit_button("Sign in as owner", key="btn_login_owner", icon=":material/admin_panel_settings:",
                                           use_container_width=True, on_click=_login_owner_submit)
-    st.html(f'<div class="login-foot">{_ms("lock", "s16")}<span>Private workspace · for invited users only</span></div>')
+        if _GOOGLE or email_ok:
+            with st.container(key="lp_links", horizontal=True):
+                if _GOOGLE:
+                    # new accounts are created by the first Google sign-in, so
+                    # "Sign up" is that same, existing Google sign-in
+                    st.button("Don't have an account? **Sign up**", key="btn_login_signup", type="tertiary",
+                              on_click=_login_google, help="New here? Continue with Google — your account is created "
+                                                           "automatically the first time you sign in.")
+                if email_ok:
+                    with st.popover("Forgot password?", key="lp_forgot", type="tertiary"):
+                        st.html('<p class="lp-help">Email-and-password accounts are managed by the workspace admin — '
+                                'ask them to reset your password'
+                                + (", or continue with Google instead." if _GOOGLE else ".") + '</p>')
 
 
 _AUTH_CONFIG, _AUTH_PROBLEM, _AUTH_PRESENT = _firebase_config()
