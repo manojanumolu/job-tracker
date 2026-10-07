@@ -1542,15 +1542,43 @@ def _firebase_config():
     return config, problem, firebase_auth.any_setting(secrets)
 
 
-@st.cache_resource(show_spinner=False)
+class _StoreUnavailable(Exception):
+    """configure() refused (its safe message is the text). Raised rather
+    than returned so Streamlit never caches the failure."""
+
+
 def _user_store():
-    """(store, problem): the per-user data store, shared by every session
-    of this process (a Firestore client — it holds no one's data). (None,
-    "") until a Firebase service account is configured; the app then works
-    exactly as without personal data."""
+    """(store, problem): the per-user data store. (None, "") while no
+    Firebase service account is configured — the app then works exactly as
+    without personal data.
+
+    Read on every call: "not configured" and failures are never cached, so
+    a service account that is added, fixed or removed takes effect on the
+    next page load, without a reboot. (Caching the whole answer once kept
+    "not configured" for the life of the server process: Streamlit reloads
+    st.secrets when they change but keeps st.cache_resource.)"""
     secrets = _secrets_dict()
+    if not user_store.configured(secrets):
+        return None, ""
     fb = firebase_auth.config_status(secrets)[0]
-    return user_store.configure(secrets, fb.project_id if fb else "")
+    project = fb.project_id if fb else ""
+    try:
+        return _user_store_for(user_store.credential_fingerprint(secrets, project), project), ""
+    except _StoreUnavailable as e:
+        return None, str(e)
+
+
+@st.cache_resource(show_spinner=False)
+def _user_store_for(fingerprint: str, project_id: str):
+    """The working store for one credential, shared by every session of
+    this process (a Firestore client — it holds no one's data). Keyed by a
+    fingerprint of the credential's identity (never the key itself), so a
+    different credential gets its own store. A failure raises, and Streamlit
+    never caches an exception."""
+    store, problem = user_store.configure(_secrets_dict(), project_id)
+    if store is None:
+        raise _StoreUnavailable(problem)
+    return store
 
 
 def _google_firebase_account(sub: str) -> dict | None:
@@ -1722,8 +1750,8 @@ def resolve_account(google: dict | None, config) -> dict | None:
             return _blocked_account()
         if state == "deleted":
             # the Firebase account behind this sign-in no longer exists: no
-            # personal data is read or written for it (whether a deleted person
-            # may come back is a policy decision — see user_store docs)
+            # personal data is read or written for it (approved policy: deletion
+            # is a reset — a fresh sign-in gets a new UID; see user_store docs)
             account = {**account, "uid": "", "account_deleted": True}
     if account is None and not admins_configured() and owner_session_valid(st.session_state):
         account = {"email": "", "email_verified": False, "name": "Owner", "uid": "", "provider": "owner"}
@@ -1927,12 +1955,13 @@ if st.query_params.get("diag") == "auth" and is_owner():
 # shared data for a member).
 USER: user_store.UserData | None = None
 USER_PROBLEM = ""
+USER_PROBLEM_DETAIL = ""          # for admins only: a fixed config message or an error class name
 _STORE, _STORE_PROBLEM = _user_store() if AUTH_GATE else (None, "")
 if _STORE_PROBLEM:
     log.warning("personal data unavailable: %s", _STORE_PROBLEM)
 if ACCOUNT and ACCOUNT.get("provider") in ("google.com", "password") and (_STORE is not None or _STORE_PROBLEM):
     if _STORE is None:
-        USER_PROBLEM = user_store.UNAVAILABLE
+        USER_PROBLEM, USER_PROBLEM_DETAIL = user_store.UNAVAILABLE, _STORE_PROBLEM
     elif ACCOUNT.get("account_deleted"):
         USER_PROBLEM = "Your account was removed, so personal data is off for this session."
     elif not user_store.valid_uid(ACCOUNT.get("uid")):
@@ -1946,7 +1975,7 @@ if ACCOUNT and ACCOUNT.get("provider") in ("google.com", "password") and (_STORE
                                     ACCOUNT.get("email_verified") is True)
                 st.session_state._profile_uid = USER.uid
         except user_store.UserStoreError as e:
-            USER, USER_PROBLEM = None, str(e)
+            USER, USER_PROBLEM, USER_PROBLEM_DETAIL = None, str(e), e.kind
 
 
 def account_label(account: dict) -> str:
@@ -1982,7 +2011,7 @@ if USER is not None:
     try:
         _HIDDEN = USER.dismissed()
     except user_store.UserStoreError as _e:
-        USER, USER_PROBLEM = None, str(_e)
+        USER, USER_PROBLEM, USER_PROBLEM_DETAIL = None, str(_e), _e.kind
 if _HIDDEN is not None and is_owner():
     _HIDDEN |= {job_key(j) for j in all_records if j.get("dismissed")}
 
@@ -2002,7 +2031,7 @@ if USER is not None:
     try:
         _VIEW = USER.personal_view()
     except user_store.UserStoreError as _e:
-        USER, USER_PROBLEM = None, str(_e)
+        USER, USER_PROBLEM, USER_PROBLEM_DETAIL = None, str(_e), _e.kind
 
 
 def for_me(jobs: list[dict]) -> list[dict]:
@@ -3196,7 +3225,11 @@ def account_card() -> None:
         if USER is not None:
             rows.append(("Personal data", "Saved to your own account"))
         elif USER_PROBLEM:
-            rows.append(("Personal data", escape(USER_PROBLEM)))
+            rows.append(("Personal data", escape(USER_PROBLEM) + (
+                f'<span class="kv-note">{escape(USER_PROBLEM_DETAIL)}</span>' if admin and USER_PROBLEM_DETAIL else "")))
+        elif admin and ACCOUNT.get("provider") in ("google.com", "password"):
+            # only admins: members simply have the app as it was
+            rows.append(("Personal data", "Not switched on — no Firebase service account is configured for this app"))
         st.html('<dl class="kv">' + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in rows) + "</dl>")
         # Until JT_ADMIN_EMAILS exists the legacy owner password still unlocks
         # changes — tucked away here, never a second login screen.

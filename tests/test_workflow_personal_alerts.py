@@ -287,3 +287,30 @@ def test_the_documented_streamlit_form_is_accepted():
     assert user_store._service_account({"firebase_service_account": sa}) == sa
     store, why = user_store.configure({"FIREBASE_SERVICE_ACCOUNT": pasted}, "another-project")
     assert store is None and why == "the Firebase service account belongs to a different project"
+
+
+def test_a_firestore_failure_logs_its_category_and_nothing_else(cli_env, monkeypatch, caplog):
+    """The documented log lines for a Firestore problem (e.g. permission
+    denied): the category, then "stopped" — never the message or a path."""
+    class PermissionDenied(Exception):
+        pass
+    s = cli_env["store"]
+    _subscriber(s, A, "a@example.org")
+    cli_env["seen"]([_job(1)])
+    monkeypatch.setattr(s.backend, "list", lambda path: (_ for _ in ()).throw(
+        PermissionDenied(f"403 Missing or insufficient permissions on {path}")))
+    caplog.set_level("INFO")
+    assert user_alerts.main(["--send"]) == 1
+    assert "listing users failed: PermissionDenied" in caplog.text
+    assert "personal alerts stopped: UserStoreError" in caplog.text
+    assert "insufficient" not in caplog.text and "users" not in caplog.text.replace("listing users", "")
+    assert cli_env["sent"] == []
+
+
+def test_zero_profiles_logs_an_empty_count(cli_env, caplog):
+    """`sent: {}` — what the first scheduled run logs when nobody has a
+    profile yet (the key and Firestore work, nothing is sent)."""
+    cli_env["seen"]([_job(1)])
+    caplog.set_level("INFO")
+    assert user_alerts.main(["--send"]) == 0
+    assert "sent: {}" in caplog.text and cli_env["sent"] == []

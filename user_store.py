@@ -70,7 +70,13 @@ UNAVAILABLE = "Your personal data is unavailable right now."
 
 
 class UserStoreError(Exception):
-    """The personal-data store failed. ``str(e)`` is safe to show."""
+    """The personal-data store failed. ``str(e)`` is safe to show; ``kind``
+    is the underlying error's class name (e.g. "PermissionDenied"), never its
+    message — a category an admin can act on, with no data in it."""
+
+    def __init__(self, message: str = "", kind: str = ""):
+        super().__init__(message)
+        self.kind = kind
 
 
 class InvalidInput(ValueError):
@@ -162,7 +168,7 @@ def _retry_aborted(attempt):
 class FirestoreBackend:
     """The same operations on a google.cloud.firestore client (from the
     Firebase Admin SDK). create() is atomic (fails if the document exists);
-    update_if() is a transaction."""
+    update_if() is a compare-and-set (a last_update_time precondition)."""
 
     def __init__(self, client):
         self.client = client
@@ -254,7 +260,7 @@ def _guard(method):
             raise
         except Exception as e:
             log.warning("user store %s failed: %s", method.__name__, type(e).__name__)
-            raise UserStoreError(UNAVAILABLE) from None
+            raise UserStoreError(UNAVAILABLE, kind=type(e).__name__) from None
     return wrapper
 
 
@@ -463,7 +469,7 @@ class UserStore:
             return self.identity.account(uid)
         except Exception as e:
             log.warning("Firebase account lookup failed: %s", type(e).__name__)
-            raise UserStoreError(UNAVAILABLE) from None
+            raise UserStoreError(UNAVAILABLE, kind=type(e).__name__) from None
 
     def user_ids(self) -> list[str]:
         """Every users/{uid} document (for the notifier, a server process)."""
@@ -471,7 +477,7 @@ class UserStore:
             return sorted(uid for uid in self.backend.list("users") if valid_uid(uid))
         except Exception as e:
             log.warning("listing users failed: %s", type(e).__name__)
-            raise UserStoreError(UNAVAILABLE) from None
+            raise UserStoreError(UNAVAILABLE, kind=type(e).__name__) from None
 
     def google_account(self, google_sub: str) -> dict | None:
         if self.identity is None or not isinstance(google_sub, str) or not google_sub:
@@ -480,7 +486,7 @@ class UserStore:
             return self.identity.google_account(google_sub)
         except Exception as e:
             log.warning("Firebase account lookup failed: %s", type(e).__name__)
-            raise UserStoreError(UNAVAILABLE) from None
+            raise UserStoreError(UNAVAILABLE, kind=type(e).__name__) from None
 
 
 # ---------------------------------------------------------------------------
@@ -507,6 +513,19 @@ def configured(secrets: Mapping | None) -> bool:
     return _service_account(secrets) is not None
 
 
+def _credential_identity(info: Mapping) -> str:
+    """Who a credential is — project, service-account email, key ID — as a
+    SHA-256 digest. Never the private key, which isn't part of it."""
+    return _hash_id("|".join(str(info.get(k) or "") for k in ("project_id", "client_email", "private_key_id")))
+
+
+def credential_fingerprint(secrets: Mapping | None, project_id: str = "") -> str:
+    """A non-secret fingerprint of the configured credential (plus the
+    project it must belong to), for cache keys. A different key (a new key
+    ID) or project gives a different fingerprint; it is never logged."""
+    return _hash_id(_credential_identity(_service_account(secrets) or {}) + "|" + (project_id or ""))
+
+
 def configure(secrets: Mapping | None, project_id: str = "") -> tuple[UserStore | None, str]:
     """(store, problem). (None, "") when per-user data isn't set up — the
     app then works exactly as before. ``problem`` never contains a value
@@ -520,8 +539,7 @@ def configure(secrets: Mapping | None, project_id: str = "") -> tuple[UserStore 
         return None, "the Firebase service account belongs to a different project"
     # one Admin SDK app per credential (keyed by its identity, never by the key
     # itself), so a different credential can never reuse an app built from another
-    fingerprint = _hash_id("|".join(str(info.get(k) or "") for k in ("project_id", "client_email", "private_key_id")))
-    name = f"{APP_NAME}-{fingerprint[:16]}"
+    name = f"{APP_NAME}-{_credential_identity(info)[:16]}"
     try:
         import firebase_admin
         from firebase_admin import credentials, firestore
