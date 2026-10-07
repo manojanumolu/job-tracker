@@ -500,18 +500,18 @@ def test_google_sign_in_opens_the_app_with_a_persistent_account_chip(app, google
     assert not at.exception and not _login_page(at) and at.session_state.page == "home"
     html = _html(at)
     assert "Graduate Software Engineer" in html                  # the app itself
-    assert 'class="side-acct"' in html and "Person Example" in html and EMAIL.lower() in html
+    assert 'class="acct-head"' in html and "Person Example" in html and EMAIL.lower() in html
     assert "btn_account_sign_out" in _buttons(at)
     assert 'class="jt-toast"' not in html                                 # no fading success message
     assert len(fb.requests) == 1 and at.session_state[firebase_auth.SESSION_KEY]["uid"] == UID
     for _ in range(2):                                            # it stays
         at.run()
-        assert 'class="side-acct"' in _html(at)
+        assert 'class="acct-head"' in _html(at)
     assert len(fb.requests) == 1
     _nav(at, "settings")
     html = _html(at)
     assert "Signed in with Google" in html and "Member — read-only" in html
-    assert UID not in html and "<dd>Linked</dd>" in html          # Firebase IDs are for admins
+    assert UID not in html and "Firebase account" not in html     # sign-in internals are for admins
 
 
 def test_admin_sees_the_firebase_uid(app, google_env, monkeypatch):
@@ -529,11 +529,11 @@ def test_reload_after_an_hour_stays_signed_in_without_google_again(app, google_e
     fb = google_env["firebase"](ok_google_answer())
     google_env["set_user"](FakeUser(token=make_id_token(project="google-issued", exp=time.time() - 600)))
     at = app([NEW_RECORD], secrets=GATED, owner=False)
-    assert not _login_page(at) and 'class="side-acct"' in _html(at)
+    assert not _login_page(at) and 'class="acct-head"' in _html(at)
     assert fb.requests == [] and google_env["calls"]["login"] == []
     assert "expired" not in _html(at).lower()
     _nav(at, "settings")
-    assert "Linked at your next Google sign-in" in _html(at)
+    assert UID not in _html(at) and "Firebase account" not in _html(at)    # a member: no link details
 
 
 @pytest.mark.parametrize("message, code, hint", [
@@ -545,7 +545,7 @@ def test_firebase_link_failure_never_blocks_and_is_explained(app, google_env, mo
     fb = google_env["firebase"](error_answer(message))
     google_env["set_user"](FakeUser(token=_fresh_google_token()))
     at = app([], page="settings", secrets=GATED, owner=False)
-    assert not _login_page(at) and 'class="side-acct"' in _html(at)       # still signed in
+    assert not _login_page(at) and 'class="acct-head"' in _html(at)       # still signed in
     html = unescape(_html(at))
     assert f"({code})" in html and hint in html and 'class="jt-toast"' not in _html(at)
     at.run()
@@ -557,7 +557,7 @@ def test_firebase_link_failure_is_not_explained_to_members(app, google_env):
     google_env["set_user"](FakeUser(token=_fresh_google_token()))
     at = app([], page="settings", secrets=GATED, owner=False)
     html = unescape(_html(at))
-    assert not _login_page(at) and "<dd>Not linked</dd>" in html
+    assert not _login_page(at) and "Firebase account" not in html     # sign-in internals are for admins
     assert "INVALID_IDP_RESPONSE" not in html and "Firebase project" not in html
 
 
@@ -598,7 +598,7 @@ def test_email_sign_in_opens_the_app(app, google_env):
     at = app([NEW_RECORD], secrets=GATED, owner=False)
     _login(at)
     assert not _login_page(at) and "Graduate Software Engineer" in _html(at)
-    assert 'class="side-acct"' in _html(at) and EMAIL.lower() in _html(at)
+    assert 'class="acct-head"' in _html(at) and EMAIL.lower() in _html(at)
     assert fb.requests[0].headers["x-goog-api-key"] == API_KEY
     for secret in (PASSWORD, API_KEY, "refresh-token-xyz", ok_password_answer()["idToken"]):
         assert secret not in _dump(at) and secret not in _html(at)
@@ -676,9 +676,10 @@ def test_members_are_read_only(app, google_env, admins, monkeypatch):
     _nav(at, "jobs")
     at.button(key=_key("dismiss", NEW_RECORD)).click().run()
     assert not _seen(at)[0].get("dismissed") and "Only admins can dismiss jobs." in _html(at)
-    _nav(at, "email")
-    at.button(key="btn_test").click().run()
-    assert sent == [] and "Only admins can send test emails." in _html(at)
+    assert "nav_email" not in _buttons(at)                            # no email page for members at all
+    at.session_state["page"] = "email"
+    at.run()
+    assert at.session_state.page == "home" and "btn_test" not in _buttons(at) and sent == []
 
 
 def test_an_unverified_email_is_never_admin(app, google_env, admins):

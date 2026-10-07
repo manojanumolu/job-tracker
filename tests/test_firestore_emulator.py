@@ -125,7 +125,8 @@ def test_two_users_are_isolated(emu):
     a.set_preferences("tailored", ["Data & analytics"], ["Pune"], ["fresher"])
     assert b.dismissed() == set() and b.watchlist() == set()
     view_b = b.personal_view()
-    assert view_b["watch_all"] is True and view_b["mode"] == "general" and view_b["prefs"]["job_families"] == []
+    assert view_b["watch_all"] is False and view_b["watchlist"] == set()      # a new person follows no one's companies
+    assert view_b["mode"] == "general" and view_b["prefs"]["job_families"] == []
     assert a.dismissed() == {"job-1|https://x"} and a.watchlist() == {"sanofi"}
     assert a.personal_view()["prefs"]["locations"] == ["Pune"]
     assert not _docs(f"users/{B}/dismissed").get("documents") and not _docs(f"users/{B}/companies").get("documents")
@@ -213,6 +214,7 @@ def _subscriber(emu, uid, email):
     _account(emu, uid, email)
     u = emu.for_uid(uid)
     u.ensure_profile(email, "", True)
+    u.set_watch_all(True)                    # chose "All companies" (a new profile covers none)
     u.set_notifications(True, "general")
     emu.backend.set(f"users/{uid}", {"notifications": {"enabled": True, "mode": "general",
                                                        "enabled_at": "2030-01-01T00:00:00Z"}}, merge=True)
@@ -337,6 +339,10 @@ def test_the_app_creates_and_reuses_the_profile_on_the_emulator(app, google_env,
         at = app([NEW_RECORD], secrets=GATED, owner=False)
         _login(at, email="alice@example.org")
         assert not _login_page(at)
+        assert (at.session_state.page == "onboarding") is (attempt == 0)    # setup on the first sign-in only
+        if attempt == 0:
+            at.button(key="btn_onboarding_skip").click().run()
+            assert emu.for_uid(A).profile()["onboarding"]["status"] == "complete"
     _nav(at, "jobs")
     at.button(key=_key("dismiss", NEW_RECORD)).click().run()
     assert [d["name"].rsplit("/", 1)[-1] for d in _docs("users").get("documents", [])] == [A]
@@ -474,3 +480,20 @@ def test_even_the_signed_in_owner_and_admins_get_no_client_access(emu):
     }
     assert {k: r.status_code for k, r in attempts.items()} == {k: 403 for k in attempts}
     assert emu.for_uid(A).profile()["email"] == "a@example.org"                                  # untouched
+
+
+def test_new_preferences_and_the_snapshot_on_the_emulator(emu):
+    a, b = emu.for_uid(A), emu.for_uid(B)
+    a.ensure_profile("a@example.org", "", True)
+    b.ensure_profile("b@example.org", "", True)
+    a.set_preferences("general", ["Data & analytics"], ["Hyderabad"], ["fresher"], ["internship"], ["remote"])
+    a.watch("sanofi", {"sanofi", "pwc"})
+    a.dismiss({"job-9|https://x"})
+    snap = a.snapshot()
+    assert snap["watchlist"] == {"sanofi"} and snap["dismissed"] == {"job-9|https://x"}
+    assert snap["profile"]["preferences"]["job_types"] == ["internship"]
+    assert snap["profile"]["preferences"]["work_modes"] == ["remote"]
+    assert snap["profile"]["onboarding"]["status"] == user_store.ONBOARDING_PENDING
+    other = b.snapshot()
+    assert other["watchlist"] == set() and other["dismissed"] == set()
+    assert other["profile"]["preferences"]["job_types"] == [] and other["profile"]["watch_all"] is False

@@ -125,4 +125,6 @@ def test_motion_is_slow_and_respects_reduced_motion(app, google_env):
     durations = [float(d) for d in re.findall(r"jt-float(?:-s)? (\d+(?:\.\d+)?)s", css.split(".lp-card.c1", 1)[1][:2000])]
     assert durations and min(durations) >= 8                                             # slow drift, no bouncing
     reduced = css.split("@media (prefers-reduced-motion: reduce) {", 2)[-1]
-    assert ".lp-card, .lp-chip, .lp-glow, .lp-dot::after, .st-key-login_card { animation: none !important; }" in reduced
+    for still in (".lp-card, .lp-chip, .lp-glow, .lp-dot::after, .st-key-login_card", ".lp-title, .lp-copy"):
+        assert still in reduced
+    assert ".lp-card-in, .lp-card-in .logo { transition: none !important; }" in reduced      # no hover lean either

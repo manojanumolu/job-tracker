@@ -55,11 +55,16 @@ def _admin_session(app, google_env, admins, secrets):
     at = app([NEW_RECORD], secrets=secrets, owner=False)
     _login(at, email=A_MAIL)
     assert not _login_page(at)
+    if "btn_onboarding_skip" in {b.key for b in at.button}:
+        at.button(key="btn_onboarding_skip").click().run()
     _nav(at, "settings")
     return at
 
 
 def _personal_row(at) -> str:
+    if at.session_state.page == "onboarding":           # the store just came on: first-sign-in setup
+        at.button(key="btn_onboarding_skip").click().run()
+        _nav(at, "settings")
     html = _html(at)
     if "<dt>Personal data</dt>" not in html:
         return ""

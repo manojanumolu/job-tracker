@@ -153,6 +153,8 @@ def _subscriber(store, uid, email, *, mode="general", prefs=None, follow=None, s
         for c in follow:
             u.watch(c, {"pwc", "sanofi", "metlife"})
         u.set_watch_all(False)
+    else:                    # chose "All companies" in My alerts (a new profile covers none)
+        u.set_watch_all(True)
     if prefs:
         u.set_preferences(mode, **prefs)
     store.backend.set(f"users/{uid}", {"notifications": {"enabled": True, "mode": mode, "enabled_at": since}},

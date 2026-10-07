@@ -9,8 +9,17 @@ one person asked for:
   Tailored  the same, also matching their job families, locations and
             experience levels (an empty choice means "any")
 
-Company scope: all tracked companies (the default) or only the companies
-they follow (IDs from the shared catalogue).
+Company scope: all tracked companies, or only the companies they follow
+(IDs from the shared catalogue). A new person follows nothing yet: their
+General alerts start empty, while Tailored alerts and their job lists use
+their preferences across every company until they choose some.
+
+Job type and work mode are saved preferences only. The scanner doesn't
+extract either from postings (no employment-type field; no posting says
+remote or hybrid), so nothing is matched on them — they are kept for when
+the data exists. Matching uses only what the scanner actually reads:
+location text, title (job family), the classifier's category (experience)
+and the company.
 
 No Streamlit import here, so this is unit-testable on its own.
 """
@@ -64,7 +73,13 @@ _FAMILY_RE = {name: re.compile(rf"(?<![a-z0-9])(?:{words})(?![a-z0-9])", re.IGNO
 _LOCATION_RE = {name: re.compile(r"(?<![a-z])(?:" + "|".join(re.escape(w) for w in words) + r")(?![a-z])", re.IGNORECASE)
                 for name, words in LOCATIONS.items()}
 
-VOCABULARY = {"job_families": tuple(JOB_FAMILIES), "locations": tuple(LOCATIONS), "experience": tuple(EXPERIENCE)}
+# saved for future matching only (see the module note)
+JOB_TYPES = {"full_time": "Full-time", "internship": "Internship", "contract": "Contract",
+             "apprenticeship": "Apprenticeship"}
+WORK_MODES = {"onsite": "On-site", "hybrid": "Hybrid", "remote": "Remote"}
+
+VOCABULARY = {"job_families": tuple(JOB_FAMILIES), "locations": tuple(LOCATIONS), "experience": tuple(EXPERIENCE),
+              "job_types": tuple(JOB_TYPES), "work_modes": tuple(WORK_MODES)}
 
 
 def passes_global_gate(job: dict) -> bool:
@@ -111,7 +126,22 @@ def matches_preferences(job: dict, prefs: dict) -> bool:
 
 def for_person(job: dict, *, mode: str, prefs: dict, watch_all: bool, watchlist: Iterable[str]) -> bool:
     """General: in the person's company scope. Tailored: also matching
-    their preferences. (The global gate is checked separately.)"""
+    their preferences. (The global gate is checked separately.)
+    With no companies chosen yet (and not "all companies"), General has
+    nothing to cover, while Tailored follows the preferences everywhere."""
+    watchlist = set(watchlist)
+    if not watch_all and not watchlist:
+        return mode == "tailored" and matches_preferences(job, prefs)
     if not in_scope(job, watch_all, watchlist):
         return False
     return mode != "tailored" or matches_preferences(job, prefs)
+
+
+def matches_view(job: dict, *, locations=(), families=(), experience=(), companies=None) -> bool:
+    """The job lists' filters (preferences are the defaults; the viewer can
+    change them while browsing): empty means "any"; ``companies`` None
+    means every company."""
+    if companies is not None and job.get("company_id") not in set(companies):
+        return False
+    return matches_preferences(job, {"locations": list(locations), "job_families": list(families),
+                                     "experience": list(experience)})

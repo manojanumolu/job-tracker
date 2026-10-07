@@ -301,8 +301,10 @@ class UserData:
         fresh = {"uid": self.uid, "schema": SCHEMA_VERSION, "created_at": stamp, **identity,
                  "onboarding": {"status": ONBOARDING_PENDING},
                  "notifications": {"enabled": False, "mode": "general", "enabled_at": None},
-                 "preferences": {"mode": "general", "job_families": [], "locations": [], "experience": []},
-                 "watch_all": True}
+                 "preferences": {"mode": "general", "job_families": [], "locations": [], "experience": [],
+                                 "job_types": [], "work_modes": []},
+                 # a new person follows no company yet: the shared catalogue isn't theirs
+                 "watch_all": False}
         if self._backend.create(self._root, fresh):
             return fresh, True
         self._backend.set(self._root, identity, merge=True)
@@ -367,12 +369,7 @@ class UserData:
     def notification_settings(self) -> dict:
         """{"enabled", "mode", "email"}. The address is always the verified
         email of the signed-in identity — it can't be set to anything else."""
-        prof = self._backend.get(self._root) or {}
-        notif = prof.get("notifications") if isinstance(prof.get("notifications"), dict) else {}
-        email = prof.get("email") if prof.get("email_verified") is True else ""
-        return {"enabled": notif.get("enabled") is True and bool(email),
-                "mode": notif.get("mode") if notif.get("mode") in NOTIFY_MODES else "general",
-                "email": email or ""}
+        return notification_settings_from(self._backend.get(self._root) or {})
 
     @_guard
     def set_notifications(self, enabled: bool, mode: str = "general") -> dict:
@@ -392,12 +389,14 @@ class UserData:
 
     # -- general / tailored preferences ----------------------------------------
     @_guard
-    def set_preferences(self, mode: str = "general", job_families=(), locations=(), experience=()) -> None:
+    def set_preferences(self, mode: str = "general", job_families=(), locations=(), experience=(),
+                        job_types=(), work_modes=()) -> None:
         if mode not in NOTIFY_MODES:
             raise InvalidInput("unknown preference mode")
         from job_filters import VOCABULARY
         chosen = {"job_families": _clean_list(job_families), "locations": _clean_list(locations),
-                  "experience": _clean_list(experience)}
+                  "experience": _clean_list(experience), "job_types": _clean_list(job_types),
+                  "work_modes": _clean_list(work_modes)}
         for field, values in chosen.items():
             if any(v not in VOCABULARY[field] for v in values):
                 raise InvalidInput(f"unknown {field} value")
@@ -408,15 +407,15 @@ class UserData:
         """What this person asked to see: {"mode", "prefs", "watch_all",
         "watchlist", "notifications"}. Missing fields get the defaults."""
         prof = self._backend.get(self._root) or {}
-        prefs = prof.get("preferences") if isinstance(prof.get("preferences"), dict) else {}
-        notif = prof.get("notifications") if isinstance(prof.get("notifications"), dict) else {}
-        mode = notif.get("mode") if notif.get("mode") in NOTIFY_MODES else "general"
-        return {"mode": mode,
-                "prefs": {k: [v for v in prefs.get(k) or [] if isinstance(v, str)]
-                          for k in ("job_families", "locations", "experience")},
-                "watch_all": prof.get("watch_all") is not False,
-                "watchlist": self.watchlist() if prof.get("watch_all") is False else set(),
-                "notifications": notif}
+        return view_from(prof, self.watchlist() if prof.get("watch_all") is False else set())
+
+    @_guard
+    def snapshot(self) -> dict:
+        """Everything the app shows about this person, in three reads:
+        {"profile", "dismissed", "watchlist"} — so a page can be drawn
+        without asking Firestore again for each piece."""
+        prof = self._backend.get(self._root) or {}
+        return {"profile": prof, "dismissed": self.dismissed(), "watchlist": self.watchlist()}
 
     # -- per-user delivery ledger: claim -> send -> finalize --------------------
     def _delivery_path(self, job_key: str) -> str:
@@ -447,6 +446,32 @@ class UserData:
     @_guard
     def delivery(self, job_key: str) -> dict | None:
         return self._backend.get(self._delivery_path(job_key))
+
+
+PREFERENCE_KEYS = ("job_families", "locations", "experience", "job_types", "work_modes")
+
+
+def view_from(profile: dict, watchlist: set) -> dict:
+    """personal_view() computed from an already-read profile + watchlist."""
+    prof = profile if isinstance(profile, dict) else {}
+    prefs = prof.get("preferences") if isinstance(prof.get("preferences"), dict) else {}
+    notif = prof.get("notifications") if isinstance(prof.get("notifications"), dict) else {}
+    mode = notif.get("mode") if notif.get("mode") in NOTIFY_MODES else "general"
+    watch_all = prof.get("watch_all") is not False
+    return {"mode": mode,
+            "prefs": {k: [v for v in prefs.get(k) or [] if isinstance(v, str)] for k in PREFERENCE_KEYS},
+            "watch_all": watch_all, "watchlist": set() if watch_all else set(watchlist),
+            "notifications": notif}
+
+
+def notification_settings_from(profile: dict) -> dict:
+    """notification_settings() computed from an already-read profile."""
+    prof = profile if isinstance(profile, dict) else {}
+    notif = prof.get("notifications") if isinstance(prof.get("notifications"), dict) else {}
+    email = prof.get("email") if prof.get("email_verified") is True else ""
+    return {"enabled": notif.get("enabled") is True and bool(email),
+            "mode": notif.get("mode") if notif.get("mode") in NOTIFY_MODES else "general",
+            "email": email or ""}
 
 
 class UserStore:
