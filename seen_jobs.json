@@ -1087,5 +1087,87 @@
     "notify_state": "sent",
     "claimed_at": "2026-10-06T13:02:08.597436+00:00",
     "notified_at": "2026-10-06T13:02:13.211865+00:00"
+  },
+  {
+    "title": "IN-Associate_IA_Internal Audit Services_Advisory_Mumbai",
+    "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Mumbai-Shivaji-Park/IN-Associate-IA-Internal-Audit-Services-Advisory-Mumbai_751155WD-2",
+    "company": "PwC",
+    "location": "Mumbai Shivaji Park · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 - 1 Years'",
+    "evidence": {
+      "experience": [
+        "0 - 1 Years"
+      ],
+      "experience_lines": [
+        "Experience in Internal Audit/ Process Audit concepts & methodology",
+        "Experience with analysis in high volume data environments.",
+        "Years of experience required:",
+        "0  -  1   Years"
+      ],
+      "fresher_evidence": "0 - 1 Years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:751155WD-2",
+      "canonical_url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Mumbai-Shivaji-Park/IN-Associate-IA-Internal-Audit-Services-Advisory-Mumbai_751155WD-2",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "pwc|workday:751155WD-2",
+    "date": "Oct 7, 18:41",
+    "first_seen": "2026-10-07T18:41:21.416755+00:00",
+    "id": "PwC_IN-Associate_IA_Internal_Audit_Services_",
+    "notified": false,
+    "company_id": "pwc",
+    "notify_state": "claimed",
+    "claimed_at": "2026-10-07T18:41:29.941374+00:00"
+  },
+  {
+    "title": "IN_Associate_Metal & Mining_Fuels & Resources S&O_Advisory_Gurgaon",
+    "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Gurugram-Downtown-4/IN-Specialist-2-Metal---Mining-Fuels---Resources-S-O-Advisory-Gurgaon_755063WD-1",
+    "company": "PwC",
+    "location": "Gurugram Downtown 4 · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-3 years'",
+    "evidence": {
+      "experience": [
+        "0-3 years"
+      ],
+      "experience_lines": [
+        "0-3 years",
+        "Years of experience   required  :"
+      ],
+      "fresher_evidence": "0-3 years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:755063WD-1",
+      "canonical_url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Gurugram-Downtown-4/IN-Specialist-2-Metal---Mining-Fuels---Resources-S-O-Advisory-Gurgaon_755063WD-1",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "pwc|workday:755063WD-1",
+    "date": "Oct 7, 18:41",
+    "first_seen": "2026-10-07T18:41:21.416755+00:00",
+    "id": "PwC_IN_Associate_Metal_&_Mining_Fuels_&_Reso",
+    "notified": false,
+    "company_id": "pwc",
+    "notify_state": "claimed",
+    "claimed_at": "2026-10-07T18:41:29.941374+00:00"
   }
 ]

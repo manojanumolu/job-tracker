@@ -6,12 +6,12 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-07T09:59:56.027014+00:00",
+    "last_checked": "2026-10-07T18:38:55.354922+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
       "postings_seen": 445,
-      "candidates": 77,
+      "candidates": 74,
       "details_read": 18,
       "details_unreadable": 0,
       "pending": 0,
@@ -26,11 +26,11 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-07T10:00:02.959838+00:00",
+    "last_checked": "2026-10-07T18:39:05.769892+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 148,
+      "postings_seen": 146,
       "candidates": 21,
       "details_read": 0,
       "details_unreadable": 0,
@@ -46,7 +46,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-07T10:00:05.016140+00:00",
+    "last_checked": "2026-10-07T18:39:07.831244+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -66,13 +66,13 @@
     "locked": true,
     "status": "active",
     "last_job": "Scientific Sales Executive",
-    "last_checked": "2026-10-07T10:00:30.027768+00:00",
+    "last_checked": "2026-10-07T18:39:28.148689+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
       "postings_seen": 81,
       "candidates": 81,
-      "details_read": 34,
+      "details_read": 32,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 1
@@ -85,17 +85,17 @@
     "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers",
     "locked": true,
     "status": "active",
-    "last_job": "Specialist 3",
-    "last_checked": "2026-10-07T10:02:11.906588+00:00",
+    "last_job": "IN_Specialist 3_ Frontend Developer_AppTech_Advisory_Pune",
+    "last_checked": "2026-10-07T18:41:21.416718+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 646,
-      "candidates": 646,
-      "details_read": 183,
+      "postings_seen": 630,
+      "candidates": 630,
+      "details_read": 186,
       "details_unreadable": 0,
       "pending": 0,
-      "accepted": 12
+      "accepted": 13
     },
     "source": "Workday API"
   },
@@ -106,7 +106,7 @@
     "locked": true,
     "status": "active",
     "last_job": "Customer Contact Comms New Associate - Messaging",
-    "last_checked": "2026-10-07T10:02:15.821768+00:00",
+    "last_checked": "2026-10-07T18:41:24.764563+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -115,7 +115,7 @@
       "details_read": 0,
       "details_unreadable": 0,
       "pending": 0,
-      "accepted": 28
+      "accepted": 29
     },
     "source": "Accenture job-search API"
   },
@@ -126,12 +126,12 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-07T10:02:19.912745+00:00",
+    "last_checked": "2026-10-07T18:41:28.732126+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 135,
-      "candidates": 135,
+      "postings_seen": 136,
+      "candidates": 136,
       "details_read": 0,
       "details_unreadable": 0,
       "pending": 0,
