@@ -6,6 +6,7 @@ import re
 
 import pytest
 
+import job_filters
 import user_store
 from user_store import MemoryBackend, UserStore
 from test_firebase_auth import _buttons, _login_page, admins, google_env, no_env  # noqa: F401  (fixtures)
@@ -356,3 +357,134 @@ def test_motion_is_light_and_respects_reduced_motion():
     for selector in (".lp-card-in", ".st-key-onboard", ".lp-title", ".lp-copy"):
         assert selector in joined
     assert "transition: all" not in src                               # only cheap, named properties animate
+
+
+# ── final polish: job families, saved-for-later, menu wording, GitHub reads ──
+
+NEW_FAMILIES = ("Cloud & DevOps", "Cybersecurity")
+
+
+@pytest.mark.parametrize("title, family", [
+    ("Associate Container Platform Engineer", "Cloud & DevOps"),          # a real title in seen_jobs.json
+    ("DevOps Engineer - Fresher", "Cloud & DevOps"),
+    ("Site Reliability Engineer (SRE) Trainee", "Cloud & DevOps"),
+    ("AWS Cloud Support Associate", "Cloud & DevOps"),
+    ("Cyber Security Analyst - Graduate", "Cybersecurity"),
+    ("SOC Analyst L1", "Cybersecurity"),
+    ("Information Security Trainee", "Cybersecurity"),
+    ("Penetration Tester (Fresher)", "Cybersecurity"),
+])
+def test_new_job_families_match_titles(title, family):
+    assert family in job_filters.job_families({"title": title})
+
+
+@pytest.mark.parametrize("title", ["Security Guard", "Social Security Associate", "Associate", "Socio-economic Analyst",
+                                   "Internal Audit Associate", "Liaison Officer"])
+def test_new_job_families_do_not_over_match(title):
+    assert not set(NEW_FAMILIES) & job_filters.job_families({"title": title})
+
+
+def test_devops_titles_keep_their_existing_family():
+    assert {"Software engineering", "Cloud & DevOps"} <= job_filters.job_families({"title": "DevOps Engineer"})
+
+
+def test_one_vocabulary_for_onboarding_preferences_and_filters(app, google_env, store):
+    at = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS, onboard=True)
+    at.button(key="btn_ob_next").click().run()                          # locations -> job types
+    at.button(key="btn_ob_next").click().run()                          # -> job families
+    onboarding = _pills(at, "ob_job_families").options
+    at.button(key="btn_onboarding_skip").click().run()
+    at.button(key="acct_preferences").click().run()
+    preferences = _pills(at, "pref_job_families").options
+    _nav(at, "jobs")
+    filters = _ms(at, "j_pfam").options
+    assert onboarding == preferences == filters == list(job_filters.JOB_FAMILIES)
+    assert set(NEW_FAMILIES) <= set(onboarding)
+    assert set(NEW_FAMILIES) <= set(job_filters.VOCABULARY["job_families"])          # what the store accepts
+
+
+def test_a_new_family_is_saved_and_filters_the_jobs(app, google_env, store):
+    platform_job = {**PWC_JOB, "title": "Associate Container Platform Engineer"}
+    _ready(store, A_UID, A_MAIL, job_families=["Cloud & DevOps"])
+    at = _sign_in(app, google_env, A_UID, A_MAIL, seen=(platform_job, METLIFE_JOB), page="jobs")
+    assert _ms(at, "j_pfam").value == ["Cloud & DevOps"]
+    assert "Associate Container Platform Engineer" in _html(at) and METLIFE_TITLE not in _html(at)
+
+
+def test_job_type_and_work_mode_are_saved_but_never_matched(app, google_env, store):
+    _ready(store, A_UID, A_MAIL).set_preferences("general", [], [], [], ["internship"], ["remote"])
+    at = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS)
+    html = _html(at)
+    assert PWC_TITLE in html and METLIFE_TITLE in html                    # nothing is filtered by them
+    used, later = html.split("Used to match jobs", 1)[1].split("Saved for later", 1)
+    assert "Internship" in later and "Remote" in later and "Internship" not in used
+    _nav(at, "jobs")
+    assert PWC_TITLE in _html(at) and METLIFE_TITLE in _html(at)
+    assert "can’t be filtered on yet" in _html(at)
+    _nav(at, "settings")
+    html = _html(at)
+    assert "<dt>Used to match jobs</dt><dd>None yet</dd>" in html and "<dt>Saved for later</dt>" in html
+    assert "Not used for matching yet" in html
+    at.button(key="acct_preferences").click().run()
+    html = _html(at)
+    assert (html.index("Used to match jobs") < html.index("<b>Locations</b>") < html.index("Saved for later")
+            < html.index("<b>Job types</b>") < html.index("<b>Work mode</b>"))
+    assert _pills(at, "pref_job_types").value == ["internship"]          # still saved and shown
+
+
+def test_account_menu_wording(app, google_env, store):
+    _ready(store, A_UID, A_MAIL)
+    at = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS)
+    menu = [(b.key, b.label) for b in at.button if (b.key or "").startswith("acct_") or b.key == "btn_account_sign_out"]
+    assert menu == [("acct_settings", "Account"), ("acct_preferences", "Job preferences"),
+                    ("acct_companies", "My companies"), ("acct_alerts", "My alerts"), ("btn_account_sign_out", "Sign out")]
+    at.button(key="acct_settings").click().run()
+    assert at.session_state.page == "settings"
+    at.button(key="acct_companies").click().run()
+    assert at.session_state.page == "companies" and "My companies" in _html(at)
+
+
+def test_admin_preferences_never_touch_the_global_configuration(app, google_env, store, admins):
+    admins(A_MAIL)
+    _ready(store, A_UID, A_MAIL)
+    at = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS, page="preferences")
+    before = {n: (at.tmp_path / n).read_bytes() for n in ("companies.json", "settings.json", "seen_jobs.json")}
+    _pills(at, "pref_job_families").set_value(["Cybersecurity"])
+    at.button(key="btn_prefs_save").click().run()
+    assert store.backend.get(f"users/{A_UID}")["preferences"]["job_families"] == ["Cybersecurity"]
+    assert {n: (at.tmp_path / n).read_bytes() for n in before} == before
+
+
+def test_page_clicks_do_not_refetch_github_data(app, google_env, store, monkeypatch):
+    """With a GitHub token configured, the shared files are read once per
+    server process and then served from the snapshot (refreshed in the
+    background only when older than 5 minutes)."""
+    import config_store
+    calls = []
+    catalogue = json.loads((REPO / "companies.json").read_text("utf-8"))
+
+    def fake_fetch(paths, *a, **k):
+        calls.append(list(paths))
+        return {"companies.json": catalogue, "settings.json": {"recipient_email": "me@example.com"},
+                "seen_jobs.json": list(JOBS)}
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    monkeypatch.setattr(config_store, "fetch_remote_json", fake_fetch)
+    _ready(store, A_UID, A_MAIL)
+    _ready(store, B_UID, B_MAIL)
+    at = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS)
+    assert len(calls) == 1 and PWC_TITLE in _html(at)                    # the first read waits once
+    for page in ("jobs", "companies", "settings", "home", "jobs"):
+        _nav(at, page)
+    at.button(key="acct_preferences").click().run()
+    at.button(key="acct_alerts").click().run()
+    other = _sign_in(app, google_env, B_UID, B_MAIL, seen=JOBS, page="jobs")   # another session, same process
+    assert not other.exception and len(calls) == 1
+
+
+def test_nothing_sticks_out_of_the_fixed_width_sidebar():
+    """The resize handle's wrapper (8 px, right: -6px) overflowed the fixed
+    248 px sidebar by 5 px and showed as a white bar at its edge while pages
+    redrew (measured in Chromium: 55 of 273 frames before, 0 of 298 after).
+    The wrapper must stay hidden, not just the handle inside it."""
+    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    assert 'section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]) { display: none !important; }' in src

@@ -434,6 +434,10 @@ _CSS = """
 .stDeployButton, [data-testid="stToolbar"], [data-testid="stDecoration"] { display: none !important; }
 [data-testid="stSidebarHeader"], [data-testid="stSidebarCollapseButton"], [data-testid="stSidebarCollapsedControl"],
 [data-testid="stExpandSidebarButton"], [data-testid="stSidebarResizeHandle"] { display: none !important; }
+/* The handle's own wrapper (8 px, right: -6px) still stuck 5 px out of the
+   fixed-width sidebar; that overflow showed as a white bar at the sidebar's
+   edge while pages redrew. The width is fixed, so there is nothing to resize. */
+section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]) { display: none !important; }
 /* visual depth: two soft lights and a faint dot grid that fades out down the page */
 .stApp, [data-testid="stAppViewContainer"] {
   background:
@@ -1200,6 +1204,11 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .mh-card ul { list-style: none; padding: 0 !important; margin: 10px 0 0 !important; }
 .mh-card li { font-size: 14px; line-height: 1.6; color: var(--text-2); margin: 0; }
 .mh-card li.muted, .ob-summary li.muted { color: var(--muted); }
+.mh-card li.pg, .ob-summary li.pg { margin-top: 10px; font-size: 11px; line-height: 1.5; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--muted); }
+.mh-card li.pg:first-child, .ob-summary li.pg:first-child { margin-top: 0; }
+.pref-group.later { margin-top: 14px; padding-top: 16px; border-top: 1px solid var(--border); }
+.pref-group p { margin: 2px 0 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
 
 /* ── preferences, filters, companies ── */
 .filter-note { margin: 2px 2px 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
@@ -2659,10 +2668,10 @@ def account_menu() -> None:
             badge_html = '<span class="role admin">Admin</span>' if IS_ADMIN else ""
             st.html(f'<div class="acct-head">{_avatar(name, "sm")}<div class="who"><div class="nm">{escape(name)}</div>'
                     f'<div class="em">{escape(ACCOUNT.get("email") or "")}</div></div>{badge_html}</div>')
-            items = [("settings", "Account settings", ":material/account_circle:", {})]
+            items = [("settings", "Account", ":material/account_circle:", {})]
             if USER is not None:
                 items += [("preferences", "Job preferences", ":material/tune:", {}),
-                          ("companies", "Companies I follow", ":material/apartment:", {"view": "mine"}),
+                          ("companies", "My companies", ":material/apartment:", {"view": "mine"}),
                           ("alerts", "My alerts", ":material/notifications:", {})]
             for dest, text, icon, kw in items:
                 st.button(text, key=f"acct_{dest}", icon=icon, type="tertiary", use_container_width=True,
@@ -3852,9 +3861,27 @@ _PREF_INFO = {   # question · short label · {value: label} · hint
 }
 
 
-def pref_lines(prefs: dict) -> list[str]:
+# What the job lists and Tailored alerts really match on, and what is only
+# kept until the postings carry it (see job_filters' module note).
+MATCHED_PREFS = ("locations", "job_families", "experience")
+SAVED_ONLY_PREFS = ("job_types", "work_modes")
+SAVED_ONLY_NOTE = "Saved for later — not used for matching yet"
+
+
+def pref_lines(prefs: dict, fields=tuple(PREF_STEPS)) -> list[str]:
     """"Hyderabad · Bengaluru", "Software engineering", … — one per chosen field."""
-    return [" · ".join(_PREF_INFO[f][2].get(v, v) for v in prefs.get(f) or []) for f in PREF_STEPS if prefs.get(f)]
+    return [" · ".join(_PREF_INFO[f][2].get(v, v) for v in prefs.get(f) or []) for f in fields if prefs.get(f)]
+
+
+def pref_list_html(prefs: dict, empty: str) -> str:
+    """<li> rows for a summary: what is used to match jobs, then what is
+    only saved for later (never presented as a match)."""
+    used, saved = pref_lines(prefs, MATCHED_PREFS), pref_lines(prefs, SAVED_ONLY_PREFS)
+    html = '<li class="pg">Used to match jobs</li>' + ("".join(f"<li>{escape(x)}</li>" for x in used)
+                                                       or f'<li class="muted">{escape(empty)}</li>')
+    if saved:
+        html += f'<li class="pg">{SAVED_ONLY_NOTE}</li>' + "".join(f'<li class="muted">{escape(x)}</li>' for x in saved)
+    return html
 
 
 def save_preferences(values: dict) -> bool:
@@ -3886,11 +3913,18 @@ def page_preferences():
     with st.container(key="set_prefs"):
         with st.form("prefs_form", border=False):
             picks = {}
-            for f in PREF_STEPS:
-                question, short, options, hint = _PREF_INFO[f]
-                st.html(f'<div class="pref-q"><b>{escape(short)}</b><span>{escape(hint)}</span></div>')
-                picks[f] = st.pills(short, list(options), selection_mode="multi", default=_VIEW["prefs"].get(f) or [],
-                                    key=f"pref_{f}", format_func=options.get, label_visibility="collapsed")
+            for cls, group, sub, fields in (
+                    ("", "Used to match jobs", "Your job lists start from these, and Tailored alerts use them.",
+                     MATCHED_PREFS),
+                    ("later", SAVED_ONLY_NOTE, "Postings don’t state these yet, so no job is filtered by them.",
+                     SAVED_ONLY_PREFS)):
+                st.html(f'<div class="pref-group {cls}"><div class="eyebrow">{escape(group)}</div><p>{escape(sub)}</p></div>')
+                for f in fields:
+                    question, short, options, hint = _PREF_INFO[f]
+                    st.html(f'<div class="pref-q"><b>{escape(short)}</b><span>{escape(hint)}</span></div>')
+                    picks[f] = st.pills(short, list(options), selection_mode="multi",
+                                        default=_VIEW["prefs"].get(f) or [], key=f"pref_{f}", format_func=options.get,
+                                        label_visibility="collapsed")
             if st.form_submit_button("Save preferences", key="btn_prefs_save", type="primary", icon=":material/check:"):
                 if save_preferences(picks):
                     toast("Preferences saved", "success")
@@ -3907,7 +3941,7 @@ def page_alerts():
         st.button("Job preferences", key="btn_alerts_prefs", icon=":material/tune:", on_click=go, args=("preferences",),
                   use_container_width=True)
     with b:
-        st.button("Companies I follow", key="btn_alerts_cos", icon=":material/apartment:", on_click=go,
+        st.button("My companies", key="btn_alerts_cos", icon=":material/apartment:", on_click=go,
                   args=("companies",), kwargs={"view": "mine"}, use_container_width=True)
 
 
@@ -3962,9 +3996,7 @@ def page_onboarding():
                 st.button("Skip for now", key="btn_onboarding_skip", type="tertiary", on_click=_onboarding_finish,
                           args=(False,))
         else:
-            lines = pref_lines(vals)
-            summary = ("".join(f'<li>{escape(line)}</li>' for line in lines) if lines
-                       else '<li class="muted">No preferences — you’ll see every qualifying fresher job.</li>')
+            summary = pref_list_html(vals, "No preferences — you’ll see every qualifying fresher job.")
             st.html(f'<div class="ob-head"><div class="ob-dots">{dots}</div><div class="ob-done">{_ms("task_alt", "s28")}</div>'
                     '<h1 class="ob-title">You’re ready</h1><p class="ob-sub">Your job lists start from these. Change them '
                     'anytime from your account menu. Alert emails stay off until you turn them on.</p>'
@@ -3981,7 +4013,7 @@ def page_my_companies():
     which itself never changes here."""
     following = sorted((c for c in companies if str(c.get("id")) in (ME["watchlist"] if ME else set())),
                        key=lambda c: (c.get("name") or "").lower())
-    page_header("My companies" if MEMBER_VIEW else "Companies I follow",
+    page_header("My companies",
                 "Companies you follow narrow your job lists and General alerts. "
                 "The tracker's company list itself isn't changed.", eyebrow="Your account" if not MEMBER_VIEW else None)
     if _personal_unavailable():
@@ -4039,11 +4071,10 @@ def page_member_home():
                 f'<p class="hero-sub">{_plural(len(mine), "job")} match your preferences right now.</p></div>')
     if ME is not None:
         notif = user_store.notification_settings_from(ME["profile"])
-        lines = pref_lines(_VIEW["prefs"])
         cols = st.columns(3)
         cards = [
             ("set_mh_prefs", "tune", "Job preferences",
-             "".join(f"<li>{escape(x)}</li>" for x in lines) or '<li class="muted">None yet — every qualifying job is shown.</li>',
+             pref_list_html(_VIEW["prefs"], "None yet — every qualifying job is shown."),
              "Edit preferences", ("preferences",), {}),
             ("set_mh_companies", "apartment", "Companies",
              (f'<li>Following {len(ME["watchlist"])}</li>' if ME["watchlist"] else '<li class="muted">Not following any yet</li>'),
@@ -4083,12 +4114,15 @@ def personal_summary_card() -> None:
     if ME is None:
         return
     notif = user_store.notification_settings_from(ME["profile"])
-    lines = pref_lines(_VIEW["prefs"])
+    used, saved = pref_lines(_VIEW["prefs"], MATCHED_PREFS), pref_lines(_VIEW["prefs"], SAVED_ONLY_PREFS)
     with st.container(key="set_personal"):
         st.html(f'<div class="set-head"><span class="ic">{_ms("person_search")}</span><div><div class="eyebrow">Job discovery</div>'
                 '<h2 class="section-title">Your job search</h2><p class="section-sub">Saved to your own account.</p></div></div>'
                 '<dl class="kv">'
-                f'<dt>Job preferences</dt><dd>{"<br>".join(escape(x) for x in lines) or "None yet"}</dd>'
+                f'<dt>Used to match jobs</dt><dd>{"<br>".join(escape(x) for x in used) or "None yet"}</dd>'
+                + (f'<dt>Saved for later</dt><dd>{"<br>".join(escape(x) for x in saved)}'
+                   '<span class="kv-note">Not used for matching yet — postings don’t state job type or work mode.</span></dd>'
+                   if saved else "") +
                 f'<dt>Companies</dt><dd>{"Following " + str(len(ME["watchlist"])) if ME["watchlist"] else "Not following any yet"}</dd>'
                 f'<dt>Alert emails</dt><dd>{("On · " + ("Tailored" if notif["mode"] == "tailored" else "General")) if notif["enabled"] else "Off"}</dd>'
                 '</dl>')
@@ -4097,7 +4131,7 @@ def personal_summary_card() -> None:
             st.button("Edit preferences", key="btn_set_prefs", icon=":material/tune:", on_click=go, args=("preferences",),
                       use_container_width=True)
         with b:
-            st.button("Companies I follow", key="btn_set_cos", icon=":material/apartment:", on_click=go,
+            st.button("My companies", key="btn_set_cos", icon=":material/apartment:", on_click=go,
                       args=("companies",), kwargs={"view": "mine"}, use_container_width=True)
         with c:
             st.button("My alerts", key="btn_set_alerts", icon=":material/notifications:", on_click=go, args=("alerts",),

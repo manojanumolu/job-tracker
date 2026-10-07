@@ -57,6 +57,16 @@ JOB_FAMILIES = {
                             r"android|ios|java|python|devops|cloud|application|apptech|salesforce|sap",
     "Data & analytics": r"data|analytics?|analyst|machine learning|ml|ai|artificial intelligence|business intelligence|"
                         r"bi|statistics?|statistician",
+    # A title can belong to several families: "DevOps Engineer" stays in
+    # Software engineering (as before) and is also Cloud & DevOps.
+    "Cloud & DevOps": r"cloud|devops|dev ops|site reliability|sre|platform engineer(?:ing)?|aws|azure|gcp|"
+                      r"kubernetes|k8s|terraform|ci/cd",
+    # no bare "security" (or "security associate"): "Security Guard" and
+    # "Social Security Associate" aren't cybersecurity
+    "Cybersecurity": r"cyber ?security|cyber|information security|infosec|it security|cloud security|"
+                     r"network security|application security|appsec|security (?:analyst|engineer|operations|"
+                     r"specialist|consultant|architect)|soc(?: analyst)?|penetration test(?:er|ing)?|"
+                     r"pen ?tester|ethical hack(?:er|ing)|vulnerability|identity and access|iam",
     "Testing & QA": r"test|tester|testing|qa|quality assurance|automation",
     "IT support & infrastructure": r"support|infra|infrastructure|helpdesk|help desk|service desk|network|networking|"
                                    r"system administrator|sysadmin|it operations",
