@@ -134,6 +134,26 @@ def matches_preferences(job: dict, prefs: dict) -> bool:
     return True
 
 
+TAILORING_KEYS = ("locations", "job_families")
+
+
+def matches_tailoring(job: dict, tailoring: dict | None) -> bool:
+    """Email tailoring ("Tailor my email alerts"): a personal narrowing of
+    the alert EMAILS only — never of discovery, the job lists or anyone
+    else's alerts. Same vocabulary and matchers as everywhere else (the
+    LOCATIONS and JOB_FAMILIES above). Any of the chosen locations AND any
+    of the chosen families; a dimension left empty doesn't narrow anything,
+    so no tailoring at all means every qualifying job."""
+    t = tailoring if isinstance(tailoring, dict) else {}
+    locs = {v for v in t.get("locations") or () if v in LOCATIONS}
+    fams = {v for v in t.get("job_families") or () if v in JOB_FAMILIES}
+    if locs and not locs & job_location_choices(job):
+        return False
+    if fams and not fams & job_families(job):
+        return False
+    return True
+
+
 def for_person(job: dict, *, mode: str, prefs: dict, watch_all: bool, watchlist: Iterable[str]) -> bool:
     """General: in the person's company scope. Tailored: also matching
     their preferences. (The global gate is checked separately.)

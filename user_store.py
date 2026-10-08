@@ -5,8 +5,9 @@ identity, the company catalogue, scanner state and the eligibility rules.
 Personal (here), one tree per person:
 
   users/{uid}                    profile: email, display_name, created_at,
-                                 last_login_at, onboarding, notifications,
-                                 preferences, watch_all
+                                 last_login_at, onboarding, notifications
+                                 (incl. the email tailoring), preferences,
+                                 watch_all
   users/{uid}/companies/{id}     watchlist: company IDs from the shared catalogue
   users/{uid}/dismissed/{id}     jobs this person dismissed (job_key inside)
   users/{uid}/deliveries/{id}    per-user email ledger: claim -> send -> finalize
@@ -300,7 +301,9 @@ class UserData:
                     "email_verified": email_verified is True, "last_login_at": stamp}
         fresh = {"uid": self.uid, "schema": SCHEMA_VERSION, "created_at": stamp, **identity,
                  "onboarding": {"status": ONBOARDING_PENDING},
-                 "notifications": {"enabled": False, "mode": "general", "enabled_at": None},
+                 # alerts off; no email tailoring (= every qualifying job, once alerts are on)
+                 "notifications": {"enabled": False, "mode": "general", "enabled_at": None,
+                                   "tailoring": {"locations": [], "job_families": []}},
                  "preferences": {"mode": "general", "job_families": [], "locations": [], "experience": [],
                                  "job_types": [], "work_modes": []},
                  # a new person follows no company yet: the shared catalogue isn't theirs
@@ -382,10 +385,29 @@ class UserData:
         # alerts cover jobs found from the moment they were turned on — never a
         # backlog of everything found before
         since = old.get("enabled_at") if old.get("enabled") is True and old.get("enabled_at") else _now_iso()
-        self._backend.set(self._root, {"notifications": {"enabled": enabled is True, "mode": mode,
+        # the email tailoring rides along unchanged (a merge may replace the whole map)
+        self._backend.set(self._root, {"notifications": {**old, "enabled": enabled is True, "mode": mode,
                                                          "enabled_at": since if enabled is True else None}},
                           merge=True)
         return self.notification_settings()
+
+    @_guard
+    def set_email_tailoring(self, locations=(), job_families=()) -> dict:
+        """Tailor this person's alert EMAILS (users/{uid}.notifications.
+        tailoring): only jobs in any of ``locations`` and any of
+        ``job_families``; empty lists mean no tailoring (every qualifying job
+        from their companies). Values must come from the shared vocabulary.
+        Touches nothing else — not the job lists' preferences, not alerts on
+        or off, not anyone else's settings. Returns what was saved."""
+        from job_filters import VOCABULARY
+        chosen = {"locations": _clean_list(locations), "job_families": _clean_list(job_families)}
+        for field, values in chosen.items():
+            if any(v not in VOCABULARY[field] for v in values):
+                raise InvalidInput(f"unknown {field} value")
+        prof = self._backend.get(self._root) or {}
+        old = prof.get("notifications") if isinstance(prof.get("notifications"), dict) else {}
+        self._backend.set(self._root, {"notifications": {**old, "tailoring": chosen}}, merge=True)
+        return chosen
 
     # -- general / tailored preferences ----------------------------------------
     @_guard
@@ -413,9 +435,13 @@ class UserData:
     def snapshot(self) -> dict:
         """Everything the app shows about this person, in three reads:
         {"profile", "dismissed", "watchlist"} — so a page can be drawn
-        without asking Firestore again for each piece."""
-        prof = self._backend.get(self._root) or {}
-        return {"profile": prof, "dismissed": self.dismissed(), "watchlist": self.watchlist()}
+        without asking Firestore again for each piece. The reads run side by
+        side (one round trip of waiting instead of three)."""
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            prof = pool.submit(self._backend.get, self._root)
+            dismissed, watchlist = pool.submit(self.dismissed), pool.submit(self.watchlist)
+            return {"profile": prof.result() or {}, "dismissed": dismissed.result(), "watchlist": watchlist.result()}
 
     # -- per-user delivery ledger: claim -> send -> finalize --------------------
     def _delivery_path(self, job_key: str) -> str:
@@ -461,7 +487,21 @@ def view_from(profile: dict, watchlist: set) -> dict:
     return {"mode": mode,
             "prefs": {k: [v for v in prefs.get(k) or [] if isinstance(v, str)] for k in PREFERENCE_KEYS},
             "watch_all": watch_all, "watchlist": set() if watch_all else set(watchlist),
-            "notifications": notif}
+            "notifications": notif, "tailoring": tailoring_from(prof)}
+
+
+TAILORING_KEYS = ("locations", "job_families")
+
+
+def tailoring_from(profile: dict) -> dict:
+    """The email tailoring saved in a profile: {"locations", "job_families"}.
+    A profile from before tailoring existed has none: both lists empty,
+    which means every qualifying job — exactly the alerts it had before."""
+    prof = profile if isinstance(profile, dict) else {}
+    notif = prof.get("notifications") if isinstance(prof.get("notifications"), dict) else {}
+    t = notif.get("tailoring") if isinstance(notif.get("tailoring"), dict) else {}
+    return {k: [v for v in t.get(k) or [] if isinstance(v, str)] if isinstance(t.get(k), list) else []
+            for k in TAILORING_KEYS}
 
 
 def notification_settings_from(profile: dict) -> dict:

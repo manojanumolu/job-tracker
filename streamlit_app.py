@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+import threading
 import time
 from datetime import datetime, timedelta, timezone
 from html import escape
@@ -379,6 +380,8 @@ LIGHT = {
     "opp-glow": "1", "oc-bg": "rgba(255,255,255,.82)", "oc-border": "rgba(91,76,245,.14)",
     "oc-shadow": "0 18px 40px -18px rgba(36,30,110,.32), 0 2px 6px -2px rgba(16,24,40,.06)",
     "oc-bar": "#e9eaf3", "oc-bar-strong": "#d6d8e8",
+    "oc-gloss": "linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,0) 48%)",
+    "oc-shadow-hover": "0 30px 56px -22px rgba(36,30,110,.42), 0 4px 12px -4px rgba(16,24,40,.10)",
 }
 DARK = {
     "bg": "#0b1020", "surface": "#121833", "surface-2": "#0f1530", "raised": "#171e3d", "hover": "#1b2347",
@@ -404,6 +407,8 @@ DARK = {
     "opp-glow": ".85", "oc-bg": "rgba(26,32,66,.78)", "oc-border": "rgba(255,255,255,.10)",
     "oc-shadow": "0 20px 44px -18px rgba(0,0,0,.75), 0 0 0 1px rgba(124,108,255,.08)",
     "oc-bar": "rgba(255,255,255,.08)", "oc-bar-strong": "rgba(255,255,255,.16)",
+    "oc-gloss": "linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,0) 48%)",
+    "oc-shadow-hover": "0 32px 60px -24px rgba(0,0,0,.9), 0 0 0 1px rgba(124,108,255,.22)",
 }
 TH = DARK if st.session_state.dark_mode else LIGHT
 _root_vars = ":root {" + "".join(f"--{k}:{v};" for k, v in TH.items()) + "}"
@@ -1159,37 +1164,102 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 /* ── account menu, top right ── */
 .st-key-acct_bar { flex-direction: row !important; justify-content: flex-end; margin-bottom: -16px; position: relative; z-index: 6; }
 .st-key-acct_bar > div { width: auto !important; flex: 0 0 auto !important; }
-.st-key-acct_menu [data-testid="stPopoverButton"] { min-height: 42px !important; padding: 4px 12px 4px 5px !important; border-radius: 999px !important;
-  gap: 9px; background: var(--surface) !important; border: 1px solid var(--border) !important; box-shadow: var(--hi), var(--shadow) !important; }
-.st-key-acct_menu [data-testid="stPopoverButton"]:hover { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)) !important;
-  box-shadow: var(--hi), var(--btn2-shadow-hover) !important; transform: translateY(-1px); }
-.st-key-acct_menu [data-testid="stPopoverButton"]::before { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
-  flex-shrink: 0; font-weight: 800; font-size: 14px; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
-.st-key-acct_menu [data-testid="stPopoverButton"] p { font-size: 14px !important; font-weight: 600 !important; color: var(--text) !important; }
-.st-key-acct_menu strong { margin-left: 6px; padding: 2px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 700 !important;
-  letter-spacing: .08em; color: var(--accent-text); background: var(--accent-soft);
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent); }
-.acct-head { display: flex; align-items: center; gap: 10px; padding: 2px 2px 12px; margin-bottom: 4px; min-width: 250px;
+/* the compact control: avatar · first name · ADMIN — a little larger, one glossy pill */
+[class*="st-key-acct_menu"] [data-testid="stPopoverButton"] { min-height: 48px !important; padding: 5px 14px 5px 5px !important; border-radius: 999px !important;
+  gap: 10px; background: var(--btn2-grad) !important; border: 1px solid var(--border) !important;
+  box-shadow: var(--hi), var(--shadow), 0 10px 24px -18px var(--accent) !important;
+  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease), transform var(--fast) var(--ease); }
+[class*="st-key-acct_menu"] [data-testid="stPopoverButton"]:hover { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)) !important;
+  box-shadow: var(--hi), var(--btn2-shadow-hover), 0 14px 28px -18px var(--accent) !important; transform: translateY(-1px); }
+[class*="st-key-acct_menu"] [data-testid="stPopoverButton"]::before { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  flex-shrink: 0; font-family: var(--font); font-weight: 800; font-size: 15px; color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 4px 10px -4px var(--accent); }
+[class*="st-key-acct_menu"] [data-testid="stPopoverButton"] p { font-family: var(--font) !important; font-size: 15px !important; font-weight: 700 !important;
+  letter-spacing: -.01em; color: var(--text) !important; white-space: nowrap; display: flex; align-items: center; }
+[class*="st-key-acct_menu"] [data-testid="stPopoverButton"] [data-testid="stIconMaterial"] { color: var(--muted); }
+[class*="st-key-acct_menu"] strong, .acct-head .role { margin-left: 8px; padding: 3px 8px; border-radius: 999px; font-family: var(--font) !important;
+  font-size: 10px; line-height: 13px; font-weight: 800 !important; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-text);
+  background: linear-gradient(135deg, var(--accent-soft), color-mix(in srgb, var(--accent-2) 12%, var(--accent-soft)));
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent); box-shadow: var(--badge-hi); }
+/* the menu itself: a portal outside .stApp, so it needs the app font set here */
+[data-testid="stPopoverBody"], [data-testid="stPopoverBody"] *:not([data-testid="stIconMaterial"]):not(.ms) { font-family: var(--font) !important; }
+[data-testid="stPopoverBody"]:has(.acct-head) { padding: 8px !important; min-width: 280px; border-radius: 18px !important;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, transparent), color-mix(in srgb, var(--surface-2) 94%, transparent)) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid var(--border) !important; box-shadow: var(--hi), var(--shadow-lg) !important; }
+[data-testid="stPopoverBody"]:has(.acct-head) [data-testid="stVerticalBlock"] { gap: 2px !important; }
+.acct-head { display: flex; align-items: center; gap: 11px; padding: 8px 8px 12px; margin-bottom: 6px; min-width: 250px;
   border-bottom: 1px solid var(--border); }
+.acct-av { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; font-size: 16px; font-weight: 800;
+  color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 6px 14px -6px var(--accent); }
 .acct-head .who { min-width: 0; flex: 1; }
-.acct-head .nm { font-size: 14.5px; font-weight: 700; color: var(--text); }
-.acct-head .em { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.acct-head .role { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 7px;
-  border-radius: 999px; color: var(--accent-text); background: var(--accent-soft); }
-.acct-sep { height: 1px; background: var(--border); margin: 4px 0; }
-/* the menu's items: left-aligned rows with a quick hover tint */
+.acct-head .nm { font-size: 14.5px; line-height: 20px; font-weight: 700; letter-spacing: -.01em; color: var(--text); }
+.acct-head .em { font-size: 12.5px; line-height: 18px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-head .role { margin-left: 0; align-self: flex-start; margin-top: 2px; }
+.acct-sep { height: 1px; background: var(--border); margin: 5px 6px; }
+/* the menu's items: compact left-aligned rows; a soft glossy highlight follows the pointer */
 :is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts, .st-key-btn_account_sign_out)
-  [data-testid^="stBaseButton"] { justify-content: flex-start !important; min-height: 40px !important; padding: 0 10px !important;
-  border-radius: 10px !important; transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease); }
+  [data-testid^="stBaseButton"] { justify-content: flex-start !important; min-height: 38px !important; padding: 0 10px !important;
+  border-radius: 11px !important; border: 1px solid transparent !important; color: var(--text-2) !important;
+  transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease), border-color var(--fast) var(--ease),
+              box-shadow var(--fast) var(--ease), transform var(--fast) var(--ease); }
 :is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts, .st-key-btn_account_sign_out)
-  [data-testid^="stBaseButton"] > div { justify-content: flex-start !important; gap: 10px !important; }
+  [data-testid^="stBaseButton"] > div { justify-content: flex-start !important; gap: 11px !important; }
+:is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts, .st-key-btn_account_sign_out)
+  [data-testid^="stBaseButton"] p { font-size: 14px !important; font-weight: 600 !important; color: inherit !important; }
+:is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts, .st-key-btn_account_sign_out)
+  [data-testid="stIconMaterial"] { color: var(--muted) !important; font-size: 19px !important; transition: color var(--fast) var(--ease); }
 :is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts)
-  [data-testid^="stBaseButton"]:hover { background: var(--accent-soft) !important; color: var(--accent-text) !important; }
-.st-key-btn_account_sign_out [data-testid^="stBaseButton"]:hover { background: var(--red-soft) !important; color: var(--red) !important; }
+  [data-testid^="stBaseButton"]:hover { background: linear-gradient(90deg, var(--accent-soft), color-mix(in srgb, var(--accent-soft) 40%, transparent)) !important;
+  color: var(--accent-text) !important; border-color: color-mix(in srgb, var(--accent) 16%, transparent) !important;
+  box-shadow: var(--badge-hi) !important; transform: translateX(2px); }
+:is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts)
+  [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] { color: var(--accent-text) !important; }
+.st-key-btn_account_sign_out [data-testid^="stBaseButton"]:hover { background: var(--red-soft) !important; color: var(--red) !important;
+  border-color: color-mix(in srgb, var(--red) 16%, transparent) !important; transform: translateX(2px); }
+.st-key-btn_account_sign_out [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] { color: var(--red) !important; }
 @media (max-width: 767px) {
   .st-key-acct_bar { margin: 8px 0 -8px; }
-  .st-key-acct_menu [data-testid="stPopoverButton"] p { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  [class*="st-key-acct_menu"] [data-testid="stPopoverButton"] { min-height: 44px !important; }
+  [class*="st-key-acct_menu"] [data-testid="stPopoverButton"] p { max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
 }
+@media (prefers-reduced-motion: reduce) {
+  :is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts, .st-key-btn_account_sign_out)
+    [data-testid^="stBaseButton"]:hover { transform: none; }
+}
+
+/* ── email tailoring card ── */
+.tl-opt { margin-left: 4px; padding: 1px 7px; border-radius: 999px; font-size: 9.5px; letter-spacing: .1em; color: var(--accent-text);
+  background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent); }
+.tl-status { display: flex; gap: 12px; align-items: flex-start; padding: 13px 15px; border-radius: 14px; border: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--surface-2), color-mix(in srgb, var(--surface-2) 55%, transparent)); box-shadow: var(--hi); }
+.tl-status > .ms { color: var(--muted); margin-top: 1px; }
+.tl-status b { display: block; font-size: 14.5px; line-height: 20px; font-weight: 700; color: var(--text); }
+.tl-status div > span { display: block; font-size: 13px; line-height: 19px; color: var(--muted); margin-top: 2px; }
+.tl-status.on { border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+  background: linear-gradient(135deg, var(--accent-soft), color-mix(in srgb, var(--accent-2) 9%, var(--surface))); }
+.tl-status.on > .ms { color: var(--accent-text); }
+.tl-q { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 6px; }
+.tl-q .ms { color: var(--accent-text); }
+.tl-q b { font-size: 14.5px; font-weight: 700; color: var(--text); }
+.tl-q span:not(.ms) { font-size: 12.5px; color: var(--muted); }
+[class*="st-key-tl_pick_"] button[data-variant="pills"] { min-height: 36px; padding: 0 14px !important; border-radius: 999px !important;
+  background: var(--btn2-grad) !important; border: 1px solid var(--border-strong) !important; color: var(--text-2) !important;
+  box-shadow: var(--hi), var(--btn2-shadow) !important;
+  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease), transform var(--fast) var(--ease), color var(--fast) var(--ease); }
+[class*="st-key-tl_pick_"] button[data-variant="pills"]:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--border-strong)) !important;
+  color: var(--accent-text) !important; box-shadow: var(--hi), var(--btn2-shadow-hover) !important; transform: translateY(-1px); }
+[class*="st-key-tl_pick_"] button[data-variant="pills"]:is([aria-checked="true"], [aria-pressed="true"], [data-selected="true"]) { color: var(--accent-text) !important;
+  background: linear-gradient(180deg, var(--accent-soft), color-mix(in srgb, var(--accent) 16%, var(--accent-soft))) !important;
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent) !important; box-shadow: var(--badge-hi), 0 6px 14px -10px var(--accent) !important; }
+[class*="st-key-tl_pick_"] button[data-variant="pills"] p { color: inherit !important; font-size: 13.5px !important; font-weight: 600 !important; }
+.st-key-tl_actions { align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.tl-dirty { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--amber); }
+.tl-dirty::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--amber); }
+.tl-note { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.55; }
+.tl-note .ms { flex-shrink: 0; margin-top: 2px; }
 
 /* ── member home ── */
 .st-key-mh_hero { position: relative; overflow: hidden; padding: 28px 30px !important; border-radius: var(--r-xl) !important;
@@ -1964,8 +2034,8 @@ _GOOGLE_G_URI = "data:image/svg+xml;base64," + base64.b64encode(_GOOGLE_G_SVG.en
 
 _LOGIN_CSS = """
 [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"], .st-key-mnav { display: none !important; }
-[data-testid="stMainBlockContainer"], .block-container { max-width: 1240px !important; margin: 0 auto !important;
-  padding: 24px 48px !important; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+[data-testid="stMainBlockContainer"], .block-container { max-width: 1520px !important; margin: 0 auto !important;
+  padding: 24px clamp(24px, 4.5vw, 84px) !important; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
 /* the page's own block must not stretch, or there is nothing left to centre */
 :is([data-testid="stMainBlockContainer"], .block-container) > [data-testid="stVerticalBlock"] { flex: 0 0 auto; }
 .lp, .lp *:not(.ms), .st-key-login_card,
@@ -1979,15 +2049,15 @@ _LOGIN_CSS = """
 .lp-brand .n { font-size: 21px; line-height: 26px; font-weight: 800; letter-spacing: -.02em; color: var(--text); }
 .lp-brand .s { font-size: 11.5px; line-height: 16px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase;
   color: var(--muted); margin-top: 3px; }
-.lp-hero { display: grid; grid-template-columns: minmax(0, 1fr) 312px; column-gap: 24px;
+.lp-hero { display: grid; grid-template-columns: minmax(0, 1fr) clamp(300px, 25vw, 400px); column-gap: clamp(20px, 2.4vw, 44px);
   grid-template-areas: "eyebrow eyebrow" "title title" "copy stage"; margin-top: 26px; }
 .lp-hero > .eyebrow { grid-area: eyebrow; animation: jt-rise .45s var(--ease) .06s both; }
-.stApp .lp-title { grid-area: title; margin: 10px 0 0 !important; font-size: 54px; line-height: 1.04; font-weight: 800;
+.stApp .lp-title { grid-area: title; margin: 10px 0 0 !important; font-size: clamp(46px, 3.9vw, 66px); line-height: 1.04; font-weight: 800;
   letter-spacing: -.035em; word-spacing: .02em; color: var(--text); animation: jt-rise .5s var(--ease) .12s both; }
 .lp-title em { font-style: normal; background: linear-gradient(92deg, var(--accent), var(--accent-2));
   -webkit-background-clip: text; background-clip: text; color: transparent; }
 .lp-copy { grid-area: copy; min-width: 0; animation: jt-rise .5s var(--ease) .2s both; }
-.lp-sub { margin: 14px 0 0; max-width: 440px; font-size: 16px; line-height: 1.6; color: var(--text-2); }
+.lp-sub { margin: 14px 0 0; max-width: 470px; font-size: clamp(16px, 1.05vw, 17.5px); line-height: 1.6; color: var(--text-2); }
 .lp-benefits { list-style: none; margin: 20px 0 0 !important; padding: 0 !important; display: grid; gap: 12px; }
 .lp-benefits li { display: flex; align-items: center; gap: 14px; margin: 0; }
 .lp-benefits .ic { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; flex-shrink: 0;
@@ -2001,30 +2071,58 @@ _LOGIN_CSS = """
 
 /* the floating opportunity cards: decorative artwork, never data */
 .lp-stage { grid-area: stage; position: relative; height: 352px; margin-top: 10px; }
+@media (min-width: 1500px) { .lp-stage { height: 380px; } .lp-card.c2 { top: 126px !important; } .lp-card.c3 { top: 252px !important; } }
 .lp-glow { position: absolute; inset: 0 -14% 4% -24%; border-radius: 50%; pointer-events: none;
   background: radial-gradient(closest-side, var(--glow-1), transparent 72%),
               radial-gradient(closest-side at 72% 78%, var(--glow-2), transparent 70%);
   animation: jt-glow-drift 16s ease-in-out infinite alternate; }
 .lp-arc { position: absolute; width: 380px; height: 380px; top: -60px; left: -40px; border-radius: 50%; pointer-events: none;
   border: 1px solid color-mix(in srgb, var(--accent) 13%, transparent); }
-.lp-card { position: absolute; width: 322px; }
-.lp-card-in { position: relative; display: flex; align-items: center; gap: 12px; padding: 14px;
+.lp-card { position: absolute; width: clamp(300px, 24vw, 360px); }
+.lp-card-in { position: relative; display: flex; align-items: center; gap: 12px; padding: 14px; overflow: hidden;
   border-radius: 18px; background: var(--oc-bg); border: 1px solid var(--oc-border); box-shadow: var(--oc-shadow);
   -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); will-change: transform;
-  transition: transform .45s var(--ease), box-shadow .45s var(--ease), border-color .45s var(--ease); }
+  transition: transform .35s var(--ease), box-shadow .35s var(--ease), border-color .35s var(--ease); }
+/* gloss: a soft top highlight, and a light sweep across the card on hover */
+.lp-card-in::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: var(--oc-gloss); opacity: .7; transition: opacity .35s var(--ease); }
+.lp-card-in::after { content: ""; position: absolute; top: 0; bottom: 0; left: -60%; width: 45%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, color-mix(in srgb, #fff 34%, transparent), transparent);
+  transform: translateX(0) skewX(-14deg); opacity: 0; transition: transform .7s var(--ease), opacity .35s var(--ease); }
+.lp-card:hover .lp-card-in::before { opacity: 1; }
+.lp-card:hover .lp-card-in::after { opacity: .55; transform: translateX(420%) skewX(-14deg); }
+.lp-card-in > * { position: relative; z-index: 1; }
 /* four invisible quarters: the card leans 2–4 px toward the one under the cursor */
 .lp-card .z { position: absolute; z-index: 2; width: 50%; height: 50%; }
 .lp-card .z1 { top: 0; left: 0; } .lp-card .z2 { top: 0; right: 0; }
 .lp-card .z3 { bottom: 0; left: 0; } .lp-card .z4 { bottom: 0; right: 0; }
-.lp-card:hover .lp-card-in { transform: translate3d(0, -4px, 0); box-shadow: var(--shadow-lg);
-  border-color: color-mix(in srgb, var(--accent) 34%, transparent); }
-.lp-card .z1:hover ~ .lp-card-in { transform: translate3d(-3px, -5px, 0); }
-.lp-card .z2:hover ~ .lp-card-in { transform: translate3d(3px, -5px, 0); }
-.lp-card .z3:hover ~ .lp-card-in { transform: translate3d(-3px, -2px, 0); }
-.lp-card .z4:hover ~ .lp-card-in { transform: translate3d(3px, -2px, 0); }
-.lp-card-in .logo { transition: box-shadow .45s var(--ease), filter .45s var(--ease); }
-.lp-card:hover .lp-card-in .logo { filter: saturate(1.25); box-shadow: 0 6px 16px -8px var(--accent); }
-.lp-card .logo { width: 40px; height: 40px; border-radius: 12px; font-size: 17px; }
+.lp-card:hover { z-index: 3; }
+.lp-card:hover .lp-card-in { transform: translate3d(0, -8px, 0) scale(1.03); box-shadow: var(--oc-shadow-hover);
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent); }
+.lp-card .z1:hover ~ .lp-card-in { transform: translate3d(-3px, -9px, 0) scale(1.03); }
+.lp-card .z2:hover ~ .lp-card-in { transform: translate3d(3px, -9px, 0) scale(1.03); }
+.lp-card .z3:hover ~ .lp-card-in { transform: translate3d(-3px, -6px, 0) scale(1.03); }
+.lp-card .z4:hover ~ .lp-card-in { transform: translate3d(3px, -6px, 0) scale(1.03); }
+.lp-card .go { transition: transform .35s var(--ease), color .35s var(--ease); }
+.lp-card:hover .go { transform: translateX(3px); color: var(--accent-text); }
+/* company marks: drawn in CSS from local data (no image is fetched) */
+.lp-card .bm { width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; display: grid; place-items: center; position: relative;
+  background: linear-gradient(180deg, #ffffff, #f3f4f8); border: 1px solid rgba(15,23,42,.08);
+  box-shadow: inset 0 1px 0 #fff, 0 6px 14px -8px rgba(15,23,42,.35); transition: transform .35s var(--ease), box-shadow .35s var(--ease); }
+.lp-card:hover .bm { transform: scale(1.06); box-shadow: inset 0 1px 0 #fff, 0 10px 20px -10px var(--accent); }
+.bm.google::before { content: ""; width: 22px; height: 22px; background: url("GOOGLE_G_URI") center / contain no-repeat; }
+.bm.microsoft { grid-template-columns: 9px 9px; grid-template-rows: 9px 9px; gap: 2px; place-content: center; }
+.bm.microsoft i { display: block; width: 9px; height: 9px; }
+.bm.microsoft i:nth-child(1) { background: #f25022; } .bm.microsoft i:nth-child(2) { background: #7fba00; }
+.bm.microsoft i:nth-child(3) { background: #00a4ef; } .bm.microsoft i:nth-child(4) { background: #ffb900; }
+.bm.amazon { background: linear-gradient(180deg, #2b3a4d, #1b2532); border-color: rgba(255,255,255,.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 6px 14px -8px rgba(15,23,42,.6); }
+.bm.amazon b { font-family: Arial, Helvetica, sans-serif !important; font-size: 23px; line-height: 1; font-weight: 700;
+  color: #fff; margin-top: -6px; letter-spacing: -.02em; }
+.bm.amazon::after { content: ""; position: absolute; left: 11px; right: 10px; bottom: 9px; height: 7px;
+  border-bottom: 2.5px solid #ff9900; border-radius: 0 0 60% 60% / 0 0 100% 100%; }
+.bm.amazon::before { content: ""; position: absolute; right: 9px; bottom: 9px; width: 4px; height: 4px;
+  border-top: 2.5px solid #ff9900; border-right: 2.5px solid #ff9900; transform: rotate(20deg); border-radius: 0 1px 0 0; }
 .lp-card .tx { min-width: 0; flex: 1; }
 .lp-card .t { font-size: 13.5px; line-height: 18px; font-weight: 700; color: var(--text); overflow: hidden;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
@@ -2056,7 +2154,7 @@ _LOGIN_CSS = """
 .lp-dot.d4::after { animation-delay: .6s; }
 
 /* ── right: the sign-in card ── */
-.st-key-login_card { max-width: 448px; margin: 0 0 0 auto !important; padding: 30px 34px 24px !important; gap: 12px !important;
+.st-key-login_card { max-width: 480px; margin: 0 0 0 auto !important; padding: 30px 34px 24px !important; gap: 12px !important;
   border: 1px solid var(--border) !important; border-radius: 28px !important; background: var(--surface) !important;
   box-shadow: var(--hi), var(--shadow-lg) !important; animation: jt-rise .5s var(--ease) .1s both; }
 .lp-head img { width: 48px; height: 48px; border-radius: 14px; display: block;
@@ -2113,18 +2211,28 @@ _LOGIN_CSS = """
 
 /* tablet: a smaller stage */
 @media (max-width: 1180px) {
-  .lp-hero { grid-template-columns: minmax(0, 1fr) 250px; }
-  .stApp .lp-title { font-size: 48px; }
-  .lp-card { width: 250px; } .lp-card .tags .pill:nth-child(2) { display: none; }
-  .stApp .lp-title { font-size: 46px; }
+  .lp-hero { grid-template-columns: minmax(0, 1fr) 256px; }
+  .lp-card { width: 256px; } .lp-card .tags .pill:nth-child(2) { display: none; }
+  .stApp .lp-title { font-size: 44px; }
   .lp-chip.k2, .lp-chip.k3, .lp-dot.d3 { display: none; }
   .lp-card.c1 { left: 6px; } .lp-card.c2 { left: -4px; } .lp-card.c3 { left: 4px; }
 }
-/* narrow: the form is what matters — the artwork steps aside */
+/* tablet: the hero (with its cards) above a full-size sign-in card, instead of a squeezed side column */
 @media (max-width: 960px) {
-  .lp-hero { grid-template-columns: minmax(0, 1fr); grid-template-areas: "eyebrow" "title" "copy"; margin-top: 28px; }
-  .lp-stage, .lp-benefits { display: none; }
+  [data-testid="stHorizontalBlock"]:has(.st-key-login_card) { flex-direction: column !important; flex-wrap: nowrap !important; gap: 28px !important; }
+  [data-testid="stHorizontalBlock"]:has(.st-key-login_card) > [data-testid="stColumn"] { width: 100% !important; flex: 1 1 auto !important; min-width: 0 !important; }
+  [data-testid="stMainBlockContainer"], .block-container { justify-content: flex-start; padding-top: 32px !important; }
+  .st-key-login_card { margin: 0 auto !important; width: 100%; }
+  .lp { overflow-x: clip; }                  /* the decorative arc must never widen the page */
+  .lp-brand, .lp-hero { max-width: 640px; margin-left: auto; margin-right: auto; }
+  .lp-hero { grid-template-columns: minmax(0, 1fr) 256px; margin-top: 22px; }
+  .lp-benefits { display: none; }
   .stApp .lp-title { font-size: 40px; }
+}
+/* phones: the form is what matters — the artwork steps aside */
+@media (max-width: 640px) {
+  .lp-hero { grid-template-columns: minmax(0, 1fr); grid-template-areas: "eyebrow" "title" "copy"; }
+  .lp-stage { display: none; }
 }
 @media (max-width: 640px) {
   [data-testid="stMainBlockContainer"], .block-container { padding: 20px 16px 28px !important; min-height: 0; }
@@ -2136,7 +2244,8 @@ _LOGIN_CSS = """
 @media (prefers-reduced-motion: reduce) {
   .lp-card, .lp-chip, .lp-glow, .lp-dot::after, .st-key-login_card, .lp-brand, .lp-brand img, .lp-hero > .eyebrow,
   .lp-title, .lp-copy { animation: none !important; }
-  .lp-card-in, .lp-card-in .logo { transition: none !important; }
+  .lp-card-in, .lp-card .bm, .lp-card .go, .lp-card-in::before, .lp-card-in::after { transition: none !important; }
+  .lp-card-in::after { display: none; }
   .lp-card:hover .lp-card-in, .lp-card .z:hover ~ .lp-card-in { transform: none !important; }
   .lp-card.c1 { transform: rotate(-1.4deg); } .lp-card.c3 { transform: rotate(1deg); }
 }
@@ -2145,10 +2254,14 @@ _LOGIN_CSS = """
 # decorative opportunity cards for the login artwork — fixed example content,
 # not job data: nothing here is read from the tracker or any account
 _LOGIN_CARDS = (
-    ("c1", "Google", 250, "Software Engineer Intern", "Bengaluru", (("on", "New"), ("entry", "Internship"))),
-    ("c2", "Microsoft", 175, "SDE – New Grad", "Hyderabad", (("fresher", "Fresher"), ("entry", "Full-time"))),
-    ("c3", "Amazon", 25, "Software Development Engineer", "Bengaluru", (("fresher", "Fresher"), ("entry", "Full-time"))),
+    ("c1", "Google", "Software Engineer Intern", "Bengaluru", (("on", "New"), ("entry", "Internship"))),
+    ("c2", "Microsoft", "SDE – New Grad", "Hyderabad", (("fresher", "Fresher"), ("entry", "Full-time"))),
+    ("c3", "Amazon", "Software Development Engineer", "Bengaluru", (("fresher", "Fresher"), ("entry", "Full-time"))),
 )
+# the company marks of those example cards, drawn by CSS (.bm.*)
+_LOGIN_MARKS = {"Google": '<span class="bm google"></span>',
+                "Microsoft": '<span class="bm microsoft"><i></i><i></i><i></i><i></i></span>',
+                "Amazon": '<span class="bm amazon"><b>a</b></span>'}
 
 
 def _login_art() -> str:
@@ -2158,12 +2271,12 @@ def _login_art() -> str:
     cards = "".join(
         f'<div class="lp-card {cls}"><span class="z z1"></span><span class="z z2"></span><span class="z z3"></span>'
         '<span class="z z4"></span>'
-        f'<div class="lp-card-in"><div class="logo" style="--h:{hue}">{escape(company[0])}</div>'
+        f'<div class="lp-card-in">{_LOGIN_MARKS[company]}'
         f'<div class="tx"><div class="t">{escape(title)}</div><div class="m">{escape(company)} · {escape(city)}</div>'
         '<div class="tags">' + "".join(f'<span class="pill {k}">{"<i></i>" if k == "on" else ""}{escape(v)}</span>'
                                        for k, v in tags) + "</div></div>"
         f'<span class="go">{_ms("chevron_right", "s20")}</span></div></div>'
-        for cls, company, hue, title, city, tags in _LOGIN_CARDS)
+        for cls, company, title, city, tags in _LOGIN_CARDS)
     benefits = [("violet", "search", "Fresh opportunities", "From top companies"),
                 ("green", "bolt", "Stay ahead", "Get notified early"),
                 ("blue", "apartment", "Track what matters", "Follow your preferred companies")]
@@ -2196,7 +2309,7 @@ def render_login_page() -> None:
     server log."""
     st.html(f"<style>{_LOGIN_CSS}</style>")
     email_ok = _AUTH_CONFIG is not None
-    art, side = st.columns([1.42, 1], gap="large", vertical_alignment="center")
+    art, side = st.columns([1.6, 1], gap="large", vertical_alignment="center")
     with art:
         st.html(_login_art())
     with side, st.container(key="login_card"):
@@ -2309,26 +2422,52 @@ if ACCOUNT and ACCOUNT.get("provider") in ("google.com", "password") and (_STORE
             USER, USER_PROBLEM, USER_PROBLEM_DETAIL = None, str(e), e.kind
 
 
-# This viewer's own data, read once and kept in THIS browser session for a
-# minute: clicks no longer re-read Firestore for the same data (2–4 round
-# trips per click before). Every change made here refreshes it; a change
-# made on another device shows up within the minute.
+# This viewer's own data, read once and kept in THIS browser session: clicks
+# never wait for Firestore for data they already have. Once the copy is a
+# minute old, a click still answers from it at once while a background read
+# fetches the next one (adopted on a later click), so idling for a minute no
+# longer freezes the next click behind three Firestore round trips. Every
+# change made here refreshes it (that read waits: the change must show); a
+# change made on another device shows up within about a minute.
 _PERSONAL_TTL_S = 60
+_PERSONAL_REFRESH_GIVEUP_S = 30          # a background read that never finished is retried
 
 
 def _personal_snapshot() -> dict:
     cached = st.session_state.get("_pcache")
-    if (isinstance(cached, dict) and cached.get("uid") == USER.uid
-            and time.time() - cached.get("at", 0) < _PERSONAL_TTL_S):
-        return cached
-    snap = {"uid": USER.uid, "at": time.time(), **USER.snapshot()}
-    st.session_state._pcache = snap
-    return snap
+    if not (isinstance(cached, dict) and cached.get("uid") == USER.uid):
+        st.session_state.pop("_pcache_next", None)
+        snap = {"uid": USER.uid, "at": time.time(), **USER.snapshot()}       # nothing to show yet: wait once
+        st.session_state._pcache = snap
+        return snap
+    nxt = st.session_state.get("_pcache_next")
+    if isinstance(nxt, dict) and (nxt.get("done") or time.time() - nxt.get("started", 0) > _PERSONAL_REFRESH_GIVEUP_S):
+        st.session_state.pop("_pcache_next", None)
+        # only a read of this account that began after the current copy was read
+        if (nxt.get("done") and isinstance(nxt.get("snap"), dict) and nxt.get("uid") == USER.uid
+                and nxt.get("started", 0) >= cached.get("at", 0)):
+            cached = {"uid": USER.uid, "at": nxt["started"], **nxt["snap"]}
+            st.session_state._pcache = cached
+        nxt = None
+    if nxt is None and time.time() - cached.get("at", 0) >= _PERSONAL_TTL_S:
+        holder = {"uid": USER.uid, "started": time.time(), "done": False}
+        st.session_state._pcache_next = holder
+
+        def _refresh(user=USER, holder=holder):     # no Streamlit calls in here: plain data only
+            try:
+                holder["snap"] = user.snapshot()
+            except Exception:                         # keep the current copy; the next click retries
+                holder["snap"] = None
+            holder["done"] = True
+        threading.Thread(target=_refresh, daemon=True).start()
+    return cached
 
 
 def personal_changed() -> None:
-    """Call after any write to this viewer's data: the next read is fresh."""
+    """Call after any write to this viewer's data: the next read is fresh
+    (and a background read begun before the write is never adopted)."""
     st.session_state.pop("_pcache", None)
+    st.session_state.pop("_pcache_next", None)
 
 
 ME: dict | None = None
@@ -2362,6 +2501,17 @@ elif st.session_state.page == "onboarding":
 
 def account_label(account: dict) -> str:
     return (account.get("name") or account.get("email") or "Signed in").strip()
+
+
+def first_name(account: dict) -> str:
+    """The compact header's name: "Manoj" for "Manoj Anumolu". An account
+    without a name (email/password) gets the start of its address."""
+    name = (account.get("name") or "").strip()
+    if name:
+        return name.split()[0]
+    local = (account.get("email") or "").split("@")[0]
+    word = next((w for w in re.split(r"[._+\-\d]+", local) if w), "")
+    return word[:1].upper() + word[1:] if word else "Account"
 
 
 # ── data ──────────────────────────────────────────────────────────────────────
@@ -2655,18 +2805,29 @@ with st.container(key="mnav"):
 
 
 # ── the account, top right ───────────────────────────────────────────────────
+def _menu_go(page: str, **extra) -> None:
+    """A destination chosen from the account menu: go there and close the menu."""
+    go(page, **extra)
+    st.session_state._acct_menu_n = st.session_state.get("_acct_menu_n", 0) + 1
+
+
 def account_menu() -> None:
-    """Who is signed in, and their own destinations: name, an initial avatar
-    and — for admins only — an ADMIN badge. Admin tools stay in the
-    sidebar's Management group, never in this menu."""
+    """Who is signed in, and their own destinations: an initial avatar, the
+    FIRST name and — for admins only — an ADMIN badge (the full name and
+    email are inside the menu). Admin tools stay in the sidebar's
+    Management group, never in this menu."""
     name = account_label(ACCOUNT)
-    initial = next((ch for ch in name if ch.isalnum()), "?").upper()
-    label = re.sub(r"([\\`*_{}\[\]()#+!|~<>-])", r"\\\1", name) + (" **ADMIN**" if IS_ADMIN else "")
-    st.html(f'<style>.st-key-acct_menu [data-testid="stPopoverButton"]::before {{ content: "{initial}"; }}</style>')
+    first = first_name(ACCOUNT)
+    initial = next((ch for ch in first if ch.isalnum()), "?").upper()
+    label = re.sub(r"([\\`*_{}\[\]()#+!|~<>-])", r"\\\1", first) + (" **ADMIN**" if IS_ADMIN else "")
+    st.html(f'<style>[class*="st-key-acct_menu"] [data-testid="stPopoverButton"]::before {{ content: "{initial}"; }}</style>')
     with st.container(key="acct_bar"):
-        with st.popover(label, key="acct_menu"):
+        # a new key after an item is chosen: the next page draws the menu closed
+        # (no extra round trip — the popover's own state isn't tracked)
+        with st.popover(label, key=f"acct_menu_{st.session_state.get('_acct_menu_n', 0)}"):
             badge_html = '<span class="role admin">Admin</span>' if IS_ADMIN else ""
-            st.html(f'<div class="acct-head">{_avatar(name, "sm")}<div class="who"><div class="nm">{escape(name)}</div>'
+            st.html(f'<div class="acct-head"><span class="acct-av" aria-hidden="true">{escape(initial)}</span>'
+                    f'<div class="who"><div class="nm">{escape(name)}</div>'
                     f'<div class="em">{escape(ACCOUNT.get("email") or "")}</div></div>{badge_html}</div>')
             items = [("settings", "Account", ":material/account_circle:", {})]
             if USER is not None:
@@ -2675,7 +2836,7 @@ def account_menu() -> None:
                           ("alerts", "My alerts", ":material/notifications:", {})]
             for dest, text, icon, kw in items:
                 st.button(text, key=f"acct_{dest}", icon=icon, type="tertiary", use_container_width=True,
-                          on_click=go, args=(dest,), kwargs=kw)
+                          on_click=_menu_go, args=(dest,), kwargs=kw)
             st.html('<div class="acct-sep"></div>')
             if st.button("Sign out", key="btn_account_sign_out", icon=":material/logout:", type="tertiary",
                          use_container_width=True):
@@ -3506,6 +3667,7 @@ def page_monitoring():
     with st.container(key="mon_table"):
         st.html('<table class="mon"><thead><tr><th>Company</th><th>Status</th><th>Last checked</th><th>Active jobs</th>'
                 '<th>Scraper</th><th>Notes</th></tr></thead><tbody>' + "".join(rows) + "</tbody></table>")
+    email_tailoring_card()
     st.html(f'<div class="legend">{_ms("info", "s20")}<p class="note">Statuses come from the scraper: <b>Healthy</b> = scanned successfully in the last {_STALE_H} hours · '
             f'<b>Delayed</b> = no successful scan for {_STALE_H}+ hours · <b>Failing</b> = the last scan partly failed '
             f'(errors, rate limits or unreadable job pages) · <b>Broken</b> = the job list could not be read (blocked, HTTP error, '
@@ -3515,7 +3677,8 @@ def page_monitoring():
 
 def my_alerts_card() -> None:
     """The viewer's own alert emails: on/off (to their verified sign-in
-    email only), General or Tailored, and which companies they cover."""
+    email only) and which companies they cover. WHICH jobs is the separate,
+    optional "Tailor my email alerts" card."""
     if USER is None or ME is None:
         return
     prefs = user_store.notification_settings_from(ME["profile"])
@@ -3524,15 +3687,11 @@ def my_alerts_card() -> None:
         dest = (f'<span class="num">{escape(prefs["email"])}</span> (your verified sign-in email)' if prefs["email"]
                 else "your sign-in email isn't verified, so personal alerts can't be turned on")
         st.html(f'<div class="set-head"><span class="ic">{_ms("notifications")}</span><div><div class="eyebrow">Your account</div>'
-                f'<h2 class="section-title">Alert emails</h2><p class="section-sub">Sent to {dest}. New matching jobs are '
+                f'<h2 class="section-title">Alert emails</h2><p class="section-sub">Sent to {dest}. New qualifying jobs are '
                 'emailed after each scheduled scan, once each — never the backlog from before you turned them on.</p></div></div>')
         with st.form("my_alerts_form", border=False):
             enabled = st.toggle("Email me new jobs", value=prefs["enabled"], key="my_alerts_on",
                                 disabled=not prefs["email"])
-            mode = st.radio("Which jobs", ["general", "tailored"], index=["general", "tailored"].index(prefs["mode"]),
-                            key="my_alerts_mode",
-                            format_func=lambda m: {"general": "General — every qualifying job from my companies",
-                                                   "tailored": "Tailored — only jobs matching my job preferences"}[m])
             scope = st.radio("Companies", ["followed", "all"], index=0 if not _VIEW["watch_all"] else 1,
                              key="my_alerts_scope", horizontal=True,
                              format_func=lambda v: {"all": "Every tracked company",
@@ -3540,7 +3699,9 @@ def my_alerts_card() -> None:
             if st.form_submit_button("Save", key="btn_my_alerts", type="primary", icon=":material/save:"):
                 try:
                     USER.set_watch_all(scope == "all")
-                    USER.set_notifications(bool(enabled) and bool(prefs["email"]), mode)
+                    # the mode is kept as saved: "Tailored" (job preferences) is an
+                    # older setting that stays until the person switches it off below
+                    USER.set_notifications(bool(enabled) and bool(prefs["email"]), prefs["mode"])
                     toast("Alert settings saved", "success")
                 except (user_store.UserStoreError, ValueError) as e:
                     toast(str(e) if isinstance(e, user_store.UserStoreError) else "Those settings couldn't be saved.",
@@ -3548,9 +3709,146 @@ def my_alerts_card() -> None:
                 finally:
                     personal_changed()
                 st.rerun()
-        if scope == "followed" and not followed:
-            st.html(f'<p class="note">{_ms("info", "s16")} You don’t follow any companies yet, so General alerts '
-                    'have nothing to cover; Tailored alerts use your job preferences across every company.</p>')
+        if scope == "followed" and not followed and prefs["mode"] != "tailored":
+            st.html(f'<p class="note">{_ms("info", "s16")} You don’t follow any companies yet, so there is nothing to '
+                    'email — follow some in My companies, or choose “Every tracked company”.</p>')
+        if prefs["mode"] == "tailored":
+            st.html(f'<p class="note">{_ms("info", "s16")} Your alerts also follow your saved job preferences '
+                    '(an older setting). Use “Tailor my email alerts” instead to choose exactly what is emailed.</p>')
+            st.button("Stop matching my job preferences", key="btn_alerts_legacy_off", icon=":material/tune:",
+                      on_click=_alerts_mode_general)
+
+
+def _alerts_mode_general() -> None:
+    """Switch an older "Tailored" (job preferences) alert setting back to
+    every qualifying job — on/off and everything else unchanged."""
+    try:
+        prefs = user_store.notification_settings_from(USER.profile() or {})
+        USER.set_notifications(prefs["enabled"], "general")
+        toast("Alerts no longer follow your job preferences", "success")
+    except (user_store.UserStoreError, ValueError) as e:
+        toast(str(e) if isinstance(e, user_store.UserStoreError) else "That couldn't be saved.", "error")
+    finally:
+        personal_changed()
+
+
+# ── "Tailor my email alerts": an optional, personal narrowing of the EMAILS ──
+# Stored in the person's own profile (notifications.tailoring), applied only when the
+# notifier decides what to email this person (user_alerts.select_jobs, after
+# the shared eligibility gate, their companies and their dismissals). It never
+# touches the job lists, their browsing filters or anyone else.
+TAILOR_FIELDS = (("locations", "Locations", "location_on", "Any of these places"),
+                 ("job_families", "Job families", "work", "Any of these kinds of work, matched on each job’s title"))
+
+
+def _tl_key(field: str) -> str:
+    """The pickers' widget keys, per account: another sign-in in this same
+    browser never starts from someone else's unsaved picks."""
+    return _widget_key(f"tl_{field}", USER.uid)
+
+
+def my_tailoring() -> dict:
+    return _VIEW["tailoring"] if _VIEW is not None else {f: [] for f, *_ in TAILOR_FIELDS}
+
+
+def tailoring_summary(t: dict) -> str:
+    return " — ".join(" · ".join(t.get(f) or []) for f, *_ in TAILOR_FIELDS if t.get(f))
+
+
+def alerts_summary(notif: dict) -> str:
+    """"On · All qualifying jobs", "On · Tailored" or "Off"."""
+    if not notif["enabled"]:
+        return "Off"
+    tailored = any(my_tailoring().values()) or notif["mode"] == "tailored"
+    return "On · " + ("Tailored" if tailored else "All qualifying jobs")
+
+
+def _tailoring_cached(saved: dict) -> None:
+    """Show the saved tailoring at once without reading Firestore again:
+    only this field changed, and it was written just now."""
+    cached = st.session_state.get("_pcache")
+    if isinstance(cached, dict) and cached.get("uid") == USER.uid and isinstance(cached.get("profile"), dict):
+        notif = cached["profile"].get("notifications")
+        cached["profile"]["notifications"] = {**(notif if isinstance(notif, dict) else {}), "tailoring": saved}
+        cached["at"] = time.time()
+        st.session_state.pop("_pcache_next", None)
+    else:
+        personal_changed()
+
+
+def _tailor_save() -> None:
+    picks = {f: list(st.session_state.get(_tl_key(f)) or []) for f, *_ in TAILOR_FIELDS}
+    try:
+        saved = USER.set_email_tailoring(picks["locations"], picks["job_families"])
+    except user_store.UserStoreError as e:
+        toast(str(e), "error")
+        personal_changed()
+        return
+    except ValueError:
+        toast("Those choices couldn't be saved.", "error")
+        return
+    _tailoring_cached(saved)
+    toast("Your email alerts are tailored to your preferences." if any(saved.values())
+          else "Saved — you'll get all qualifying jobs from your monitored companies.", "success")
+
+
+def _tailor_clear() -> None:
+    for f, *_ in TAILOR_FIELDS:
+        st.session_state[_tl_key(f)] = []
+    _tailor_save()
+
+
+def email_tailoring_card() -> None:
+    """The optional email tailoring, with its saved state. Nothing chosen =
+    every qualifying job from the person's monitored companies."""
+    if USER is None or ME is None or _VIEW is None:
+        return
+    saved = my_tailoring()
+    notif = user_store.notification_settings_from(ME["profile"])
+    for f, *_ in TAILOR_FIELDS:
+        st.session_state.setdefault(_tl_key(f), list(saved[f]))
+    tailored = any(saved.values())
+    n_follow = len(ME["watchlist"])
+    scope = ("every tracked company" if _VIEW["watch_all"]
+             else f"the {_plural(n_follow, 'company', 'companies')} you follow" if n_follow
+             else "the companies you follow (none yet)")
+    with st.container(key="set_tailor"):
+        st.html(f'<div class="set-head"><span class="ic">{_ms("tune")}</span><div>'
+                '<div class="eyebrow">Email alerts <span class="tl-opt">Optional</span></div>'
+                '<h2 class="section-title">Tailor my email alerts</h2>'
+                '<p class="section-sub">Choose what you want to receive. Leave everything unselected to receive all '
+                'qualifying jobs from your monitored companies.</p></div></div>')
+        if tailored:
+            st.html(f'<div class="tl-status on" role="status">{_ms("mark_email_read", "s20")}<div>'
+                    '<b>Your email alerts are tailored to your preferences.</b>'
+                    f'<span>{escape(tailoring_summary(saved))} · from {escape(scope)}</span></div></div>')
+        else:
+            st.html(f'<div class="tl-status" role="status">{_ms("all_inbox", "s20")}<div>'
+                    '<b>All qualifying jobs from your monitored companies.</b>'
+                    f'<span>No tailoring — every fresher and entry-level job from {escape(scope)}.</span></div></div>')
+        for f, label, icon, hint in TAILOR_FIELDS:
+            options = list(job_filters.LOCATIONS if f == "locations" else job_filters.JOB_FAMILIES)
+            st.html(f'<div class="tl-q">{_ms(icon, "s16")}<b>{escape(label)}</b><span>{escape(hint)}</span></div>')
+            with st.container(key=f"tl_pick_{f}"):
+                st.pills(label, options, selection_mode="multi", key=_tl_key(f), label_visibility="collapsed")
+        current = {f: list(st.session_state.get(_tl_key(f)) or []) for f, *_ in TAILOR_FIELDS}
+        dirty = any(sorted(current[f]) != sorted(saved[f]) for f, *_ in TAILOR_FIELDS)
+        with st.container(key="tl_actions", horizontal=True):
+            st.button("Save email preferences", key="btn_tl_save", type="primary", icon=":material/check:",
+                      on_click=_tailor_save, disabled=not dirty)
+            if tailored or any(current.values()):
+                st.button("Clear — email me everything", key="btn_tl_clear", icon=":material/restart_alt:",
+                          on_click=_tailor_clear)
+            if dirty:
+                st.html('<span class="tl-dirty">Unsaved changes</span>')
+        notes = ["Only changes which jobs are <b>emailed</b> to you. The filters on Home and Jobs are for browsing — "
+                 "they aren’t saved and never change your emails."]
+        if not notif["enabled"]:
+            notes.append("Alert emails are off right now — turn them on in <b>My alerts</b>.")
+        if IS_ADMIN:
+            notes.append("This is your personal alert email; the tracker’s shared alert email "
+                         "(Email &amp; Notifications) is unchanged.")
+        st.html(f'<p class="note tl-note">{_ms("info", "s16")}<span>{" ".join(notes)}</span></p>')
 
 
 def page_email():
@@ -3906,15 +4204,15 @@ def _personal_unavailable() -> bool:
 
 
 def page_preferences():
-    page_header("Job preferences", "Used as the starting filters of your job lists and for Tailored alerts. "
-                                   "The same for everyone — admins included.", eyebrow="Your account")
+    page_header("Job preferences", "The starting filters of your job lists. Which jobs are emailed to you is set "
+                                   "separately, in “Tailor my email alerts”.", eyebrow="Your account")
     if _personal_unavailable():
         return
     with st.container(key="set_prefs"):
         with st.form("prefs_form", border=False):
             picks = {}
             for cls, group, sub, fields in (
-                    ("", "Used to match jobs", "Your job lists start from these, and Tailored alerts use them.",
+                    ("", "Used to match jobs", "Your job lists start from these.",
                      MATCHED_PREFS),
                     ("later", SAVED_ONLY_NOTE, "Postings don’t state these yet, so no job is filtered by them.",
                      SAVED_ONLY_PREFS)):
@@ -3936,6 +4234,7 @@ def page_alerts():
     if _personal_unavailable():
         return
     my_alerts_card()
+    email_tailoring_card()
     a, b, _c = st.columns([1, 1, 2])
     with a:
         st.button("Job preferences", key="btn_alerts_prefs", icon=":material/tune:", on_click=go, args=("preferences",),
@@ -3976,7 +4275,7 @@ def page_onboarding():
     st.html('<style>[data-testid="stSidebar"], .st-key-mnav { display: none !important; }</style>')
     step = int(st.session_state.get("ob_step", 0))
     vals = st.session_state.setdefault("ob_values", {})
-    first = account_label(ACCOUNT).split(" ")[0] if ACCOUNT else ""
+    first = first_name(ACCOUNT) if ACCOUNT else ""
     with st.container(key="onboard"):
         dots = "".join(f'<i class="{"on" if i < step else "now" if i == step else ""}"></i>' for i in range(len(PREF_STEPS) + 1))
         if step < len(PREF_STEPS):
@@ -4014,7 +4313,7 @@ def page_my_companies():
     following = sorted((c for c in companies if str(c.get("id")) in (ME["watchlist"] if ME else set())),
                        key=lambda c: (c.get("name") or "").lower())
     page_header("My companies",
-                "Companies you follow narrow your job lists and General alerts. "
+                "Companies you follow narrow your job lists and your alert emails. "
                 "The tracker's company list itself isn't changed.", eyebrow="Your account" if not MEMBER_VIEW else None)
     if _personal_unavailable():
         return
@@ -4040,10 +4339,12 @@ def page_my_companies():
     picking = bool(following) or st.session_state.get("co_pick")
     if not following and not picking:
         empty_state("apartment", "You aren't following any companies yet.",
-                    "Follow the companies you care about — your job lists and General alerts will focus on them.",
+                    "Follow the companies you care about — your job lists and alert emails will focus on them.",
                     lambda: st.button("Choose companies", key="btn_co_pick", type="primary", icon=":material/add:",
                                       on_click=lambda: st.session_state.update(co_pick=True)))
         return
+    if following:
+        email_tailoring_card()
     rest = [c for c in companies if str(c.get("id")) in _catalogue_ids() and c not in following]
     if rest:
         with st.container(key="set_co_add"):
@@ -4063,7 +4364,7 @@ def page_my_companies():
 
 def page_member_home():
     """A member's Home: their own job search — no scanner, no admin tools."""
-    first = account_label(ACCOUNT).split(" ")[0] if ACCOUNT else ""
+    first = first_name(ACCOUNT) if ACCOUNT else ""
     mine = for_me(active_jobs)
     with st.container(key="mh_hero"):
         st.html(f'<div class="mh-hero"><div class="eyebrow sparked">Your job search</div>'
@@ -4080,7 +4381,7 @@ def page_member_home():
              (f'<li>Following {len(ME["watchlist"])}</li>' if ME["watchlist"] else '<li class="muted">Not following any yet</li>'),
              "Choose companies", ("companies",), {"view": "mine"}),
             ("set_mh_alerts", "notifications", "Alert emails",
-             (f'<li>On · {"Tailored" if notif["mode"] == "tailored" else "General"}</li>' if notif["enabled"]
+             (f'<li>{escape(alerts_summary(notif))}</li>' if notif["enabled"]
               else '<li class="muted">Off</li>'), "Manage alerts", ("alerts",), {}),
         ]
         for col, (key, icon, title, body, cta, args, kw) in zip(cols, cards):
@@ -4124,7 +4425,7 @@ def personal_summary_card() -> None:
                    '<span class="kv-note">Not used for matching yet — postings don’t state job type or work mode.</span></dd>'
                    if saved else "") +
                 f'<dt>Companies</dt><dd>{"Following " + str(len(ME["watchlist"])) if ME["watchlist"] else "Not following any yet"}</dd>'
-                f'<dt>Alert emails</dt><dd>{("On · " + ("Tailored" if notif["mode"] == "tailored" else "General")) if notif["enabled"] else "Off"}</dd>'
+                f'<dt>Alert emails</dt><dd>{escape(alerts_summary(notif))}</dd>'
                 '</dl>')
         a, b, c = st.columns(3)
         with a:

@@ -7,6 +7,8 @@ Who gets what:
   2. not dismissed by this person
   3. found after they turned alerts on (never a backlog)
   4. their company scope, and in Tailored mode their preferences
+  5. their email tailoring, if they set one (any chosen location AND any
+     chosen job family; none chosen = every job that passed 1-4)
 Where it goes: the account's CURRENT verified email, read from Firebase
 Authentication by UID at send time — never an address anyone typed. A
 deleted, disabled or unverified account gets nothing.
@@ -71,8 +73,9 @@ def select_jobs(seen: list[dict], view: dict, dismissed: set[str], since: dateti
         found = _parse_time(j.get("first_seen"))
         if key in keys or key in dismissed or found is None or found < since:
             continue
-        if job_filters.for_person(j, mode=view["mode"], prefs=view["prefs"], watch_all=view["watch_all"],
-                                  watchlist=view["watchlist"]):
+        if (job_filters.for_person(j, mode=view["mode"], prefs=view["prefs"], watch_all=view["watch_all"],
+                                   watchlist=view["watchlist"])
+                and job_filters.matches_tailoring(j, view.get("tailoring"))):
             out.append(j)
             keys.add(key)
     return out

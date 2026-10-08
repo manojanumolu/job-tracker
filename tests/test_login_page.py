@@ -127,4 +127,38 @@ def test_motion_is_slow_and_respects_reduced_motion(app, google_env):
     reduced = css.split("@media (prefers-reduced-motion: reduce) {", 2)[-1]
     for still in (".lp-card, .lp-chip, .lp-glow, .lp-dot::after, .st-key-login_card", ".lp-title, .lp-copy"):
         assert still in reduced
-    assert ".lp-card-in, .lp-card-in .logo { transition: none !important; }" in reduced      # no hover lean either
+    assert ".lp-card-in, .lp-card .bm, .lp-card .go, .lp-card-in::before, .lp-card-in::after { transition: none !important; }" in reduced
+    assert ".lp-card-in::after { display: none; }" in reduced                              # no gloss sweep either
+    assert ".lp-card:hover .lp-card-in, .lp-card .z:hover ~ .lp-card-in { transform: none !important; }" in reduced
+
+
+def test_the_cards_carry_company_marks_drawn_locally(app, google_env):
+    """Google, Microsoft and Amazon example cards show a recognisable mark,
+    drawn in CSS (Google's G is the data-URI already used by the button):
+    no image is fetched and no inline svg is used."""
+    at = app([NEW_RECORD], secrets=GATED, owner=False)
+    html = _html(at)
+    stage = html.split('<div class="lp-stage" aria-hidden="true">', 1)[1]
+    for mark in ('<span class="bm google"></span>', '<span class="bm microsoft"><i></i><i></i><i></i><i></i></span>',
+                 '<span class="bm amazon"><b>a</b></span>'):
+        assert mark in stage
+    assert '.bm.google::before { content: ""; width: 22px; height: 22px; background: url("data:image/svg+xml;base64,' in html
+    mark_rules = [line for line in html.splitlines() if ".bm" in line]
+    cards = stage.split("\n", 1)[0]                                                       # the artwork element only
+    assert mark_rules and not [line for line in mark_rules if "http" in line] and "<img" not in cards
+
+
+def test_card_hover_is_visible_and_gpu_friendly(app, google_env):
+    at = app([NEW_RECORD], secrets=GATED, owner=False)
+    css = _html(at)
+    assert ".lp-card:hover .lp-card-in { transform: translate3d(0, -8px, 0) scale(1.03); box-shadow: var(--oc-shadow-hover);" in css
+    assert ".lp-card:hover .lp-card-in::after { opacity: .55; transform: translateX(420%) skewX(-14deg); }" in css   # gloss sweep
+
+
+def test_the_page_uses_the_viewport_and_the_app_font(app, google_env):
+    at = app([NEW_RECORD], secrets=GATED, owner=False)
+    css = _html(at)
+    assert "max-width: 1520px !important;" in css and "padding: 24px clamp(24px, 4.5vw, 84px) !important;" in css
+    first_style = next(e.proto.body for e in at.get("html") if e.proto.body.startswith("<style>"))
+    assert first_style.startswith("<style>\n@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans")
+    assert ".lp, .lp *:not(.ms), .st-key-login_card," in css                              # every login text: var(--font)

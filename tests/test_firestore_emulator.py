@@ -497,3 +497,22 @@ def test_new_preferences_and_the_snapshot_on_the_emulator(emu):
     other = b.snapshot()
     assert other["watchlist"] == set() and other["dismissed"] == set()
     assert other["profile"]["preferences"]["job_types"] == [] and other["profile"]["watch_all"] is False
+
+
+def test_email_tailoring_on_real_firestore(emu):
+    """Tailoring lives in users/{uid}.notifications.tailoring: it survives
+    alerts being switched off and on (Firestore merges maps), narrows only
+    its owner's email, and another person keeps every qualifying job."""
+    a = _subscriber(emu, A, "a@example.org")
+    _subscriber(emu, B, "b@example.org")
+    assert a.set_email_tailoring(["Pune"], ["Software engineering"]) == {
+        "locations": ["Pune"], "job_families": ["Software engineering"]}
+    a.set_notifications(False, "general")
+    a.set_notifications(True, "general")
+    assert a.personal_view()["tailoring"] == {"locations": ["Pune"], "job_families": ["Software engineering"]}
+    assert emu.for_uid(B).personal_view()["tailoring"] == {"locations": [], "job_families": []}
+    seen = [_job(1), _job(2, title="Data Analyst"), {**_job(3), "location": "Chennai"}]
+    mail = Mailer()
+    user_alerts.run(emu, seen, mail, run_id="t1")
+    assert sorted(mail.sent) == [("a@example.org", [job_key(seen[0])]),
+                                 ("b@example.org", sorted(job_key(j) for j in seen))]

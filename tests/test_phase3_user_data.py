@@ -405,9 +405,8 @@ def test_notification_settings_are_per_user_and_go_to_the_verified_email(app, go
     assert "My alerts" in _html(a) and A_MAIL in _html(a)
     assert not [t for t in a.text_input if "mail" in (t.key or "")]         # no address field to type into
     a.toggle(key="my_alerts_on").set_value(True)
-    a.radio(key="my_alerts_mode").set_value("tailored")
     a.button(key="btn_my_alerts").click().run()
-    assert store.for_uid(A_UID).notification_settings() == {"enabled": True, "mode": "tailored", "email": A_MAIL}
+    assert store.for_uid(A_UID).notification_settings() == {"enabled": True, "mode": "general", "email": A_MAIL}
     b = _sign_in(app, google_env, B_UID, B_MAIL, page="alerts")
     assert store.for_uid(B_UID).notification_settings()["enabled"] is False
     assert A_MAIL not in _html(b) and B_MAIL in _html(b)
@@ -634,10 +633,11 @@ def test_my_alerts_saves_scope_and_preferences(app, google_env, store2):
     _go(a, "alerts")
     a.toggle(key="my_alerts_on").set_value(True)
     a.radio(key="my_alerts_scope").set_value("all")
-    a.radio(key="my_alerts_mode").set_value("tailored")
     a.button(key="btn_my_alerts").click().run()
     view = store2.for_uid(A_UID).personal_view()
-    assert view["watch_all"] is True and view["mode"] == "tailored"
+    # which jobs are emailed is the separate email tailoring; job preferences stay the job lists' defaults
+    assert view["watch_all"] is True and view["mode"] == "general"
+    assert view["tailoring"] == {"locations": [], "job_families": []}
     assert view["prefs"] == {"job_families": ["Data & analytics"], "locations": ["Hyderabad", "Remote"],
                              "experience": ["fresher"], "job_types": [], "work_modes": []}
     assert view["notifications"]["enabled"] is True and view["notifications"]["enabled_at"]
@@ -707,3 +707,16 @@ def test_the_app_binds_personal_data_in_exactly_one_place():
     src = (REPO / "streamlit_app.py").read_text("utf-8")
     assert re.findall(r"for_uid\((.*?)\)", src) == ['ACCOUNT["uid"]']
     assert "users/" not in src and "UserData(" not in src
+
+
+def test_an_older_tailored_alert_setting_is_kept_and_can_be_switched_off(app, google_env, store2):
+    store2.for_uid(A_UID).ensure_profile(A_MAIL, "", True)
+    store2.for_uid(A_UID).complete_onboarding()
+    store2.for_uid(A_UID).set_notifications(True, "tailored")
+    a = _sign_in(app, google_env, A_UID, A_MAIL, page="alerts")
+    assert "an older setting" in _html(a)
+    a.button(key="btn_my_alerts").click().run()                            # saving on/off keeps the mode
+    assert store2.for_uid(A_UID).notification_settings()["mode"] == "tailored"
+    a.button(key="btn_alerts_legacy_off").click().run()
+    assert store2.for_uid(A_UID).notification_settings() == {"enabled": True, "mode": "general", "email": A_MAIL}
+    assert "an older setting" not in _html(a)
