@@ -6,11 +6,11 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-07T18:38:55.354922+00:00",
+    "last_checked": "2026-10-08T00:48:44.390360+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 445,
+      "postings_seen": 446,
       "candidates": 74,
       "details_read": 18,
       "details_unreadable": 0,
@@ -26,11 +26,11 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-07T18:39:05.769892+00:00",
+    "last_checked": "2026-10-08T00:48:54.481684+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 146,
+      "postings_seen": 144,
       "candidates": 21,
       "details_read": 0,
       "details_unreadable": 0,
@@ -46,7 +46,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-07T18:39:07.831244+00:00",
+    "last_checked": "2026-10-08T00:48:56.405107+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -66,7 +66,7 @@
     "locked": true,
     "status": "active",
     "last_job": "Scientific Sales Executive",
-    "last_checked": "2026-10-07T18:39:28.148689+00:00",
+    "last_checked": "2026-10-08T00:49:17.404176+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -85,13 +85,13 @@
     "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers",
     "locked": true,
     "status": "active",
-    "last_job": "IN_Specialist 3_ Frontend Developer_AppTech_Advisory_Pune",
-    "last_checked": "2026-10-07T18:41:21.416718+00:00",
+    "last_job": "Associate",
+    "last_checked": "2026-10-08T00:50:51.459703+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 630,
-      "candidates": 630,
+      "postings_seen": 629,
+      "candidates": 629,
       "details_read": 186,
       "details_unreadable": 0,
       "pending": 0,
@@ -105,8 +105,8 @@
     "url": "https://www.accenture.com/in-en/careers/jobsearch",
     "locked": true,
     "status": "active",
-    "last_job": "Customer Contact Comms New Associate - Messaging",
-    "last_checked": "2026-10-07T18:41:24.764563+00:00",
+    "last_job": "Procure to Pay Operations New Associate",
+    "last_checked": "2026-10-08T00:50:54.882197+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -115,7 +115,7 @@
       "details_read": 0,
       "details_unreadable": 0,
       "pending": 0,
-      "accepted": 29
+      "accepted": 32
     },
     "source": "Accenture job-search API"
   },
@@ -126,7 +126,7 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-07T18:41:28.732126+00:00",
+    "last_checked": "2026-10-08T00:50:58.761616+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
