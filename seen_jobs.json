@@ -1171,5 +1171,49 @@
     "notify_state": "sent",
     "claimed_at": "2026-10-07T18:41:29.941374+00:00",
     "notified_at": "2026-10-07T18:41:33.683014+00:00"
+  },
+  {
+    "title": "Order to Cash Operations New Associate-Voice",
+    "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01641859_en&title=Order+to+Cash+Operations+New+Associate-Voice",
+    "company": "Accenture",
+    "location": "Gurugram · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 to 1 years'",
+    "evidence": {
+      "experience": [
+        "0 to 1 years",
+        "0 to 1 years",
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "Years of Experience: 0 to 1 years",
+        "Years of Experience :0 to 1 years",
+        "Qualifications: Any Graduation",
+        "Accenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil"
+      ],
+      "fresher_evidence": "0 to 1 years",
+      "detail_read": true,
+      "detail_match": "ATS record of this listing",
+      "job_id": "accenture:AIOC-S01641859_en",
+      "canonical_url": "https://accenture.com/in-en/careers/jobdetails?id=AIOC-S01641859_en&title=Order+to+Cash+Operations+New+Associate-Voice",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "accenture|accenture:AIOC-S01641859_en",
+    "date": "Oct 8, 10:15",
+    "first_seen": "2026-10-08T10:15:28.070271+00:00",
+    "id": "Accenture_Order_to_Cash_Operations_New_Associate-V",
+    "notified": false,
+    "company_id": "accenture",
+    "notify_state": "claimed",
+    "claimed_at": "2026-10-08T10:15:35.558203+00:00"
   }
 ]
