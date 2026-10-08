@@ -1211,9 +1211,10 @@
     "date": "Oct 8, 10:15",
     "first_seen": "2026-10-08T10:15:28.070271+00:00",
     "id": "Accenture_Order_to_Cash_Operations_New_Associate-V",
-    "notified": false,
+    "notified": true,
     "company_id": "accenture",
-    "notify_state": "claimed",
-    "claimed_at": "2026-10-08T10:15:35.558203+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-10-08T10:15:35.558203+00:00",
+    "notified_at": "2026-10-08T10:15:38.079379+00:00"
   }
 ]
