@@ -716,8 +716,10 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 .logo.ini2 { font-size: 15px; letter-spacing: -0.03em; }
 .logo.lg.ini2 { font-size: 23px; } .logo.sm.ini2 { font-size: 12.5px; }
 /* a company's own mark on its tile (local SVG from brand_logos.py: nothing is fetched) */
-.logo.brand { background: var(--tile, #fff); box-shadow: inset 0 0 0 1px rgba(15,23,42,.10), var(--hi); }
-.logo.brand img { width: 62%; height: 62%; object-fit: contain; display: block; pointer-events: none; user-select: none; }
+/* (its own class name: the sidebar's .brand rules once resized these tiles) */
+.logo.co-mark { background: var(--tile, #fff); padding: 0; box-shadow: inset 0 0 0 1px rgba(15,23,42,.10), var(--hi); }
+.logo.co-mark img { width: 62%; height: 62%; margin: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none;
+  object-fit: contain; display: block; pointer-events: none; user-select: none; }
 .name-msg { display: flex; gap: 8px; align-items: center; font-size: 13.5px; line-height: 1.45; margin-top: 4px;
   color: var(--green); } .name-msg.err { color: var(--red); }
 [class*="st-key-jr_"]:hover .logo, [class*="st-key-cr_"]:hover .logo { transform: scale(1.05);
@@ -1479,7 +1481,7 @@ def _avatar(name: str, size: str = "", person: bool = False) -> str:
     cls = "logo" + (" " + size if size else "")
     brand = None if person else brand_logos.brand_key(name)
     if brand:
-        return (f'<div class="{cls} brand" style="--tile:{brand_logos.brand_tile(brand)}" aria-hidden="true">'
+        return (f'<div class="{cls} co-mark" style="--tile:{brand_logos.brand_tile(brand)}" aria-hidden="true">'
                 f'<img src="{brand_logos.brand_uri(brand)}" alt=""></div>')
     key = (name or "").strip().lower()
     order = [(c.get("name") or "").strip().lower() for c in companies]

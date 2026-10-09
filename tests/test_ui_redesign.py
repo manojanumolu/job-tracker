@@ -130,7 +130,7 @@ def test_tracked_companies_get_distinct_avatar_tints(app):
     _nav(at, "companies")
     html = _html(at)
     hues = re.findall(r'<div class="logo(?: ini2)?" style="--h:(\d+)" aria-hidden="true">', html)
-    marks = html.count('<div class="logo brand" style="--tile:')         # companies with their own mark
+    marks = html.count('<div class="logo co-mark" style="--tile:')         # companies with their own mark
     n = len(json.loads((at.tmp_path / "companies.json").read_text("utf-8")))
     assert marks and len(hues) + marks == n and len(set(hues)) == min(len(hues), 10)
 

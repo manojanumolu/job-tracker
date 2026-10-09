@@ -105,7 +105,7 @@ def test_job_cards_use_the_same_mark(app):
 
 
 def html_has_mark(html, key):
-    return f'<div class="logo brand" style="--tile:{brand_logos.brand_tile(key)}" aria-hidden="true">' \
+    return f'<div class="logo co-mark" style="--tile:{brand_logos.brand_tile(key)}" aria-hidden="true">' \
            f'<img src="{brand_logos.brand_uri(key)}" alt=""></div>' in html
 
 
@@ -308,3 +308,73 @@ def test_no_editor_without_personal_data(app, google_env):
     at = app([NEW_RECORD], secrets=GATED, owner=False)
     _go(at, "settings")
     assert "btn_save_display_name" not in _buttons(at) and _label(at) == "Manoj"
+
+
+# ── marks are laid out right in a real browser (not just present in HTML) ───
+
+def _app_css():
+    from test_streamlit_app import REPO
+    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    start = src.index('_CSS = """') + len('_CSS = """')
+    return "\n".join(line for line in src[start:src.index('"""', start)].splitlines() if not line.startswith("@import"))
+
+
+def _app_avatar():
+    """streamlit_app._avatar (with _initial and _HUES), without running the app."""
+    import ast
+    import hashlib
+    from html import escape
+    from test_streamlit_app import REPO
+    tree = ast.parse((REPO / "streamlit_app.py").read_text("utf-8"))
+    keep = [n for n in tree.body if (isinstance(n, ast.FunctionDef) and n.name in ("_initial", "_avatar"))
+            or (isinstance(n, ast.Assign) and any(getattr(t, "id", "") == "_HUES" for t in n.targets))]
+    ns = {"brand_logos": brand_logos, "hashlib": hashlib, "escape": escape, "companies": []}
+    exec(compile(ast.Module(body=keep, type_ignores=[]), "streamlit_app", "exec"), ns)
+    return ns["_avatar"]
+
+
+def test_tile_class_names_are_used_only_by_tiles():
+    """The tiles' classes have no rules outside .logo — an unscoped rule for
+    one of them (the sidebar's .brand once) resizes every company mark."""
+    import re
+    selectors = [s.strip() for block in re.findall(r"([^{}]+)\{", _app_css()) for s in block.split(",")]
+    html = _app_avatar()("Accenture", "lg") + _app_avatar()("MetLife", "sm")
+    classes = {c for attr in re.findall(r'class="([^"]+)"', html) for c in attr.split()} - {"logo"}
+    assert classes == {"co-mark", "lg", "sm", "ini2"}
+    for sel in selectors:
+        for compound in re.split(r"[\s>+~]+", sel):
+            needs = set(re.findall(r"\.([\w-]+)", compound.split(":", 1)[0]))
+            # a compound that could match a tile (it asks only for tile classes) must name .logo
+            if needs & classes and needs <= classes | {"logo"}:
+                assert "logo" in needs, (compound, sel)
+
+
+def test_marks_fill_their_tiles_in_a_browser():
+    pw = pytest.importorskip("playwright.sync_api")
+    avatar = _app_avatar()
+    tiles = "".join(f'<div style="display:flex;gap:12px;margin:8px">{avatar(n, size)}</div>'
+                    for size in ("", "lg", "sm") for n in [brand_logos.BRAND_NAMES[k] for k in TEN] + ["MetLife"])
+    page = (f"<html><head><style>{_app_css()}</style></head><body>"
+            # the sidebar brand block sits on every page: its rules must not reach the tiles
+            '<div class="brand"><div class="mark"><img src="data:," alt=""></div><div><div class="n">x</div></div></div>'
+            f"{tiles}</body></html>")
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            pg = browser.new_page()
+            pg.set_content(page)
+            pg.wait_for_function("[...document.querySelectorAll('.co-mark img')].every(i => i.complete && i.naturalWidth)")
+            boxes = pg.evaluate("""() => [...document.querySelectorAll('.logo')].map(t => {
+                const i = t.querySelector('img'), a = t.getBoundingClientRect(), b = i ? i.getBoundingClientRect() : null;
+                return {cls: t.className, tw: a.width, th: a.height, iw: b && b.width, ih: b && b.height,
+                        dx: b && Math.abs((b.left + b.width / 2) - (a.left + a.width / 2)),
+                        dy: b && Math.abs((b.top + b.height / 2) - (a.top + a.height / 2))}; })""")
+            browser.close()
+    except pw.Error as e:                                     # no browser installed here
+        pytest.skip(f"chromium unavailable: {e}")
+    marks = [b for b in boxes if "co-mark" in b["cls"]]
+    assert len(marks) == 3 * len(TEN) and len(boxes) == 3 * (len(TEN) + 1)
+    for b in marks:
+        assert b["tw"] == b["th"] and b["tw"] in (44, 64, 34), b                       # tile keeps its size
+        assert abs(b["iw"] - 0.62 * b["tw"]) < 1 and abs(b["ih"] - 0.62 * b["th"]) < 1, b   # mark fills 62%
+        assert b["dx"] < 1 and b["dy"] < 1, b                                           # and is centred
