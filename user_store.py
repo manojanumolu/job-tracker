@@ -4,7 +4,9 @@ Shared (unchanged, in the repository): job facts and their job_key
 identity, the company catalogue, scanner state and the eligibility rules.
 Personal (here), one tree per person:
 
-  users/{uid}                    profile: email, display_name, created_at,
+  users/{uid}                    profile: email, display_name (from the sign-in
+                                 provider), preferred_name (chosen by the
+                                 person), created_at,
                                  last_login_at, onboarding, notifications
                                  (incl. the email tailoring), preferences,
                                  watch_all
@@ -64,6 +66,7 @@ NOTIFY_MODES = ("general", "tailored")
 ONBOARDING_PENDING, ONBOARDING_COMPLETE = "pending", "complete"
 DELIVERY_CLAIMED, DELIVERY_SENT, DELIVERY_PENDING = "claimed", "sent", "pending"
 MAX_PREF_ITEMS, MAX_PREF_LEN = 50, 80
+DISPLAY_NAME_MAX = 60                                      # characters, after trimming
 SERVICE_ACCOUNT_SECTION = "firebase_service_account"     # [firebase_service_account] in st.secrets
 SERVICE_ACCOUNT_KEY = "FIREBASE_SERVICE_ACCOUNT"          # or the JSON as one string
 APP_NAME = "job-tracker-user-data"
@@ -265,6 +268,23 @@ def _guard(method):
     return wrapper
 
 
+def clean_display_name(value: object) -> str:
+    """A name a person chose for themselves: surrounding whitespace trimmed
+    and runs of whitespace collapsed to one space. Empty names, names over
+    DISPLAY_NAME_MAX characters and control characters are refused."""
+    if not isinstance(value, str):
+        raise InvalidInput("Enter a name.")
+    name = " ".join(value.split())
+    if not name:
+        raise InvalidInput("Enter a name — it can't be empty.")
+    if len(name) > DISPLAY_NAME_MAX:
+        raise InvalidInput(f"Use at most {DISPLAY_NAME_MAX} characters.")
+    if any(ord(ch) < 32 or 0x7F <= ord(ch) < 0xA0 or ch in "\u200b\u200e\u200f\u202a\u202b\u202c\u202d\u202e\ufeff"
+           for ch in name):
+        raise InvalidInput("The name contains characters that can't be shown.")
+    return name
+
+
 def _clean_list(values: object) -> list[str]:
     if not isinstance(values, (list, tuple, set, frozenset)):
         raise InvalidInput("expected a list")
@@ -316,6 +336,17 @@ class UserData:
     @_guard
     def profile(self) -> dict | None:
         return self._backend.get(self._root)
+
+    @_guard
+    def set_display_name(self, name: object) -> str:
+        """The name this person wants shown (users/{uid}.preferred_name).
+        Kept apart from display_name, which every sign-in refreshes from
+        the provider, so a chosen name survives signing in again. Touches
+        nothing else: not the email, UID, role, companies, dismissals,
+        alerts, tailoring or preferences. Returns what was saved."""
+        clean = clean_display_name(name)
+        self._backend.set(self._root, {"preferred_name": clean}, merge=True)
+        return clean
 
     @_guard
     def complete_onboarding(self, now: float | None = None) -> None:
@@ -502,6 +533,17 @@ def tailoring_from(profile: dict) -> dict:
     t = notif.get("tailoring") if isinstance(notif.get("tailoring"), dict) else {}
     return {k: [v for v in t.get(k) or [] if isinstance(v, str)] if isinstance(t.get(k), list) else []
             for k in TAILORING_KEYS}
+
+
+def display_name_from(profile: dict) -> str:
+    """The name a person chose (preferred_name), or "" when they haven't
+    chosen one (or the saved value isn't a usable name) — the app then
+    falls back to the sign-in provider's name, as before."""
+    prof = profile if isinstance(profile, dict) else {}
+    try:
+        return clean_display_name(prof.get("preferred_name"))
+    except InvalidInput:
+        return ""
 
 
 def notification_settings_from(profile: dict) -> dict:

@@ -59,6 +59,7 @@ from config_store import (
 )
 from notifier import category_label, friendly_reason, safe_url
 from identity import ats_job_id
+import brand_logos
 import firebase_auth
 import job_filters
 import snapshot_cache
@@ -712,6 +713,13 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
   box-shadow: inset 0 0 0 1px hsl(var(--h) var(--av-sat) var(--av-bd)), var(--hi); transition: transform var(--normal) var(--ease); }
 .logo.lg { width: 64px; height: 64px; border-radius: 18px; font-size: 26px; }
 .logo.sm { width: 34px; height: 34px; border-radius: 10px; font-size: 14px; }
+.logo.ini2 { font-size: 15px; letter-spacing: -0.03em; }
+.logo.lg.ini2 { font-size: 23px; } .logo.sm.ini2 { font-size: 12.5px; }
+/* a company's own mark on its tile (local SVG from brand_logos.py: nothing is fetched) */
+.logo.brand { background: var(--tile, #fff); box-shadow: inset 0 0 0 1px rgba(15,23,42,.10), var(--hi); }
+.logo.brand img { width: 62%; height: 62%; object-fit: contain; display: block; pointer-events: none; user-select: none; }
+.name-msg { display: flex; gap: 8px; align-items: center; font-size: 13.5px; line-height: 1.45; margin-top: 4px;
+  color: var(--green); } .name-msg.err { color: var(--red); }
 [class*="st-key-jr_"]:hover .logo, [class*="st-key-cr_"]:hover .logo { transform: scale(1.05);
   box-shadow: inset 0 0 0 1px hsl(var(--h) var(--av-sat) var(--av-bd)), var(--hi), 0 6px 14px -8px hsl(var(--h) 60% 45%); }
 /* a hovered card's primary action steps forward slightly */
@@ -1454,8 +1462,8 @@ def _ms(name: str, size: str = "") -> str:
 
 
 def _initial(name: str) -> str:
-    name = (name or "").strip()
-    return escape(name[:1].upper()) if name[:1].isalnum() else "•"
+    """Initials for a tile: "MS" for Morgan Stanley, "Me" for MetLife."""
+    return escape(brand_logos.initials(name)) or "•"
 
 
 # company tints: well-separated hues, assigned in tracking order so every
@@ -1463,14 +1471,23 @@ def _initial(name: str) -> str:
 _HUES = (250, 175, 25, 320, 205, 140, 285, 0, 55, 230)
 
 
-def _avatar(name: str, size: str = "") -> str:
-    """Company identity: the initial on a tint, so companies are told apart
-    at a glance (no logos are fetched or invented)."""
+def _avatar(name: str, size: str = "", person: bool = False) -> str:
+    """Company identity: the company's own mark when brand_logos has one
+    (a local SVG — nothing is fetched), otherwise its initials on a tint, so
+    companies are told apart at a glance. ``person``: someone's account
+    avatar — initials only, never a company's mark."""
+    cls = "logo" + (" " + size if size else "")
+    brand = None if person else brand_logos.brand_key(name)
+    if brand:
+        return (f'<div class="{cls} brand" style="--tile:{brand_logos.brand_tile(brand)}" aria-hidden="true">'
+                f'<img src="{brand_logos.brand_uri(brand)}" alt=""></div>')
     key = (name or "").strip().lower()
     order = [(c.get("name") or "").strip().lower() for c in companies]
     idx = order.index(key) if key in order else int(hashlib.sha1(key.encode("utf-8")).hexdigest()[:4], 16)
     hue = _HUES[idx % len(_HUES)]
-    return f'<div class="logo{" " + size if size else ""}" style="--h:{hue}" aria-hidden="true">{_initial(name)}</div>'
+    text = _initial(name)
+    return (f'<div class="{cls}{" ini2" if len(text) == 2 else ""}" style="--h:{hue}" aria-hidden="true">'
+            f'{text}</div>')
 
 
 def _plural(n: int, word: str, many: str | None = None) -> str:
@@ -2020,16 +2037,7 @@ def _login_google() -> None:
 # Google's "G" mark for the Google button. Inline <svg> elements don't paint
 # in this app's hosting (see the design-system note above), so it is drawn
 # as a CSS background image instead.
-_GOOGLE_G_SVG = (
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">'
-    '<path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 '
-    '2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>'
-    '<path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 '
-    '7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>'
-    '<path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 '
-    '0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>'
-    '<path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 '
-    '0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>')
+_GOOGLE_G_SVG = brand_logos.GOOGLE_G_SVG
 _GOOGLE_G_URI = "data:image/svg+xml;base64," + base64.b64encode(_GOOGLE_G_SVG.encode("utf-8")).decode("ascii")
 
 _LOGIN_CSS = """
@@ -2110,19 +2118,9 @@ _LOGIN_CSS = """
   background: linear-gradient(180deg, #ffffff, #f3f4f8); border: 1px solid rgba(15,23,42,.08);
   box-shadow: inset 0 1px 0 #fff, 0 6px 14px -8px rgba(15,23,42,.35); transition: transform .35s var(--ease), box-shadow .35s var(--ease); }
 .lp-card:hover .bm { transform: scale(1.06); box-shadow: inset 0 1px 0 #fff, 0 10px 20px -10px var(--accent); }
-.bm.google::before { content: ""; width: 22px; height: 22px; background: url("GOOGLE_G_URI") center / contain no-repeat; }
-.bm.microsoft { grid-template-columns: 9px 9px; grid-template-rows: 9px 9px; gap: 2px; place-content: center; }
-.bm.microsoft i { display: block; width: 9px; height: 9px; }
-.bm.microsoft i:nth-child(1) { background: #f25022; } .bm.microsoft i:nth-child(2) { background: #7fba00; }
-.bm.microsoft i:nth-child(3) { background: #00a4ef; } .bm.microsoft i:nth-child(4) { background: #ffb900; }
-.bm.amazon { background: linear-gradient(180deg, #2b3a4d, #1b2532); border-color: rgba(255,255,255,.08);
+.lp-card .bm img { width: 24px; height: 24px; display: block; object-fit: contain; }
+.lp-card .bm.dark { border-color: rgba(255,255,255,.08);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 6px 14px -8px rgba(15,23,42,.6); }
-.bm.amazon b { font-family: Arial, Helvetica, sans-serif !important; font-size: 23px; line-height: 1; font-weight: 700;
-  color: #fff; margin-top: -6px; letter-spacing: -.02em; }
-.bm.amazon::after { content: ""; position: absolute; left: 11px; right: 10px; bottom: 9px; height: 7px;
-  border-bottom: 2.5px solid #ff9900; border-radius: 0 0 60% 60% / 0 0 100% 100%; }
-.bm.amazon::before { content: ""; position: absolute; right: 9px; bottom: 9px; width: 4px; height: 4px;
-  border-top: 2.5px solid #ff9900; border-right: 2.5px solid #ff9900; transform: rotate(20deg); border-radius: 0 1px 0 0; }
 .lp-card .tx { min-width: 0; flex: 1; }
 .lp-card .t { font-size: 13.5px; line-height: 18px; font-weight: 700; color: var(--text); overflow: hidden;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
@@ -2258,10 +2256,14 @@ _LOGIN_CARDS = (
     ("c2", "Microsoft", "SDE – New Grad", "Hyderabad", (("fresher", "Fresher"), ("entry", "Full-time"))),
     ("c3", "Amazon", "Software Development Engineer", "Bengaluru", (("fresher", "Fresher"), ("entry", "Full-time"))),
 )
-# the company marks of those example cards, drawn by CSS (.bm.*)
-_LOGIN_MARKS = {"Google": '<span class="bm google"></span>',
-                "Microsoft": '<span class="bm microsoft"><i></i><i></i><i></i><i></i></span>',
-                "Amazon": '<span class="bm amazon"><b>a</b></span>'}
+
+
+def _login_mark(company: str) -> str:
+    """An example card's company mark: the same local SVG as on job cards."""
+    key = brand_logos.brand_key(company)
+    tile = brand_logos.brand_tile(key)
+    return (f'<span class="bm {key}{" dark" if tile.lower() != "#ffffff" else ""}" style="background:{tile}">'
+            f'<img src="{brand_logos.brand_uri(key)}" alt=""></span>')
 
 
 def _login_art() -> str:
@@ -2271,7 +2273,7 @@ def _login_art() -> str:
     cards = "".join(
         f'<div class="lp-card {cls}"><span class="z z1"></span><span class="z z2"></span><span class="z z3"></span>'
         '<span class="z z4"></span>'
-        f'<div class="lp-card-in">{_LOGIN_MARKS[company]}'
+        f'<div class="lp-card-in">{_login_mark(company)}'
         f'<div class="tx"><div class="t">{escape(title)}</div><div class="m">{escape(company)} · {escape(city)}</div>'
         '<div class="tags">' + "".join(f'<span class="pill {k}">{"<i></i>" if k == "on" else ""}{escape(v)}</span>'
                                        for k, v in tags) + "</div></div>"
@@ -2477,6 +2479,11 @@ if USER is not None:
     except user_store.UserStoreError as _e:
         USER, USER_PROBLEM, USER_PROBLEM_DETAIL = None, str(_e), _e.kind
 
+# The name shown for this account: the one the person chose (saved in their
+# own profile as preferred_name), else the sign-in provider's name
+# as before. Display only: identity, role and data stay keyed by the UID.
+CHOSEN_NAME = user_store.display_name_from(ME["profile"]) if ME is not None else ""
+
 # Roles, decided on the server once per run (the real checks still happen in
 # every protected operation). A member never gets the admin's dashboard; the
 # legacy no-sign-in mode keeps its old behaviour.
@@ -2512,6 +2519,11 @@ def first_name(account: dict) -> str:
     local = (account.get("email") or "").split("@")[0]
     word = next((w for w in re.split(r"[._+\-\d]+", local) if w), "")
     return word[:1].upper() + word[1:] if word else "Account"
+
+
+# the signed-in account as it is SHOWN (with the chosen name); ACCOUNT itself
+# — what sign-in and the role checks use — is never changed
+SHOWN_ACCOUNT = {**ACCOUNT, "name": CHOSEN_NAME} if ACCOUNT and CHOSEN_NAME else ACCOUNT
 
 
 # ── data ──────────────────────────────────────────────────────────────────────
@@ -2816,8 +2828,8 @@ def account_menu() -> None:
     FIRST name and — for admins only — an ADMIN badge (the full name and
     email are inside the menu). Admin tools stay in the sidebar's
     Management group, never in this menu."""
-    name = account_label(ACCOUNT)
-    first = first_name(ACCOUNT)
+    name = account_label(SHOWN_ACCOUNT)
+    first = first_name(SHOWN_ACCOUNT)
     initial = next((ch for ch in first if ch.isalnum()), "?").upper()
     label = re.sub(r"([\\`*_{}\[\]()#+!|~<>-])", r"\\\1", first) + (" **ADMIN**" if IS_ADMIN else "")
     st.html(f'<style>[class*="st-key-acct_menu"] [data-testid="stPopoverButton"]::before {{ content: "{initial}"; }}</style>')
@@ -3948,14 +3960,50 @@ def page_email():
 
 
 # ── Settings → Account (when sign-in is on) ─────────────────────────────────
+def _save_display_name() -> None:
+    """Save the name typed into the Account page. USER is bound to the
+    Firebase UID the server resolved at sign-in — the form carries no UID,
+    email or address — and only the chosen name changes."""
+    try:
+        name = USER.set_display_name(st.session_state.get("display_name_input"))
+    except user_store.InvalidInput as e:
+        st.session_state._name_msg = ("err", str(e))
+        return
+    except user_store.UserStoreError:
+        st.session_state._name_msg = ("err", "Couldn't save your name right now — try again in a moment.")
+        return
+    finally:
+        personal_changed()
+    st.session_state.display_name_input = name               # show it as saved (trimmed)
+    st.session_state._name_msg = ("ok", f"Saved — you'll appear as {name}.")
+    toast("Display name saved", "success")
+
+
+def display_name_editor() -> None:
+    """Change the name shown in the header, the account menu and here."""
+    current = CHOSEN_NAME or (ACCOUNT.get("name") or "").strip()
+    st.session_state.setdefault("display_name_input", current)
+    with st.form("display_name_form", clear_on_submit=False, border=False):
+        st.text_input("Display name", key="display_name_input", max_chars=user_store.DISPLAY_NAME_MAX,
+                      placeholder="Your name", autocomplete="name",
+                      help="Shown in the app only. Your email and sign-in stay the same.")
+        st.form_submit_button("Save name", key="btn_save_display_name", icon=":material/check:", type="primary",
+                              on_click=_save_display_name)
+    msg = st.session_state.pop("_name_msg", None)
+    if msg:
+        kind, text = msg
+        st.html(f'<div class="name-msg {kind}" role="{"status" if kind == "ok" else "alert"}">'
+                f'{_ms("check_circle" if kind == "ok" else "error", "s20")}<div>{escape(text)}</div></div>')
+
+
 def account_card() -> None:
     admin = is_owner()
     method = {"google.com": "Google", "password": "email &amp; password",
               "owner": "the owner password"}.get(ACCOUNT.get("provider"), "Firebase")
     with st.container(key="set_account"):
-        st.html(f'<div class="set-head">{_avatar(account_label(ACCOUNT))}<div style="min-width:0;">'
+        st.html(f'<div class="set-head">{_avatar(account_label(SHOWN_ACCOUNT), person=True)}<div style="min-width:0;">'
                 '<div class="eyebrow">Account</div>'
-                f'<h2 class="section-title">{escape(account_label(ACCOUNT))}</h2>'
+                f'<h2 class="section-title">{escape(account_label(SHOWN_ACCOUNT))}</h2>'
                 f'<p class="section-sub">Signed in with {method}'
                 + (f' · {escape(ACCOUNT["email"])}' if ACCOUNT.get("email") else "") + '</p></div></div>')
         # Firebase IDs and the reasons a link failed are for admins; a member
@@ -3988,6 +4036,8 @@ def account_card() -> None:
             # only admins: members simply have the app as it was
             rows.append(("Personal data", "Not switched on — no Firebase service account is configured for this app"))
         st.html('<dl class="kv">' + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in rows) + "</dl>")
+        if USER is not None:
+            display_name_editor()
         # Until JT_ADMIN_EMAILS exists the legacy owner password still unlocks
         # changes — tucked away here, never a second login screen.
         if owner_password_enabled():
@@ -4275,7 +4325,7 @@ def page_onboarding():
     st.html('<style>[data-testid="stSidebar"], .st-key-mnav { display: none !important; }</style>')
     step = int(st.session_state.get("ob_step", 0))
     vals = st.session_state.setdefault("ob_values", {})
-    first = first_name(ACCOUNT) if ACCOUNT else ""
+    first = first_name(SHOWN_ACCOUNT) if ACCOUNT else ""
     with st.container(key="onboard"):
         dots = "".join(f'<i class="{"on" if i < step else "now" if i == step else ""}"></i>' for i in range(len(PREF_STEPS) + 1))
         if step < len(PREF_STEPS):
@@ -4364,7 +4414,7 @@ def page_my_companies():
 
 def page_member_home():
     """A member's Home: their own job search — no scanner, no admin tools."""
-    first = first_name(ACCOUNT) if ACCOUNT else ""
+    first = first_name(SHOWN_ACCOUNT) if ACCOUNT else ""
     mine = for_me(active_jobs)
     with st.container(key="mh_hero"):
         st.html(f'<div class="mh-hero"><div class="eyebrow sparked">Your job search</div>'

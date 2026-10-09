@@ -128,9 +128,11 @@ def test_job_card_badge_and_meta_are_truthful(app):
 def test_tracked_companies_get_distinct_avatar_tints(app):
     at = app([])
     _nav(at, "companies")
-    hues = re.findall(r'<div class="logo" style="--h:(\d+)" aria-hidden="true">', _html(at))
+    html = _html(at)
+    hues = re.findall(r'<div class="logo(?: ini2)?" style="--h:(\d+)" aria-hidden="true">', html)
+    marks = html.count('<div class="logo brand" style="--tile:')         # companies with their own mark
     n = len(json.loads((at.tmp_path / "companies.json").read_text("utf-8")))
-    assert len(hues) == n and len(set(hues)) == min(n, 10)
+    assert marks and len(hues) + marks == n and len(set(hues)) == min(len(hues), 10)
 
 
 def test_icon_only_row_actions_still_have_text_labels(app):

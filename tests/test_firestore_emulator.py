@@ -105,6 +105,24 @@ def test_profile_creation_and_repeat_sign_in(emu):
     assert [d["name"].rsplit("/", 1)[-1] for d in _docs("users").get("documents", [])] == [A]
 
 
+def test_a_chosen_display_name_is_saved_to_its_own_profile_only(emu):
+    a, b = emu.for_uid(A), emu.for_uid(B)
+    a.ensure_profile("a@example.org", "Provider A", True)
+    b.ensure_profile("b@example.org", "Provider B", True)
+    a.watch("sanofi", {"sanofi", "pwc"})
+    a.set_notifications(True)
+    a_before, b_before = a.snapshot(), b.profile()
+    assert a.set_display_name("  Ada   Lovelace ") == "Ada Lovelace"
+    after = a.snapshot()
+    assert after["profile"] == {**a_before["profile"], "preferred_name": "Ada Lovelace"}
+    assert after["watchlist"] == a_before["watchlist"] and b.profile() == b_before
+    prof, _ = emu.for_uid(A).ensure_profile("a@example.org", "Provider A2", True)      # signing in again
+    assert prof["preferred_name"] == "Ada Lovelace" and prof["display_name"] == "Provider A2"
+    with pytest.raises(user_store.InvalidInput):
+        a.set_display_name("   ")
+    assert a.profile()["preferred_name"] == "Ada Lovelace"
+
+
 def test_concurrent_first_sign_ins_make_one_profile(emu):
     results = []
     threads = [threading.Thread(target=lambda: results.append(emu.for_uid(A).ensure_profile("a@example.org")[1]))

@@ -133,19 +133,20 @@ def test_motion_is_slow_and_respects_reduced_motion(app, google_env):
 
 
 def test_the_cards_carry_company_marks_drawn_locally(app, google_env):
-    """Google, Microsoft and Amazon example cards show a recognisable mark,
-    drawn in CSS (Google's G is the data-URI already used by the button):
-    no image is fetched and no inline svg is used."""
+    """Google, Microsoft and Amazon example cards show the same local SVG
+    marks as the job cards (brand_logos): data: URIs, so no image is
+    fetched, and no inline svg is used."""
+    import brand_logos
     at = app([NEW_RECORD], secrets=GATED, owner=False)
     html = _html(at)
     stage = html.split('<div class="lp-stage" aria-hidden="true">', 1)[1]
-    for mark in ('<span class="bm google"></span>', '<span class="bm microsoft"><i></i><i></i><i></i><i></i></span>',
-                 '<span class="bm amazon"><b>a</b></span>'):
-        assert mark in stage
-    assert '.bm.google::before { content: ""; width: 22px; height: 22px; background: url("data:image/svg+xml;base64,' in html
-    mark_rules = [line for line in html.splitlines() if ".bm" in line]
     cards = stage.split("\n", 1)[0]                                                       # the artwork element only
-    assert mark_rules and not [line for line in mark_rules if "http" in line] and "<img" not in cards
+    for key in ("google", "microsoft", "amazon"):
+        assert (f'<span class="bm {key}{" dark" if key == "amazon" else ""}" style="background:'
+                f'{brand_logos.brand_tile(key)}"><img src="{brand_logos.brand_uri(key)}" alt=""></span>') in cards
+    assert 'src="http' not in cards and "url(http" not in cards and "<svg" not in cards
+    assert brand_logos.brand_uri("google").endswith(
+        html.split('url("data:image/svg+xml;base64,', 1)[1].split('"', 1)[0])            # the button's G is the same mark
 
 
 def test_card_hover_is_visible_and_gpu_friendly(app, google_env):
