@@ -320,14 +320,14 @@ def _app_css():
 
 
 def _app_avatar():
-    """streamlit_app._avatar (with _initial and _HUES), without running the app."""
+    """streamlit_app._avatar (with _initial and its logo tables), without running the app."""
     import ast
     import hashlib
     from html import escape
     from test_streamlit_app import REPO
     tree = ast.parse((REPO / "streamlit_app.py").read_text("utf-8"))
     keep = [n for n in tree.body if (isinstance(n, ast.FunctionDef) and n.name in ("_initial", "_avatar"))
-            or (isinstance(n, ast.Assign) and any(getattr(t, "id", "") == "_HUES" for t in n.targets))]
+            or (isinstance(n, ast.AnnAssign) and getattr(n.target, "id", "") in ("_FOUND_LOGOS", "_USED_LOGOS"))]
     ns = {"brand_logos": brand_logos, "hashlib": hashlib, "escape": escape, "companies": []}
     exec(compile(ast.Module(body=keep, type_ignores=[]), "streamlit_app", "exec"), ns)
     return ns["_avatar"]

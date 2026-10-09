@@ -1,8 +1,13 @@
+import colorsys
+import hashlib
+import json
 import os
 import re
 import smtplib
+from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from pathlib import Path
 from html import escape
 from urllib.parse import urlparse
 
@@ -17,14 +22,31 @@ def _smtp_creds() -> tuple[str, str]:
     return addr, pwd
 
 
-def _send(to: str, subject: str, html: str, text: str) -> None:
-    addr, pwd = _smtp_creds()
-    msg = MIMEMultipart("alternative")
+def _message(subject: str, html: str, text: str, images: dict | None = None):
+    """text + HTML; company logos (if any) ride along as inline images the
+    HTML points at with cid: — no image is fetched when the mail is read."""
+    body = MIMEMultipart("alternative")
+    body.attach(MIMEText(text, "plain"))
+    body.attach(MIMEText(html, "html"))
+    if not images:
+        msg = body
+    else:
+        msg = MIMEMultipart("related")
+        msg.attach(body)
+        for cid, (data, subtype) in images.items():
+            part = MIMEImage(data, _subtype=subtype)
+            part.add_header("Content-ID", f"<{cid}>")
+            part.add_header("Content-Disposition", "inline", filename=f"{cid.split('@', 1)[0]}.{subtype}")
+            msg.attach(part)
     msg["Subject"] = subject
+    return msg
+
+
+def _send(to: str, subject: str, html: str, text: str, images: dict | None = None) -> None:
+    addr, pwd = _smtp_creds()
+    msg = _message(subject, html, text, images)
     msg["From"] = f"Fresher Job Tracker <{addr}>"
     msg["To"] = to
-    msg.attach(MIMEText(text, "plain"))
-    msg.attach(MIMEText(html, "html"))
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(addr, pwd)
         server.sendmail(addr, to, msg.as_string())
@@ -144,7 +166,60 @@ def _field_row(label: str, value: str) -> str:
               </tr>"""
 
 
-def _job_card(job: dict, index: int, total: int) -> str:
+# ---------------------------------------------------------------------------
+# Company identity: the logo found on the company's own site (logos.json),
+# attached to the mail; otherwise its initials on the same tint as the app.
+# Reading it can never stop a mail: any problem means "initials".
+# ---------------------------------------------------------------------------
+
+BASE = Path(__file__).parent
+
+
+def email_logos(jobs: list[dict], base: Path | None = None) -> tuple[dict, list[str]]:
+    """({company name (lower): (cid, bytes, subtype)} for these jobs'
+    companies, the tracked companies' names in order). ({}, []) if the
+    files are missing or unreadable."""
+    base = base or BASE
+    try:
+        import company_logos
+        companies = [c for c in json.loads((base / "companies.json").read_text("utf-8")) if isinstance(c, dict)]
+        found = company_logos.entries(company_logos.load_local(base / company_logos.LOGOS_FILE))
+        ids = {(c.get("name") or "").strip().lower(): c.get("id") for c in companies}
+        out = {}
+        for j in jobs:
+            name = (j.get("company") or "").strip().lower()
+            entry = found.get(ids.get(name)) if name and name not in out else None
+            img = company_logos.email_image(entry) if entry else None
+            if img:
+                out[name] = (f"logo-{hashlib.sha1(name.encode('utf-8')).hexdigest()[:12]}@jobtracker", *img)
+        return out, [c.get("name") or "" for c in companies]
+    except Exception as e:                       # never let a logo stop an alert
+        print(f"[notifier] company logos unavailable: {type(e).__name__}")
+        return {}, []
+
+
+def _hex(h: float, s: float, l: float) -> str:
+    r, g, b = colorsys.hls_to_rgb(h / 360, l, s)
+    return "#{:02x}{:02x}{:02x}".format(round(r * 255), round(g * 255), round(b * 255))
+
+
+def _company_mark(company: str, logos: dict, tracked: list[str]) -> str:
+    """A 40px logo cell: the attached logo (alt text = the company), or the
+    company's initials on its tint — never a broken image."""
+    found = logos.get(company.strip().lower())
+    if found:
+        return (f'<img src="cid:{found[0]}" width="40" height="40" alt="{escape(company, quote=True)}" '
+                f'style="display:block;width:40px;height:40px;border:1px solid {BORDER};border-radius:10px;'
+                f'background:#ffffff;font:600 10px/1.2 {FONT};color:{MUTED};">')
+    from brand_logos import initials, tile_hue
+    hue = tile_hue(company, tracked)
+    return (f'<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>'
+            f'<td width="40" height="40" align="center" valign="middle" bgcolor="{_hex(hue, .7, .94)}" '
+            f'style="width:40px;height:40px;border-radius:10px;font:800 14px/40px {FONT};color:{_hex(hue, .7, .34)};'
+            f'text-align:center;">{escape(initials(company) or "•")}</td></tr></table>')
+
+
+def _job_card(job: dict, index: int, total: int, logos: dict | None = None, tracked: list[str] | None = None) -> str:
     title = _clip(job.get("title") or "Untitled posting", _MAX_TITLE)
     company = _clip(job.get("company") or "", 80)
     location = _clip(job.get("location") or "", 120)
@@ -152,8 +227,6 @@ def _job_card(job: dict, index: int, total: int) -> str:
     url = safe_url(job.get("url", ""))
 
     rows = ""
-    if company:
-        rows += _field_row("Company", company)
     rows += _field_row("Location", location or "See posting")
     rows += _field_row("Why", friendly_reason(job))
 
@@ -177,13 +250,21 @@ def _job_card(job: dict, index: int, total: int) -> str:
         if url else
         f'<p style="margin:16px 0 0;font:400 13px/1.5 {FONT};color:{MUTED};">Open the company’s career page to apply.</p>'
     )
+    # the employer: logo (or initials) beside its name
+    head = (f"""
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px;">
+                    <tr>
+                      <td width="40" style="width:40px;padding:0 12px 0 0;vertical-align:middle;">{_company_mark(company, logos or {}, tracked or [])}</td>
+                      <td style="vertical-align:middle;font:700 15px/1.35 {FONT};color:{TEXT};word-break:break-word;">{escape(company)}</td>
+                    </tr>
+                  </table>""" if company else "")
     return f"""
         <tr>
           <td style="padding:0 0 16px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
                    style="background:#ffffff;border:1px solid {BORDER};border-radius:12px;">
               <tr>
-                <td style="padding:20px 22px;">
+                <td style="padding:20px 22px;">{head}
                   <div style="margin:0 0 8px;">{counter}<span style="display:inline-block;padding:3px 9px;border-radius:999px;background:{bg};color:{fg};font:700 11px/1.4 {FONT};letter-spacing:.03em;text-transform:uppercase;">{escape(label)}</span></div>
                   <h2 style="margin:0 0 12px;font:700 18px/1.35 {FONT};color:{TEXT};word-break:break-word;">{escape(title)}</h2>
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;">{rows}
@@ -210,15 +291,18 @@ def _job_text(job: dict, index: int, total: int) -> str:
     return "\n".join(lines)
 
 
-def build_alert_email(jobs: list[dict]) -> tuple[str, str, str]:
-    """Return (subject, html, plain_text) for a job-alert email."""
+def build_alert_email(jobs: list[dict], logos: dict | None = None,
+                      tracked: list[str] | None = None) -> tuple[str, str, str]:
+    """Return (subject, html, plain_text) for a job-alert email. ``logos``:
+    {company name (lower): (cid, bytes, subtype)} from email_logos(); the
+    caller attaches those images. Without it every company shows initials."""
     total = len(jobs)
     heading = "New fresher job" if total == 1 else f"{total} new fresher jobs"
     preheader = "; ".join(
         f"{_clip(j.get('title') or '', 60)}" + (f" at {j['company']}" if j.get("company") else "")
         for j in jobs[:3]
     )
-    cards = "".join(_job_card(j, i, total) for i, j in enumerate(jobs, 1))
+    cards = "".join(_job_card(j, i, total, logos, tracked) for i, j in enumerate(jobs, 1))
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -308,9 +392,12 @@ test_mail.__test__ = False
 def send_alerts(jobs: list[dict], recipient: str) -> None:
     if not jobs or not recipient:
         return
-    subject, html, text = build_alert_email(jobs)
-    _send(recipient, subject, html, text)
-    print(f"[notifier] Alert sent to {mask_email(recipient)} with {len(jobs)} job(s)")
+    logos, tracked = email_logos(jobs)
+    subject, html, text = build_alert_email(jobs, logos, tracked)
+    images = {cid: (data, subtype) for cid, data, subtype in logos.values() if f"cid:{cid}" in html}
+    _send(recipient, subject, html, text, images)
+    print(f"[notifier] Alert sent to {mask_email(recipient)} with {len(jobs)} job(s)"
+          + (f", {len(images)} company logo(s)" if images else ""))
 
 
 if __name__ == "__main__":

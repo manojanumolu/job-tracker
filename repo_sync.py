@@ -10,6 +10,8 @@ re-reads the latest remote copy and merges *records*:
   companies.json  — the remote list wins for membership and configuration
                     (added/removed/renamed in the app); this run only
                     contributes its scan results (status, last_checked, ...)
+  logos.json      — this run's entries (it read the remote copy first); a
+                    logo already found remotely is never replaced by a miss
 """
 
 from __future__ import annotations
@@ -97,6 +99,19 @@ def merge_companies(remote: list, local: list) -> list:
     return out
 
 
+def merge_logos(remote: dict | None, local: dict) -> dict:
+    rem = (remote or {}).get("logos") if isinstance(remote, dict) else None
+    rem = rem if isinstance(rem, dict) else {}
+    mine = local.get("logos") if isinstance(local, dict) and isinstance(local.get("logos"), dict) else {}
+    out = {}
+    for k, e in mine.items():
+        r = rem.get(k)
+        keep_remote = (isinstance(r, dict) and r.get("status") == "ok"
+                       and not (isinstance(e, dict) and e.get("status") == "ok"))
+        out[k] = r if keep_remote else e
+    return {**local, "logos": out}
+
+
 # ---------------------------------------------------------------------------
 # git plumbing
 # ---------------------------------------------------------------------------
@@ -138,6 +153,8 @@ def publish(message: str, local: dict[str, object], *, cwd: Path = BASE, branch:
                     merged[name] = merge_seen(rem or [], data)
                 elif name == "companies.json":
                     merged[name] = merge_companies(rem, data) if rem is not None else data
+                elif name == "logos.json":
+                    merged[name] = merge_logos(rem, data)
                 else:
                     merged[name] = data
             # start from the remote tip, then write the merged data

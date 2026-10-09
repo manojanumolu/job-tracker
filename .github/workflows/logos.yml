@@ -1,0 +1,48 @@
+name: Company Logos
+
+# Finds each tracked company's own logo on its official website and keeps a
+# small copy in logos.json (company_logos.py). Separate from Check Jobs on
+# purpose: it never delays a scan or an email, and a failure here changes
+# nothing else. Runs when companies.json changes (a company added or edited
+# in the app), once a day for earlier misses, and on demand.
+on:
+  push:
+    branches: [main]
+    paths: [companies.json]
+  schedule:
+    - cron: "40 2 * * *"      # daily, 08:10 IST
+  workflow_dispatch:
+
+# one logo run at a time; its own group, so it never cancels a queued scan
+concurrency:
+  group: company-logos
+  cancel-in-progress: false
+
+jobs:
+  logos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install "httpx>=0.27.0"
+
+      - name: Find company logos
+        env:
+          PUBLISH_BRANCH: ${{ github.ref_name }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          python company_logos.py --publish

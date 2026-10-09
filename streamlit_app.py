@@ -60,6 +60,7 @@ from config_store import (
 from notifier import category_label, friendly_reason, safe_url
 from identity import ats_job_id
 import brand_logos
+import company_logos
 import firebase_auth
 import job_filters
 import snapshot_cache
@@ -1492,9 +1493,13 @@ def _initial(name: str) -> str:
     return escape(brand_logos.initials(name)) or "•"
 
 
-# company tints: well-separated hues, assigned in tracking order so every
-# tracked company gets its own; anything else falls back to a name hash
-_HUES = (250, 175, 25, 320, 205, 140, 285, 0, 55, 230)
+# company logos found on each company's own website (logos.json, written by
+# the Company Logos workflow): {lowercased company name: entry}, filled once
+# the data has loaded. The logos a page draws are collected in _USED_LOGOS
+# and sent as ONE small style block at the end of the page (each image once,
+# however many cards show it).
+_FOUND_LOGOS: dict[str, dict] = {}
+_USED_LOGOS: dict[str, dict] = {}
 
 
 def _avatar(name: str, size: str = "", person: bool = False) -> str:
@@ -1507,10 +1512,12 @@ def _avatar(name: str, size: str = "", person: bool = False) -> str:
     if brand:
         return (f'<div class="{cls} co-mark" style="--tile:{brand_logos.brand_tile(brand)}" aria-hidden="true">'
                 f'<img src="{brand_logos.brand_uri(brand)}" alt=""></div>')
-    key = (name or "").strip().lower()
-    order = [(c.get("name") or "").strip().lower() for c in companies]
-    idx = order.index(key) if key in order else int(hashlib.sha1(key.encode("utf-8")).hexdigest()[:4], 16)
-    hue = _HUES[idx % len(_HUES)]
+    found = None if person else _FOUND_LOGOS.get((name or "").strip().lower())
+    if found:
+        key = "co-l-" + hashlib.sha1(found["web"]["data"].encode("ascii")).hexdigest()[:12]
+        _USED_LOGOS[key] = found
+        return f'<div class="{cls} co-mark {key}" style="--tile:#ffffff" aria-hidden="true"></div>'
+    hue = brand_logos.tile_hue(name, [c.get("name") for c in companies])
     text = _initial(name)
     return (f'<div class="{cls}{" ini2" if len(text) == 2 else ""}" style="--h:{hue}" aria-hidden="true">'
             f'{text}</div>')
@@ -1646,7 +1653,7 @@ def _refresh_data() -> None:
         _shared_data().refresh_now()
 
 
-_SHARED_FILES = ["companies.json", "settings.json", "seen_jobs.json"]
+_SHARED_FILES = ["companies.json", "settings.json", "seen_jobs.json", "logos.json"]
 
 
 @st.cache_resource(show_spinner=False)
@@ -2579,6 +2586,9 @@ for _i, _c in enumerate(c for c in _load_synced("companies.json", []) if isinsta
         _c["id"] = f"_row{_i}"
     companies.append(_c)
 settings: dict = _load_synced("settings.json", {"recipient_email": ""})
+_logo_entries = company_logos.entries(_load_synced("logos.json", {}))
+_FOUND_LOGOS = {(c.get("name") or "").strip().lower(): _logo_entries[c["id"]]
+                for c in companies if c.get("id") in _logo_entries and (c.get("name") or "").strip()}
 # seen_jobs.json is also the scraper's dedup history: jobs are dismissed
 # (hidden), never deleted, or the scraper would email them again
 all_records: list[dict] = []
@@ -4631,6 +4641,14 @@ if st.session_state.dark_mode:
 if dict(st.query_params) != want:
     st.query_params.from_dict(want)
 st.session_state._url_written = want   # a later mismatch means browser Back/Forward
+
+# ── the company logos this page drew (each image sent once) ──────────────────
+if _USED_LOGOS:
+    st.html("<style>" + "".join(
+        # 62% of the tile along the logo's longer side, as the drawn marks
+        f'.logo.co-mark.{k} {{ background: url("{company_logos.web_uri(e)}") center / '
+        f'{"62% auto" if (e["web"].get("w") or 1) >= (e["web"].get("h") or 1) else "auto 62%"} no-repeat, var(--tile, #fff); }}'
+        for k, e in _USED_LOGOS.items()) + "</style>")
 
 # ── toast ─────────────────────────────────────────────────────────────────────
 # Shown once and faded out with CSS; a sleep()+rerun would freeze the app.

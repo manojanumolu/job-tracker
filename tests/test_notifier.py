@@ -215,6 +215,9 @@ def test_mime_message_has_plain_and_html_parts(monkeypatch):
     monkeypatch.setenv("GMAIL_ADDRESS", "bot@example.com")
     monkeypatch.setenv("GMAIL_APP_PASSWORD", "x")
     monkeypatch.setattr(notifier.smtplib, "SMTP_SSL", FakeSMTP)
+    # no company logos here (with logos the message is multipart/related:
+    # see test_company_logos.py)
+    monkeypatch.setattr(notifier, "email_logos", lambda jobs: ({}, []))
     notifier.send_alerts([_job(), _job(title="Trainee", url="https://e.example/2")], "me@example.com")
 
     msg = message_from_string(sent["raw"])

@@ -161,5 +161,20 @@ def initials(name: object) -> str:
     return w[0].upper() + (w[1:2].lower() if len(w) > 1 else "")
 
 
+# initials tints: well-separated hues, assigned in tracking order so every
+# tracked company gets its own; anything else falls back to a name hash
+TILE_HUES = (250, 175, 25, 320, 205, 140, 285, 0, 55, 230)
+
+
+def tile_hue(name: object, tracked_names=()) -> int:
+    """The initials tile's hue for a company — the same in the app and in
+    emails: its place in the tracked list, else a stable hash of its name."""
+    import hashlib
+    key = (name if isinstance(name, str) else "").strip().lower()
+    order = [(n or "").strip().lower() for n in tracked_names]
+    idx = order.index(key) if key in order else int(hashlib.sha1(key.encode("utf-8")).hexdigest()[:4], 16)
+    return TILE_HUES[idx % len(TILE_HUES)]
+
+
 _STOPWORDS = {"the", "of", "and", "inc", "ltd", "llc", "llp", "plc", "pvt", "private", "limited", "co", "corp",
               "corporation", "company", "group", "india"}
