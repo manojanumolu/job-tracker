@@ -720,6 +720,25 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 .logo.co-mark { background: var(--tile, #fff); padding: 0; box-shadow: inset 0 0 0 1px rgba(15,23,42,.10), var(--hi); }
 .logo.co-mark img { width: 62%; height: 62%; margin: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none;
   object-fit: contain; display: block; pointer-events: none; user-select: none; }
+/* Account → Profile avatar: glossy round tiles; the chosen one is ringed and ticked */
+.av-pick-head { margin-top: 14px; } .av-pick-head b { display: block; font-size: 14px; line-height: 20px; font-weight: 700; color: var(--text); }
+.av-pick-head span { display: block; font-size: 13px; line-height: 19px; color: var(--muted); margin-top: 2px; }
+/* (.st-key-av_picker IS the vertical block in Streamlit 1.65: lay its children out as a wrapping row) */
+.st-key-av_picker { flex-direction: row !important; flex-wrap: wrap !important; gap: 10px !important; margin-top: 6px; }
+.st-key-av_picker > * { width: auto !important; flex: 0 0 auto !important; }
+[class*="st-key-av_pick_"] button { position: relative; width: 92px !important; min-height: 98px !important; padding: 12px 6px 10px !important;
+  flex-direction: column !important; justify-content: flex-start !important; gap: 8px !important; border-radius: 16px !important;
+  background: var(--btn2-grad) !important; border: 1px solid var(--border) !important; box-shadow: var(--hi), var(--shadow) !important;
+  transition: transform var(--fast) var(--ease), border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease) !important; }
+[class*="st-key-av_pick_"] button::before { content: ""; width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center;
+  font-family: var(--font); font-size: 18px; font-weight: 800; color: #fff;
+  background: var(--av-img, none) center / 60% no-repeat, var(--av-tile, #fff);
+  box-shadow: inset 0 0 0 1px rgba(15,23,42,.12), inset 0 1px 0 rgba(255,255,255,.4), 0 6px 14px -8px rgba(15,23,42,.5);
+  transition: transform var(--fast) var(--ease); }
+[class*="st-key-av_pick_"] button p { font-size: 12px !important; line-height: 16px !important; font-weight: 600 !important; color: var(--muted) !important; }
+[class*="st-key-av_pick_"] button:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)) !important;
+  box-shadow: var(--hi), var(--btn2-shadow-hover), 0 14px 26px -18px var(--accent) !important; }
+[class*="st-key-av_pick_"] button:hover::before { transform: scale(1.06); }
 .name-msg { display: flex; gap: 8px; align-items: center; font-size: 13.5px; line-height: 1.45; margin-top: 4px;
   color: var(--green); } .name-msg.err { color: var(--red); }
 [class*="st-key-jr_"]:hover .logo, [class*="st-key-cr_"]:hover .logo { transform: scale(1.05);
@@ -1204,6 +1223,11 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .acct-av { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; font-size: 16px; font-weight: 800;
   color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2));
   box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 6px 14px -6px var(--accent); }
+/* the person's picked avatar (a brand mark on its tile) and the Account page size */
+.acct-av.av-mark { box-shadow: inset 0 0 0 1px rgba(15,23,42,.12), inset 0 1px 0 rgba(255,255,255,.4), 0 6px 14px -8px rgba(15,23,42,.5); }
+.acct-av.av-mark img { width: 60%; height: 60%; margin: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none;
+  object-fit: contain; display: block; pointer-events: none; user-select: none; }
+.acct-av-lg { width: 52px; height: 52px; font-size: 20px; }
 .acct-head .who { min-width: 0; flex: 1; }
 .acct-head .nm { font-size: 14.5px; line-height: 20px; font-weight: 700; letter-spacing: -.01em; color: var(--text); }
 .acct-head .em { font-size: 12.5px; line-height: 18px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2485,6 +2509,8 @@ if USER is not None:
 # own profile as preferred_name), else the sign-in provider's name
 # as before. Display only: identity, role and data stay keyed by the UID.
 CHOSEN_NAME = user_store.display_name_from(ME["profile"]) if ME is not None else ""
+# ...and the profile avatar they picked ("" = their initial)
+CHOSEN_AVATAR = user_store.avatar_from(ME["profile"]) if ME is not None else ""
 
 # Roles, decided on the server once per run (the real checks still happen in
 # every protected operation). A member never gets the admin's dashboard; the
@@ -2526,6 +2552,20 @@ def first_name(account: dict) -> str:
 # the signed-in account as it is SHOWN (with the chosen name); ACCOUNT itself
 # — what sign-in and the role checks use — is never changed
 SHOWN_ACCOUNT = {**ACCOUNT, "name": CHOSEN_NAME} if ACCOUNT and CHOSEN_NAME else ACCOUNT
+
+
+def _me_initial() -> str:
+    return next((ch for ch in first_name(SHOWN_ACCOUNT) if ch.isalnum()), "?").upper() if ACCOUNT else "?"
+
+
+def _me_avatar(cls: str = "acct-av") -> str:
+    """The signed-in person's avatar: the mark they picked on the Account
+    page, else their initial. It is about the viewer — never the employer
+    of a job on screen (those use _avatar)."""
+    if CHOSEN_AVATAR:
+        return (f'<span class="{cls} av-mark" style="background:{brand_logos.brand_tile(CHOSEN_AVATAR)}" '
+                f'aria-hidden="true"><img src="{brand_logos.brand_uri(CHOSEN_AVATAR)}" alt=""></span>')
+    return f'<span class="{cls}" aria-hidden="true">{escape(_me_initial())}</span>'
 
 
 # ── data ──────────────────────────────────────────────────────────────────────
@@ -2832,15 +2872,20 @@ def account_menu() -> None:
     Management group, never in this menu."""
     name = account_label(SHOWN_ACCOUNT)
     first = first_name(SHOWN_ACCOUNT)
-    initial = next((ch for ch in first if ch.isalnum()), "?").upper()
     label = re.sub(r"([\\`*_{}\[\]()#+!|~<>-])", r"\\\1", first) + (" **ADMIN**" if IS_ADMIN else "")
-    st.html(f'<style>[class*="st-key-acct_menu"] [data-testid="stPopoverButton"]::before {{ content: "{initial}"; }}</style>')
+    trigger = '[class*="st-key-acct_menu"] [data-testid="stPopoverButton"]::before'
+    if CHOSEN_AVATAR:                 # the picked mark on its tile, as in the menu and on the Account page
+        st.html(f'<style>{trigger} {{ content: ""; background: url("{brand_logos.brand_uri(CHOSEN_AVATAR)}") center / 60% '
+                f'no-repeat, {brand_logos.brand_tile(CHOSEN_AVATAR)}; box-shadow: inset 0 0 0 1px rgba(15,23,42,.12), '
+                f'inset 0 1px 0 rgba(255,255,255,.4), 0 4px 10px -4px rgba(15,23,42,.45); }}</style>')
+    else:
+        st.html(f'<style>{trigger} {{ content: "{_me_initial()}"; }}</style>')
     with st.container(key="acct_bar"):
         # a new key after an item is chosen: the next page draws the menu closed
         # (no extra round trip — the popover's own state isn't tracked)
         with st.popover(label, key=f"acct_menu_{st.session_state.get('_acct_menu_n', 0)}"):
             badge_html = '<span class="role admin">Admin</span>' if IS_ADMIN else ""
-            st.html(f'<div class="acct-head"><span class="acct-av" aria-hidden="true">{escape(initial)}</span>'
+            st.html(f'<div class="acct-head">{_me_avatar()}'
                     f'<div class="who"><div class="nm">{escape(name)}</div>'
                     f'<div class="em">{escape(ACCOUNT.get("email") or "")}</div></div>{badge_html}</div>')
             items = [("settings", "Account", ":material/account_circle:", {})]
@@ -3998,12 +4043,64 @@ def display_name_editor() -> None:
                 f'{_ms("check_circle" if kind == "ok" else "error", "s20")}<div>{escape(text)}</div></div>')
 
 
+def _save_avatar(choice: str) -> None:
+    """Save the avatar picked on the Account page — to the signed-in
+    person's own profile (USER is bound to the server-side Firebase UID);
+    nothing else changes."""
+    try:
+        saved = USER.set_avatar(choice)
+    except user_store.InvalidInput as e:
+        st.session_state._avatar_msg = ("err", str(e))
+        return
+    except user_store.UserStoreError:
+        st.session_state._avatar_msg = ("err", "Couldn't save your avatar right now — try again in a moment.")
+        return
+    finally:
+        personal_changed()
+    shown = brand_logos.BRAND_NAMES.get(saved, "your initial")
+    st.session_state._avatar_msg = ("ok", f"Avatar saved — you'll appear with {shown}.")
+    toast("Profile avatar saved", "success")
+
+
+def avatar_picker() -> None:
+    """Pick a profile avatar, so several accounts (even with the same name)
+    are told apart at a glance. Saved at once; the chosen tile is ringed."""
+    st.html('<div class="av-pick-head"><b>Profile avatar</b><span>Tell your accounts apart at a glance — shown in the '
+            'header, the account menu and here. Your sign-in and data stay the same.</span></div>')
+    choices = ("",) + user_store.AVATAR_CHOICES
+    rules = []
+    for key in choices:
+        sel = f".st-key-av_pick_{key or 'initials'} button"
+        if key:
+            rules.append(f'{sel} {{ --av-img: url("{brand_logos.brand_uri(key)}"); --av-tile: {brand_logos.brand_tile(key)}; }}')
+        else:
+            rules.append(f'{sel} {{ --av-tile: linear-gradient(135deg, var(--accent), var(--accent-2)); }}'
+                         f'{sel}::before {{ content: "{_me_initial()}"; }}')
+    on = f".st-key-av_pick_{CHOSEN_AVATAR or 'initials'} button"
+    rules.append(f"{on} {{ border-color: var(--accent) !important; background: var(--accent-soft) !important;"
+                 " box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent), var(--hi) !important; }"
+                 f"{on} p {{ color: var(--accent-text) !important; font-weight: 700 !important; }}"
+                 f'{on}::after {{ content: "✓"; position: absolute; top: 6px; right: 6px; width: 18px; height: 18px;'
+                 " border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #fff;"
+                 " background: var(--accent); box-shadow: 0 2px 6px -2px var(--accent); }")
+    st.html(f"<style>{''.join(rules)}</style>")
+    with st.container(key="av_picker"):
+        for key in choices:
+            st.button(brand_logos.BRAND_NAMES.get(key, "Initials"), key=f"av_pick_{key or 'initials'}",
+                      on_click=_save_avatar, args=(key,))
+    msg = st.session_state.pop("_avatar_msg", None)
+    if msg:
+        kind, text = msg
+        st.html(f'<div class="name-msg {kind}" role="{"status" if kind == "ok" else "alert"}">'
+                f'{_ms("check_circle" if kind == "ok" else "error", "s20")}<div>{escape(text)}</div></div>')
+
+
 def account_card() -> None:
     admin = is_owner()
     method = {"google.com": "Google", "password": "email &amp; password",
               "owner": "the owner password"}.get(ACCOUNT.get("provider"), "Firebase")
     with st.container(key="set_account"):
-        st.html(f'<div class="set-head">{_avatar(account_label(SHOWN_ACCOUNT), person=True)}<div style="min-width:0;">'
+        st.html(f'<div class="set-head">{_me_avatar("acct-av acct-av-lg")}<div style="min-width:0;">'
                 '<div class="eyebrow">Account</div>'
                 f'<h2 class="section-title">{escape(account_label(SHOWN_ACCOUNT))}</h2>'
                 f'<p class="section-sub">Signed in with {method}'
@@ -4040,6 +4137,7 @@ def account_card() -> None:
         st.html('<dl class="kv">' + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in rows) + "</dl>")
         if USER is not None:
             display_name_editor()
+            avatar_picker()
         # Until JT_ADMIN_EMAILS exists the legacy owner password still unlocks
         # changes — tucked away here, never a second login screen.
         if owner_password_enabled():

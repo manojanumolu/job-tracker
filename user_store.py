@@ -6,7 +6,8 @@ Personal (here), one tree per person:
 
   users/{uid}                    profile: email, display_name (from the sign-in
                                  provider), preferred_name (chosen by the
-                                 person), created_at,
+                                 person), avatar (chosen by the person),
+                                 created_at,
                                  last_login_at, onboarding, notifications
                                  (incl. the email tailoring), preferences,
                                  watch_all
@@ -67,6 +68,9 @@ ONBOARDING_PENDING, ONBOARDING_COMPLETE = "pending", "complete"
 DELIVERY_CLAIMED, DELIVERY_SENT, DELIVERY_PENDING = "claimed", "sent", "pending"
 MAX_PREF_ITEMS, MAX_PREF_LEN = 50, 80
 DISPLAY_NAME_MAX = 60                                      # characters, after trimming
+# profile avatars a person can pick: the company marks in brand_logos.py
+# ("" = their initials, the default)
+AVATAR_CHOICES = ("google", "amazon", "microsoft", "apple", "meta", "nvidia", "ibm", "intel", "accenture", "deloitte")
 SERVICE_ACCOUNT_SECTION = "firebase_service_account"     # [firebase_service_account] in st.secrets
 SERVICE_ACCOUNT_KEY = "FIREBASE_SERVICE_ACCOUNT"          # or the JSON as one string
 APP_NAME = "job-tracker-user-data"
@@ -349,6 +353,18 @@ class UserData:
         return clean
 
     @_guard
+    def set_avatar(self, choice: object) -> str:
+        """The profile avatar this person picked (users/{uid}.avatar): one
+        of AVATAR_CHOICES, or "" for their initials. Display only — it
+        identifies nothing and touches nothing else. Returns what was saved."""
+        if choice in (None, ""):
+            choice = ""
+        elif choice not in AVATAR_CHOICES:
+            raise InvalidInput("That avatar isn't available.")
+        self._backend.set(self._root, {"avatar": choice}, merge=True)
+        return choice
+
+    @_guard
     def complete_onboarding(self, now: float | None = None) -> None:
         self._backend.set(self._root, {"onboarding": {"status": ONBOARDING_COMPLETE,
                                                       "completed_at": _now_iso(now)}}, merge=True)
@@ -544,6 +560,13 @@ def display_name_from(profile: dict) -> str:
         return clean_display_name(prof.get("preferred_name"))
     except InvalidInput:
         return ""
+
+
+def avatar_from(profile: dict) -> str:
+    """The avatar a person picked, or "" (their initials) when they haven't
+    picked one or the saved value isn't a current choice."""
+    prof = profile if isinstance(profile, dict) else {}
+    return prof.get("avatar") if prof.get("avatar") in AVATAR_CHOICES else ""
 
 
 def notification_settings_from(profile: dict) -> dict:

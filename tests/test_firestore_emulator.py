@@ -123,6 +123,23 @@ def test_a_chosen_display_name_is_saved_to_its_own_profile_only(emu):
     assert a.profile()["preferred_name"] == "Ada Lovelace"
 
 
+def test_a_profile_avatar_is_saved_to_its_own_profile_only(emu):
+    a, b = emu.for_uid(A), emu.for_uid(B)
+    a.ensure_profile("a@example.org", "Manoj", True)
+    b.ensure_profile("b@example.org", "Manoj", True)
+    a.set_display_name("Manoj")
+    b.set_display_name("Manoj")                                                       # same name, separate people
+    b.set_avatar("amazon")
+    a_before, b_before = a.profile(), b.profile()
+    assert a.set_avatar("google") == "google"
+    assert a.profile() == {**a_before, "avatar": "google"} and b.profile() == b_before
+    prof, _ = emu.for_uid(A).ensure_profile("a@example.org", "Manoj", True)            # signing in again
+    assert user_store.avatar_from(prof) == "google" and user_store.avatar_from(b.profile()) == "amazon"
+    with pytest.raises(user_store.InvalidInput):
+        a.set_avatar("metlife")
+    assert user_store.avatar_from(a.profile()) == "google"
+
+
 def test_concurrent_first_sign_ins_make_one_profile(emu):
     results = []
     threads = [threading.Thread(target=lambda: results.append(emu.for_uid(A).ensure_profile("a@example.org")[1]))
