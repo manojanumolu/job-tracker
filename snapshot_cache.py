@@ -72,6 +72,11 @@ class SnapshotCache:
         with self._lock:
             return dict(self._data or {})
 
+    def has_data(self) -> bool:
+        """True once a first read finished (a get() then returns at once)."""
+        with self._lock:
+            return self._data is not None
+
     def refresh_now(self) -> dict:
         """Read GitHub again and wait for it (an explicit Refresh)."""
         self._load()

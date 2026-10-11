@@ -25,9 +25,7 @@ def _reload_changed_local_modules() -> None:
     import sys
 
     base = os.path.dirname(os.path.abspath(__file__))
-    order = ["identity", "locations", "job_classifier", "sources", "scraper", "config_store", "repo_sync",
-             "access", "firebase_auth", "job_filters", "user_store", "snapshot_cache", "notifier", "alerts"]
-    for name in order:
+    for name in _LOCAL_MODULES:
         mod = sys.modules.get(name)
         path = getattr(mod, "__file__", None) if mod else None
         if not path or os.path.dirname(os.path.abspath(path)) != base:
@@ -42,10 +40,34 @@ def _reload_changed_local_modules() -> None:
                 mod = importlib.reload(mod)
             except Exception as e:      # keep the old module rather than break the page
                 logging.getLogger("streamlit_app").warning("reload of %s failed: %s", name, type(e).__name__)
+                mod._jt_reload_failed = True          # never stamped as current: retried on the next run
                 continue
             mod._jt_loaded_mtime = mtime
 
 
+def _stamp_fresh_local_modules() -> None:
+    """End of a run: every local module still without a stamp was imported
+    during THIS run (the check above stamps or reloads all the others at the
+    start), so it is current. Stamp it — otherwise the next click reloaded
+    it for nothing: about ten modules on a new server process's second run,
+    and scraper.py (0.35 s) again right after the first Monitoring visit."""
+    import sys
+
+    base = os.path.dirname(os.path.abspath(__file__))
+    for name in _LOCAL_MODULES:
+        mod = sys.modules.get(name)
+        path = getattr(mod, "__file__", None) if mod else None
+        if (not path or os.path.dirname(os.path.abspath(path)) != base
+                or getattr(mod, "_jt_loaded_mtime", None) is not None or getattr(mod, "_jt_reload_failed", False)):
+            continue
+        try:
+            mod._jt_loaded_mtime = os.path.getmtime(path)
+        except OSError:
+            pass
+
+
+_LOCAL_MODULES = ["identity", "locations", "job_classifier", "sources", "scraper", "config_store", "repo_sync",
+                  "access", "firebase_auth", "job_filters", "user_store", "snapshot_cache", "notifier", "alerts"]
 _reload_changed_local_modules()
 
 from config_store import (
@@ -384,6 +406,12 @@ LIGHT = {
     "oc-bar": "#e9eaf3", "oc-bar-strong": "#d6d8e8",
     "oc-gloss": "linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,0) 48%)",
     "oc-shadow-hover": "0 30px 56px -22px rgba(36,30,110,.42), 0 4px 12px -4px rgba(16,24,40,.10)",
+    # the account avatar: a domed tile, a gap ring and a thin accent ring
+    "pill-gloss": "rgba(255,255,255,.7)", "av-ring": "rgba(91,76,245,.38)",
+    "av-gloss": "inset 0 1px 1px rgba(255,255,255,.65), inset 0 -3px 6px rgba(15,23,42,.07)",
+    "av-drop": "0 6px 12px -6px rgba(36,30,110,.45)",
+    # interactive surfaces: a lit hover wash, and the busy bar
+    "hover-wash": "linear-gradient(180deg, rgba(255,255,255,.9), rgba(239,237,255,.75))",
 }
 DARK = {
     "bg": "#0b1020", "surface": "#121833", "surface-2": "#0f1530", "raised": "#171e3d", "hover": "#1b2347",
@@ -411,6 +439,10 @@ DARK = {
     "oc-bar": "rgba(255,255,255,.08)", "oc-bar-strong": "rgba(255,255,255,.16)",
     "oc-gloss": "linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,0) 48%)",
     "oc-shadow-hover": "0 32px 60px -24px rgba(0,0,0,.9), 0 0 0 1px rgba(124,108,255,.22)",
+    "pill-gloss": "rgba(255,255,255,.06)", "av-ring": "rgba(160,150,255,.55)",
+    "av-gloss": "inset 0 1px 1px rgba(255,255,255,.45), inset 0 -3px 6px rgba(0,0,0,.14)",
+    "av-drop": "0 6px 14px -6px rgba(0,0,0,.7)",
+    "hover-wash": "linear-gradient(180deg, rgba(124,108,255,.16), rgba(124,108,255,.08))",
 }
 TH = DARK if st.session_state.dark_mode else LIGHT
 _root_vars = ":root {" + "".join(f"--{k}:{v};" for k, v in TH.items()) + "}"
@@ -541,7 +573,6 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 .chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--text-2); white-space: nowrap;
   background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--surface-2) 85%, transparent)); border: 1px solid var(--border);
   box-shadow: var(--badge-hi), 0 1px 2px rgba(16,24,40,.05); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition: border-color var(--fast), box-shadow var(--normal) var(--ease); }
-.chip:hover { border-color: var(--border-strong); box-shadow: var(--badge-hi), 0 4px 10px -6px rgba(16,24,40,.18); }
 .chip .ms { font-size: 16px; color: var(--muted); }
 .dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; flex-shrink: 0; position: relative; }
 .dot.healthy { background: var(--green); } .dot.delayed { background: var(--amber); } .dot.failing { background: var(--red); }
@@ -653,14 +684,10 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
   box-shadow: var(--hi), var(--shadow); transition: transform var(--normal) var(--ease), box-shadow var(--normal) var(--ease), border-color var(--normal) var(--ease); overflow: hidden; }
 .stat::before { content: ""; position: absolute; left: 16px; right: 40%; top: 0; height: 2px; border-radius: 0 0 2px 2px;
   background: linear-gradient(90deg, var(--tint, var(--accent)), transparent); opacity: .65; transition: opacity var(--normal) var(--ease); }
-.stat:hover { transform: translateY(-2px); box-shadow: var(--hi), var(--shadow-lg); border-color: color-mix(in srgb, var(--tint, var(--accent)) 30%, var(--border)); }
-.stat:hover::before { opacity: 1; }
 .stat .ic { width: 36px; height: 36px; border-radius: 11px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;
   color: var(--tint, var(--accent)); border: 1px solid color-mix(in srgb, var(--tint, var(--accent)) 18%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, var(--tint, var(--accent)) 9%, transparent), color-mix(in srgb, var(--tint, var(--accent)) 16%, transparent));
   box-shadow: var(--badge-hi); transition: transform var(--normal) var(--ease), box-shadow var(--normal) var(--ease); }
-.stat:hover .ic { transform: translateY(-1px) scale(1.05);
-  box-shadow: var(--badge-hi), 0 6px 16px -6px color-mix(in srgb, var(--tint, var(--accent)) 60%, transparent); }
 .stat.t-green { --tint: var(--green); } .stat.t-teal { --tint: var(--accent-2); } .stat.t-amber { --tint: var(--amber); } .stat.t-red { --tint: var(--red); } .stat.t-gray { --tint: var(--gray); }
 .stat .k { font-size: 13px; line-height: 18px; color: var(--muted); font-weight: 500; display: flex; align-items: center; gap: 6px; }
 .stat .v { font-size: 30px; line-height: 36px; font-weight: 700; letter-spacing: -0.03em; color: var(--text); margin-top: 4px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
@@ -701,12 +728,12 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
   background: linear-gradient(180deg, var(--accent), var(--accent-2)); opacity: 0; transform: scaleY(.4); transition: opacity var(--normal) var(--ease), transform var(--normal) var(--ease); }
 [class*="st-key-jr_"]:hover, [class*="st-key-jr_"]:focus-within { transform: translateY(-2px); box-shadow: var(--hi), var(--shadow-lg) !important; border-color: color-mix(in srgb, var(--accent) 30%, var(--border)) !important; }
 [class*="st-key-jr_"]:hover::before, [class*="st-key-jr_"]:focus-within::before { opacity: 1; transform: none; }
-[class*="st-key-jr_"] > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"],
-[class*="st-key-jr_"] > [data-testid="stHorizontalBlock"] { gap: 16px !important; align-items: center !important; flex-wrap: nowrap !important; }
-[class*="st-key-jr_"] [data-testid="stColumn"] { width: auto !important; min-width: 0 !important; flex: 0 0 auto !important; }
-[class*="st-key-jr_"] [data-testid="stColumn"]:first-child { flex: 1 1 auto !important; }
-[class*="st-key-jr_"] [data-testid="stColumn"]:last-child [data-testid="stVerticalBlock"] { flex-direction: row !important; gap: 8px !important; align-items: center; flex-wrap: nowrap; }
-[class*="st-key-jr_"] [data-testid="stColumn"]:last-child [data-testid="stElementContainer"] { width: auto !important; flex: 0 0 auto; }
+/* the card IS its vertical block (Streamlit 1.65): text and actions side by side */
+[class*="st-key-jr_"] { flex-direction: row !important; align-items: center !important; flex-wrap: nowrap !important; column-gap: 16px !important; }
+[class*="st-key-jr_"] > [data-testid="stElementContainer"] { flex: 1 1 auto !important; width: auto !important; min-width: 0 !important; }
+[class*="st-key-jr_"] > [data-testid="stLayoutWrapper"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
+[class*="st-key-ja_"] { flex-direction: row !important; gap: 8px !important; align-items: center !important; flex-wrap: nowrap !important; width: auto !important; }
+[class*="st-key-ja_"] > [data-testid="stElementContainer"] { width: auto !important; flex: 0 0 auto !important; }
 .job { display: flex; gap: 16px; min-width: 0; align-items: flex-start; }
 .logo { --h: 245; width: 44px; height: 44px; border-radius: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   font-size: 17px; font-weight: 800; letter-spacing: -0.02em;
@@ -769,12 +796,12 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 .st-key-list_foot_h [data-testid="stColumn"]:first-child, .st-key-list_foot_j [data-testid="stColumn"]:first-child { flex: 1 1 auto !important; }
 /* a narrow list (company page, tablet, phone): actions move under the text */
 @container (max-width: 780px) {
-  [class*="st-key-jr_"] > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], [class*="st-key-jr_"] > [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 14px !important; }
-  [class*="st-key-jr_"] [data-testid="stColumn"]:first-child { flex: 1 1 100% !important; }
-  [class*="st-key-jr_"] [data-testid="stColumn"]:last-child { flex: 1 1 100% !important; padding-left: 60px; }
+  [class*="st-key-jr_"] { flex-wrap: wrap !important; row-gap: 14px !important; }
+  [class*="st-key-jr_"] > [data-testid="stElementContainer"] { flex: 1 1 100% !important; }
+  [class*="st-key-jr_"] > [data-testid="stLayoutWrapper"] { flex: 1 1 100% !important; padding-left: 60px; }
 }
 @container (max-width: 420px) {
-  [class*="st-key-jr_"] [data-testid="stColumn"]:last-child { padding-left: 0; }
+  [class*="st-key-jr_"] > [data-testid="stLayoutWrapper"] { padding-left: 0; }
   .job { gap: 12px; } .job .logo { width: 38px; height: 38px; font-size: 15px; border-radius: 11px; }
 }
 
@@ -895,12 +922,11 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 [class*="st-key-cr_"] { padding: 18px !important; gap: 0 !important; height: 100%;
   transition: transform var(--normal) var(--ease), box-shadow var(--normal) var(--ease), border-color var(--normal) var(--ease); }
 [class*="st-key-cr_"]:hover, [class*="st-key-cr_"]:focus-within { transform: translateY(-2px); box-shadow: var(--hi), var(--shadow-lg) !important; border-color: color-mix(in srgb, var(--accent) 30%, var(--border)) !important; }
-[class*="st-key-cr_"] > [data-testid="stLayoutWrapper"], [class*="st-key-cr_"] > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] { height: 100%; }
-[class*="st-key-cr_"] > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"],
-[class*="st-key-cr_"] > [data-testid="stHorizontalBlock"] { gap: 14px !important; flex-direction: column !important; align-items: stretch !important; flex-wrap: nowrap !important; }
-[class*="st-key-cr_"] [data-testid="stColumn"] { width: 100% !important; min-width: 0 !important; flex: 0 0 auto !important; }
-[class*="st-key-cr_"] [data-testid="stColumn"]:first-child { flex: 1 1 auto !important; }
-[class*="st-key-cr_"] [data-testid="stColumn"]:last-child [data-testid^="stBaseButton"] { width: 100%; }
+/* the card's text grows; its button sits at the bottom, full width */
+[class*="st-key-cr_"] { row-gap: 14px !important; justify-content: space-between; }
+[class*="st-key-cr_"] > [data-testid="stElementContainer"] { width: 100% !important; min-width: 0 !important; }
+[class*="st-key-cr_"] > [data-testid="stElementContainer"]:first-child { flex: 1 1 auto !important; }
+[class*="st-key-cr_"] [data-testid^="stBaseButton"] { width: 100%; }
 .co-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name status" "stats stats" "site site"; gap: 14px 12px; align-items: start; min-width: 0; }
 .co-row > :nth-child(1) { grid-area: name; } .co-row > :nth-child(2) { grid-area: site; } .co-row > :nth-child(3) { grid-area: status; }
 .co-stats { grid-area: stats; display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface-2); }
@@ -935,7 +961,6 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 .mon tbody tr:has(.pill.failing)::before { background: var(--red); }
 .mon tbody tr:has(.pill.delayed)::before { background: var(--amber); }
 .mon tbody tr:has(.pill.pending)::before, .mon tbody tr:has(.pill.checking)::before { background: var(--gray); }
-.mon tbody tr:hover { transform: translateY(-2px); box-shadow: var(--hi), var(--shadow-lg) !important; }
 .mon td { display: block; padding: 0; border: none; color: var(--text); min-width: 0; font-weight: 600; }
 .mon td.c { grid-column: 1 / 3; font-weight: 700; font-size: 15.5px; letter-spacing: -0.015em; }
 .mon td[data-l="Status"] { grid-column: 3; justify-self: end; }
@@ -1014,7 +1039,6 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 [data-testid="stSidebarUserContent"] { padding: 22px 14px 16px !important; margin: 0 !important; width: 100% !important; min-height: 100vh; display: flex; flex-direction: column; }
 [data-testid="stSidebarUserContent"] > div { flex: 1 1 auto; display: flex; flex-direction: column; }
 [data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] { flex: 1 1 auto; }
-[data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-side_foot_wrap) { margin-top: auto; }
 [data-testid="stSidebarUserContent"] [data-testid="stVerticalBlock"] { gap: 3px !important; }
 .brand { display: flex; align-items: center; gap: 12px; padding: 0 6px 22px; }
 .brand .mark { position: relative; flex-shrink: 0; }
@@ -1039,23 +1063,6 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 /* the ✕ / ↺ buttons on job rows are icon-only; their label is for screen readers */
 [class*="st-key-dismiss_"] [data-testid="stMarkdownContainer"], [class*="st-key-restore_"] [data-testid="stMarkdownContainer"],
 [class*="st-key-dismiss_"] [data-testid="stMarkdownContainer"] p, [class*="st-key-restore_"] [data-testid="stMarkdownContainer"] p { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; clip-path: inset(50%) !important; white-space: nowrap !important; margin: -1px !important; padding: 0 !important; border: 0 !important; }
-/* application status, integrated into the rail: a quiet inset surface, not another card */
-.side-foot { margin-top: auto; padding: 12px 12px 11px; border-radius: 12px; border: 1px solid var(--border); position: relative; overflow: hidden;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 70%, transparent), color-mix(in srgb, var(--surface-2) 95%, transparent));
-  font-size: 12px; line-height: 17px; color: var(--muted); box-shadow: var(--hi); transition: border-color var(--normal) var(--ease); }
-.side-foot::before { content: ""; position: absolute; left: 12px; right: 12px; top: 0; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--tone, var(--green)) 50%, transparent), transparent); }
-.side-foot.failing { --tone: var(--red); } .side-foot.delayed { --tone: var(--amber); } .side-foot.pending, .side-foot.checking { --tone: var(--gray); }
-.side-foot .st { display: flex; align-items: center; gap: 9px; color: var(--text); font-weight: 700; font-size: 13px; }
-.side-acct { margin-top: 10px; padding: 10px 11px; border-radius: 12px; border: 1px solid var(--border); display: flex; align-items: center; gap: 9px; min-width: 0; }
-.side-acct .who { min-width: 0; flex: 1; }
-.side-acct .nm { font-size: 13px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.side-acct .em { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.side-acct .role { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 7px; border-radius: 999px;
-  color: var(--muted); background: var(--surface-2); flex: none; }
-.side-acct .role.admin { color: var(--accent-text); background: var(--accent-soft); }
-.side-foot .meta { margin-top: 7px; padding-left: 17px; display: flex; flex-direction: column; gap: 3px; }
-.side-foot .meta .txt { display: flex; align-items: center; gap: 6px; } .side-foot .meta .ms { color: var(--muted); opacity: .8; }
-.st-key-side_foot_wrap { margin-top: auto; padding-top: 16px; }
 
 /* mobile top nav (phones only) */
 .st-key-mnav { display: none !important; }
@@ -1071,7 +1078,6 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .how .ic, .set-head .ic:not(.red) { border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 60%, var(--surface)), var(--accent-soft)); }
 .how > div { transition: border-color var(--normal) var(--ease), background var(--normal) var(--ease); }
-.how > div:hover { border-color: color-mix(in srgb, var(--accent) 30%, var(--border-strong)); background: color-mix(in srgb, var(--surface) 85%, transparent); }
 
 /* ── footer ── */
 .app-foot { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 8px; }
@@ -1121,7 +1127,6 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   /* icon rail: labels are hidden visually but kept for screen readers */
   [class*="st-key-nav_"] p { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; clip-path: inset(50%) !important; white-space: nowrap !important; margin: -1px !important; padding: 0 !important; border: 0 !important; }
   [data-testid="stSidebarUserContent"] { padding: 18px 10px !important; }
-  .side-foot { padding: 12px 0; text-align: center; border: none; background: none; box-shadow: none; } .side-foot .txt, .side-foot .meta { display: none; } .side-foot::before { display: none; } .side-foot .st { justify-content: center; }
   .st-key-job_cols > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-job_cols > [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; }
   .st-key-job_cols [data-testid="stColumn"]:nth-child(n) { flex: 1 1 100% !important; width: 100% !important; }
   .how { grid-template-columns: minmax(0, 1fr); }
@@ -1192,19 +1197,29 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 }
 
 /* ── account menu, top right ── */
-.st-key-acct_bar { flex-direction: row !important; justify-content: flex-end; margin-bottom: -16px; position: relative; z-index: 6; }
+.st-key-acct_bar { flex-direction: row !important; justify-content: flex-end; margin-bottom: -8px; position: relative; z-index: 6; }
 .st-key-acct_bar > div { width: auto !important; flex: 0 0 auto !important; }
-/* the compact control: avatar · first name · ADMIN — a little larger, one glossy pill */
-[class*="st-key-acct_menu"] [data-testid="stPopoverButton"] { min-height: 48px !important; padding: 5px 14px 5px 5px !important; border-radius: 999px !important;
-  gap: 10px; background: var(--btn2-grad) !important; border: 1px solid var(--border) !important;
+/* the compact control: avatar · first name · ADMIN · chevron — one glossy pill.
+   The avatar is its own circle: a hairline-edged tile, a gap in the pill's
+   colour and a thin accent ring, clear of the pill's edge on every side. */
+[class*="st-key-acct_menu"] [data-testid="stPopoverButton"] { min-height: 50px !important; padding: 7px 14px 7px 9px !important; border-radius: 999px !important;
+  gap: 12px; border: 1px solid var(--border) !important;
+  background: linear-gradient(180deg, var(--pill-gloss), transparent 55%), var(--btn2-grad) !important;
   box-shadow: var(--hi), var(--shadow), 0 10px 24px -18px var(--accent) !important;
   transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease), transform var(--fast) var(--ease); }
-[class*="st-key-acct_menu"] [data-testid="stPopoverButton"]:hover { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)) !important;
-  box-shadow: var(--hi), var(--btn2-shadow-hover), 0 14px 28px -18px var(--accent) !important; transform: translateY(-1px); }
-[class*="st-key-acct_menu"] [data-testid="stPopoverButton"]::before { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
-  flex-shrink: 0; font-family: var(--font); font-weight: 800; font-size: 15px; color: #fff;
+[class*="st-key-acct_menu"] [data-testid="stPopoverButton"]:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)) !important;
+  box-shadow: var(--hi), var(--btn2-shadow-hover), 0 16px 30px -18px var(--accent) !important; transform: translateY(-1px); }
+[class*="st-key-acct_menu"] [data-testid="stPopoverButton"]:focus-visible { outline: 2px solid var(--accent) !important; outline-offset: 3px !important; }
+[class*="st-key-acct_menu"] [data-testid="stPopoverButton"][aria-expanded="true"] { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)) !important; }
+[class*="st-key-acct_menu"] [data-testid="stPopoverButton"]::before { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  flex-shrink: 0; box-sizing: border-box; font-family: var(--font); font-weight: 800; font-size: 14.5px; line-height: 1; color: #fff;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 4px 10px -4px var(--accent); }
+  box-shadow: var(--av-gloss), 0 0 0 2px var(--surface), 0 0 0 3.5px var(--av-ring), var(--av-drop); }
+/* the label: name, then the ADMIN badge, then a separate chevron that turns when open */
+[class*="st-key-acct_menu"] [data-testid="stPopoverButton"] > div { gap: 8px !important; align-items: center !important; }
+[class*="st-key-acct_menu"] [data-testid="stPopoverButton"] div[aria-hidden="true"] { margin-left: 2px; display: flex; align-items: center; }
+[class*="st-key-acct_menu"] [data-testid="stPopoverButton"] div[aria-hidden="true"] [data-testid="stIconMaterial"] { transition: transform var(--normal) var(--ease), color var(--fast); }
+[class*="st-key-acct_menu"] [data-testid="stPopoverButton"][aria-expanded="true"] div[aria-hidden="true"] [data-testid="stIconMaterial"] { transform: rotate(180deg); color: var(--accent-text); }
 [class*="st-key-acct_menu"] [data-testid="stPopoverButton"] p { font-family: var(--font) !important; font-size: 15px !important; font-weight: 700 !important;
   letter-spacing: -.01em; color: var(--text) !important; white-space: nowrap; display: flex; align-items: center; }
 [class*="st-key-acct_menu"] [data-testid="stPopoverButton"] [data-testid="stIconMaterial"] { color: var(--muted); }
@@ -1222,10 +1237,10 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .acct-head { display: flex; align-items: center; gap: 11px; padding: 8px 8px 12px; margin-bottom: 6px; min-width: 250px;
   border-bottom: 1px solid var(--border); }
 .acct-av { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; font-size: 16px; font-weight: 800;
-  color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 6px 14px -6px var(--accent); }
+  color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2)); margin: 4px;
+  box-shadow: var(--av-gloss), 0 0 0 2px var(--surface), 0 0 0 3.5px var(--av-ring), var(--av-drop); }
 /* the person's picked avatar (a brand mark on its tile) and the Account page size */
-.acct-av.av-mark { box-shadow: inset 0 0 0 1px rgba(15,23,42,.12), inset 0 1px 0 rgba(255,255,255,.4), 0 6px 14px -8px rgba(15,23,42,.5); }
+.acct-av.av-mark { box-shadow: var(--av-gloss), inset 0 0 0 1px rgba(15,23,42,.10), 0 0 0 2px var(--surface), 0 0 0 3.5px var(--av-ring), var(--av-drop); }
 .acct-av.av-mark img { width: 60%; height: 60%; margin: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none;
   object-fit: contain; display: block; pointer-events: none; user-select: none; }
 .acct-av-lg { width: 52px; height: 52px; font-size: 20px; }
@@ -1342,6 +1357,84 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .ob-summary li { font-size: 15px; line-height: 1.8; color: var(--text); margin: 0; }
 .st-key-onboard button[data-variant="pills"] { min-height: 40px; padding: 0 16px !important; font-size: 14.5px !important; }
 .st-key-ob_actions { align-items: center; gap: 10px; margin-top: 6px; }
+
+/* ── Settings → Tracker status (moved here from the sidebar) ── */
+.status-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 16px 0 0 !important; padding: 0 !important; }
+.st-tile { min-width: 0; padding: 13px 14px; border-radius: 13px; border: 1px solid var(--border); box-shadow: var(--hi);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 60%, var(--surface)), var(--surface-2)); }
+.st-tile dt { font-family: var(--label) !important; font-size: 10.5px; line-height: 15px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600; margin: 0 0 7px !important; }
+.st-tile dd { margin: 0 !important; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; }
+.st-tile .v { font-size: 18px; line-height: 24px; font-weight: 700; letter-spacing: -.02em; color: var(--text); overflow-wrap: anywhere; }
+.st-tile .n { font-size: 12.5px; line-height: 17px; color: var(--muted); overflow-wrap: anywhere; }
+@media (max-width: 1100px) { .status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .status-grid { grid-template-columns: minmax(0, 1fr); } }
+.st-key-set_status .st-key-btn_set_monitoring, .st-key-set_status [data-testid="stElementContainer"]:has(.st-key-btn_set_monitoring) { width: auto !important; }
+
+/* ── loading: only for work that takes a moment ── */
+/* While the app works, a thin purple→teal bar slides along the top of the
+   window. It waits 450 ms first, so a quick page change never flashes it. */
+@keyframes jt-busy-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes jt-busy-slide { from { background-position: -45% 0; } to { background-position: 145% 0; } }
+@keyframes jt-busy-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+@keyframes jt-spin { to { transform: rotate(360deg); } }
+.stApp::after { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 10000; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, transparent, var(--accent) 30%, var(--accent-2) 70%, transparent) -45% 0 / 38% 100% no-repeat,
+    color-mix(in srgb, var(--accent) 12%, transparent); }
+.stApp[data-test-script-state="running"]::after { animation: jt-busy-in 220ms ease-out 450ms both, jt-busy-slide 1.15s linear 450ms infinite; }
+.stApp[data-test-script-state="running"] { cursor: progress; }
+/* the button that was just pressed shows that its work is under way:
+   Refresh / Reload spin their icon at once, any other button's label
+   breathes if its work takes more than a moment */
+.stApp[data-test-script-state="running"] :is(.st-key-btn_refresh, .st-key-btn_reload) [data-testid^="stBaseButton"]:focus [data-testid="stIconMaterial"] {
+  animation: jt-spin .8s linear infinite; }
+.stApp[data-test-script-state="running"] [data-testid^="stBaseButton"]:focus > div,
+.stApp[data-test-script-state="running"] [class*="st-key-av_pick_"] button:focus::before { animation: jt-busy-pulse 1s ease-in-out 350ms infinite; }
+/* first load of a server process: a skeleton of the page while the shared data arrives */
+.jt-skel { display: grid; gap: 14px; }
+.jt-skel i { display: block; border-radius: var(--r-lg); border: 1px solid var(--border);
+  background: linear-gradient(90deg, var(--surface) 0, color-mix(in srgb, var(--accent) 7%, var(--surface)) 40%, var(--surface) 80%) 0 0 / 640px 100%;
+  animation: jt-shimmer 1.4s linear infinite; }
+.jt-skel .hero { height: 180px; } .jt-skel .row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.jt-skel .row i { height: 112px; } .jt-skel .line { height: 92px; }
+.jt-skel p { margin: 0; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.jt-skel p .ms { animation: jt-spin 1.2s linear infinite; color: var(--accent-text); }
+@media (max-width: 767px) { .jt-skel .row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) {
+  /* the bar appears (still after the pause) but stays still: a full, soft line */
+  .stApp[data-test-script-state="running"]::after { animation: jt-busy-in 1ms linear 450ms both !important;
+    background: color-mix(in srgb, var(--accent) 55%, transparent) !important; }
+  .stApp[data-test-script-state="running"] [data-testid^="stBaseButton"]:focus > div,
+  .stApp[data-test-script-state="running"] [data-testid="stIconMaterial"],
+  .stApp[data-test-script-state="running"] [class*="st-key-av_pick_"] button::before, .jt-skel i, .jt-skel p .ms { animation: none !important; }
+}
+
+/* ── interaction polish: a clear, consistent answer to the pointer ── */
+/* sidebar: hovering lights the row (wash + hairline + soft glow); the current page keeps its own style */
+[class*="st-key-nav_"] [data-testid^="stBaseButton"]:hover { background: var(--hover-wash) !important; color: var(--text) !important;
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--border)) !important; box-shadow: var(--hi), 0 8px 18px -14px var(--accent) !important; }
+[class*="st-key-nav_"] [data-testid^="stBaseButton"]:active { transform: scale(.985); }
+/* quiet (tertiary) buttons: an accent wash instead of an almost invisible grey */
+[data-testid="stBaseButton-tertiary"]:hover:not(:disabled) { background: var(--accent-soft) !important; color: var(--accent-text) !important; }
+/* secondary buttons: a lit top edge so they read as raised glass */
+[data-testid="stBaseButton-secondary"], [data-testid="stBaseButton-secondaryFormSubmit"] {
+  background: linear-gradient(180deg, var(--pill-gloss), transparent 60%), var(--btn2-grad) !important; }
+[data-testid="stBaseButton-secondary"]:hover:not(:disabled), [data-testid="stBaseButton-secondaryFormSubmit"]:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--pill-gloss), transparent 60%), var(--btn2-grad) !important;
+  box-shadow: var(--hi), var(--btn2-shadow-hover), 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent) !important; }
+/* segmented tabs and filter pills: a visible hover surface */
+.st-key-jobs_tab_wrap button[data-variant="pills"]:hover, .st-key-co_status_wrap button[data-variant="pills"]:hover {
+  background: color-mix(in srgb, var(--surface) 75%, transparent) !important; }
+/* avatar tiles: press feedback and a keyboard ring */
+[class*="st-key-av_pick_"] button:active { transform: translateY(0) scale(.97); }
+[class*="st-key-av_pick_"] button:focus-visible { outline: 2px solid var(--accent) !important; outline-offset: 3px !important; }
+/* job and company cards: a brighter edge when they lift */
+:is([class*="st-key-jr_"], [class*="st-key-cr_"]):hover { border-color: color-mix(in srgb, var(--accent) 38%, var(--border)) !important; }
+/* settings cards (not clickable: no hover): a faint glossy sheen from the top edge */
+[class*="st-key-set_"], .st-key-mail_status, .st-key-email_form, .st-key-test_panel {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 3%, var(--surface)), var(--surface) 160px) !important; }
+/* menus: the account menu's items and select lists answer the pointer the same way */
+[data-baseweb="popover"] li:hover { background: var(--accent-soft) !important; color: var(--accent-text) !important; }
 """
 
 # @import rules only count at the very top of a stylesheet, so the design
@@ -1554,8 +1647,10 @@ def _trigger_scrape() -> tuple[bool, str]:
     if not token:
         return False, "Can't start a check — no GitHub token is configured for this app."
     try:
-        from github import Github
-        repo = Github(token).get_repo(GITHUB_REPO)
+        import config_store
+        # lazy: no request for the repository itself — only the workflow
+        # lookup and the dispatch reach GitHub (two round trips, not three)
+        repo = config_store._get_repo(token)
         workflow = repo.get_workflow("check_jobs.yml")
         if workflow.create_dispatch(ref="main"):
             return True, "Check started — it takes a few minutes. Use Refresh afterwards to see new jobs."
@@ -2505,6 +2600,41 @@ def personal_changed() -> None:
     st.session_state.pop("_pcache_next", None)
 
 
+def _personal_patched(profile: dict | None = None, dismissed_add=(), dismissed_remove=(),
+                      watch_add=(), watch_remove=()) -> None:
+    """After a write whose outcome is known exactly (one profile field, a
+    dismissal, a follow): apply it to this session's copy instead of reading
+    everything back — a full re-read is three Firestore round trips that the
+    next click had to wait for. A background read begun before the write is
+    dropped (it could bring back the old value); the copy keeps its age, so
+    a change made on another device still arrives within a minute. Without
+    a usable copy this falls back to a full re-read."""
+    cached = st.session_state.get("_pcache")
+    if not (USER is not None and isinstance(cached, dict) and cached.get("uid") == USER.uid
+            and isinstance(cached.get("profile"), dict)):
+        personal_changed()
+        return
+    st.session_state.pop("_pcache_next", None)
+    st.session_state._pcache = {
+        **cached,
+        "profile": {**cached["profile"], **(profile or {})},
+        "dismissed": (set(cached.get("dismissed") or ()) | set(dismissed_add)) - set(dismissed_remove),
+        "watchlist": (set(cached.get("watchlist") or ()) | set(watch_add)) - set(watch_remove),
+    }
+
+
+_SKELETON = ('<div class="jt-skel" role="status" aria-live="polite"><p>' + _ms("progress_activity", "s16")
+             + 'Loading the latest jobs…</p><i class="hero"></i><div class="row"><i></i><i></i><i></i><i></i></div>'
+               '<i class="line"></i><i class="line"></i></div>')
+# Only a cold start waits: the first read of the shared files in a new server
+# process, or this sign-in's first read of its own data. A skeleton of the
+# page shows meanwhile (every later click is answered from the copies at once,
+# so it never appears for ordinary navigation).
+_cold_load = None
+if not _shared_data().has_data() or (USER is not None and (st.session_state.get("_pcache") or {}).get("uid") != USER.uid):
+    _cold_load = st.empty()
+    _cold_load.html(_SKELETON)
+
 ME: dict | None = None
 if USER is not None:
     try:
@@ -2599,6 +2729,8 @@ for _j in _load_synced("seen_jobs.json", []):
     if isinstance(_j, dict) and job_key(_j) not in _seen_keys:
         _seen_keys.add(job_key(_j))
         all_records.append(_j)
+if _cold_load is not None:
+    _cold_load.empty()
 # With personal data, "dismissed" means dismissed BY THIS VIEWER (an admin's
 # view also includes the shared dismissals that today's alert emails follow);
 # one person's dismissal never hides a job from anyone else.
@@ -2681,10 +2813,10 @@ def change_dismissal(keys: set[str], dismiss: bool):
         try:
             (USER.dismiss if dismiss else USER.restore)(keys)
         except user_store.UserStoreError as e:
+            personal_changed()
             toast(str(e), "error")
             return None
-        finally:
-            personal_changed()
+        _personal_patched(dismissed_add=keys if dismiss else (), dismissed_remove=() if dismiss else keys)
         if not is_owner():
             return True, ""
     _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(keys) if dismiss else _restore_jobs(keys), [],
@@ -2850,13 +2982,8 @@ with st.sidebar:
         for key in items:
             st.button(nav_label(key), key=f"nav_{key}", icon=PAGES[key][1], type="tertiary", use_container_width=True,
                       on_click=go, args=(key,))
-    if not MEMBER_VIEW:                 # the scanner's state is the admin's business
-        with st.container(key="side_foot_wrap"):
-            st.html(f"""<div class="side-foot {overall[0]}" role="status">
-              <div class="st" title="{escape(overall[1], quote=True)}"><span class="dot {overall[0]}"></span><span class="txt">{escape(overall[1])}</span></div>
-              <div class="meta"><span class="txt">{_ms("apartment", "s14")}{_plural(len(companies), 'company', 'companies')} monitored</span>
-                <span class="txt num">{_ms("history", "s14")}Last scan {_ago(last_scan, NOW)}</span></div>
-            </div>""")
+    # (the scanner's health and last scan are on Home and, for admins, under
+    # Settings → Tracker status — the rail holds navigation only)
 
 # phones: the sidebar is hidden and this compact bar takes over (CSS decides)
 _MOB_LABELS = {"email": "Email", "monitoring": "Monitor", "companies": "Companies", "alerts": "Alerts"}
@@ -2885,9 +3012,9 @@ def account_menu() -> None:
     label = re.sub(r"([\\`*_{}\[\]()#+!|~<>-])", r"\\\1", first) + (" **ADMIN**" if IS_ADMIN else "")
     trigger = '[class*="st-key-acct_menu"] [data-testid="stPopoverButton"]::before'
     if CHOSEN_AVATAR:                 # the picked mark on its tile, as in the menu and on the Account page
-        st.html(f'<style>{trigger} {{ content: ""; background: url("{brand_logos.brand_uri(CHOSEN_AVATAR)}") center / 60% '
-                f'no-repeat, {brand_logos.brand_tile(CHOSEN_AVATAR)}; box-shadow: inset 0 0 0 1px rgba(15,23,42,.12), '
-                f'inset 0 1px 0 rgba(255,255,255,.4), 0 4px 10px -4px rgba(15,23,42,.45); }}</style>')
+        st.html(f'<style>{trigger} {{ content: ""; background: url("{brand_logos.brand_uri(CHOSEN_AVATAR)}") center / 58% '
+                f'no-repeat, {brand_logos.brand_tile(CHOSEN_AVATAR)}; box-shadow: var(--av-gloss), '
+                'inset 0 0 0 1px rgba(15,23,42,.10), 0 0 0 2px var(--surface), 0 0 0 3.5px var(--av-ring), var(--av-drop); }</style>')
     else:
         st.html(f'<style>{trigger} {{ content: "{_me_initial()}"; }}</style>')
     with st.container(key="acct_bar"):
@@ -2945,29 +3072,37 @@ def status_line() -> str:
             f'<span class="chip num">{_ms("schedule", "s16")}Next scheduled {_ist(_next_slot())}</span>')
 
 
+# Actions run as on_click callbacks: Streamlit runs them BEFORE the page is
+# drawn, so a click is one run of the script. (Handled inline, a click drew
+# the page up to the button, acted, then st.rerun() drew it all again.)
+def _refresh_click() -> None:
+    _refresh_data()
+    toast("Showing the latest data", "success")
+
+
+def _run_check_click() -> None:
+    cooldown = _guards()["check"]
+    if not owner_only("start a check"):
+        return
+    if not cooldown.try_start():
+        toast(f"A check was just started — try again in {int(cooldown.remaining() // 60) + 1} min", "error")
+        return
+    ok, msg = _trigger_scrape()
+    if ok:
+        st.session_state.last_check_trigger = time.time()
+    else:
+        cooldown.cancel()
+    toast(msg, "success" if ok else "error")
+
+
 def scan_actions():
     a, b = st.columns(2)
     with a:
-        if st.button("Refresh", key="btn_refresh", icon=":material/refresh:", help="Reload the latest jobs and portal status"):
-            _refresh_data()
-            toast("Showing the latest data", "success")
-            st.rerun()
+        st.button("Refresh", key="btn_refresh", icon=":material/refresh:", help="Reload the latest jobs and portal status",
+                  on_click=_refresh_click)
     with b:
-        if st.button("Run check", key="btn_run_check", icon=":material/travel_explore:", type="primary",
-                     help="Ask GitHub Actions to scan every portal now (takes a few minutes)"):
-            cooldown = _guards()["check"]
-            if not owner_only("start a check"):
-                pass
-            elif not cooldown.try_start():
-                toast(f"A check was just started — try again in {int(cooldown.remaining() // 60) + 1} min", "error")
-            else:
-                ok, msg = _trigger_scrape()
-                if ok:
-                    st.session_state.last_check_trigger = time.time()
-                else:
-                    cooldown.cancel()
-                toast(msg, "success" if ok else "error")
-            st.rerun()
+        st.button("Run check", key="btn_run_check", icon=":material/travel_explore:", type="primary",
+                  help="Ask GitHub Actions to scan every portal now (takes a few minutes)", on_click=_run_check_click)
 
 
 def apply_link(j: dict, label: str = "Apply") -> str:
@@ -3134,10 +3269,11 @@ def job_row(j: dict, idx: str, origin: str):
     if d or j.get("date"):
         meta.append(f'<span class="mi num" title="{escape(j.get("date") or "", quote=True)} UTC">{_ms("schedule")}'
                     f'Found {_ago(d, NOW) if d else escape(j["date"])}</span>')
+    # No st.columns here: the card's text and its actions sit side by side
+    # through CSS. Each column is its own Streamlit element, so a page of
+    # cards drew two extra elements per job on every click.
     with st.container(key=f"jr_{idx}"):
-        c1, c2 = st.columns([5, 2], vertical_alignment="center")
-        with c1:
-            st.html(f"""
+        st.html(f"""
             <div class="job">
               {_avatar(company)}
               <div class="job-body">
@@ -3147,25 +3283,40 @@ def job_row(j: dict, idx: str, origin: str):
                 <div class="job-why">{badge(pill_cls, pill_label)}<span class="t">{_ms("work_history" if pill_cls != "legacy" else "info")}{escape(job_why(j))}</span></div>
               </div>
             </div>""")
-        with c2:
+        with st.container(key=f"ja_{idx}"):
             st.html(apply_link(j))
             st.button("Details", key=_widget_key("crit", jkey), on_click=go, args=("jobs",),
                       kwargs={"job": _jid(j), "origin": origin})
             if is_dismissed(j):
-                if st.button("Restore", icon=":material/undo:", key=_widget_key("restore", jkey),
-                             help="Restore to active jobs (it won't be emailed again)"):
-                    res = change_dismissal({jkey}, dismiss=False)
-                    if res:
-                        toast("Job restored" if res[0] else f"Restored here, but not saved permanently. {res[1]}",
-                              "success" if res[0] else "error")
-                    st.rerun()
-            elif st.button("Dismiss", icon=":material/close:", key=_widget_key("dismiss", jkey),
-                           help="Dismiss — hide this job (it won't be emailed again)"):
-                res = change_dismissal({jkey}, dismiss=True)
-                if res:
-                    toast("Removed 1 alert(s)" if res[0] else f"Removed here, but not saved permanently. {res[1]}",
-                          "success" if res[0] else "error")
-                st.rerun()
+                st.button("Restore", icon=":material/undo:", key=_widget_key("restore", jkey),
+                          help="Restore to active jobs (it won't be emailed again)", on_click=_dismiss_click,
+                          args=(jkey, False))
+            else:
+                st.button("Dismiss", icon=":material/close:", key=_widget_key("dismiss", jkey),
+                          help="Dismiss — hide this job (it won't be emailed again)", on_click=_dismiss_click,
+                          args=(jkey, True))
+
+
+def _detail_dismiss_click(jkey: str, back: str, back_kwargs: dict) -> None:
+    """Dismiss from a job's own page, then return to the list it came from."""
+    res = change_dismissal({jkey}, dismiss=True)
+    if not res:
+        return
+    toast("Removed 1 alert(s)" if res[0] else f"Removed here, but not saved permanently. {res[1]}",
+          "success" if res[0] else "error")
+    go(back, **back_kwargs)
+
+
+def _dismiss_click(jkey: str, dismiss: bool) -> None:
+    """Dismiss / Restore one job (a callback: the page is drawn once, after it)."""
+    res = change_dismissal({jkey}, dismiss=dismiss)
+    if res:
+        if dismiss:
+            toast("Removed 1 alert(s)" if res[0] else f"Removed here, but not saved permanently. {res[1]}",
+                  "success" if res[0] else "error")
+        else:
+            toast("Job restored" if res[0] else f"Restored here, but not saved permanently. {res[1]}",
+                  "success" if res[0] else "error")
 
 
 def empty_state(icon: str, title: str, text: str, actions=None):
@@ -3297,14 +3448,11 @@ def page_jobs():
             with f1:
                 st.html(f'<span class="muted num" style="font-size:13px;">{start + 1}–{end} of {total}</span>')
             with f2:
-                if st.button("Previous", key="alerts_prev", icon=":material/chevron_left:", disabled=page == 0):
-                    st.session_state.jobs_page = page - 1
-                    st.rerun()
+                st.button("Previous", key="alerts_prev", icon=":material/chevron_left:", disabled=page == 0,
+                          on_click=st.session_state.__setitem__, args=("jobs_page", page - 1))
             with f3:
-                if st.button("Next", key="alerts_next", icon=":material/chevron_right:", icon_position="right",
-                             disabled=end >= total):
-                    st.session_state.jobs_page = page + 1
-                    st.rerun()
+                st.button("Next", key="alerts_next", icon=":material/chevron_right:", icon_position="right",
+                          disabled=end >= total, on_click=st.session_state.__setitem__, args=("jobs_page", page + 1))
 
 
 def page_job_detail(j: dict):
@@ -3367,23 +3515,12 @@ def page_job_detail(j: dict):
                 st.html(apply_link(j, "Apply on company site"))
             with a[1]:
                 if is_dismissed(j):
-                    if st.button("Restore", key="detail_restore", icon=":material/undo:"):
-                        res = change_dismissal({jkey}, dismiss=False)
-                        if res:
-                            toast("Job restored" if res[0] else f"Restored here, but not saved permanently. {res[1]}",
-                                  "success" if res[0] else "error")
-                        st.rerun()
+                    st.button("Restore", key="detail_restore", icon=":material/undo:", on_click=_dismiss_click,
+                              args=(jkey, False))
                 else:
                     with st.container(key="danger"):
-                        dismiss = st.button("Dismiss", key="detail_dismiss", icon=":material/close:")
-                    if dismiss:
-                        res = change_dismissal({jkey}, dismiss=True)
-                        if not res:
-                            st.rerun()
-                        toast("Removed 1 alert(s)" if res[0] else f"Removed here, but not saved permanently. {res[1]}",
-                              "success" if res[0] else "error")
-                        go(back, **back_kwargs)
-                        st.rerun()
+                        st.button("Dismiss", key="detail_dismiss", icon=":material/close:", on_click=_detail_dismiss_click,
+                                  args=(jkey, back, back_kwargs))
             with a[2]:
                 if c:
                     st.button("Company details", key="btn_job_company", icon=":material/apartment:",
@@ -3498,23 +3635,21 @@ def page_companies():
             is_new = c.get("id") == st.session_state.just_added
             tags = ('<span class="tag" title="Built-in company">Core</span>' if c.get("locked") else "") + \
                    ('<span class="pill new">New</span>' if is_new else "")
+            # the card's text, then its button (stacked by CSS; no st.columns)
             with st.container(key=f"cr_{_widget_key('c', str(c.get('id')))}"):
-                r1, r2 = st.columns([6, 1], vertical_alignment="center")
-                with r1:
-                    st.html(f"""<div class="co-row">
-                      <div class="co-name">{_avatar(name)}
-                        <div style="min-width:0;"><div class="t">{escape(name)}{tags}</div>
-                        <div class="h">{escape(_short_url(curl)) if curl else '<span style="color:var(--red)">Invalid career page URL</span>'}</div></div></div>
-                      <div class="co-cell site">{_ms("language")}{f'<a class="link" href="{escape(site, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(site, 28))}</a>' if site else '<span class="muted">Not set</span>'}</div>
-                      <div><span class="pill {k}"><i></i>{lbl}</span></div>
-                      <div class="co-stats">
-                        <div><span class="k">Openings</span><div class="co-cell">{_ms("work")}{company_active(c)}<span class="l"> active jobs</span></div></div>
-                        <div><span class="k">Last scan</span><div class="co-cell">{_ms("schedule")}{_ago(_parse_iso(c.get("last_checked", "")), NOW)}</div></div>
-                      </div>
-                    </div>""")
-                with r2:
-                    st.button("View company", key=f"view_{_widget_key('c', str(c.get('id')))}", icon=":material/arrow_forward:",
-                              icon_position="right", on_click=go, args=("companies",), kwargs={"company": c.get("id")})
+                st.html(f"""<div class="co-row">
+                  <div class="co-name">{_avatar(name)}
+                    <div style="min-width:0;"><div class="t">{escape(name)}{tags}</div>
+                    <div class="h">{escape(_short_url(curl)) if curl else '<span style="color:var(--red)">Invalid career page URL</span>'}</div></div></div>
+                  <div class="co-cell site">{_ms("language")}{f'<a class="link" href="{escape(site, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(site, 28))}</a>' if site else '<span class="muted">Not set</span>'}</div>
+                  <div><span class="pill {k}"><i></i>{lbl}</span></div>
+                  <div class="co-stats">
+                    <div><span class="k">Openings</span><div class="co-cell">{_ms("work")}{company_active(c)}<span class="l"> active jobs</span></div></div>
+                    <div><span class="k">Last scan</span><div class="co-cell">{_ms("schedule")}{_ago(_parse_iso(c.get("last_checked", "")), NOW)}</div></div>
+                  </div>
+                </div>""")
+                st.button("View company", key=f"view_{_widget_key('c', str(c.get('id')))}", icon=":material/arrow_forward:",
+                          icon_position="right", on_click=go, args=("companies",), kwargs={"company": c.get("id")})
 
 
 def page_add_company():
@@ -3585,11 +3720,12 @@ def set_following(cid: str, follow: bool, name: str = "") -> None:
     shared catalogue; the catalogue itself never changes)."""
     try:
         USER.watch(cid, _catalogue_ids()) if follow else USER.unwatch(cid)
-        toast(f"Following {name}" if follow else f"Unfollowed {name}", "success")
     except (user_store.UserStoreError, user_store.InvalidInput) as e:
-        toast(str(e) if isinstance(e, user_store.UserStoreError) else "That company can't be followed.", "error")
-    finally:
         personal_changed()
+        toast(str(e) if isinstance(e, user_store.UserStoreError) else "That company can't be followed.", "error")
+        return
+    _personal_patched(watch_add=(cid,) if follow else (), watch_remove=() if follow else (cid,))
+    toast(f"Following {name}" if follow else f"Unfollowed {name}", "success")
 
 
 def follow_button(c: dict) -> None:
@@ -3602,6 +3738,23 @@ def follow_button(c: dict) -> None:
               icon=":material/check:" if following else ":material/add:", type="secondary" if following else "primary",
               help="Unfollow" if following else "Follow this company in your account",
               on_click=set_following, args=(cid, not following, c.get("name") or ""))
+
+
+def _ask_remove_company(cid) -> None:
+    if owner_only("remove companies"):
+        st.session_state.confirm_remove = cid
+
+
+def _remove_company(cid, name: str) -> None:
+    """Stop tracking a company (the owner check is repeated in _save_change)."""
+    if not owner_only("remove companies"):
+        st.session_state.confirm_remove = None
+        return
+    _, saved, err = _save_change("companies.json", lambda latest: [x for x in latest if x.get("id") != cid],
+                                 [], f"chore: remove {name}")
+    toast(f"Removed {name}" if saved else f"Removed {name}, but not saved permanently. {err}",
+          "success" if saved else "error")
+    go("companies")
 
 
 def page_company_detail(c: dict):
@@ -3633,30 +3786,18 @@ def page_company_detail(c: dict):
         with a[2]:
             with st.container(key="danger"):
                 if not MEMBER_VIEW and st.session_state.confirm_remove != c.get("id"):
-                    if st.button("Stop tracking", key="btn_remove_company", icon=":material/delete:"):
-                        if owner_only("remove companies"):
-                            st.session_state.confirm_remove = c.get("id")
-                        st.rerun()
+                    st.button("Stop tracking", key="btn_remove_company", icon=":material/delete:",
+                              on_click=_ask_remove_company, args=(c.get("id"),))
     if st.session_state.confirm_remove == c.get("id"):
         with st.container(key="danger_confirm"):
             st.html(f'<p class="note" style="color:var(--text);">Stop tracking <b>{escape(name)}</b>? Jobs already found stay in your history.</p>')
             y, n_ = st.columns([1, 4])
             with y:
-                if st.button("Yes, stop tracking", key="btn_remove", type="primary"):
-                    if not owner_only("remove companies"):
-                        st.session_state.confirm_remove = None
-                        st.rerun()
-                    cid = c.get("id")
-                    _, saved, err = _save_change("companies.json", lambda latest: [x for x in latest if x.get("id") != cid],
-                                                 [], f"chore: remove {name}")
-                    toast(f"Removed {name}" if saved else f"Removed {name}, but not saved permanently. {err}",
-                          "success" if saved else "error")
-                    go("companies")
-                    st.rerun()
+                st.button("Yes, stop tracking", key="btn_remove", type="primary", on_click=_remove_company,
+                          args=(c.get("id"), name))
             with n_:
-                if st.button("Cancel", key="btn_cancel_remove"):
-                    st.session_state.confirm_remove = None
-                    st.rerun()
+                st.button("Cancel", key="btn_cancel_remove", on_click=st.session_state.__setitem__,
+                          args=("confirm_remove", None))
 
     with st.container(key="co_cols"):
         main, side = st.columns([3, 2])
@@ -3744,6 +3885,22 @@ def page_monitoring():
             f'<b>Pending</b> = not scanned yet. Full run logs: <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">GitHub Actions</a>.</p></div>')
 
 
+def _save_my_alerts(prefs: dict) -> None:
+    """The alert form's Save (a callback: the page is drawn once, after it)."""
+    enabled = st.session_state.get("my_alerts_on")
+    scope = st.session_state.get("my_alerts_scope")
+    try:
+        USER.set_watch_all(scope == "all")
+        # the mode is kept as saved: "Tailored" (job preferences) is an
+        # older setting that stays until the person switches it off below
+        USER.set_notifications(bool(enabled) and bool(prefs["email"]), prefs["mode"])
+        toast("Alert settings saved", "success")
+    except (user_store.UserStoreError, ValueError) as e:
+        toast(str(e) if isinstance(e, user_store.UserStoreError) else "Those settings couldn't be saved.", "error")
+    finally:
+        personal_changed()
+
+
 def my_alerts_card() -> None:
     """The viewer's own alert emails: on/off (to their verified sign-in
     email only) and which companies they cover. WHICH jobs is the separate,
@@ -3765,19 +3922,8 @@ def my_alerts_card() -> None:
                              key="my_alerts_scope", horizontal=True,
                              format_func=lambda v: {"all": "Every tracked company",
                                                     "followed": f"Only companies I follow ({len(followed)})"}[v])
-            if st.form_submit_button("Save", key="btn_my_alerts", type="primary", icon=":material/save:"):
-                try:
-                    USER.set_watch_all(scope == "all")
-                    # the mode is kept as saved: "Tailored" (job preferences) is an
-                    # older setting that stays until the person switches it off below
-                    USER.set_notifications(bool(enabled) and bool(prefs["email"]), prefs["mode"])
-                    toast("Alert settings saved", "success")
-                except (user_store.UserStoreError, ValueError) as e:
-                    toast(str(e) if isinstance(e, user_store.UserStoreError) else "Those settings couldn't be saved.",
-                          "error")
-                finally:
-                    personal_changed()
-                st.rerun()
+            st.form_submit_button("Save", key="btn_my_alerts", type="primary", icon=":material/save:",
+                                  on_click=_save_my_alerts, args=(prefs,))
         if scope == "followed" and not followed and prefs["mode"] != "tailored":
             st.html(f'<p class="note">{_ms("info", "s16")} You don’t follow any companies yet, so there is nothing to '
                     'email — follow some in My companies, or choose “Every tracked company”.</p>')
@@ -4027,10 +4173,11 @@ def _save_display_name() -> None:
         st.session_state._name_msg = ("err", str(e))
         return
     except user_store.UserStoreError:
+        personal_changed()
         st.session_state._name_msg = ("err", "Couldn't save your name right now — try again in a moment.")
         return
-    finally:
-        personal_changed()
+    # one write, and only this field changed: no read-back of the whole profile
+    _personal_patched(profile={"preferred_name": name})
     st.session_state.display_name_input = name               # show it as saved (trimmed)
     st.session_state._name_msg = ("ok", f"Saved — you'll appear as {name}.")
     toast("Display name saved", "success")
@@ -4063,10 +4210,11 @@ def _save_avatar(choice: str) -> None:
         st.session_state._avatar_msg = ("err", str(e))
         return
     except user_store.UserStoreError:
+        personal_changed()
         st.session_state._avatar_msg = ("err", "Couldn't save your avatar right now — try again in a moment.")
         return
-    finally:
-        personal_changed()
+    # one write, and only this field changed: no read-back of the whole profile
+    _personal_patched(profile={"avatar": saved})
     shown = brand_logos.BRAND_NAMES.get(saved, "your initial")
     st.session_state._avatar_msg = ("ok", f"Avatar saved — you'll appear with {shown}.")
     toast("Profile avatar saved", "success")
@@ -4203,6 +4351,62 @@ def owner_card() -> None:
                                       on_click=_owner_submit)
 
 
+def _ask_clear_all() -> None:
+    if owner_only("dismiss jobs"):
+        st.session_state.confirm_clear = True
+
+
+def _clear_all(keys: set[str]) -> None:
+    """Dismiss every job that was active when this was confirmed."""
+    st.session_state.confirm_clear = False
+    if not owner_only("dismiss jobs"):
+        return
+    if USER is not None:
+        try:
+            USER.dismiss(keys)
+        except user_store.UserStoreError as e:
+            personal_changed()
+            toast(str(e), "error")
+            return
+        _personal_patched(dismissed_add=keys)
+    _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(None), [], "chore: dismiss all alerts")
+    toast("All alerts cleared" if saved else f"Cleared here, but not saved permanently. {err}",
+          "success" if saved else "error")
+
+
+def _toggle_theme() -> None:
+    st.session_state.dark_mode = not st.session_state.dark_mode
+
+
+_STATUS_WORDS = {"healthy": "healthy", "delayed": "delayed", "failing": "failing", "pending": "pending",
+                 "checking": "checking now"}
+
+
+def tracker_status_card() -> None:
+    """Settings → Tracker status (admins): the portals' health and the scan
+    times — what the sidebar's status card used to show, kept in one place.
+    The same numbers as Home's chips and metrics (nothing is fetched)."""
+    breakdown = " · ".join(f"{n_by_status[k]} {_STATUS_WORDS[k]}" for k in _STATUS_WORDS if n_by_status[k]) or "No portals yet"
+    tiles = [
+        ("Portal health", f'<span class="pill {overall[0]}"><i></i>{escape(overall[1])}</span>',
+         f"{_plural(len(companies), 'company', 'companies')} checked by the scanner"),
+        ("Companies monitored", f'<span class="v num">{len(companies)}</span>', escape(breakdown)),
+        ("Last scan", f'<span class="v num">{escape(_ago(last_scan, NOW))}</span>',
+         escape(_ist_stamp(last_scan)) if last_scan else "No scan has finished yet"),
+        ("Next scheduled", f'<span class="v num">{escape(_ist(_next_slot()))}</span>',
+         f"{escape(_cadence())} · GitHub may start it later"),
+    ]
+    with st.container(key="set_status"):
+        st.html(f'<div class="set-head"><span class="ic">{_ms("monitor_heart")}</span><div><div class="eyebrow">Monitoring</div>'
+                '<h2 class="section-title">Tracker status</h2><p class="section-sub">How the portals are doing and when they '
+                'were last scanned. Home shows the same at a glance.</p></div></div>'
+                '<dl class="status-grid" role="status">'
+                + "".join(f'<div class="st-tile"><dt>{k}</dt><dd>{v}<span class="n">{n}</span></dd></div>' for k, v, n in tiles)
+                + "</dl>")
+        st.button("Open monitoring", key="btn_set_monitoring", icon=":material/monitor_heart:", on_click=go,
+                  args=("monitoring",))
+
+
 def page_settings():
     page_header("Settings", "Your account, your job search and how the app looks"
                 + ("" if MEMBER_VIEW else " — plus how the tracker is configured"))
@@ -4218,14 +4422,13 @@ def page_settings():
                     '<div class="eyebrow">General</div><h2 class="section-title">Appearance</h2><p class="section-sub">'
                     f'{"Dark" if st.session_state.dark_mode else "Light"} theme · kept in this page’s address, so it survives reloads and bookmarks</p></div></div>')
         with a2:
-            if st.button("Use light theme" if st.session_state.dark_mode else "Use dark theme", key="btn_theme",
-                         icon=":material/light_mode:" if st.session_state.dark_mode else ":material/dark_mode:",
-                         use_container_width=True):
-                st.session_state.dark_mode = not st.session_state.dark_mode
-                st.rerun()
+            st.button("Use light theme" if st.session_state.dark_mode else "Use dark theme", key="btn_theme",
+                      icon=":material/light_mode:" if st.session_state.dark_mode else ":material/dark_mode:",
+                      use_container_width=True, on_click=_toggle_theme)
     if MEMBER_VIEW:                      # the tracker's own settings are the admin's
         st.html('<div class="app-foot"><span>Fresher Job Tracker</span><span>Fresher and entry-level roles in India</span></div>')
         return
+    tracker_status_card()
     with st.container(key="set_data"):
         synced = bool(os.environ.get("GITHUB_TOKEN"))
         d1, d2 = st.columns([4, 1], vertical_alignment="center")
@@ -4236,10 +4439,8 @@ def page_settings():
                        if synced else "Reading the files bundled with this deployment — no GitHub token is configured.")
                     + "</p></div></div>")
         with d2:
-            if st.button("Reload data", key="btn_reload", icon=":material/refresh:", use_container_width=True):
-                _refresh_data()
-                toast("Showing the latest data", "success")
-                st.rerun()
+            st.button("Reload data", key="btn_reload", icon=":material/refresh:", use_container_width=True,
+                      on_click=_refresh_click)
     with st.container(key="set_engine"):
         by_source: dict[str, list[str]] = {}
         for c in companies:
@@ -4266,11 +4467,8 @@ def page_settings():
             m1, _m2 = st.columns([1, 3])
             with m1:
                 with st.container(key="danger"):
-                    if st.button(f"Dismiss all {len(_all_active_jobs)} jobs", key="btn_clear_all", disabled=not _all_active_jobs,
-                                 use_container_width=True):
-                        if owner_only("dismiss jobs"):
-                            st.session_state.confirm_clear = True
-                        st.rerun()
+                    st.button(f"Dismiss all {len(_all_active_jobs)} jobs", key="btn_clear_all", disabled=not _all_active_jobs,
+                              use_container_width=True, on_click=_ask_clear_all)
         else:
             unsent = sum(1 for j in _all_active_jobs if alert_pending(j))
             with st.container(key="danger_confirm"):
@@ -4280,24 +4478,11 @@ def page_settings():
                         + "</p>")
                 y, n_ = st.columns([1, 3])
                 with y:
-                    if st.button("Yes, dismiss all", key="btn_clear_all_confirm", type="primary", use_container_width=True):
-                        st.session_state.confirm_clear = False
-                        if not owner_only("dismiss jobs"):
-                            st.rerun()
-                        if USER is not None:
-                            try:
-                                USER.dismiss({job_key(j) for j in _all_active_jobs})
-                            except user_store.UserStoreError as e:
-                                toast(str(e), "error")
-                                st.rerun()
-                        _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(None), [], "chore: dismiss all alerts")
-                        toast("All alerts cleared" if saved else f"Cleared here, but not saved permanently. {err}",
-                              "success" if saved else "error")
-                        st.rerun()
+                    st.button("Yes, dismiss all", key="btn_clear_all_confirm", type="primary", use_container_width=True,
+                              on_click=_clear_all, args=({job_key(j) for j in _all_active_jobs},))
                 with n_:
-                    if st.button("Cancel", key="btn_clear_all_cancel"):
-                        st.session_state.confirm_clear = False
-                        st.rerun()
+                    st.button("Cancel", key="btn_clear_all_cancel", on_click=st.session_state.__setitem__,
+                              args=("confirm_clear", False))
     st.html('<div class="app-foot"><span>Fresher Job Tracker</span><span>Fresher and entry-level roles in India</span></div>')
 
 
@@ -4344,15 +4529,16 @@ def pref_list_html(prefs: dict, empty: str) -> str:
 
 def save_preferences(values: dict) -> bool:
     try:
-        USER.set_preferences(_VIEW["mode"] if _VIEW else "general", values.get("job_families") or [],
-                             values.get("locations") or [], values.get("experience") or [],
-                             values.get("job_types") or [], values.get("work_modes") or [])
+        saved = USER.set_preferences(_VIEW["mode"] if _VIEW else "general", values.get("job_families") or [],
+                                     values.get("locations") or [], values.get("experience") or [],
+                                     values.get("job_types") or [], values.get("work_modes") or [])
+        # one write of one field: patch this session's copy (no read-back)
+        _personal_patched(profile={"preferences": saved}) if isinstance(saved, dict) else personal_changed()
         return True
     except (user_store.UserStoreError, ValueError) as e:
+        personal_changed()
         toast(str(e) if isinstance(e, user_store.UserStoreError) else "Those preferences couldn't be saved.", "error")
         return False
-    finally:
-        personal_changed()
 
 
 def _personal_unavailable() -> bool:
@@ -4370,7 +4556,6 @@ def page_preferences():
         return
     with st.container(key="set_prefs"):
         with st.form("prefs_form", border=False):
-            picks = {}
             for cls, group, sub, fields in (
                     ("", "Used to match jobs", "Your job lists start from these.",
                      MATCHED_PREFS),
@@ -4380,13 +4565,17 @@ def page_preferences():
                 for f in fields:
                     question, short, options, hint = _PREF_INFO[f]
                     st.html(f'<div class="pref-q"><b>{escape(short)}</b><span>{escape(hint)}</span></div>')
-                    picks[f] = st.pills(short, list(options), selection_mode="multi",
-                                        default=_VIEW["prefs"].get(f) or [], key=f"pref_{f}", format_func=options.get,
-                                        label_visibility="collapsed")
-            if st.form_submit_button("Save preferences", key="btn_prefs_save", type="primary", icon=":material/check:"):
-                if save_preferences(picks):
-                    toast("Preferences saved", "success")
-                st.rerun()
+                    st.pills(short, list(options), selection_mode="multi",
+                             default=_VIEW["prefs"].get(f) or [], key=f"pref_{f}", format_func=options.get,
+                             label_visibility="collapsed")
+            st.form_submit_button("Save preferences", key="btn_prefs_save", type="primary", icon=":material/check:",
+                                  on_click=_save_preferences_click)
+
+
+def _save_preferences_click() -> None:
+    """The preferences form's Save (a callback: the page is drawn once, after it)."""
+    if save_preferences({f: list(st.session_state.get(f"pref_{f}") or []) for f in PREF_STEPS}):
+        toast("Preferences saved", "success")
 
 
 def page_alerts():
@@ -4641,6 +4830,31 @@ if st.session_state.dark_mode:
 if dict(st.query_params) != want:
     st.query_params.from_dict(want)
 st.session_state._url_written = want   # a later mismatch means browser Back/Forward
+
+
+def _warm_scraper_import() -> None:
+    """Monitoring and Settings name each portal's scraper, which imports
+    scraper.py (and the classifier's ~70 regexes): about 0.35 s the first
+    time in a server process, paid by whoever opened Monitoring first. Do it
+    once in the background after an admin's page is drawn instead."""
+    import sys
+    guards = _guards()
+    if "scraper" in sys.modules or guards.get("scraper_warming"):
+        return
+    guards["scraper_warming"] = True
+
+    def _load():
+        try:
+            import scraper  # noqa: F401
+        except Exception:                 # the page imports it again (and reports) if it is really broken
+            return
+        _stamp_fresh_local_modules()      # just imported: current, so the next click doesn't reload it
+    threading.Thread(target=_load, daemon=True).start()
+
+
+_stamp_fresh_local_modules()
+if not MEMBER_VIEW:
+    _warm_scraper_import()
 
 # ── the company logos this page drew (each image sent once) ──────────────────
 if _USED_LOGOS:

@@ -88,12 +88,17 @@ def test_web_fonts_are_imported_first_so_they_load():
     assert "JetBrains" not in SRC and "--font: 'Plus Jakarta Sans'" in CSS
 
 
-def test_sidebar_has_status_but_no_repository_link(app):
+def test_sidebar_has_no_status_card_and_no_repository_link(app):
+    """The scanner's status moved from the sidebar to Settings → Tracker
+    status (Oct 2026); the rail holds navigation only."""
     at = app([])
     html = _html(at)
     assert "Source on GitHub" not in html and "Source on GitHub" not in SRC
-    foot = re.search(r'<div class="side-foot[^"]*" role="status">(.*?)</div>\s*</div>', html, re.S).group(1)
-    assert "monitored" in foot and "Last scan" in foot and "github" not in foot.lower()
+    assert '<div class="side-foot' not in html
+    _nav(at, "settings")
+    status = re.search(r'<dl class="status-grid" role="status">(.*?)</dl>', _html(at), re.S).group(1)
+    assert "Companies monitored" in status and "Last scan" in status
+    assert "github.com" not in status.lower() and "<a " not in status                 # facts, not a repository link
 
 
 def test_failing_portal_shows_as_a_warning_contact(app):

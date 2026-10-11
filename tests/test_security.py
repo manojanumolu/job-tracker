@@ -215,7 +215,7 @@ def _fake_github(monkeypatch, calls, ok=True):
         def __init__(self, token):
             pass
 
-        def get_repo(self, name):
+        def get_repo(self, name, lazy=False):
             class Repo:
                 def get_workflow(_, wf):
                     return FakeWorkflow(calls, ok)

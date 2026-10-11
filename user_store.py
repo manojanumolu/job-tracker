@@ -459,7 +459,9 @@ class UserData:
     # -- general / tailored preferences ----------------------------------------
     @_guard
     def set_preferences(self, mode: str = "general", job_families=(), locations=(), experience=(),
-                        job_types=(), work_modes=()) -> None:
+                        job_types=(), work_modes=()) -> dict:
+        """Save the job-list preferences; returns exactly what was stored
+        (users/{uid}.preferences)."""
         if mode not in NOTIFY_MODES:
             raise InvalidInput("unknown preference mode")
         from job_filters import VOCABULARY
@@ -469,7 +471,9 @@ class UserData:
         for field, values in chosen.items():
             if any(v not in VOCABULARY[field] for v in values):
                 raise InvalidInput(f"unknown {field} value")
-        self._backend.set(self._root, {"preferences": {"mode": mode, **chosen}}, merge=True)
+        saved = {"mode": mode, **chosen}
+        self._backend.set(self._root, {"preferences": saved}, merge=True)
+        return saved
 
     @_guard
     def personal_view(self) -> dict:

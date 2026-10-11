@@ -101,28 +101,42 @@ def friendly_github_error(e: Exception) -> str:
 
 
 def _get_repo(token: str):
+    """The repository handle, lazily: no request is made for the repository
+    itself, so a read or a save starts with the request it actually needs
+    (one GitHub round trip fewer each). Errors such as a bad token surface on
+    that first real request instead."""
     from github import Github
-    return Github(token).get_repo(GITHUB_REPO)
+    try:
+        return Github(token, lazy=True).get_repo(GITHUB_REPO)
+    except TypeError:                     # PyGithub without Github(lazy=...)
+        return Github(token).get_repo(GITHUB_REPO, lazy=True)
 
 
 def fetch_remote_json(repo_paths: list[str], token: str | None = None, repo=None) -> dict:
     """Latest parsed content of each file on GitHub; a file that can't be
-    fetched or parsed is left out (callers fall back to the local copy)."""
+    fetched or parsed is left out (callers fall back to the local copy).
+    With a token the files are read side by side (each on its own client),
+    so an explicit Refresh waits for the slowest file, not for all of them
+    one after another."""
     token = token if token is not None else os.environ.get("GITHUB_TOKEN")
     if not token and repo is None:
         return {}
-    out = {}
-    try:
-        repo = repo or _get_repo(token)
-    except Exception as e:
-        log.warning("GitHub unavailable for refresh: %s", e)
-        return out
-    for path in repo_paths:
+
+    def _one(path: str, handle):
         try:
-            out[path] = json.loads(repo.get_contents(path).decoded_content.decode("utf-8"))
+            handle = handle or _get_repo(token)
+            return json.loads(handle.get_contents(path).decoded_content.decode("utf-8"))
         except Exception as e:
             log.warning("Could not fetch %s from GitHub: %s", path, e)
-    return out
+            return None
+
+    if repo is not None or len(repo_paths) < 2:
+        got = [(p, _one(p, repo)) for p in repo_paths]
+    else:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=min(len(repo_paths), 6)) as pool:
+            got = list(zip(repo_paths, pool.map(lambda p: _one(p, None), repo_paths)))
+    return {p: v for p, v in got if v is not None}
 
 
 def update_json(local_path: Path, repo_path: str, mutate, default, message: str,
