@@ -480,7 +480,7 @@ def test_recipient_is_read_only_and_never_written(app):
 def test_delivery_summary_uses_notified_flags(app):
     at = app([OLD_RECORD, NEW_RECORD], page="email")
     html = _html(at)
-    assert "Covered a job found Jul 15, 13:45 UTC" in html   # only OLD_RECORD was emailed
+    assert "Covered a job found Jul 15, 7:15 PM IST" in html   # only OLD_RECORD was emailed
     assert "1 — sent after the next check" in html           # NEW_RECORD is still pending
 
 

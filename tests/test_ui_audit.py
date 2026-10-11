@@ -136,7 +136,8 @@ def test_email_page_last_alert_uses_delivery_time(app):
     sent_at = (NOW - timedelta(days=2)).replace(microsecond=0)
     at = app([{**SALES, "notified": True, "notify_state": "sent", "notified_at": sent_at.isoformat(),
                "date": (NOW - timedelta(days=5)).strftime("%b %d, %H:%M")}], page="email")
-    assert f"{sent_at:%b %d, %H:%M} UTC" in _html(at)
+    ist = sent_at.astimezone(timezone(timedelta(hours=5, minutes=30)))
+    assert f"{ist:%b %d}, {ist:%I:%M %p}".replace(", 0", ", ") + " IST" in _html(at)      # India time, as everywhere
 
 
 def test_healthy_scan_keeps_technical_notes_out_of_status_reason(monkeypatch):

@@ -2816,6 +2816,10 @@ _check_trigger = st.session_state.get("last_check_trigger", 0)
 last_scan = max((d for d in (_parse_iso(c.get("last_checked", "")) for c in companies) if d), default=None)
 scan_stale = last_scan is None or NOW - last_scan > timedelta(hours=_STALE_H)
 NEXT_SCAN = scan_schedule.next_scan(NOW, SCAN_HOURS, scan_schedule.last_scan(companies))   # UTC; shown in IST
+# a scan is already overdue (none since the latest interval boundary): it
+# waits for the next hourly check — said plainly, never as a countdown
+SCAN_DUE = scan_schedule.scan_due(NOW, SCAN_HOURS, scan_schedule.last_scan(companies))
+NEXT_SCAN_NOTE = "Overdue — GitHub may start it later" if SCAN_DUE else "GitHub may start it later"
 
 
 # scraper status -> label; all of them use the red "failing" style/counts
@@ -3271,7 +3275,7 @@ def job_row(j: dict, idx: str, origin: str):
         meta.append(f'<span class="mi">{_ms("location_on")}<span>{escape(j["location"])}</span></span>')
     d = found[id(j)]
     if d or j.get("date"):
-        meta.append(f'<span class="mi num" title="{escape(j.get("date") or "", quote=True)} UTC">{_ms("schedule")}'
+        meta.append(f'<span class="mi num" title="{escape(_ist_stamp(d) if d else (j.get("date") or "") + " UTC", quote=True)}">{_ms("schedule")}'
                     f'Found {_ago(d, NOW) if d else escape(j["date"])}</span>')
     # No st.columns here: the card's text and its actions sit side by side
     # through CSS. Each column is its own Streamlit element, so a page of
@@ -3511,6 +3515,19 @@ def _jobs_list(tab: str) -> None:
     _fragment_logos(before)
 
 
+def _distinct(lines: list[str]) -> list[str]:
+    """Each line once, in order — lines that differ only in spacing, case or
+    punctuation ("Experience: 0 to 1 years" / "Experience :0 to 1 years") count
+    as the same line."""
+    seen, out = set(), []
+    for line in lines:
+        key = re.sub(r"[\W_]+", "", line).lower()
+        if key and key not in seen:
+            seen.add(key)
+            out.append(line)
+    return out
+
+
 def page_job_detail(j: dict):
     back = st.session_state.get("job_from", "jobs")
     back_co = next((x for x in companies if back == "companies"
@@ -3534,8 +3551,8 @@ def page_job_detail(j: dict):
     raw_lines = ev.get("experience_lines") if isinstance(ev.get("experience_lines"), list) else []
     exp_lines = [x.strip(" ·•-*	") for x in raw_lines if isinstance(x, str)
                  and re.search(r"experience|\bexp\b|fresher|graduat|\d\s*(?:\+\s*)?(?:years?|yrs?|months?)\b", x, re.I)]
-    exp_lines = list(dict.fromkeys(exp_lines))
-    ev_exp = [str(x) for x in ev.get("experience") or [] if x] if isinstance(ev.get("experience"), list) else []
+    exp_lines = _distinct(exp_lines)
+    ev_exp = _distinct([str(x) for x in ev.get("experience") or [] if x] if isinstance(ev.get("experience"), list) else [])
     if ev_exp and ev_exp != ["no experience requirement stated"]:
         experience = escape(", ".join(ev_exp))
     elif exp_lines:
@@ -3621,7 +3638,8 @@ def page_job_detail(j: dict):
                     ("Location", escape(j.get("location") or "Not captured for this posting")),
                     ("Category", escape(pill_label)),
                     ("Experience", experience),
-                    ("Found", f'<span class="num">{escape(j.get("date") or "—")} UTC</span>' + (f' <span class="muted">({_ago(d, NOW)})</span>' if d else "")),
+                    ("Found", (f'<span class="num">{escape(_ist_stamp(d))}</span> <span class="muted">({_ago(d, NOW)})</span>' if d
+                               else f'<span class="num">{escape(j.get("date") or "—")} UTC</span>')),
                     ("Status", "Dismissed" if is_dismissed(j) else "Active")]
             st.html('<div class="divider"></div><div class="eyebrow">Posting information</div>'
                     '<h2 class="section-title" style="margin-top:4px;">Job overview</h2><dl class="kv">'
@@ -3900,7 +3918,7 @@ def page_monitoring():
                     f"{_plural(len(companies), 'portal')} tracked", icon, tone, small=True)
             + _stat("Last scan", _ago(last_scan, NOW), _ist_stamp(last_scan) if last_scan else "No scan recorded",
                     "history", "t-amber" if scan_stale else "t-teal", small=True)
-            + _stat("Next scheduled scan", _ist(NEXT_SCAN), "GitHub may start it later", "schedule", "", small=True)
+            + _stat("Next scheduled scan", _ist(NEXT_SCAN), NEXT_SCAN_NOTE, "schedule", "", small=True)
             + _stat("Portals", f'{n_by_status["healthy"]}<span class="muted" style="font-size:16px;font-weight:600;"> / {len(companies)} healthy</span>',
                     f"{n_by_status['delayed']} delayed · {n_by_status['failing']} failing · {n_by_status['pending'] + n_by_status['checking']} pending",
                     "lan", "t-red" if n_by_status["failing"] else "t-green")
@@ -3942,19 +3960,20 @@ def page_monitoring():
 
 
 def _save_my_alerts(prefs: dict) -> None:
-    """The alert form's Save (a callback: the page is drawn once, after it)."""
+    """The alert form's Save (a callback: the page is drawn once, after it).
+    One read and one write; the session's copy is patched, not re-read."""
     enabled = st.session_state.get("my_alerts_on")
     scope = st.session_state.get("my_alerts_scope")
     try:
-        USER.set_watch_all(scope == "all")
         # the mode is kept as saved: "Tailored" (job preferences) is an
         # older setting that stays until the person switches it off below
-        USER.set_notifications(bool(enabled) and bool(prefs["email"]), prefs["mode"])
-        toast("Alert settings saved", "success")
+        fields = USER.save_alert_settings(bool(enabled) and bool(prefs["email"]), prefs["mode"], scope == "all")
     except (user_store.UserStoreError, ValueError) as e:
-        toast(str(e) if isinstance(e, user_store.UserStoreError) else "Those settings couldn't be saved.", "error")
-    finally:
         personal_changed()
+        toast(str(e) if isinstance(e, user_store.UserStoreError) else "Those settings couldn't be saved.", "error")
+        return
+    _personal_patched(profile=fields)
+    toast("Alert settings saved", "success")
 
 
 def my_alerts_card() -> None:
@@ -3981,6 +4000,13 @@ def my_alerts_card() -> None:
                                                     "followed": f"Only companies I follow ({len(followed)})"}[v])
             st.form_submit_button("Save", key="btn_my_alerts", type="primary", icon=":material/save:",
                                   on_click=_save_my_alerts, args=(prefs,))
+        if prefs["enabled"]:
+            last = _parse_iso(user_store.alerts_last_sent_from(ME["profile"]).replace("Z", "+00:00"))
+            nxt = last + timedelta(hours=scan_schedule.MEMBER_ALERT_HOURS) if last else None
+            when = (f"your next email can go out after <b class=\"num\">{escape(_ist_stamp(nxt))}</b>"
+                    if nxt and nxt > NOW else "your next email goes out after the next scan that finds new jobs for you")
+            st.html(f'<p class="note">{_ms("schedule", "s16")} At most one email every '
+                    f'{scan_schedule.MEMBER_ALERT_HOURS} hours, with every new job since — {when}.</p>')
         if scope == "followed" and not followed and prefs["mode"] != "tailored":
             st.html(f'<p class="note">{_ms("info", "s16")} You don’t follow any companies yet, so there is nothing to '
                     'email — follow some in My companies, or choose “Every tracked company”.</p>')
@@ -4142,7 +4168,7 @@ def page_email():
             headline, sub = "Alerts are on", f"{_plural(len(pending), 'job')} waiting — sent after the next check."
         else:
             headline, sub = "Alerts are on", "Nothing waiting to send. New fresher jobs are emailed after each check."
-        last_txt = (f'<span class="num">{"Sent" if last_is_sent else "Covered a job found"} {last_mail:%b %d, %H:%M} UTC</span> <span class="muted">({_ago(last_mail, NOW)})</span>'
+        last_txt = (f'<span class="num">{"Sent" if last_is_sent else "Covered a job found"} {_ist_stamp(last_mail)}</span> <span class="muted">({_ago(last_mail, NOW)})</span>'
                     if last_mail else "No alert emails recorded yet")
         st.html(f"""<div class="mail-status"><div class="big {'on' if recipient else 'off'}">{_ms("notifications_active" if recipient else "notifications_off", "s28")}</div>
           <div style="min-width:0;"><h2>{headline}</h2><p class="section-sub">{sub}</p></div></div>
@@ -4177,7 +4203,7 @@ def page_email():
     with st.container(key="test_panel"):
         ts = st.session_state.test_status
         status = ("Not sent this session" if ts is None else
-                  f"Sent at {ts[1]} UTC" if ts[0] else f"Failed at {ts[1]} UTC")
+                  f"Sent at {ts[1]}" if ts[0] else f"Failed at {ts[1]}")
         t1, t2 = st.columns([4, 1], vertical_alignment="center")
         with t1:
             st.html(f'<div><h2 class="section-title">{_ms("send")}Test delivery</h2><p class="section-sub">Send a sample alert to the recipient above to confirm emails arrive. '
@@ -4185,7 +4211,7 @@ def page_email():
         with t2:
             test = st.button("Send test email", key="btn_test", icon=":material/send:", use_container_width=True)
     if test:
-        stamp = datetime.now(timezone.utc).strftime("%H:%M")
+        stamp = _ist(datetime.now(timezone.utc))
         # owner only, and only ever to the configured recipient — never to an
         # address typed in here, so the system mailbox can't be used to send
         # mail to anyone else
@@ -4472,7 +4498,8 @@ def scan_schedule_card() -> None:
                 '<dl class="kv">'
                 f'<dt>Current interval</dt><dd><b>{escape(interval_label(SCAN_HOURS))}</b></dd>'
                 f'<dt>Next scheduled scan</dt><dd><span class="num">{escape(_ist_stamp(NEXT_SCAN))}</span>'
-                '<span class="kv-note">Asia/Kolkata time. GitHub may start a scheduled scan later than this.</span></dd>'
+                f'<span class="kv-note">Asia/Kolkata time.{" A scan is overdue: it waits for GitHub’s next hourly check." if SCAN_DUE else ""} '
+                'GitHub may start a scheduled scan later than this.</span></dd>'
                 '<dt>Roles kept</dt><dd>Fresher and entry-level roles located in India</dd>'
                 '<dt>Detail pages</dt><dd>Every candidate job’s own posting is read before it can be classified and '
                 'emailed; if it can’t be read, it is retried on the next scan</dd></dl>')
@@ -4506,7 +4533,7 @@ def tracker_status_card() -> None:
         ("Last scan", f'<span class="v num">{escape(_ago(last_scan, NOW))}</span>',
          escape(_ist_stamp(last_scan)) if last_scan else "No scan has finished yet"),
         ("Next scheduled", f'<span class="v num">{escape(_ist(NEXT_SCAN))}</span>',
-         f"{escape(interval_label(SCAN_HOURS))} · GitHub may start it later"),
+         f"{escape(interval_label(SCAN_HOURS))} · {escape(NEXT_SCAN_NOTE)}"),
     ]
     with st.container(key="set_status"):
         st.html(f'<div class="set-head"><span class="ic">{_ms("monitor_heart")}</span><div><div class="eyebrow">Monitoring</div>'

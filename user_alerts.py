@@ -76,7 +76,7 @@ def select_jobs(seen: list[dict], view: dict, dismissed: set[str], since: dateti
     """The jobs this person should be emailed about (before the ledger)."""
     out, keys = [], set()
     for j in seen:
-        if not job_filters.passes_global_gate(j):
+        if not isinstance(j, dict) or not job_filters.passes_global_gate(j):     # a malformed record is skipped
             continue
         key = job_key(j)
         found = _parse_time(j.get("first_seen"))
@@ -138,6 +138,9 @@ def run(store: UserStore, seen: list[dict], send, *, run_id: str | None = None, 
         try:
             outcome, n = run_for_user(store, uid, seen, send, run_id, dry_run, now)
         except UserStoreError:
+            outcome, n = "error", 0
+        except Exception as e:                 # anything else about one person never stops the others
+            log.error("one person's alerts failed (%s); the others continue", type(e).__name__)
             outcome, n = "error", 0
         stats[outcome] += 1
         stats[f"{outcome}_jobs"] += n

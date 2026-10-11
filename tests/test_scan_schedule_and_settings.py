@@ -356,7 +356,7 @@ def test_the_interval_drives_the_displayed_schedule(app, google_env, ustore, adm
     monkeypatch.setattr(config_store, "_get_repo", lambda token: repo)
     at = _admin(app, google_env, ustore, admins)
     html = _html(at)
-    assert "<dt>Current interval</dt><dd><b>Every 12 hours</b></dd>" in html and "Every 12 hours · GitHub may start it later" in html
+    assert "<dt>Current interval</dt><dd><b>Every 12 hours</b></dd>" in html and re.search(r"Every 12 hours · (Overdue — )?GitHub may start it later", html)
     _nav(at, "monitoring")
     assert "checked every 12 hours" in _html(at)
 

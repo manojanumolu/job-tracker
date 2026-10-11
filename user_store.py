@@ -512,6 +512,26 @@ class UserData:
         return self._backend.update_if(path, {"state": DELIVERY_PENDING}, claimed)
 
     @_guard
+    def save_alert_settings(self, enabled: bool, mode: str, watch_all: bool) -> dict:
+        """The "Alert emails" form in one read and one write: on/off, the
+        mode and the company scope — exactly what set_watch_all() followed by
+        set_notifications() store (the same verified-email rule, the same
+        enabled_at "no backlog" stamp, tailoring kept). Returns the fields
+        written, so the caller can show them without reading them back."""
+        if mode not in NOTIFY_MODES:
+            raise InvalidInput("unknown notification mode")
+        prof = self._backend.get(self._root) or {}
+        if enabled and prof.get("email_verified") is not True:
+            raise InvalidInput("alerts need a verified email address")
+        old = prof.get("notifications") if isinstance(prof.get("notifications"), dict) else {}
+        since = old.get("enabled_at") if old.get("enabled") is True and old.get("enabled_at") else _now_iso()
+        fields = {"watch_all": watch_all is True,
+                  "notifications": {**old, "enabled": enabled is True, "mode": mode,
+                                    "enabled_at": since if enabled is True else None}}
+        self._backend.set(self._root, fields, merge=True)
+        return fields
+
+    @_guard
     def record_alert_sent(self, now: float | None = None) -> str:
         """A personal alert email was just sent: start the next cadence
         window (see scan_schedule.MEMBER_ALERT_HOURS). Returns the time."""
