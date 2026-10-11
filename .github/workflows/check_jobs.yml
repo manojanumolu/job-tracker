@@ -1,9 +1,17 @@
 name: Check Jobs
 
+# Two fixed schedules (GitHub cron lines are static); scan_schedule.py decides
+# what each tick does, from settings.json (the admin's global scan interval:
+# 1, 3, 6 or 12 h, default 3) and companies.json (when the last scan ran):
+#   * hourly: a ~10 s plan job; the full scan starts only when one is due
+#   * every 6 h: the personal-alert pass (no scan) — members are emailed at
+#     most every 6 h whatever the scan interval is
+# GitHub may start scheduled runs late; a missed scan catches up next hour.
 on:
   schedule:
-    - cron: "0 */3 * * *"   # every 3 hours
-  workflow_dispatch:          # allow manual run
+    - cron: "0 * * * *"     # plan tick: scan when the admin's interval says so
+    - cron: "20 */6 * * *"  # personal alerts every 6 hours (no scan)
+  workflow_dispatch:          # "Run check": always scans
 
 # queue overlapping runs instead of letting them race each other's git push
 concurrency:
@@ -11,7 +19,34 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      scan: ${{ steps.plan.outputs.scan }}
+      deliver: ${{ steps.plan.outputs.deliver }}
+    steps:
+      - name: Checkout schedule inputs
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scan_schedule.py
+            settings.json
+            companies.json
+          sparse-checkout-cone-mode: false
+
+      - name: Decide what this run does
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: python3 scan_schedule.py plan >> "$GITHUB_OUTPUT"
+
   check:
+    needs: plan
+    if: ${{ needs.plan.outputs.scan == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -69,6 +104,36 @@ jobs:
         if: ${{ !cancelled() && steps.scrape.outcome == 'success' }}
         continue-on-error: true
         timeout-minutes: 10
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: python user_alerts.py --send
+
+  # The 6-hourly personal pass: no scan, the same user_alerts.py as the last
+  # step above (ledger claim -> send -> finalize; each person at most once per
+  # 6 h). It can never fail the workflow.
+  personal-alerts:
+    needs: plan
+    if: ${{ needs.plan.outputs.deliver == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Send personal email alerts
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}

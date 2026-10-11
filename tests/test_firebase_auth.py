@@ -514,12 +514,16 @@ def test_google_sign_in_opens_the_app_with_a_persistent_account_chip(app, google
     assert UID not in html and "Firebase account" not in html     # sign-in internals are for admins
 
 
-def test_admin_sees_the_firebase_uid(app, google_env, monkeypatch):
+def test_admin_sees_the_link_state_but_never_the_uid(app, google_env, monkeypatch):
+    """Oct 2026: an internal identifier isn't shown to anyone — admins see
+    that the Firebase account is linked (and, on failure, why)."""
     monkeypatch.setenv("JT_ADMIN_EMAILS", EMAIL)
     google_env["firebase"](ok_google_answer())
     google_env["set_user"](FakeUser(token=_fresh_google_token()))
     at = app([], page="settings", secrets=GATED, owner=False)
-    assert UID in _html(at) and "Admin — can manage" in _html(at)
+    html = _html(at)
+    assert UID not in html and "Admin — can manage" in html
+    assert "<dt>Firebase account</dt><dd>Linked</dd>" in html
 
 
 def test_reload_after_an_hour_stays_signed_in_without_google_again(app, google_env):

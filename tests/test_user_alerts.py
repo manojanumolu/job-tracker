@@ -12,6 +12,11 @@ import user_alerts
 from config_store import alert_pending, job_key
 from user_store import MemoryBackend, UserStore, UserStoreError
 
+from datetime import datetime, timedelta, timezone
+
+# a later alert pass, past the 6-hour personal cadence (scan_schedule.MEMBER_ALERT_HOURS)
+LATER = datetime.now(timezone.utc) + timedelta(hours=7)
+
 REPO = Path(__file__).resolve().parent.parent
 A, B = "UserAaaaaaaaaaaaaaaaaaaaaaaa1", "UserBbbbbbbbbbbbbbbbbbbbbbbb2"
 PASSED = {"checks": {"india": True, "experience": True}}
@@ -203,8 +208,8 @@ def test_a_job_is_sent_once(store):
     seen = [job(1)]
     mail = Mailer()
     user_alerts.run(store, seen, mail, run_id="r1")
-    user_alerts.run(store, seen, mail, run_id="r2")
-    user_alerts.run(store, seen + [job(2)], mail, run_id="r3")
+    user_alerts.run(store, seen, mail, run_id="r2", now=LATER)
+    user_alerts.run(store, seen + [job(2)], mail, run_id="r3", now=LATER)
     assert mail.sent == [("alice@example.org", [job_key(seen[0])]), ("alice@example.org", [job_key(job(2))])]
     assert store.for_uid(A).delivery(job_key(seen[0]))["state"] == "sent"
 

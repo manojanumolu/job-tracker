@@ -66,7 +66,7 @@ def _stamp_fresh_local_modules() -> None:
             pass
 
 
-_LOCAL_MODULES = ["identity", "locations", "job_classifier", "sources", "scraper", "config_store", "repo_sync",
+_LOCAL_MODULES = ["scan_schedule", "identity", "locations", "job_classifier", "sources", "scraper", "config_store", "repo_sync",
                   "access", "firebase_auth", "job_filters", "user_store", "snapshot_cache", "notifier", "alerts"]
 _reload_changed_local_modules()
 
@@ -85,6 +85,7 @@ import brand_logos
 import company_logos
 import firebase_auth
 import job_filters
+import scan_schedule
 import snapshot_cache
 import user_store
 from access import (
@@ -1433,6 +1434,27 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 /* settings cards (not clickable: no hover): a faint glossy sheen from the top edge */
 [class*="st-key-set_"], .st-key-mail_status, .st-key-email_form, .st-key-test_panel {
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 3%, var(--surface)), var(--surface) 160px) !important; }
+/* the one-line "open at the top" script of a navigation run: takes no space */
+.st-key-jt_scroll_top, [data-testid="stLayoutWrapper"]:has(> .st-key-jt_scroll_top) { display: none !important; }
+/* Settings: the tracker section, drawn for admins only */
+.admin-head { display: flex; gap: 14px; align-items: flex-start; margin-top: 10px; padding: 18px 4px 4px;
+  border-top: 1px dashed var(--border-strong); }
+.admin-head .ic { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: var(--accent-text); border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 60%, var(--surface)), var(--accent-soft)); box-shadow: var(--badge-hi); }
+.admin-head .section-title { font-size: 19px; line-height: 26px; }
+.st-key-scan_pick_row { flex-direction: row !important; flex-wrap: wrap !important; align-items: center !important; gap: 12px !important; }
+.st-key-scan_pick_row > * { width: auto !important; flex: 0 1 auto !important; }
+.st-key-scan_pick_row button[data-variant="pills"] { min-height: 38px; padding: 0 15px !important; border-radius: 999px !important;
+  background: var(--btn2-grad) !important; border: 1px solid var(--border-strong) !important; color: var(--text-2) !important;
+  transition: border-color var(--fast) var(--ease), color var(--fast) var(--ease), box-shadow var(--fast) var(--ease); }
+.st-key-scan_pick_row button[data-variant="pills"]:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong)) !important;
+  color: var(--accent-text) !important; box-shadow: var(--hi), var(--btn2-shadow-hover) !important; }
+.st-key-scan_pick_row button[data-variant="pills"]:is([aria-checked="true"], [aria-pressed="true"], [data-selected="true"]) {
+  color: var(--accent-text) !important; border-color: color-mix(in srgb, var(--accent) 50%, transparent) !important;
+  background: linear-gradient(180deg, var(--accent-soft), color-mix(in srgb, var(--accent) 16%, var(--accent-soft))) !important;
+  box-shadow: var(--badge-hi), 0 6px 14px -10px var(--accent) !important; }
+.st-key-scan_pick_row button[data-variant="pills"] p { color: inherit !important; font-size: 13.5px !important; font-weight: 600 !important; }
 /* menus: the account menu's items and select lists answer the pointer the same way */
 [data-baseweb="popover"] li:hover { background: var(--accent-soft) !important; color: var(--accent-text) !important; }
 """
@@ -1498,73 +1520,16 @@ def _found_at(date_str: str, now: datetime) -> datetime | None:
     return dt.replace(year=now.year - 1) if dt > now + timedelta(days=1) else dt
 
 
-# The scan schedule is whatever check_jobs.yml's cron says (always UTC on
-# GitHub). It is read from the workflow so the UI follows any change there,
-# and shown in India time. IST is a fixed +05:30 (India has no DST), so no
-# tz database is needed.
+# The scan schedule is the admin's global scan interval (settings.json,
+# scan_schedule.py): check_jobs.yml ticks hourly and scans only when a scan is
+# due. Times are UTC on GitHub and shown in India time: Asia/Kolkata is a
+# fixed +05:30 (India has no DST), so no tz database is needed.
 IST = timezone(timedelta(hours=5, minutes=30), "IST")
-_WORKFLOW = BASE / ".github" / "workflows" / "check_jobs.yml"
-_DEFAULT_CRON = "0 */3 * * *"
 
 
-def _schedule_cron() -> str:
-    try:
-        m = re.search(r"""cron:\s*["']([^"']+)["']""", _WORKFLOW.read_text("utf-8"))
-    except OSError:
-        m = None
-    return m.group(1).strip() if m else _DEFAULT_CRON
-
-
-def _cron_field(spec: str, lo: int, hi: int) -> list[int]:
-    """Values of one cron field: *, */n, a, a-b, a-b/n, a/n and comma lists."""
-    vals: set[int] = set()
-    for part in spec.split(","):
-        rng, _, step = part.partition("/")
-        if rng == "*":
-            a, b = lo, hi
-        elif "-" in rng:
-            a, b = (int(x) for x in rng.split("-", 1))
-        else:
-            a = int(rng)
-            b = hi if step else a
-        vals.update(range(a, b + 1, int(step) if step else 1))
-    return sorted(v for v in vals if lo <= v <= hi)
-
-
-def _cron_times(expr: str) -> tuple[list[int], list[int]]:
-    """(minutes, hours) of a cron line; the day fields of this workflow are
-    all '*', so only minute and hour decide the slots."""
-    try:
-        minute, hour = expr.split()[:2]
-        mins, hrs = _cron_field(minute, 0, 59), _cron_field(hour, 0, 23)
-        if mins and hrs:
-            return mins, hrs
-    except ValueError:
-        pass
-    return _cron_times(_DEFAULT_CRON) if expr != _DEFAULT_CRON else ([0], list(range(0, 24, 3)))
-
-
-def _next_slot(now: datetime | None = None, expr: str | None = None) -> datetime:
-    """The next scheduled slot of check_jobs.yml's cron (UTC).
-    GitHub Actions only *schedules* at these times — runs usually start later
-    (measured Sep 2026: median 5 h apart, up to 9 h), so this is shown as a
-    scheduled time, never as a countdown."""
-    now = now or datetime.now(timezone.utc)
-    mins, hrs = _cron_times(expr or _schedule_cron())
-    day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    return min(t for d in (0, 1) for h in hrs for m in mins
-               if (t := day + timedelta(days=d, hours=h, minutes=m)) > now)
-
-
-def _cadence(expr: str | None = None) -> str:
-    """'Every 3 hours' / 'Every hour' / 'Daily' / '4 times a day'."""
-    mins, hrs = _cron_times(expr or _schedule_cron())
-    if len(mins) == 1 and len(hrs) == 1:
-        return "Daily"
-    if len(mins) == 1 and 24 % len(hrs) == 0 and hrs == list(range(hrs[0], 24, 24 // len(hrs))):
-        n = 24 // len(hrs)
-        return "Every hour" if n == 1 else f"Every {n} hours"
-    return f"{len(mins) * len(hrs)} times a day"
+def interval_label(hours: int) -> str:
+    """'Every hour' / 'Every 3 hours'."""
+    return "Every hour" if hours == 1 else f"Every {hours} hours"
 
 
 def _ist(dt: datetime) -> str:
@@ -1593,6 +1558,7 @@ def _initial(name: str) -> str:
 # however many cards show it).
 _FOUND_LOGOS: dict[str, dict] = {}
 _USED_LOGOS: dict[str, dict] = {}
+_FRAGMENT_LOGOS: dict[str, dict] = {}       # ... of which a list fragment already styled these
 
 
 def _avatar(name: str, size: str = "", person: bool = False) -> str:
@@ -2716,6 +2682,7 @@ for _i, _c in enumerate(c for c in _load_synced("companies.json", []) if isinsta
         _c["id"] = f"_row{_i}"
     companies.append(_c)
 settings: dict = _load_synced("settings.json", {"recipient_email": ""})
+SCAN_HOURS = scan_schedule.interval_from(settings)        # the admin's global interval (1, 3, 6 or 12 h)
 _logo_entries = company_logos.entries(_load_synced("logos.json", {}))
 _FOUND_LOGOS = {(c.get("name") or "").strip().lower(): _logo_entries[c["id"]]
                 for c in companies if c.get("id") in _logo_entries and (c.get("name") or "").strip()}
@@ -2778,13 +2745,14 @@ NOW = datetime.now(timezone.utc)
 # cron asks for every 3 h, but GitHub starts scheduled runs late: measured
 # gaps were median 5 h, 90th percentile 7.5 h, max 9 h — so a scan only
 # counts as "delayed" once it is overdue by more than that
-_STALE_H = 10
-SCHEDULE_NOTE = f"{_cadence().lower()} (GitHub may start scans later)"
+_STALE_H = max(10, SCAN_HOURS + 7)          # ... and a longer interval is not "delayed" either
+SCHEDULE_NOTE = f"{interval_label(SCAN_HOURS).lower()} (GitHub may start scans later)"
 HOME_LIMIT = 8
 JOBS_PAGE = 12
 _CATEGORY_PILL = {"FRESHER": "fresher", "ENTRY_LEVEL": "entry"}
 LEGACY_LABEL = "Keyword match"  # records from before the classifier existed
 
+st.session_state.pop("_app_rerun", None)
 for _k, _v in (("toast", None), ("toast_kind", "success"), ("jobs_page", 0), ("test_status", None),
                ("confirm_remove", None),
                ("just_added", None), ("job_from", "jobs"), ("confirm_clear", False)):
@@ -2847,6 +2815,7 @@ def go(page: str, **extra):
 _check_trigger = st.session_state.get("last_check_trigger", 0)
 last_scan = max((d for d in (_parse_iso(c.get("last_checked", "")) for c in companies) if d), default=None)
 scan_stale = last_scan is None or NOW - last_scan > timedelta(hours=_STALE_H)
+NEXT_SCAN = scan_schedule.next_scan(NOW, SCAN_HOURS, scan_schedule.last_scan(companies))   # UTC; shown in IST
 
 
 # scraper status -> label; all of them use the red "failing" style/counts
@@ -3044,6 +3013,22 @@ def account_menu() -> None:
 if ACCOUNT:
     account_menu()
 
+# A new destination opens at its top. Streamlit keeps the main area's scroll
+# position across reruns, so a page reached from far down another page
+# opened mid-way. Only a run whose destination (page, job, company, view)
+# changed carries this one-line script (a fresh nonce, so it runs once);
+# filters, pagination, dismissing or the account menu keep their place.
+_dest = (st.session_state.page, st.session_state.get("job_id"), st.session_state.get("company_id"),
+         st.session_state.get("company_view"))
+if st.session_state.get("_dest") not in (None, _dest):
+    st.session_state._dest_n = st.session_state.get("_dest_n", 0) + 1
+    with st.container(key="jt_scroll_top"):
+        st.html(f'<script data-nav="{st.session_state._dest_n}">(() => {{ const top = () => {{ '
+                'const m = document.querySelector(\'[data-testid="stMain"]\'); if (m) m.scrollTop = 0; '
+                'window.scrollTo(0, 0); }; top(); requestAnimationFrame(top); })();</script>',
+                unsafe_allow_javascript=True)
+st.session_state._dest = _dest
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SHARED PIECES
@@ -3069,7 +3054,7 @@ def status_line() -> str:
     """The live system state as three chips: health · last scan · next slot."""
     return (f'<span class="chip live {overall[0]}"><span class="dot {overall[0]}"></span>{escape(overall[1])}</span>'
             f'<span class="chip num">{_ms("history", "s16")}Last scan {_ago(last_scan, NOW)}</span>'
-            f'<span class="chip num">{_ms("schedule", "s16")}Next scheduled {_ist(_next_slot())}</span>')
+            f'<span class="chip num">{_ms("schedule", "s16")}Next scheduled {_ist(NEXT_SCAN)}</span>')
 
 
 # Actions run as on_click callbacks: Streamlit runs them BEFORE the page is
@@ -3115,6 +3100,21 @@ def apply_link(j: dict, label: str = "Apply") -> str:
             f'{label} {_ms("arrow_outward", "s16")}</a>')
 
 
+def _restore_widgets(keys) -> None:
+    """Bring back filter values after a visit to another page: Streamlit
+    forgets a widget's value on any run that doesn't draw it, so each value
+    is also kept under a plain key (cleared at sign-out with everything else)."""
+    for key in keys:
+        if key not in st.session_state and f"_keep_{key}" in st.session_state:
+            st.session_state[key] = st.session_state[f"_keep_{key}"]
+
+
+def _remember_widgets(keys) -> None:
+    for key in keys:
+        if key in st.session_state:
+            st.session_state[f"_keep_{key}"] = st.session_state[key]
+
+
 def filter_jobs(prefix: str, jobs: list[dict]) -> list[dict]:
     """Search · location · category · company · sort · clear. With personal
     data, the viewer's saved preferences are the defaults instead."""
@@ -3126,6 +3126,7 @@ def filter_jobs(prefix: str, jobs: list[dict]) -> list[dict]:
     sorts = {"new": "Newest first", "old": "Oldest first", "company": "Company A–Z", "title": "Title A–Z"}
     keys = {k: f"{prefix}_{k}" for k in ("q", "loc", "cat", "co", "sort")}
     defaults = {"q": "", "loc": "All locations", "cat": "all", "co": "All companies", "sort": "new"}
+    _restore_widgets(keys.values())
     for k, v in defaults.items():
         st.session_state.setdefault(keys[k], v)
     if st.session_state[keys["loc"]] not in ["All locations", *locs]:
@@ -3178,6 +3179,7 @@ def filter_jobs(prefix: str, jobs: list[dict]) -> list[dict]:
     else:
         out.sort(key=lambda j: found[id(j)] or epoch, reverse=True)
     st.session_state[f"{prefix}_filtered_sig"] = (q, loc, cat, co, sort)
+    _remember_widgets(keys.values())
     return out, active, _clear
 
 
@@ -3189,6 +3191,7 @@ def _filter_jobs_personal(prefix: str, jobs: list[dict], saved: dict):
              if not str(c.get("id", "")).startswith("_row")}
     sorts = {"new": "Newest first", "old": "Oldest first", "company": "Company A–Z", "title": "Title A–Z"}
     k = {f: f"{prefix}_{f}" for f in ("q", "sort", "ploc", "pfam", "pexp", "pco")}
+    _restore_widgets(k.values())
     base = {"q": "", "sort": "new", "ploc": list(saved["locations"]), "pfam": list(saved["families"]),
             "pexp": list(saved["experience"]), "pco": [c for c in (saved["companies"] or []) if c in names]}
     sig = json.dumps(base, sort_keys=True)
@@ -3247,6 +3250,7 @@ def _filter_jobs_personal(prefix: str, jobs: list[dict], saved: dict):
     else:
         out.sort(key=lambda j: found[id(j)] or epoch, reverse=True)
     st.session_state[f"{prefix}_filtered_sig"] = (q, sort, tuple(locs), tuple(fams), tuple(exp), tuple(cos))
+    _remember_widgets(k.values())
     return out, active, _show_all
 
 
@@ -3297,6 +3301,36 @@ def job_row(j: dict, idx: str, origin: str):
                           args=(jkey, True))
 
 
+def _leave_fragment_if_needed() -> None:
+    """In a list fragment (a run of just the list): when its callback changed
+    something outside the list — another page or job (Details, View all) or
+    the data (Dismiss/Restore) — draw the whole app instead, once."""
+    # compared with the destination the last full run drew (set before any
+    # page is drawn), so a full run itself never asks for another one
+    here = (st.session_state.page, st.session_state.get("job_id"), st.session_state.get("company_id"),
+            st.session_state.get("company_view"))
+    if st.session_state.pop("_app_rerun", False) or here != st.session_state.get("_dest"):
+        st.rerun()
+
+
+def _logo_styles(entries: dict) -> str:
+    """One style block giving each found company logo its image."""
+    return "<style>" + "".join(
+        # 62% of the tile along the logo's longer side, as the drawn marks
+        f'.logo.co-mark.{k} {{ background: url("{company_logos.web_uri(e)}") center / '
+        f'{"62% auto" if (e["web"].get("w") or 1) >= (e["web"].get("h") or 1) else "auto 62%"} no-repeat, var(--tile, #fff); }}'
+        for k, e in entries.items()) + "</style>"
+
+
+def _fragment_logos(before: dict) -> None:
+    """The logos a list fragment drew, styled inside the fragment (a list-only
+    run doesn't reach the page's own style block at the end)."""
+    mine = {k: e for k, e in _USED_LOGOS.items() if k not in before}
+    if mine:
+        st.html(_logo_styles(mine))
+        _FRAGMENT_LOGOS.update(mine)
+
+
 def _detail_dismiss_click(jkey: str, back: str, back_kwargs: dict) -> None:
     """Dismiss from a job's own page, then return to the list it came from."""
     res = change_dismissal({jkey}, dismiss=True)
@@ -3309,6 +3343,7 @@ def _detail_dismiss_click(jkey: str, back: str, back_kwargs: dict) -> None:
 
 def _dismiss_click(jkey: str, dismiss: bool) -> None:
     """Dismiss / Restore one job (a callback: the page is drawn once, after it)."""
+    st.session_state._app_rerun = True          # counts and the hero change: the whole page, not just the list
     res = change_dismissal({jkey}, dismiss=dismiss)
     if res:
         if dismiss:
@@ -3368,7 +3403,7 @@ def page_home():
             + _stat("New this week", new_this_week, "Found in the last 7 days", "trending_up", "t-teal")
             + _stat("Companies monitored", len(companies), healthy_note, "apartment",
                     "t-red" if n_by_status["failing"] else "t-green")
-            + _stat("Last scan", _ago(last_scan, NOW), f"Next scheduled {_ist(_next_slot())}", "update",
+            + _stat("Last scan", _ago(last_scan, NOW), f"Next scheduled {_ist(NEXT_SCAN)}", "update",
                     "t-amber" if scan_stale else "", small=True)
             + "</div>")
 
@@ -3382,7 +3417,7 @@ def page_home():
             with b:
                 st.button("Open monitoring", key="btn_home_mon", on_click=go, args=("monitoring",))
         empty_state("travel_explore", "No alerts yet",
-                    f"The tracker checks {_plural(len(companies), 'company', 'companies')} on a schedule of every 3 hours "
+                    f"The tracker checks {_plural(len(companies), 'company', 'companies')} on a schedule of {interval_label(SCAN_HOURS).lower()} "
                     "(GitHub often starts it later). New fresher and "
                     "entry-level roles in India appear here — and in your inbox — as soon as a portal publishes them.",
                     _acts)
@@ -3390,6 +3425,20 @@ def page_home():
 
     st.html('<div class="sec-head"><div><div class="eyebrow sparked">Latest opportunities</div><h2 class="section-title">Latest jobs</h2>'
             '<p class="section-sub">Newest fresher and entry-level roles found on the portals you track</p></div></div>')
+    _home_list()
+    st.html(f"""<div class="how">
+      <div><span class="ic">{_ms("travel_explore")}</span><div><b>Tracks career portals</b><p>Each company's job list is scanned on a schedule — no manual searching.</p></div></div>
+      <div><span class="ic">{_ms("article")}</span><div><b>Reads every posting</b><p>A job is judged from its own page, never from its title alone.</p></div></div>
+      <div><span class="ic">{_ms("mark_email_read")}</span><div><b>Emails each role once</b><p>Only India fresher and entry-level jobs that pass every check are sent.</p></div></div>
+    </div>""")
+
+
+@st.fragment
+def _home_list() -> None:
+    """Home's filters and latest jobs. A fragment: changing a filter redraws
+    only this part, not the sidebar, header, menu and hero."""
+    _leave_fragment_if_needed()
+    before = dict(_USED_LOGOS)
     shown, active, clear = filter_jobs("h", active_jobs)
     if not shown:
         empty_state("search_off", "No jobs match these filters",
@@ -3406,11 +3455,7 @@ def page_home():
             with f2:
                 st.button("View all jobs", key="btn_all_jobs", icon=":material/arrow_forward:", icon_position="right",
                           on_click=go, args=("jobs",))
-    st.html(f"""<div class="how">
-      <div><span class="ic">{_ms("travel_explore")}</span><div><b>Tracks career portals</b><p>Each company's job list is scanned on a schedule — no manual searching.</p></div></div>
-      <div><span class="ic">{_ms("article")}</span><div><b>Reads every posting</b><p>A job is judged from its own page, never from its title alone.</p></div></div>
-      <div><span class="ic">{_ms("mark_email_read")}</span><div><b>Emails each role once</b><p>Only India fresher and entry-level jobs that pass every check are sent.</p></div></div>
-    </div>""")
+    _fragment_logos(before)
 
 
 def page_jobs():
@@ -3427,6 +3472,16 @@ def page_jobs():
                     "New jobs appear here after the next scan." if tab == "active"
                     else "Jobs you dismiss are kept here so they're never emailed twice — you can restore them anytime.")
         return
+    _jobs_list(tab)
+
+
+@st.fragment
+def _jobs_list(tab: str) -> None:
+    """Jobs' filters, list and pagination. A fragment: searching, sorting,
+    filtering and paging redraw only this part of the page."""
+    _leave_fragment_if_needed()
+    before = dict(_USED_LOGOS)
+    source = active_jobs if tab == "active" else dismissed_jobs
     shown, active, clear = filter_jobs("j", source)
     sig = (tab, st.session_state.get("j_filtered_sig"))
     if st.session_state.get("_jobs_sig") != sig:
@@ -3453,6 +3508,7 @@ def page_jobs():
             with f3:
                 st.button("Next", key="alerts_next", icon=":material/chevron_right:", icon_position="right",
                           disabled=end >= total, on_click=st.session_state.__setitem__, args=("jobs_page", page + 1))
+    _fragment_logos(before)
 
 
 def page_job_detail(j: dict):
@@ -3844,7 +3900,7 @@ def page_monitoring():
                     f"{_plural(len(companies), 'portal')} tracked", icon, tone, small=True)
             + _stat("Last scan", _ago(last_scan, NOW), _ist_stamp(last_scan) if last_scan else "No scan recorded",
                     "history", "t-amber" if scan_stale else "t-teal", small=True)
-            + _stat("Next scheduled scan", _ist(_next_slot()), "GitHub may start it later", "schedule", "", small=True)
+            + _stat("Next scheduled scan", _ist(NEXT_SCAN), "GitHub may start it later", "schedule", "", small=True)
             + _stat("Portals", f'{n_by_status["healthy"]}<span class="muted" style="font-size:16px;font-weight:600;"> / {len(companies)} healthy</span>',
                     f"{n_by_status['delayed']} delayed · {n_by_status['failing']} failing · {n_by_status['pending'] + n_by_status['checking']} pending",
                     "lan", "t-red" if n_by_status["failing"] else "t-green")
@@ -3914,7 +3970,8 @@ def my_alerts_card() -> None:
                 else "your sign-in email isn't verified, so personal alerts can't be turned on")
         st.html(f'<div class="set-head"><span class="ic">{_ms("notifications")}</span><div><div class="eyebrow">Your account</div>'
                 f'<h2 class="section-title">Alert emails</h2><p class="section-sub">Sent to {dest}. New qualifying jobs are '
-                'emailed after each scheduled scan, once each — never the backlog from before you turned them on.</p></div></div>')
+                f'emailed at most once every {scan_schedule.MEMBER_ALERT_HOURS} hours, each job once — never the backlog '
+                'from before you turned them on.</p></div></div>')
         with st.form("my_alerts_form", border=False):
             enabled = st.toggle("Email me new jobs", value=prefs["enabled"], key="my_alerts_on",
                                 disabled=not prefs["email"])
@@ -4153,7 +4210,7 @@ def page_email():
         st.rerun()
 
     with st.container(key="set_behavior"):
-        steps = [("travel_explore", "A check runs", "Scheduled every 3 hours (GitHub often starts runs later). Every tracked portal is scanned."),
+        steps = [("travel_explore", "A check runs", f"Scheduled {interval_label(SCAN_HOURS).lower()} (GitHub often starts runs later). Every tracked portal is scanned."),
                  ("fact_check", "Only qualifying jobs are kept", "Fresher and entry-level jobs in India whose own posting was read — never a guess from a title."),
                  ("outgoing_mail", "New jobs go out in one email", "Each job is emailed at most once. Dismissed jobs are never emailed, and stay in the history so they're never sent again."),
                  ("replay", "Failures retry safely", "If sending fails, the jobs stay unsent and the next check retries. A job is recorded before its email goes out, so a failed save can't cause a duplicate.")]
@@ -4269,7 +4326,7 @@ def account_card() -> None:
         if ACCOUNT.get("provider") == "owner":
             fb = "— (owner password; sign in with Google to link your Firebase account)"
         elif ACCOUNT.get("uid"):
-            fb = f'<span class="num">{escape(ACCOUNT["uid"])}</span>' if admin else "Linked"
+            fb = "Linked"                      # the UID itself is never shown, not even to admins
         elif link.get("state") == "failed" and admin:
             fb = (f'Not linked — Firebase refused the Google sign-in <span class="num">({escape(link.get("code") or "")})</span>'
                   + (f'<span class="kv-note">{escape(_GOOGLE_ERROR_HINTS[link["code"]])}</span>'
@@ -4311,13 +4368,7 @@ def account_card() -> None:
                         st.text_input("Owner password", type="password", key="owner_pw", autocomplete="current-password")
                         st.form_submit_button("Unlock", key="btn_sign_in", icon=":material/lock_open:", type="primary",
                                               on_click=_owner_submit)
-        a1, _a2 = st.columns([1, 3])
-        with a1:
-            if st.button("Sign out", key="btn_account_sign_out_settings", icon=":material/logout:",
-                         use_container_width=True):
-                if not account_sign_out():
-                    st.rerun()
-                st.stop()
+        # (signing out is in the account menu, top right — one place for it)
 
 
 def owner_card() -> None:
@@ -4382,6 +4433,67 @@ _STATUS_WORDS = {"healthy": "healthy", "delayed": "delayed", "failing": "failing
                  "checking": "checking now"}
 
 
+SCAN_CHOICES = scan_schedule.ALLOWED_INTERVALS
+
+
+def _save_scan_interval() -> None:
+    """Save the global scan interval (admins only). Checked here on the server
+    — the role, then the value — and again in _save_change; the control is
+    simply never drawn for anyone else. Only settings.json changes: no scan
+    starts, and the scanner's state (last scans, jobs) is untouched."""
+    if not owner_only("change the scan interval"):
+        return
+    try:
+        hours = scan_schedule.validate_interval(st.session_state.get("scan_interval_pick"))
+    except scan_schedule.InvalidInterval as e:
+        toast(str(e), "error")
+        return
+    _, saved, err = _save_change("settings.json", lambda latest: scan_schedule.with_interval(latest, hours),
+                                 {"recipient_email": ""}, f"chore: set the scan interval to {hours} h [skip ci]")
+    if saved:
+        toast(f"Scan interval saved — {interval_label(hours).lower()}. It applies from the next hourly check; "
+              "no scan was started.", "success")
+    else:
+        toast(f"Not saved permanently. {err}", "error")
+
+
+def scan_schedule_card() -> None:
+    """Settings → Global job scan interval (admins). The shared scanner's
+    schedule: what the hourly plan tick in check_jobs.yml reads."""
+    st.session_state.setdefault("scan_interval_pick", SCAN_HOURS)
+    with st.container(key="set_engine"):
+        by_source: dict[str, list[str]] = {}
+        for c in companies:
+            by_source.setdefault(_source_label(c), []).append((c.get("name") or "").strip() or "Unnamed")
+        st.html(f'<div class="set-head"><span class="ic">{_ms("manage_search")}</span><div><div class="eyebrow">Scanning</div>'
+                '<h2 class="section-title">Global job scan interval</h2><p class="section-sub">How often the one shared '
+                'scanner checks every portal, for everybody. Members can’t change it; their alert emails go out at '
+                f'most every {scan_schedule.MEMBER_ALERT_HOURS} hours whatever this is.</p></div></div>'
+                '<dl class="kv">'
+                f'<dt>Current interval</dt><dd><b>{escape(interval_label(SCAN_HOURS))}</b></dd>'
+                f'<dt>Next scheduled scan</dt><dd><span class="num">{escape(_ist_stamp(NEXT_SCAN))}</span>'
+                '<span class="kv-note">Asia/Kolkata time. GitHub may start a scheduled scan later than this.</span></dd>'
+                '<dt>Roles kept</dt><dd>Fresher and entry-level roles located in India</dd>'
+                '<dt>Detail pages</dt><dd>Every candidate job’s own posting is read before it can be classified and '
+                'emailed; if it can’t be read, it is retried on the next scan</dd></dl>')
+        with st.container(key="scan_pick_row"):
+            st.pills("Global job scan interval", list(SCAN_CHOICES), key="scan_interval_pick",
+                     format_func=interval_label, selection_mode="single", label_visibility="collapsed")
+            st.button("Save interval", key="btn_save_interval", icon=":material/schedule:", type="primary",
+                      on_click=_save_scan_interval,
+                      disabled=st.session_state.get("scan_interval_pick") in (None, SCAN_HOURS))
+        with st.expander("Technical details", icon=":material/code:"):
+            tech = [("Scrapers", "; ".join(f"{escape(src)} for {escape(', '.join(sorted(names)))}"
+                                           for src, names in sorted(by_source.items())) or "No portals yet"),
+                    ("Scheduler", f'check_jobs.yml ticks hourly (cron <span class="num">{scan_schedule.PLAN_CRON}</span>, UTC); '
+                                  'scan_schedule.py starts a scan only at the interval boundaries, from '
+                                  f'<span class="num">{scan_schedule.SETTING}</span> in settings.json'),
+                    ("Personal alerts", f'after every scan and every {scan_schedule.MEMBER_ALERT_HOURS} h (cron '
+                                        f'<span class="num">{scan_schedule.ALERTS_CRON}</span>); each person at most '
+                                        f'once per {scan_schedule.MEMBER_ALERT_HOURS} h')]
+            st.html('<dl class="kv tech">' + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in tech) + "</dl>")
+
+
 def tracker_status_card() -> None:
     """Settings → Tracker status (admins): the portals' health and the scan
     times — what the sidebar's status card used to show, kept in one place.
@@ -4393,8 +4505,8 @@ def tracker_status_card() -> None:
         ("Companies monitored", f'<span class="v num">{len(companies)}</span>', escape(breakdown)),
         ("Last scan", f'<span class="v num">{escape(_ago(last_scan, NOW))}</span>',
          escape(_ist_stamp(last_scan)) if last_scan else "No scan has finished yet"),
-        ("Next scheduled", f'<span class="v num">{escape(_ist(_next_slot()))}</span>',
-         f"{escape(_cadence())} · GitHub may start it later"),
+        ("Next scheduled", f'<span class="v num">{escape(_ist(NEXT_SCAN))}</span>',
+         f"{escape(interval_label(SCAN_HOURS))} · GitHub may start it later"),
     ]
     with st.container(key="set_status"):
         st.html(f'<div class="set-head"><span class="ic">{_ms("monitor_heart")}</span><div><div class="eyebrow">Monitoring</div>'
@@ -4428,7 +4540,12 @@ def page_settings():
     if MEMBER_VIEW:                      # the tracker's own settings are the admin's
         st.html('<div class="app-foot"><span>Fresher Job Tracker</span><span>Fresher and entry-level roles in India</span></div>')
         return
+    st.html('<div class="admin-head"><span class="ic">' + _ms("admin_panel_settings") + '</span><div>'
+            '<div class="eyebrow">Admins only</div><h2 class="section-title">Administration</h2>'
+            '<p class="section-sub">The shared tracker: its schedule, health and data. Members never see this section.</p>'
+            '</div></div>')
     tracker_status_card()
+    scan_schedule_card()
     with st.container(key="set_data"):
         synced = bool(os.environ.get("GITHUB_TOKEN"))
         d1, d2 = st.columns([4, 1], vertical_alignment="center")
@@ -4441,24 +4558,6 @@ def page_settings():
         with d2:
             st.button("Reload data", key="btn_reload", icon=":material/refresh:", use_container_width=True,
                       on_click=_refresh_click)
-    with st.container(key="set_engine"):
-        by_source: dict[str, list[str]] = {}
-        for c in companies:
-            by_source.setdefault(_source_label(c), []).append((c.get("name") or "").strip() or "Unnamed")
-        rows = [("Schedule", f'{_cadence()} · Next scheduled <span class="num">{_ist(_next_slot())}</span>'
-                             '<span class="kv-note">GitHub may start scheduled scans later than the scheduled time.</span>'),
-                ("Roles kept", "Fresher and entry-level roles located in India"),
-                ("Detail pages", "Every candidate job's own posting is read before it can be classified and emailed; "
-                                 "if it can't be read, it is retried on the next scan")]
-        st.html(f'<div class="set-head"><span class="ic">{_ms("manage_search")}</span><div><div class="eyebrow">Monitoring</div>'
-                '<h2 class="section-title">Scanning</h2><p class="section-sub">How and when the tracker looks for new roles.</p></div></div>'
-                '<dl class="kv">' + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in rows) + "</dl>")
-        # implementation facts, for debugging only: collapsed by default
-        with st.expander("Technical details", icon=":material/code:"):
-            tech = [("Scrapers", "; ".join(f"{escape(src)} for {escape(', '.join(sorted(names)))}"
-                                           for src, names in sorted(by_source.items())) or "No portals yet"),
-                    ("Schedule (UTC)", f'cron <span class="num">{escape(_schedule_cron())}</span> in .github/workflows/check_jobs.yml')]
-            st.html('<dl class="kv tech">' + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in tech) + "</dl>")
     with st.container(key="set_maint"):
         st.html(f'<div class="set-head"><span class="ic red">{_ms("warning")}</span><div><div class="eyebrow">Danger zone</div>'
                 '<h2 class="section-title">Dismiss all jobs</h2><p class="section-sub">Dismiss every active job at once. '
@@ -4857,12 +4956,9 @@ if not MEMBER_VIEW:
     _warm_scraper_import()
 
 # ── the company logos this page drew (each image sent once) ──────────────────
-if _USED_LOGOS:
-    st.html("<style>" + "".join(
-        # 62% of the tile along the logo's longer side, as the drawn marks
-        f'.logo.co-mark.{k} {{ background: url("{company_logos.web_uri(e)}") center / '
-        f'{"62% auto" if (e["web"].get("w") or 1) >= (e["web"].get("h") or 1) else "auto 62%"} no-repeat, var(--tile, #fff); }}'
-        for k, e in _USED_LOGOS.items()) + "</style>")
+_page_logos = {k: e for k, e in _USED_LOGOS.items() if k not in _FRAGMENT_LOGOS}
+if _page_logos:
+    st.html(_logo_styles(_page_logos))
 
 # ── toast ─────────────────────────────────────────────────────────────────────
 # Shown once and faded out with CSS; a sleep()+rerun would freeze the app.

@@ -13,6 +13,7 @@ Plus the account header (first name, ADMIN for admins only) and the cost of
 clicks. In-memory store; nothing is emailed and Google/Firebase are never
 contacted."""
 import json
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -27,7 +28,7 @@ from test_phase3_user_data import (  # noqa: F401
     A_MAIL, A_UID, B_MAIL, B_UID, AccountIdentity, _sign_in, _use_store,
 )
 from test_streamlit_app import REPO, _html, _nav, app  # noqa: F401
-from test_user_alerts import A, B, Identity, Mailer, _person, job
+from test_user_alerts import LATER, A, B, Identity, Mailer, _person, job
 
 
 def _tailor(store, uid, locations=(), job_families=()):
@@ -153,7 +154,7 @@ def test_g_an_older_tailored_mode_keeps_working_and_tailoring_narrows_it_further
     _tailor(store, A, locations=["Pune"])
     more = [job(10, title="Software Engineer", location="Pune"), job(11, title="Software Engineer", location="Chennai")]
     mail = Mailer()
-    user_alerts.run(store, more, mail, run_id="r2")
+    user_alerts.run(store, more, mail, run_id="r2", now=LATER)
     assert _sent(mail) == [job_key(more[0])]
 
 
@@ -209,7 +210,7 @@ def test_i_jobs_outside_the_persons_companies_are_never_emailed(store):
     _tailor(store, A, locations=["Hyderabad"])                   # tailoring can't widen the companies
     more = [job(4, "sanofi", location="Hyderabad"), job(5, "pwc", location="Hyderabad")]
     mail = Mailer()
-    user_alerts.run(store, more, mail, run_id="r2")
+    user_alerts.run(store, more, mail, run_id="r2", now=LATER)
     assert _sent(mail) == [job_key(more[1])]
 
 

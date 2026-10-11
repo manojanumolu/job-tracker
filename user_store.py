@@ -512,6 +512,14 @@ class UserData:
         return self._backend.update_if(path, {"state": DELIVERY_PENDING}, claimed)
 
     @_guard
+    def record_alert_sent(self, now: float | None = None) -> str:
+        """A personal alert email was just sent: start the next cadence
+        window (see scan_schedule.MEMBER_ALERT_HOURS). Returns the time."""
+        stamp = _now_iso(now)
+        self._backend.set(self._root, {"alert_cadence": {"last_sent_at": stamp}}, merge=True)
+        return stamp
+
+    @_guard
     def finalize_delivery(self, job_key: str, run_id: str, sent: bool, now: float | None = None) -> bool:
         """Only the run holding the claim can settle it: sent -> "sent"
         (final), not sent -> "pending" (released for a retry)."""
@@ -538,7 +546,19 @@ def view_from(profile: dict, watchlist: set) -> dict:
     return {"mode": mode,
             "prefs": {k: [v for v in prefs.get(k) or [] if isinstance(v, str)] for k in PREFERENCE_KEYS},
             "watch_all": watch_all, "watchlist": set() if watch_all else set(watchlist),
-            "notifications": notif, "tailoring": tailoring_from(prof)}
+            "notifications": notif, "tailoring": tailoring_from(prof),
+            "alerts_last_sent": alerts_last_sent_from(prof)}
+
+
+def alerts_last_sent_from(profile: dict) -> str:
+    """When this person's last personal alert email went out (ISO time), or
+    "" — users/{uid}.alert_cadence.last_sent_at, written only by
+    user_alerts.py after a successful send. Its own top-level field: the app
+    never writes it, so no settings save can wipe it."""
+    prof = profile if isinstance(profile, dict) else {}
+    cad = prof.get("alert_cadence") if isinstance(prof.get("alert_cadence"), dict) else {}
+    value = cad.get("last_sent_at")
+    return value if isinstance(value, str) else ""
 
 
 TAILORING_KEYS = ("locations", "job_families")

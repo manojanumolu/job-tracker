@@ -13,6 +13,14 @@ Where it goes: the account's CURRENT verified email, read from Firebase
 Authentication by UID at send time — never an address anyone typed. A
 deleted, disabled or unverified account gets nothing.
 
+How often: at most one email per person per 6 hours
+(scan_schedule.MEMBER_ALERT_HOURS), whatever the admin's global scan interval
+is. A person inside their 6-hour window is skipped before anything is
+claimed, so every job that qualified meanwhile stays pending and goes out in
+their next email — never twice (the ledger below), never an empty email.
+This module runs after every scan and in a 6-hourly pass of its own
+(check_jobs.yml), so the cadence holds for a 12-hour scan interval too.
+
 Exactly once, per person: each job is claimed in the person's own ledger
 before sending (one concurrent claimant wins), finalized as "sent" after a
 successful send, or released for the next run if the send failed. A crash
@@ -46,6 +54,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import job_filters
+import scan_schedule
 from config_store import job_key
 from user_store import UserStore, UserStoreError, configure
 
@@ -82,8 +91,9 @@ def select_jobs(seen: list[dict], view: dict, dismissed: set[str], since: dateti
 
 
 def run_for_user(store: UserStore, uid: str, seen: list[dict], send, run_id: str,
-                 dry_run: bool = False) -> tuple[str, int]:
+                 dry_run: bool = False, now: datetime | None = None) -> tuple[str, int]:
     """(outcome, number of jobs) for one person."""
+    now = now or datetime.now(timezone.utc)
     user = store.for_uid(uid)
     view = user.personal_view()
     notif = view["notifications"]
@@ -97,6 +107,8 @@ def run_for_user(store: UserStore, uid: str, seen: list[dict], send, run_id: str
         return "disabled", 0
     if not account["email_verified"] or not account["email"]:
         return "unverified", 0
+    if not scan_schedule.alert_due(now, _parse_time(view.get("alerts_last_sent"))):
+        return "waiting", 0                          # emailed less than 6 h ago: nothing claimed
     jobs = select_jobs(seen, view, user.dismissed(), since)
     if dry_run:
         return ("would_send" if jobs else "nothing"), len(jobs)
@@ -112,16 +124,19 @@ def run_for_user(store: UserStore, uid: str, seen: list[dict], send, run_id: str
         log.error("a personal alert email failed (%s) — released for the next run", type(e).__name__)
     for j in claimed:
         user.finalize_delivery(job_key(j), run_id, ok)
+    if ok:
+        user.record_alert_sent(now.timestamp())       # the next email waits 6 h
     return ("sent" if ok else "failed"), len(claimed)
 
 
-def run(store: UserStore, seen: list[dict], send, *, run_id: str | None = None, dry_run: bool = False) -> dict:
+def run(store: UserStore, seen: list[dict], send, *, run_id: str | None = None, dry_run: bool = False,
+        now: datetime | None = None) -> dict:
     """Every person, independently: one failure never stops the others."""
     run_id = run_id or uuid.uuid4().hex
     stats: Counter = Counter()
     for uid in store.user_ids():
         try:
-            outcome, n = run_for_user(store, uid, seen, send, run_id, dry_run)
+            outcome, n = run_for_user(store, uid, seen, send, run_id, dry_run, now)
         except UserStoreError:
             outcome, n = "error", 0
         stats[outcome] += 1

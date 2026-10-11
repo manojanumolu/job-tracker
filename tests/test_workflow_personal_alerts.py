@@ -21,18 +21,32 @@ from user_store import MemoryBackend, UserStore, UserStoreError
 REPO = Path(__file__).resolve().parent.parent
 WORKFLOW = REPO / ".github" / "workflows" / "check_jobs.yml"
 STEP_MARK = "\n      # Personal alerts (per-user"
-# sha256 of check_jobs.yml as it was on main (f77b76f) before the personal
-# step existed, line endings normalised: the global scan must stay exactly so
-GLOBAL_WORKFLOW_SHA256 = "250a1e9b50c756c60ead5723b74fd5f3e63c9519e8fd6db8ca01340d52d1f51c"
+# sha256 of the scan job's steps as they were on main (f77b76f) before the
+# personal step existed, line endings normalised: the global scan must stay
+# exactly so. (Since Oct 2026 a plan job runs in front of it — scan_schedule.py,
+# the admin's scan interval — and a 6-hourly personal-alerts job follows; the
+# scan steps themselves are untouched.)
+GLOBAL_SCAN_STEPS_SHA256 = "356a475c10862991327244b271c3e2d12a05f602b27a213d8e57f171a742ed6f"
 
 
 def _wf() -> str:
     return WORKFLOW.read_text("utf-8").replace("\r\n", "\n")
 
 
+def _wf_job(text: str, name: str) -> str:
+    """One job's block: from "  <name>:" to the next two-space-indented key
+    (a tiny parser: no YAML library in CI)."""
+    start = text.index(f"\n  {name}:\n") + 1
+    lines = text[start:].split("\n")
+    end = next((i for i, line in enumerate(lines[1:], 1)
+                if line.startswith("  ") and not line.startswith("   ") and line.strip()),
+               len(lines))
+    return "\n".join(lines[:end])
+
+
 def _steps(text: str) -> dict[str, str]:
-    """name -> the step's text (a tiny parser: no YAML library in CI)."""
-    parts = text.split("\n      - name: ")[1:]
+    """name -> the step's text, for the scan job ("check")."""
+    parts = _wf_job(text, "check").split("\n      - name: ")[1:]
     return {p.split("\n", 1)[0].strip(): p for p in parts}
 
 
@@ -43,7 +57,9 @@ def _steps(text: str) -> dict[str, str]:
 def test_the_global_scan_is_byte_for_byte_unchanged():
     wf = _wf()
     assert STEP_MARK in wf
-    assert hashlib.sha256(wf[:wf.index(STEP_MARK)].encode()).hexdigest() == GLOBAL_WORKFLOW_SHA256
+    check = wf.index("\n  check:\n")
+    steps = wf[wf.index("\n    steps:\n", check):wf.index(STEP_MARK)]
+    assert hashlib.sha256(steps.encode()).hexdigest() == GLOBAL_SCAN_STEPS_SHA256
 
 
 def test_the_personal_step_runs_last_and_can_never_fail_the_job():
@@ -68,7 +84,11 @@ def test_the_personal_step_gets_only_the_secrets_it_needs():
                    "GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}",
                    "GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}"]
     wf = _wf()
-    assert wf.count("secrets.FIREBASE_SERVICE_ACCOUNT") == 1          # no other step sees the key
+    # only the two personal-alert steps (after a scan, and the 6-hourly pass) see the key
+    assert wf.count("secrets.FIREBASE_SERVICE_ACCOUNT") == 2
+    assert _wf_job(wf, "check").count("secrets.FIREBASE_SERVICE_ACCOUNT") == 1
+    assert _wf_job(wf, "personal-alerts").count("secrets.FIREBASE_SERVICE_ACCOUNT") == 1
+    assert "secrets." not in _wf_job(wf, "plan")
     assert "GITHUB_TOKEN" not in step and "ALERT_RECIPIENT" not in step and "git " not in step
     assert "echo" not in wf.lower()
 
