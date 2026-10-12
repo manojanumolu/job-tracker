@@ -13,10 +13,10 @@ Two separate cadences (Oct 2026):
 How the scan interval reaches the real scheduler. GitHub Actions cron lines
 are static, so check_jobs.yml has two fixed schedules:
 
-* ``0 * * * *`` — an hourly *plan* tick. A tiny job (sparse checkout of three
-  small files, no dependencies, about 10 s) runs ``python3 scan_schedule.py
-  plan``, which reads the interval from settings.json and the last scan time
-  from companies.json. Only when a scan is due does the full scan job start.
+* ``17,47 * * * *`` — a *plan* tick twice an hour. A tiny job (sparse
+  checkout of three small files, no dependencies, about 10 s) runs ``python3
+  scan_schedule.py plan``, which reads the interval from settings.json and
+  the last scan time from companies.json. Only when a scan is due does the full scan job start.
 * ``20 */6 * * *`` — a personal-alert pass every 6 hours that does not scan,
   so the 6-hour cadence holds even when the scan interval is 12 hours.
 
@@ -28,7 +28,13 @@ when GitHub starts a tick late (measured: often by hours). A manual
 shares one concurrency group, so scans never overlap.
 
 GitHub limits worth knowing: scheduled runs can start late or, under load,
-be skipped; the hourly tick makes a missed scan catch up at the next tick.
+be dropped — GitHub's docs name the start of every hour as the busiest time.
+Measured 2026-10-11/12 with the old ``0 * * * *`` tick: of ~17 ticks due in
+14 hours GitHub created 5 runs (none cancelled; no tick at all from 00:11 to
+06:55 UTC), and a ``:20`` alert tick started 5 h 43 min late. So the plan tick
+is off the hour and twice an hour: each drop costs half an hour, not a whole
+one. We can't make GitHub start a run; ``scan_overdue`` makes a missed scan
+visible in the app instead of calling it healthy.
 
 Standard library only: the plan job runs it with the runner's own python3.
 """
@@ -48,7 +54,11 @@ MEMBER_ALERT_HOURS = 6
 # pass that GitHub starts a little early or late never skips a whole cycle
 ALERT_GRACE = timedelta(minutes=30)
 SETTING = "scan_interval_hours"
-PLAN_CRON = "0 * * * *"
+PLAN_CRON = "17,47 * * * *"
+PLAN_MINUTES = (17, 47)              # the minutes PLAN_CRON fires at, in order
+# a scan is "overdue" once the first window it missed opened this long ago:
+# the window's first tick (:17) plus room for GitHub's usual lateness
+OVERDUE_GRACE = timedelta(minutes=90)
 ALERTS_CRON = "20 */6 * * *"
 
 BASE = Path(__file__).parent
@@ -116,14 +126,38 @@ def scan_due(now: datetime, hours: int, last: datetime | None) -> bool:
     return last is None or last < latest_boundary(now, hours)
 
 
+def scan_overdue(now: datetime, hours: int, last: datetime | None) -> bool:
+    """True when a scan was due and has not happened for OVERDUE_GRACE: no
+    scan started since the first interval boundary after ``last``. Counted
+    from that first missed boundary, so a scan missed at 09:00 is still
+    overdue at 12:10 (not "just due again")."""
+    if not scan_due(now, hours, last):
+        return False
+    if last is None:
+        return True
+    missed = latest_boundary(last, hours) + timedelta(hours=hours)
+    return now.astimezone(timezone.utc) - missed >= OVERDUE_GRACE
+
+
+def next_tick(now: datetime) -> datetime:
+    """The next plan tick (PLAN_MINUTES past each UTC hour) after ``now``."""
+    hour = now.astimezone(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    for h in (hour, hour + timedelta(hours=1)):
+        for m in PLAN_MINUTES:
+            t = h + timedelta(minutes=m)
+            if t > now:
+                return t
+    raise AssertionError("unreachable")
+
+
 def next_scan(now: datetime, hours: int, last: datetime | None) -> datetime:
-    """When the next scheduled scan should start: the next hourly plan tick if
-    one is already due, else the next interval boundary. (GitHub may start
-    it later than this.)"""
+    """When the next scheduled scan should start: the next plan tick if one
+    is already due, else the first tick of the next interval window. (GitHub
+    may start it later than this, or drop that tick.)"""
     now = now.astimezone(timezone.utc)
     if scan_due(now, hours, last):
-        return now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
-    return latest_boundary(now, hours) + timedelta(hours=hours)
+        return next_tick(now)
+    return latest_boundary(now, hours) + timedelta(hours=hours, minutes=PLAN_MINUTES[0])
 
 
 def alert_due(now: datetime, last_sent: datetime | None) -> bool:
@@ -166,8 +200,12 @@ def main(argv=None) -> int:
     try:
         settings, companies = _load("settings.json", {}), _load("companies.json", [])
         decision = plan(os.environ.get("EVENT", ""), os.environ.get("SCHEDULE", ""), settings, companies)
-        print(f"interval {interval_from(settings)} h · last scan {last_scan(companies)} · "
-              f"scan={decision['scan']} deliver={decision['deliver']}", file=sys.stderr)
+        hours, last = interval_from(settings), last_scan(companies)
+        now = datetime.now(timezone.utc)
+        # the log says why a tick did or didn't scan (a plan-only run is not a scan)
+        print(f"interval {hours} h · last scan {last} · window opened {latest_boundary(now, hours)} · "
+              f"overdue={scan_overdue(now, hours, last)} · scan={decision['scan']} "
+              f"deliver={decision['deliver']}", file=sys.stderr)
     except Exception as e:                       # plan nothing rather than break
         print(f"plan failed ({type(e).__name__}); nothing runs this tick", file=sys.stderr)
         decision = {"scan": False, "deliver": False}

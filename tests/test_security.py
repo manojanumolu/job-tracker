@@ -434,8 +434,8 @@ def test_workflow_passes_the_recipient_secret_only_to_the_alert_step():
     assert "ALERT_RECIPIENT" not in scrape and "GMAIL" not in scrape
     assert "echo" not in wf.lower()                      # nothing prints secrets to the log
     # permissions and scan steps are otherwise unchanged; the schedule is the
-    # hourly plan tick + the 6-hourly personal pass (scan_schedule.py decides)
-    assert 'cron: "0 * * * *"' in wf and 'cron: "20 */6 * * *"' in wf
+    # plan tick twice an hour + the 6-hourly personal pass (scan_schedule.py decides)
+    assert 'cron: "17,47 * * * *"' in wf and 'cron: "20 */6 * * *"' in wf
     assert "contents: write" in wf and "python scraper.py" in wf
 
 

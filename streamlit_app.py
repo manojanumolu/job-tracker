@@ -1722,8 +1722,10 @@ def _shared_data() -> snapshot_cache.SnapshotCache:
     """The shared files as last read from GitHub, for every session of this
     process (no one's personal data). A click is answered from the current
     copy at once; a copy older than 5 minutes is refreshed in the
-    background (it took ~2.5 s, which used to freeze that click)."""
-    return snapshot_cache.SnapshotCache(lambda: fetch_remote_json(_SHARED_FILES), ttl_s=300)
+    background (it took ~2.5 s, which used to freeze that click). A copy
+    older than 15 minutes is never shown: the first page after an idle spell
+    reads GitHub again first (it once showed a day-old scan as "delayed")."""
+    return snapshot_cache.SnapshotCache(lambda: fetch_remote_json(_SHARED_FILES), ttl_s=300, max_stale_s=900)
 
 
 def _remote_snapshot() -> dict:
@@ -2817,8 +2819,13 @@ last_scan = max((d for d in (_parse_iso(c.get("last_checked", "")) for c in comp
 scan_stale = last_scan is None or NOW - last_scan > timedelta(hours=_STALE_H)
 NEXT_SCAN = scan_schedule.next_scan(NOW, SCAN_HOURS, scan_schedule.last_scan(companies))   # UTC; shown in IST
 # a scan is already overdue (none since the latest interval boundary): it
-# waits for the next hourly check — said plainly, never as a countdown
+# waits for the next plan tick (:17 / :47) — said plainly, never as a countdown
 SCAN_DUE = scan_schedule.scan_due(NOW, SCAN_HOURS, scan_schedule.last_scan(companies))
+# ... and long enough ago (a whole window's ticks missed) to say so up front:
+# a scan GitHub never started is "overdue", never "healthy"
+SCAN_OVERDUE = scan_schedule.scan_overdue(NOW, SCAN_HOURS, scan_schedule.last_scan(companies))
+# GitHub couldn't be read for a while: the status below is from an old copy
+DATA_STALE = _shared_data().stale()
 NEXT_SCAN_NOTE = "Overdue — GitHub may start it later" if SCAN_DUE else "GitHub may start it later"
 
 
@@ -2849,10 +2856,14 @@ elif n_by_status["failing"] == len(companies):
     overall = ("failing", "All portals failing")
 elif n_by_status["failing"]:
     overall = ("failing", f"{_plural(n_by_status['failing'], 'portal')} failing")
+elif DATA_STALE:                    # never "healthy" on a copy GitHub couldn't refresh
+    overall = ("delayed", "Status may be out of date")
 elif last_scan is None:
     overall = ("pending", "Waiting for first scan")
 elif scan_stale:
     overall = ("delayed", "Scans delayed")
+elif SCAN_OVERDUE:
+    overall = ("delayed", "Scan overdue")
 else:
     overall = ("healthy", "All portals healthy")
 
@@ -3408,7 +3419,7 @@ def page_home():
             + _stat("Companies monitored", len(companies), healthy_note, "apartment",
                     "t-red" if n_by_status["failing"] else "t-green")
             + _stat("Last scan", _ago(last_scan, NOW), f"Next scheduled {_ist(NEXT_SCAN)}", "update",
-                    "t-amber" if scan_stale else "", small=True)
+                    "t-amber" if scan_stale or SCAN_OVERDUE else "", small=True)
             + "</div>")
 
     if not active_jobs:
@@ -3917,7 +3928,7 @@ def page_monitoring():
             + _stat(f'<span class="dot {overall[0]}"></span>Overall', escape(overall[1]),
                     f"{_plural(len(companies), 'portal')} tracked", icon, tone, small=True)
             + _stat("Last scan", _ago(last_scan, NOW), _ist_stamp(last_scan) if last_scan else "No scan recorded",
-                    "history", "t-amber" if scan_stale else "t-teal", small=True)
+                    "history", "t-amber" if scan_stale or SCAN_OVERDUE else "t-teal", small=True)
             + _stat("Next scheduled scan", _ist(NEXT_SCAN), NEXT_SCAN_NOTE, "schedule", "", small=True)
             + _stat("Portals", f'{n_by_status["healthy"]}<span class="muted" style="font-size:16px;font-weight:600;"> / {len(companies)} healthy</span>',
                     f"{n_by_status['delayed']} delayed · {n_by_status['failing']} failing · {n_by_status['pending'] + n_by_status['checking']} pending",
@@ -4498,7 +4509,7 @@ def scan_schedule_card() -> None:
                 '<dl class="kv">'
                 f'<dt>Current interval</dt><dd><b>{escape(interval_label(SCAN_HOURS))}</b></dd>'
                 f'<dt>Next scheduled scan</dt><dd><span class="num">{escape(_ist_stamp(NEXT_SCAN))}</span>'
-                f'<span class="kv-note">Asia/Kolkata time.{" A scan is overdue: it waits for GitHub’s next hourly check." if SCAN_DUE else ""} '
+                f'<span class="kv-note">Asia/Kolkata time.{" A scan is overdue: it waits for GitHub’s next scheduler check (twice an hour)." if SCAN_DUE else ""} '
                 'GitHub may start a scheduled scan later than this.</span></dd>'
                 '<dt>Roles kept</dt><dd>Fresher and entry-level roles located in India</dd>'
                 '<dt>Detail pages</dt><dd>Every candidate job’s own posting is read before it can be classified and '
@@ -4512,7 +4523,7 @@ def scan_schedule_card() -> None:
         with st.expander("Technical details", icon=":material/code:"):
             tech = [("Scrapers", "; ".join(f"{escape(src)} for {escape(', '.join(sorted(names)))}"
                                            for src, names in sorted(by_source.items())) or "No portals yet"),
-                    ("Scheduler", f'check_jobs.yml ticks hourly (cron <span class="num">{scan_schedule.PLAN_CRON}</span>, UTC); '
+                    ("Scheduler", f'check_jobs.yml ticks twice an hour (cron <span class="num">{scan_schedule.PLAN_CRON}</span>, UTC); '
                                   'scan_schedule.py starts a scan only at the interval boundaries, from '
                                   f'<span class="num">{scan_schedule.SETTING}</span> in settings.json'),
                     ("Personal alerts", f'after every scan and every {scan_schedule.MEMBER_ALERT_HOURS} h (cron '
