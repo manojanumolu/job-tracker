@@ -228,9 +228,9 @@ def test_portal_counts_follow_each_portals_own_result(app, tmp_path):
     assert _overall(html)[0] == "failing"
 
 
-# ── the external trigger (workflow_dispatch mode=plan) ──────────────────────
+# ── the scheduler chain's dispatch (workflow_dispatch mode=plan) ────────────
 
-def test_external_trigger_scans_only_when_due():
+def test_a_plan_dispatch_scans_only_when_due():
     companies = [{"id": "a", "last_checked": u(12, 6, 58).isoformat()}]
     plan = scan_schedule.plan
     assert plan("workflow_dispatch", "", {}, companies, u(12, 15, 5), mode="plan") == {"scan": True, "deliver": False}
@@ -245,7 +245,7 @@ def test_run_check_without_inputs_still_scans_at_once():
 
 
 def test_duplicate_triggers_in_one_window_scan_once():
-    """Two external calls (and a GitHub tick) in the same window: the
+    """Two chain dispatches (and a GitHub tick) in the same window: the
     concurrency group runs them one after another, and each later plan sees
     the scan the first one published."""
     companies = [{"id": "a", "last_checked": u(12, 6, 58).isoformat()}]
@@ -297,14 +297,6 @@ def test_the_plan_step_records_what_fired_it(tmp_path):
 def test_an_unreadable_companies_file_fails_toward_scanning(tmp_path):
     out, summary = _run_plan(tmp_path, {"EVENT": "workflow_dispatch", "MODE": "plan", "SCHEDULE": ""}, "{broken")
     assert out == ["scan=true", "deliver=false"] and "last scan None" in summary
-
-
-def test_the_setup_doc_holds_no_credential_and_names_the_minimum_permission():
-    doc = (REPO / "docs/EXTERNAL_SCHEDULER.md").read_text("utf-8")
-    assert "Actions → Read and write" in doc and "Only select repositories" in doc
-    assert '{"ref":"main","inputs":{"mode":"plan"}}' in doc
-    assert not re.search(r"gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}", doc)
-    assert "Bearer <the token>" in doc
 
 
 # ── attempt vs last success, per portal ─────────────────────────────────────

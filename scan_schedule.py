@@ -27,11 +27,18 @@ when GitHub starts a tick late (measured: often by hours). A manual
 "Run check" (workflow_dispatch) always scans. Every run of the workflow
 shares one concurrency group, so scans never overlap.
 
-External trigger (optional, docs/EXTERNAL_SCHEDULER.md): an outside cron
-calls GitHub's workflow-dispatch API with input ``mode=plan``. That run is
-gated exactly like a plan tick, so a duplicate or extra trigger never
-starts a second scan in one window. "Run check" sends no input (``scan``)
-and scans at once, as before.
+The scan scheduler chain (scan_scheduler.yml, Oct 2026) carries the real
+cadence, GitHub Actions only — the same idea as Movie Ticket Radar's
+self-dispatched segments. One small run at a time waits (``python3
+scan_schedule.py wait``) until the next window opens plus CHAIN_OFFSET,
+dispatches check_jobs.yml with input ``mode=plan`` and then dispatches the
+next scheduler run before it exits. ``mode=plan`` is gated exactly like a
+plan tick, so the chain, a late cron tick and a retry can never start a
+second scan in one window. Dispatched runs don't go through GitHub's cron
+queue, which is what drops and delays the ticks. "Run check" sends no
+input (``scan``) and scans at once, as before. The cron ticks stay as the
+safety net: every Check Jobs run restarts the chain if no scheduler run is
+active.
 
 GitHub limits worth knowing: scheduled runs can start late or, under load,
 be dropped — GitHub's docs name the start of every hour as the busiest time.
@@ -66,6 +73,13 @@ PLAN_MINUTES = (17, 47)              # the minutes PLAN_CRON fires at, in order
 # the window's first tick (:17) plus room for GitHub's usual lateness
 OVERDUE_GRACE = timedelta(minutes=90)
 ALERTS_CRON = "20 */6 * * *"
+# the scheduler chain: dispatch this long after a window opens; if a scan is
+# still due when it looks (one in progress, or the last one failed), look
+# again after CHAIN_RETRY; never wait longer than CHAIN_MAX_WAIT in one run
+# (GitHub ends a job after 6 h)
+CHAIN_OFFSET = timedelta(minutes=2)
+CHAIN_RETRY = timedelta(minutes=30)
+CHAIN_MAX_WAIT = timedelta(hours=5)
 
 BASE = Path(__file__).parent
 
@@ -158,12 +172,24 @@ def next_tick(now: datetime) -> datetime:
 
 def next_scan(now: datetime, hours: int, last: datetime | None) -> datetime:
     """When the next scheduled scan should start: the next plan tick if one
-    is already due, else the first tick of the next interval window. (GitHub
-    may start it later than this, or drop that tick.)"""
+    is already due, else when the scheduler chain dispatches the next
+    window's scan. (GitHub may start it later than this.)"""
     now = now.astimezone(timezone.utc)
     if scan_due(now, hours, last):
         return next_tick(now)
-    return latest_boundary(now, hours) + timedelta(hours=hours, minutes=PLAN_MINUTES[0])
+    return latest_boundary(now, hours) + timedelta(hours=hours) + CHAIN_OFFSET
+
+
+def chain_wait(now: datetime, hours: int, last: datetime | None) -> timedelta:
+    """How long the scheduler run waits before dispatching a plan run: until
+    the next window opens (+ CHAIN_OFFSET), or CHAIN_RETRY when a scan is
+    still due (in progress now, or failed — the plan run then retries it),
+    never more than CHAIN_MAX_WAIT."""
+    now = now.astimezone(timezone.utc)
+    if scan_due(now, hours, last):
+        return CHAIN_RETRY
+    target = latest_boundary(now, hours) + timedelta(hours=hours) + CHAIN_OFFSET
+    return min(max(target - now, timedelta(0)), CHAIN_MAX_WAIT)
 
 
 def alert_due(now: datetime, last_sent: datetime | None) -> bool:
@@ -175,8 +201,8 @@ def alert_due(now: datetime, last_sent: datetime | None) -> bool:
 def plan(event: str, schedule: str, settings, companies, now: datetime | None = None,
          mode: str = "scan") -> dict:
     """What one workflow run should do: {"scan": bool, "deliver": bool}.
-    * workflow_dispatch with mode "plan" (the external trigger): like the
-      plan tick — scan only if due
+    * workflow_dispatch with mode "plan" (the scan scheduler chain): like
+      the plan tick — scan only if due
     * workflow_dispatch otherwise (Run check): scan (and the personal step after it)
     * the hourly tick: scan only if due by the admin's interval
     * the 6-hourly alerts tick: no scan, only the personal alert pass
@@ -200,25 +226,49 @@ def _load(name: str, default):
         return default
 
 
-def _summary(line: str) -> None:
+def _summary(line: str, label: str = "Scan plan") -> None:
     """Also show the decision on the run's summary page (never fails)."""
     path = os.environ.get("GITHUB_STEP_SUMMARY")
     if not path:
         return
     try:
         with open(path, "a", encoding="utf-8") as f:
-            f.write(f"**Scan plan:** {line}\n")
+            print(f"**{label}:** {line}", file=f)
     except OSError:
         pass
+
+
+def wait_main() -> int:
+    """``python3 scan_schedule.py wait`` — the scheduler run's wait, as
+    ``seconds=N`` and ``at=<UTC time>`` for $GITHUB_OUTPUT. Never fails: on
+    any error it waits CHAIN_RETRY, so the chain keeps going."""
+    now = datetime.now(timezone.utc)
+    try:
+        settings, companies = _load("settings.json", {}), _load("companies.json", [])
+        hours, last = interval_from(settings), last_scan(companies)
+        wait = chain_wait(now, hours, last)
+        line = (f"interval {hours} h · last scan {last} · due={scan_due(now, hours, last)} · "
+                f"dispatch a plan run at {(now + wait).isoformat(timespec='minutes')}")
+    except Exception as e:
+        wait = CHAIN_RETRY
+        line = f"wait failed ({type(e).__name__}); retrying in {CHAIN_RETRY}"
+    print(line, file=sys.stderr)
+    _summary(line, "Scan scheduler")
+    print(f"seconds={int(wait.total_seconds())}")
+    print(f"at={(now + wait).isoformat(timespec='minutes')}")
+    return 0
 
 
 def main(argv=None) -> int:
     """``python3 scan_schedule.py plan`` — prints ``scan=true|false`` and
     ``deliver=true|false`` for $GITHUB_OUTPUT, plus a short human line on
-    stderr. Never fails the run: on any error it plans nothing."""
+    stderr. Never fails the run: on any error it plans nothing.
+    ``python3 scan_schedule.py wait`` — see wait_main."""
     argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ["wait"]:
+        return wait_main()
     if argv[:1] != ["plan"]:
-        print("usage: scan_schedule.py plan", file=sys.stderr)
+        print("usage: scan_schedule.py plan|wait", file=sys.stderr)
         return 2
     try:
         settings, companies = _load("settings.json", {}), _load("companies.json", [])

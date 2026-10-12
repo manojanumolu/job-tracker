@@ -156,7 +156,7 @@ def test_a_broken_schedule_file_plans_a_safe_default(tmp_path):
 
 def test_the_workflow_wires_the_plan_to_one_shared_scanner():
     jobs = re.findall(r"^  ([a-z-]+):\n", WORKFLOW.split("\njobs:\n", 1)[1], re.M)
-    assert jobs == ["plan", "check", "personal-alerts"]
+    assert jobs == ["plan", "check", "scheduler", "personal-alerts"]
     assert f'cron: "{scan_schedule.PLAN_CRON}"' in WORKFLOW and f'cron: "{scan_schedule.ALERTS_CRON}"' in WORKFLOW
     assert WORKFLOW.count("cron:") == 2 and "workflow_dispatch:" in WORKFLOW
     assert WORKFLOW.count("python scraper.py") == 1                          # one scanner, in one job

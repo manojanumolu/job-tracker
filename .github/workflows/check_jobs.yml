@@ -6,9 +6,11 @@ name: Check Jobs
 #   * twice an hour: a ~10 s plan job; the full scan starts only when one is due
 #   * every 6 h: the personal-alert pass (no scan) — members are emailed at
 #     most every 6 h whatever the scan interval is
-# GitHub may start scheduled runs late or drop them — most of all at the top
-# of the hour (measured Oct 2026: 5 of ~17 "0 * * * *" ticks ran), so the plan
-# tick is off the hour, twice an hour; a missed scan catches up at the next one.
+# GitHub may start scheduled runs late or drop them (measured Oct 2026: 5 of
+# ~17 "0 * * * *" ticks ran; none at all for 8 h on Oct 12). The real cadence
+# comes from scan_scheduler.yml, a self-dispatching chain that sends a
+# mode=plan dispatch when each window opens; the ticks below are the safety
+# net, and every run restarts that chain if it has stopped (job "scheduler").
 on:
   schedule:
     - cron: "17,47 * * * *"   # plan tick: scan when the admin's interval says so
@@ -16,8 +18,8 @@ on:
   workflow_dispatch:          # "Run check": always scans
     inputs:
       mode:
-        # "plan": the external trigger (docs/EXTERNAL_SCHEDULER.md) — scans
-        # only when one is due, like the plan tick; duplicates never re-scan
+        # "plan": what scan_scheduler.yml sends — scans only when one is due,
+        # like the plan tick, so a duplicate never re-scans a window
         description: "scan = scan now; plan = scan only if the interval says one is due"
         type: choice
         options: [scan, plan]
@@ -120,6 +122,30 @@ jobs:
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         run: python user_alerts.py --send
+
+  # Safety net for the scan scheduler chain (scan_scheduler.yml): if no run
+  # of it is queued or running, start one. Needs only the run's own token;
+  # can never fail this workflow. Disabling the Scan scheduler workflow is
+  # the off switch (the dispatch is then refused, which is fine here).
+  scheduler:
+    needs: plan
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    continue-on-error: true
+    permissions:
+      actions: write
+    steps:
+      - name: Restart the scan scheduler if it has stopped
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          active=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow scan_scheduler.yml --limit 20 --json status --jq '[.[] | select(.status != "completed")] | length')
+          # none active (or can't tell): restart it — a duplicate only queues;
+          # a restart shows up as a new Scan scheduler run
+          if [ "${active:-0}" = "0" ]; then
+            gh workflow run scan_scheduler.yml --repo "$GITHUB_REPOSITORY" --ref main
+          fi
 
   # The 6-hourly personal pass: no scan, the same user_alerts.py as the last
   # step above (ledger claim -> send -> finalize; each person at most once per

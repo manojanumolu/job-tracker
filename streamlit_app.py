@@ -4511,7 +4511,7 @@ def scan_schedule_card() -> None:
                 '<dl class="kv">'
                 f'<dt>Current interval</dt><dd><b>{escape(interval_label(SCAN_HOURS))}</b></dd>'
                 f'<dt>Next scheduled scan</dt><dd><span class="num">{escape(_ist_stamp(NEXT_SCAN))}</span>'
-                f'<span class="kv-note">Asia/Kolkata time.{" A scan is overdue: it waits for GitHub’s next scheduler check (twice an hour)." if SCAN_DUE else ""} '
+                f'<span class="kv-note">Asia/Kolkata time.{" A scan is overdue: the scheduler retries it within half an hour." if SCAN_DUE else ""} '
                 'GitHub may start a scheduled scan later than this.</span></dd>'
                 '<dt>Roles kept</dt><dd>Fresher and entry-level roles located in India</dd>'
                 '<dt>Detail pages</dt><dd>Every candidate job’s own posting is read before it can be classified and '
@@ -4525,8 +4525,10 @@ def scan_schedule_card() -> None:
         with st.expander("Technical details", icon=":material/code:"):
             tech = [("Scrapers", "; ".join(f"{escape(src)} for {escape(', '.join(sorted(names)))}"
                                            for src, names in sorted(by_source.items())) or "No portals yet"),
-                    ("Scheduler", f'check_jobs.yml ticks twice an hour (cron <span class="num">{scan_schedule.PLAN_CRON}</span>, UTC); '
-                                  'scan_schedule.py starts a scan only at the interval boundaries, from '
+                    ("Scheduler", 'scan_scheduler.yml, a self-dispatching GitHub Actions chain, asks check_jobs.yml to '
+                                  'plan as each window opens; its ticks (cron <span class="num">'
+                                  f'{scan_schedule.PLAN_CRON}</span>, UTC) are the safety net. scan_schedule.py starts a '
+                                  'scan only at the interval boundaries, from '
                                   f'<span class="num">{scan_schedule.SETTING}</span> in settings.json'),
                     ("Personal alerts", f'after every scan and every {scan_schedule.MEMBER_ALERT_HOURS} h (cron '
                                         f'<span class="num">{scan_schedule.ALERTS_CRON}</span>); each person at most '

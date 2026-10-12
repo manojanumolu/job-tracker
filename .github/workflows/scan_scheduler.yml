@@ -1,0 +1,74 @@
+name: Scan scheduler
+
+# The real scan cadence, GitHub Actions only (see scan_schedule.py).
+#
+# GitHub's cron is best-effort: on 2026-10-12 it created no Check Jobs run
+# from 06:55 to 15:33 UTC, and Movie Ticket Radar's "*/5" schedule landed
+# 3-6 h apart the same week. A workflow_dispatch made with the run's own
+# GITHUB_TOKEN doesn't wait in that cron queue, so - like Movie Ticket
+# Radar's self-dispatched segments - this workflow is a chain:
+#
+#   1. wait until the next scan window opens (+2 min; 30 min if a scan is
+#      still due: in progress, or failed and worth retrying)
+#   2. dispatch Check Jobs with mode=plan - it scans only if one is due, so
+#      the chain, a late cron tick and a retry never scan one window twice
+#   3. dispatch the next run of this workflow, then exit
+#
+# One run at a time (the concurrency group); each one is a sleeping runner
+# (free on a public repository) and never touches data, secrets or email.
+# Every Check Jobs run restarts the chain if no run of this workflow is
+# active, so the cron ticks are the safety net. To stop the chain: Actions
+# -> Scan scheduler -> Disable workflow.
+
+on:
+  workflow_dispatch:
+  # a change to this file (re)starts the chain at once - including the commit
+  # that adds it; with a run already active it just queues behind it
+  push:
+    branches: [main]
+    paths: [".github/workflows/scan_scheduler.yml"]
+
+concurrency:
+  group: scan-scheduler
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write   # dispatch Check Jobs and the next run of this workflow
+
+jobs:
+  wait-and-dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 320   # the wait is capped at 5 h; GitHub's job limit is 6 h
+    steps:
+      - name: Checkout schedule inputs
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scan_schedule.py
+            settings.json
+            companies.json
+          sparse-checkout-cone-mode: false
+
+      - name: Work out when the next window opens
+        id: wait
+        run: python3 scan_schedule.py wait >> "$GITHUB_OUTPUT"
+
+      - name: Wait until then
+        # (the previous step's log and the run summary say until when)
+        env:
+          WAIT_SECONDS: ${{ steps.wait.outputs.seconds }}
+        run: sleep "$WAIT_SECONDS"
+
+      - name: Ask Check Jobs to plan (it scans only if one is due)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run check_jobs.yml --repo "$GITHUB_REPOSITORY" --ref main -f mode=plan
+
+      # Even when the dispatch above failed (GitHub hiccup), keep the chain:
+      # the next run retries. A run someone cancelled ends the chain.
+      - name: Hand over to the next scheduler run
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run scan_scheduler.yml --repo "$GITHUB_REPOSITORY" --ref main

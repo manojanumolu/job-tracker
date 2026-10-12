@@ -296,11 +296,11 @@ def test_schedule_follows_the_admins_interval():
     workflow = (Path(__file__).resolve().parent.parent / ".github/workflows/check_jobs.yml").read_text("utf-8")
     assert f'cron: "{scan_schedule.PLAN_CRON}"' in workflow and f'cron: "{scan_schedule.ALERTS_CRON}"' in workflow
     u = lambda h, m=0: datetime(2026, 10, 5, h, m, tzinfo=timezone.utc)
-    assert scan_schedule.next_scan(u(16, 59), 3, u(15, 10)) == u(18, 17)      # scanned in the 15:00 window
+    assert scan_schedule.next_scan(u(16, 59), 3, u(15, 10)) == u(18, 2)       # scanned in the 15:00 window
     assert scan_schedule.next_scan(u(18, 5), 3, u(15, 10)) == u(18, 17)       # due now: the next plan tick
     assert scan_schedule.next_scan(u(18, 20), 3, u(15, 10)) == u(18, 47)
-    assert scan_schedule.next_scan(u(22, 30), 3, u(21, 20)) == u(0, 17) + timedelta(days=1)
-    assert scan_schedule.next_scan(u(1), 12, u(0, 40)) == u(12, 17)
+    assert scan_schedule.next_scan(u(22, 30), 3, u(21, 20)) == u(0, 2) + timedelta(days=1)
+    assert scan_schedule.next_scan(u(1), 12, u(0, 40)) == u(12, 2)
 
 
 def test_utc_slots_are_converted_to_ist_for_display():
