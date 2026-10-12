@@ -47,16 +47,17 @@ def test_home_hero_states_the_purpose_and_live_status(app):
 
 
 def test_hero_opportunity_cards_are_abstract_decoration(app):
-    """The hero shows a few crisp job cards: hidden from screen readers, no
-    company names or fake listings, and none of the tracking language."""
+    """The hero's discovery feed - a search, three roles arriving, each checked,
+    the fresher seal: hidden from screen readers, no company names or fake
+    listings, and none of the tracking language."""
     at = app([])
     html = _html(at)
     cards = re.search(r'<div class="opps-wrap" aria-hidden="true">(.*?<span class="spark-dot"></span></div>)', html, re.S).group(1)
-    assert cards.count('<div class="oc ') == 4
-    for icon in ("work", "apartment", "school", "task_alt"):          # job, company, entry-level, fresher check
+    assert cards.count('<div class="feed-row ') == 3 and cards.count('<div class="feed-seal">') == 1
+    for icon in ("search", "work", "school", "apartment", "task_alt"):   # search, job, entry-level, company, fresher check
         assert f'aria-hidden="true">{icon}</span>' in cards
     words = re.sub(r"<[^>]+>", " ", cards).split()                     # only icon ligature names, no text
-    assert set(words) <= {"work", "apartment", "school", "task_alt", "check"}
+    assert set(words) <= {"search", "work", "school", "apartment", "task_alt", "check"}
     for gone in ("aurora", "radar", "globe", "orbit"):
         assert gone not in html.lower()
     for gone in ('class="node', 'class="pt', 'class="ln', 'class="flow', "portals monitored"):
@@ -244,7 +245,8 @@ def test_in_app_navigation_still_wins_over_an_unchanged_url(app):
 
 def test_motion_respects_reduced_motion_and_stays_on_the_compositor():
     rm = CSS[CSS.index("@media (prefers-reduced-motion: reduce)"):]
-    assert "animation-duration: .001ms" in rm and ".oc, .oc::after, .opps > .glow-bg { animation: none !important; }" in rm   # cards rest in place
+    assert "animation-duration: .001ms" in rm and (".feed-q .qbar i, .feed-row, .feed-row .ok, .feed-seal, .opps > .glow-bg "
+                                                    "{ animation: none !important;") in rm   # the feed rests, finished
     assert '[data-testid="stBaseButton-primary"]::after { display: none; }' in rm   # no light sweep either
     for name, body in re.findall(r"@keyframes ([\w-]+) \{(.*?)\}\s*\}", CSS, re.S):
         props = set(re.findall(r"([a-z-]+)\s*:", body))
@@ -259,14 +261,23 @@ def test_focus_states_exist_for_buttons_and_links():
 
 
 def test_no_new_heavy_dependencies():
-    # exactly one script: the reviewed "open the new page at its top" line of a
-    # navigation run — no source, no network, nothing but scrolling
+    # exactly two reviewed scripts: the "open the new page at its top" line of a
+    # navigation run, and the select-menu guard (Oct 2026: menus close on an
+    # outside press, Tab doesn't pick an option, a field opens its own menu) —
+    # no source, no network, no storage, nothing but scrolling / menu state
     scripts = re.findall(r"<script.*?</script>", SRC, re.S | re.I)
-    assert len(scripts) == 1
-    body = scripts[0].lower()
-    for banned in ("src=", "fetch", "http", "xmlhttp", "cookie", "localstorage", "eval", "innerhtml", "location"):
-        assert banned not in body, banned
-    assert "scrolltop = 0" in body and "scrollto(0, 0)" in body
+    assert len(scripts) == 2
+    for script in scripts:
+        body = script.lower()
+        for banned in ("src=", "fetch", "http", "xmlhttp", "cookie", "localstorage", "sessionstorage", "eval", "innerhtml",
+                       "location", "function(", "new function", "settimeout('", "import("):
+            assert banned not in body, banned
+    scroll, guard = sorted(scripts, key=lambda b: "__jtmenuguard" in b.lower())
+    assert "scrolltop = 0" in scroll.lower() and "scrollto(0, 0)" in scroll.lower()
+    # the guard only listens on the document and only closes / opens select menus
+    assert set(re.findall(r"document\.addEventListener\('(\w+)'", guard)) == {"pointerdown", "keydown"}
+    assert set(re.findall(r"\.(\w+)\(", guard)) <= {"addEventListener", "querySelector", "closest", "contains", "dispatchEvent",
+                                                     "matches", "getAttribute", "click", "stopPropagation"}
     imports = set(re.findall(r'@import url\(\'https://fonts\.googleapis\.com/css2\?family=([^:&\']+)', CSS))
     assert imports <= {"Plus+Jakarta+Sans", "Material+Symbols+Rounded"}
     req = (Path(__file__).resolve().parent.parent / "requirements.txt").read_text()

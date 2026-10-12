@@ -632,11 +632,11 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
   background: radial-gradient(circle at 35% 35%, #fff 0 18%, var(--accent-2) 46%, var(--accent) 100%);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 14%, transparent), 0 0 12px color-mix(in srgb, var(--accent-2) 55%, transparent); }
 
-/* Opportunity cards: three crisp, abstract job cards and a "fresher" check
-   tile resting in depth over a soft glow — the product's subject (roles being
-   found), not a monitoring metaphor. No names or fake listings: an icon tile,
-   placeholder text bars and a badge shape. Decorative (aria-hidden), pure CSS,
-   transform/opacity animation only; nothing travels along a path. */
+/* The discovery feed: the product's job in one calm loop (10 s). A search is
+   typed, three roles arrive one after another, each gets its check (read
+   from its own posting), the fresher seal settles, then the feed clears and
+   starts again. Decorative (aria-hidden), abstract (bars, icons — no names
+   or fake listings), compositor-only motion, still under reduced motion. */
 .hero { position: relative; }
 .opps-wrap { position: relative; align-self: stretch; min-height: 270px; }
 .opps { position: absolute; inset: 0; container-type: inline-size; }
@@ -645,37 +645,52 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
     radial-gradient(36% 40% at 80% 70%, color-mix(in srgb, var(--accent-2) 26%, transparent), transparent 72%),
     radial-gradient(30% 34% at 30% 76%, color-mix(in srgb, #3b82f6 22%, transparent), transparent 72%);
   animation: jt-glow-drift 12s ease-in-out infinite alternate; }
-.oc { position: absolute; display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px;
-  background: var(--oc-bg); border: 1px solid var(--oc-border); box-shadow: var(--hi), var(--oc-shadow);
+.feed { position: absolute; left: 4%; right: 7%; top: 50%; translate: 0 -50%; display: flex; flex-direction: column; gap: 8px;
+  padding: 14px; border-radius: 18px; background: var(--oc-bg); border: 1px solid var(--oc-border); box-shadow: var(--hi), var(--oc-shadow);
   backdrop-filter: blur(10px) saturate(1.2); -webkit-backdrop-filter: blur(10px) saturate(1.2);
-  animation: jt-float var(--t, 9s) ease-in-out infinite; will-change: transform; }
-.oc::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; opacity: 0;   /* the brighten */
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent), 0 14px 34px -14px color-mix(in srgb, var(--accent) 60%, transparent); }
-.oc .ic { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: border-color var(--normal) var(--ease), box-shadow var(--normal) var(--ease); }
+.feed:hover { border-color: color-mix(in srgb, var(--accent) 28%, var(--oc-border)); }
+.feed-q { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border-radius: 12px; color: var(--accent-text);
+  background: var(--surface-2); border: 1px solid var(--border); margin-bottom: 2px; }
+.feed-q .qbar { flex: 1; min-width: 0; display: flex; }
+.feed-q .qbar i { display: block; width: 64%; height: 8px; border-radius: 6px; background: var(--oc-bar-strong); transform-origin: left center;
+  animation: jt-feed-type 10s var(--ease) infinite both; }
+.feed-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; border: 1px solid transparent;
+  background: color-mix(in srgb, var(--surface) 62%, transparent);
+  transition: background var(--fast), border-color var(--fast), box-shadow var(--normal) var(--ease);
+  animation: jt-feed-row 10s var(--ease) infinite both; }
+.feed-row.r1 { animation-delay: .9s; } .feed-row.r2 { animation-delay: 1.6s; } .feed-row.r3 { animation-delay: 2.3s; }
+.feed-row:hover { background: var(--surface); border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  box-shadow: 0 12px 26px -18px color-mix(in srgb, var(--accent) 80%, transparent); }
+.feed-row .ic, .feed-seal .ic { width: 36px; height: 36px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   color: var(--accent-text); border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent); box-shadow: var(--badge-hi);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 60%, var(--surface)), var(--accent-soft)); }
-.oc .ic.teal { color: var(--accent-2); border-color: color-mix(in srgb, var(--accent-2) 22%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 60%, var(--surface)), var(--accent-soft));
+  transition: transform var(--normal) var(--ease); }
+.feed-row:hover .ic { transform: scale(1.06); }
+.feed-row .ic.teal { color: var(--accent-2); border-color: color-mix(in srgb, var(--accent-2) 22%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 8%, var(--surface)), color-mix(in srgb, var(--accent-2) 16%, transparent)); }
-.oc .ic.blue { color: #3b82f6; border-color: color-mix(in srgb, #3b82f6 22%, transparent);
+.feed-row .ic.blue { color: #3b82f6; border-color: color-mix(in srgb, #3b82f6 22%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, #3b82f6 8%, var(--surface)), color-mix(in srgb, #3b82f6 15%, transparent)); }
-.oc .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
-.oc .tx i { display: block; height: 7px; border-radius: 6px; background: var(--oc-bar); }
-.oc .tx i.l1 { width: 82%; height: 8px; background: var(--oc-bar-strong); } .oc .tx i.l2 { width: 56%; } .oc .tx i.l3 { width: 38%; }
-.oc .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px 3px 6px; border-radius: 999px; width: max-content;
-  color: var(--green); background: var(--green-soft); border: 1px solid color-mix(in srgb, var(--green) 28%, transparent); box-shadow: var(--badge-hi); }
-.oc .badge .ms { font-size: 14px; } .oc .badge b { display: block; width: 30px; height: 6px; border-radius: 6px; background: color-mix(in srgb, var(--green) 40%, transparent); }
-/* the composition: one card in front, one behind, one lower, one check tile */
-.oc.a { left: 6%; top: 36%; width: 74%; z-index: 3; --t: 9s; padding: 16px 18px; }
-.oc.a .ic { width: 44px; height: 44px; border-radius: 13px; }
-.oc.a::after { animation: jt-brighten 10s ease-in-out infinite; }
-.oc.b { left: 30%; top: 10%; width: 64%; z-index: 2; --t: 11s; animation-delay: -4s; animation-name: jt-float, jt-dim; animation-duration: 11s, 10s; }
-.oc.c { left: 0; top: 71%; width: 54%; z-index: 4; --t: 8s; animation-delay: -2s; padding: 12px 14px; }
-.oc.c .ic { width: 32px; height: 32px; border-radius: 10px; }
-.oc.d { left: 74%; top: 65%; z-index: 5; padding: 12px; --t: 7s; --tilt: 6deg; animation-name: jt-float-s; animation-delay: -3s; border-radius: 16px; }
-.oc.d .ic { width: 40px; height: 40px; border-radius: 12px; color: var(--green); border-color: color-mix(in srgb, var(--green) 25%, transparent);
+.feed-row .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.feed-row .tx i { display: block; height: 7px; border-radius: 6px; background: var(--oc-bar); }
+.feed-row .tx i.l1 { width: 78%; height: 8px; background: var(--oc-bar-strong); } .feed-row .tx i.l2 { width: 48%; }
+.feed-row.r2 .tx i.l1 { width: 66%; } .feed-row.r3 .tx i.l1 { width: 72%; } .feed-row.r3 .tx i.l2 { width: 36%; }
+.feed-row .ok { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  color: var(--green); background: var(--green-soft); border: 1px solid color-mix(in srgb, var(--green) 30%, transparent); box-shadow: var(--badge-hi);
+  animation: jt-feed-ok 10s var(--ease) infinite both; }
+.feed-row .ok .ms { font-size: 15px; }
+.feed-row.r1 .ok { animation-delay: .9s; } .feed-row.r2 .ok { animation-delay: 1.6s; } .feed-row.r3 .ok { animation-delay: 2.3s; }
+.feed-seal { position: absolute; right: -30px; bottom: -30px; z-index: 2; padding: 10px; border-radius: 16px; background: var(--oc-bg);
+  border: 1px solid var(--oc-border); box-shadow: var(--hi), var(--oc-shadow); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  rotate: 6deg; animation: jt-feed-seal 10s var(--ease) infinite both; }
+.feed-seal .ic { width: 40px; height: 40px; border-radius: 12px; color: var(--green); border-color: color-mix(in srgb, var(--green) 25%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, var(--green-soft) 50%, var(--surface)), var(--green-soft)); }
-.oc.d .spark-dot { position: absolute; top: 7px; right: 7px; width: 7px; height: 7px; border-radius: 50%;
+.feed-seal .spark-dot { position: absolute; top: 7px; right: 7px; width: 7px; height: 7px; border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, #fff 0 20%, var(--accent-2) 70%); box-shadow: 0 0 8px color-mix(in srgb, var(--accent-2) 70%, transparent); }
+@keyframes jt-feed-type { 0% { opacity: 0; transform: scaleX(0); } 3% { opacity: 1; } 10%, 88% { opacity: 1; transform: scaleX(1); } 96%, 100% { opacity: 0; transform: scaleX(1); } }
+@keyframes jt-feed-row { 0% { opacity: 0; transform: translate3d(0, 10px, 0); } 5%, 80% { opacity: 1; transform: translate3d(0, 0, 0); } 88%, 100% { opacity: 0; transform: translate3d(0, -6px, 0); } }
+@keyframes jt-feed-ok { 0%, 7% { opacity: 0; transform: scale(.4); } 11% { opacity: 1; transform: scale(1.14); } 14%, 80% { opacity: 1; transform: scale(1); } 88%, 100% { opacity: 0; transform: scale(.8); } }
+@keyframes jt-feed-seal { 0%, 36% { opacity: 0; transform: translate3d(0, 8px, 0) scale(.86); } 42% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.05); } 46%, 84% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } 92%, 100% { opacity: 0; transform: translate3d(0, 4px, 0) scale(.92); } }
 
 /* ── metric modules ── */
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
@@ -709,13 +724,14 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 [class*="st-key-filters_"] [class*="st-key-prow_"] [data-testid="stHorizontalBlock"] { gap: 10px !important; align-items: flex-start !important; }
 :is(.st-key-h_q, .st-key-j_q) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]) { min-height: 48px !important; border-radius: var(--r) !important; background: var(--surface-2) !important; }
 :is(.st-key-h_q, .st-key-j_q) input { font-size: 15px !important; }
-:is(.st-key-h_q, .st-key-j_q, .st-key-co_q) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])::before {
+:is(.st-key-h_q, .st-key-j_q, .st-key-co_q, .stTextInput:has(input[aria-label^="Search"])) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])::before {
   content: "search"; font-family: 'Material Symbols Rounded' !important; font-feature-settings: 'liga'; font-weight: 400;
   font-size: 20px; width: 20px; overflow: hidden; white-space: nowrap; flex-shrink: 0;
   color: var(--muted); margin-left: 14px; align-self: center; line-height: 1; box-sizing: content-box; transition: color var(--fast);
 }
-:is(.st-key-h_q, .st-key-j_q, .st-key-co_q) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]):focus-within::before { color: var(--accent-text); }
-[class*="st-key-filters_"] [data-baseweb="select"] > div, [class*="st-key-filters_"] .stSelectbox [role="group"] { border-radius: 999px !important; min-height: 36px !important; padding-left: 6px; background: var(--surface) !important; }
+:is(.st-key-h_q, .st-key-j_q, .st-key-co_q, .stTextInput:has(input[aria-label^="Search"])) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]):focus-within::before { color: var(--accent-text); }
+[class*="st-key-filters_"] :is(.stSelectbox, .stMultiSelect) div[role="group"] { border-radius: var(--r) !important; min-height: 44px !important; background: var(--surface) !important; }
+[class*="st-key-filters_"] .stSelectbox input { padding-left: 14px !important; }
 
 /* ── section heads ── */
 .sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -1006,7 +1022,7 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 /* ── widgets ── */
 .stTextInput label p, .stSelectbox label p, .stCheckbox label p { font-size: 13px !important; line-height: 18px !important; font-weight: 600 !important; color: var(--text-2) !important; }
 .stTextInput [data-baseweb="input"], [data-testid="stTextInputRootElement"], [data-baseweb="select"] > div, .stSelectbox [role="group"] {
-  background: var(--surface) !important; border: 1px solid var(--border-strong) !important; border-radius: 10px !important;
+  background: var(--surface) !important; border: 1px solid var(--border-strong) !important; border-radius: var(--r) !important;
   min-height: 40px; transition: border-color var(--fast), box-shadow var(--normal) var(--ease), background var(--fast);
 }
 .stTextInput [data-baseweb="input"] *, [data-testid="stTextInputRootElement"] * { background-color: transparent !important; }
@@ -1025,6 +1041,61 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 [data-baseweb="popover"] li { color: var(--text) !important; font-size: 14px !important; }
 [data-baseweb="popover"] li:hover, [data-baseweb="popover"] li[aria-selected="true"] { background: var(--accent-soft) !important; }
 [data-testid="InputInstructions"] { display: none !important; }
+/* ── selection controls ──
+   Streamlit 1.65 draws selectbox / multiselect as react-aria fields, and
+   their menus as portals straight on the page body — outside .stApp, so none of the
+   app's type or colour reached them (they fell back to Source Sans on a
+   bare panel). Every rule below names those elements directly. */
+body { font-family: var(--font); }
+:is([data-testid="stSelectboxVirtualDropdown"], [data-testid="stMultiSelectDropdown"]),
+:is([data-testid="stSelectboxVirtualDropdown"], [data-testid="stMultiSelectDropdown"]) *:not(.ms):not([data-testid="stIconMaterial"]) {
+  font-family: var(--font) !important; word-spacing: .03em; }
+.stMultiSelect label p { font-size: 13px !important; line-height: 18px !important; font-weight: 600 !important; color: var(--text-2) !important; }
+:is(.stSelectbox, .stMultiSelect) div[role="group"] { min-height: 44px; border-radius: var(--r) !important; }
+.stMultiSelect div[role="group"] {
+  background: var(--surface) !important; border: 1px solid var(--border-strong) !important;
+  transition: border-color var(--fast), box-shadow var(--normal) var(--ease), background var(--fast); height: auto !important; }
+.stMultiSelect div[role="group"]:hover { border-color: color-mix(in srgb, var(--accent) 35%, var(--border-strong)) !important; }
+.stMultiSelect div[role="group"]:focus-within { border-color: var(--accent) !important; box-shadow: var(--ring), 0 8px 24px -14px var(--accent) !important; }
+:is(.stSelectbox, .stMultiSelect) input { font-family: var(--font) !important; font-size: 14px !important; color: var(--text) !important;
+  -webkit-text-fill-color: var(--text); }
+:is(.stSelectbox, .stMultiSelect) input::placeholder { color: var(--muted) !important; -webkit-text-fill-color: var(--muted); opacity: 1; font-weight: 400; }
+/* the field's own buttons: clear and open */
+:is(.stSelectbox, .stMultiSelect) :is(button[aria-label="Clear all"], button[aria-label="Open"]) { color: var(--muted) !important; border-radius: 8px;
+  transition: color var(--fast), background var(--fast); }
+:is(.stSelectbox, .stMultiSelect) :is(button[aria-label="Clear all"], button[aria-label="Open"]):hover { color: var(--accent-text) !important; background: var(--hover); }
+:is(.stSelectbox, .stMultiSelect) :is(button[aria-label="Clear all"], button[aria-label="Open"]) svg { fill: currentColor !important; color: currentColor !important; }
+/* chosen values: soft accent chips that wrap onto a new row (never scroll out of sight) */
+[data-testid="stMultiSelectTagsContainer"] { flex-wrap: wrap !important; overflow: visible !important; gap: 6px !important; padding: 7px 0 7px 7px !important; }
+[data-testid="stMultiSelectTagsContainer"] input { flex: 1 1 48px !important; min-width: 48px !important; width: auto !important; height: 28px !important; padding: 0 6px !important; }
+/* with chips and no focus the (empty) text box steps out of the flow, so it never adds a blank row; focusing the field brings it back to type in */
+.stMultiSelect div[role="group"]:not(:focus-within) [data-testid="stMultiSelectTagsContainer"]:has([aria-label="Selected values"] > span) { position: relative; }
+.stMultiSelect div[role="group"]:not(:focus-within) [data-testid="stMultiSelectTagsContainer"]:has([aria-label="Selected values"] > span) input {
+  position: absolute !important; right: 0; bottom: 7px; flex: none !important; width: 1px !important; min-width: 0 !important; padding: 0 !important; opacity: 0; }
+.stMultiSelect [aria-label="Selected values"] > span { display: inline-flex !important; align-items: center; gap: 2px; height: 28px; max-width: 100%;
+  padding: 0 3px 0 11px !important; margin: 0 !important; border-radius: 999px !important; background: var(--accent-soft) !important;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent); box-shadow: var(--badge-hi); }
+.stMultiSelect [aria-label="Selected values"] > span > span { font-size: 13px !important; font-weight: 600 !important; color: var(--accent-text) !important;
+  -webkit-text-fill-color: var(--accent-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stMultiSelect [aria-label="Selected values"] > span > button { width: 22px; height: 22px; margin: 0 !important; padding: 0 !important; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center; color: var(--accent-text) !important; opacity: .7;
+  transition: opacity var(--fast), background var(--fast); }
+.stMultiSelect [aria-label="Selected values"] > span > button:hover { opacity: 1; background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.stMultiSelect [aria-label="Selected values"] > span > button svg { width: 9px; height: 9px; fill: currentColor !important; }
+/* the menus */
+:is([data-testid="stSelectboxVirtualDropdown"], [data-testid="stMultiSelectDropdown"]) { background: var(--raised) !important;
+  border: 1px solid var(--border) !important; border-radius: var(--r) !important; box-shadow: var(--shadow-lg) !important; overflow: hidden; }
+:is([data-testid="stSelectboxVirtualDropdown"], [data-testid="stMultiSelectDropdown"]) [role="listbox"] { background: transparent !important; }
+:is([data-testid="stSelectboxVirtualDropdown"], [data-testid="stMultiSelectDropdown"]) [role="option"] { display: flex !important; align-items: center;
+  margin: 0 6px; padding: 0 10px !important; border-radius: 8px !important; color: var(--text) !important; font-size: 14px !important; font-weight: 500;
+  background: transparent !important; cursor: pointer; transition: background var(--fast), color var(--fast); }
+:is([data-testid="stSelectboxVirtualDropdown"], [data-testid="stMultiSelectDropdown"]) [role="option"] * { color: inherit !important; font-size: inherit !important; background: transparent !important; box-shadow: none !important; }
+:is([data-testid="stSelectboxVirtualDropdown"], [data-testid="stMultiSelectDropdown"]) [role="option"]:is(:hover, [data-focused]) { background: var(--hover) !important; }
+:is([data-testid="stSelectboxVirtualDropdown"], [data-testid="stMultiSelectDropdown"]) [role="option"][aria-selected="true"] {
+  color: var(--accent-text) !important; font-weight: 600; background: var(--accent-soft) !important; }
+:is([data-testid="stSelectboxVirtualDropdown"], [data-testid="stMultiSelectDropdown"]) [role="option"][aria-selected="true"]::after {
+  content: "check"; margin-left: auto; padding-left: 10px; font-family: 'Material Symbols Rounded' !important; font-feature-settings: 'liga';
+  font-size: 18px; font-weight: 400; line-height: 1; color: var(--accent-text); }
 /* loading: Streamlit's own placeholders, given a calm shimmer (they vanish when content arrives) */
 [data-testid="stSkeleton"] { border-radius: 12px !important; background: linear-gradient(90deg, var(--hover) 0, color-mix(in srgb, var(--surface) 60%, var(--hover)) 40%, var(--hover) 80%) !important;
   background-size: 640px 100% !important; animation: jt-shimmer 1.4s linear infinite; }
@@ -1113,8 +1184,8 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 }
 @media (max-width: 1100px) {
   .hero { grid-template-columns: minmax(0, 1fr) minmax(0, 34%); gap: 16px; }
-  .opps-wrap { min-height: 230px; } .oc.c { display: none; } .oc.a { left: 0; width: 86%; top: 34%; } .oc.b { left: 18%; width: 78%; } .oc.d { left: 70%; top: 66%; }
-  .oc { gap: 10px; padding: 12px 13px; } .oc.a { padding: 13px 14px; } .oc.a .ic { width: 38px; height: 38px; } .oc .ic { width: 32px; height: 32px; }
+  .opps-wrap { min-height: 240px; } .feed { left: 0; right: 4%; padding: 12px; gap: 6px; } .feed-row { gap: 10px; padding: 8px 10px; }
+  .feed-row .ic { width: 32px; height: 32px; } .feed-row.r3 { display: none; } .feed-seal { padding: 8px; right: -20px; bottom: -24px; } .feed-seal .ic { width: 34px; height: 34px; }
   .hero .page-title { font-size: 34px; line-height: 41px; }
 }
 /* tablet: icon rail */
@@ -1152,16 +1223,17 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   .st-key-mnav p { font-size: 10.5px !important; line-height: 13px !important; font-weight: 600 !important; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 1px; }
   .page-title, .detail-title { font-size: 24px; line-height: 31px; }
   .st-key-hero { padding: 22px 18px 20px !important; }
-  /* phones: not a shrunk desktop — a compact strip of one card and the
-     check tile above the eyebrow, so nothing sits over the heading */
+  /* phones: not a shrunk desktop — a compact strip (the search being typed
+     and the check tile) above the eyebrow, so nothing sits over the heading */
   .hero { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .opps-wrap { order: -1; min-height: 0; height: 58px; margin-bottom: 16px; }
   .opps > .glow-bg { inset: -22px -18px -20px -18px; }
-  .oc.b, .oc.c { display: none; }
-  .oc.a { left: 0; top: 0; width: min(250px, 74%); padding: 9px 12px; gap: 10px; border-radius: 12px; --t: 10s; }
-  .oc.a .ic { width: 34px; height: 34px; border-radius: 10px; } .oc .tx { gap: 5px; } .oc .tx i.l3, .oc.a .badge { display: none; }
-  .oc.d { left: auto; right: 0; top: 4px; padding: 8px; border-radius: 13px; }
-  .oc.d .ic { width: 34px; height: 34px; }
+  .feed { left: 0; right: 64px; top: 0; translate: none; padding: 0; border: none; background: none; box-shadow: none;
+    backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .feed-row { display: none; }
+  .feed-q { height: 46px; margin: 0; border-radius: 14px; background: var(--oc-bg); border-color: var(--oc-border); box-shadow: var(--hi), var(--oc-shadow); }
+  .feed-seal { right: -64px; top: 2px; bottom: auto; padding: 8px; border-radius: 13px; }
+  .feed-seal .ic { width: 34px; height: 34px; }
   .hero .page-title { font-size: 27px; line-height: 33px; }
   .hero-sub { font-size: 14.5px; line-height: 22px; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -1190,9 +1262,8 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
-  /* the cards rest in place: no float, no brighten, no glow drift */
-  .oc, .oc::after, .opps > .glow-bg { animation: none !important; }
-  .oc.d { transform: rotate(6deg); }
+  /* the feed rests in its finished state: query typed, every role checked, seal in place */
+  .feed-q .qbar i, .feed-row, .feed-row .ok, .feed-seal, .opps > .glow-bg { animation: none !important; opacity: 1 !important; transform: none !important; }
   .btn.primary::after, [data-testid="stBaseButton-primary"]::after { display: none; }
   .st-key-onboard { animation: none !important; }
 }
@@ -1296,16 +1367,16 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .tl-q .ms { color: var(--accent-text); }
 .tl-q b { font-size: 14.5px; font-weight: 700; color: var(--text); }
 .tl-q span:not(.ms) { font-size: 12.5px; color: var(--muted); }
-[class*="st-key-tl_pick_"] button[data-variant="pills"] { min-height: 36px; padding: 0 14px !important; border-radius: 999px !important;
+:is([class*="st-key-tl_pick_"], [class*="st-key-pref_"], [class*="st-key-ob_"]) button[data-variant="pills"] { min-height: 36px; padding: 0 14px !important; border-radius: 999px !important;
   background: var(--btn2-grad) !important; border: 1px solid var(--border-strong) !important; color: var(--text-2) !important;
   box-shadow: var(--hi), var(--btn2-shadow) !important;
   transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease), transform var(--fast) var(--ease), color var(--fast) var(--ease); }
-[class*="st-key-tl_pick_"] button[data-variant="pills"]:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--border-strong)) !important;
+:is([class*="st-key-tl_pick_"], [class*="st-key-pref_"], [class*="st-key-ob_"]) button[data-variant="pills"]:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--border-strong)) !important;
   color: var(--accent-text) !important; box-shadow: var(--hi), var(--btn2-shadow-hover) !important; transform: translateY(-1px); }
-[class*="st-key-tl_pick_"] button[data-variant="pills"]:is([aria-checked="true"], [aria-pressed="true"], [data-selected="true"]) { color: var(--accent-text) !important;
+:is([class*="st-key-tl_pick_"], [class*="st-key-pref_"], [class*="st-key-ob_"]) button[data-variant="pills"]:is([aria-checked="true"], [aria-pressed="true"], [data-selected="true"]) { color: var(--accent-text) !important;
   background: linear-gradient(180deg, var(--accent-soft), color-mix(in srgb, var(--accent) 16%, var(--accent-soft))) !important;
   border-color: color-mix(in srgb, var(--accent) 45%, transparent) !important; box-shadow: var(--badge-hi), 0 6px 14px -10px var(--accent) !important; }
-[class*="st-key-tl_pick_"] button[data-variant="pills"] p { color: inherit !important; font-size: 13.5px !important; font-weight: 600 !important; }
+:is([class*="st-key-tl_pick_"], [class*="st-key-pref_"], [class*="st-key-ob_"]) button[data-variant="pills"] p { color: inherit !important; font-size: 13.5px !important; font-weight: 600 !important; }
 .st-key-tl_actions { align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
 .tl-dirty { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--amber); }
 .tl-dirty::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--amber); }
@@ -1435,7 +1506,7 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 [class*="st-key-set_"], .st-key-mail_status, .st-key-email_form, .st-key-test_panel {
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 3%, var(--surface)), var(--surface) 160px) !important; }
 /* the one-line "open at the top" script of a navigation run: takes no space */
-.st-key-jt_scroll_top, [data-testid="stLayoutWrapper"]:has(> .st-key-jt_scroll_top) { display: none !important; }
+:is(.st-key-jt_scroll_top, .st-key-jt_menu_guard), [data-testid="stLayoutWrapper"]:has(> :is(.st-key-jt_scroll_top, .st-key-jt_menu_guard)) { display: none !important; }
 /* Settings: the tracker section, drawn for admins only */
 .admin-head { display: flex; gap: 14px; align-items: flex-start; margin-top: 10px; padding: 18px 4px 4px;
   border-top: 1px dashed var(--border-strong); }
@@ -1462,6 +1533,52 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 # @import rules only count at the very top of a stylesheet, so the design
 # tokens go after the CSS (with them first, the web fonts never loaded)
 st.html(f"<style>{_CSS}\n{_root_vars}</style>")
+
+# Select menus close when they should. Streamlit keeps a multiselect's menu
+# open after each pick and reruns the app; on a slow connection the stale
+# menu then stayed open over the next control, and Tab out of the field
+# selected whatever option was highlighted. This listener (installed once per
+# page) closes an open menu as soon as the pointer goes down anywhere outside
+# it and its own field, and on Tab closes it first so Tab only moves focus. A
+# click anywhere on a field (not only on its text box) opens its menu.
+_MENU_GUARD = """<script>(() => {
+  if (window.__jtMenuGuard) return; window.__jtMenuGuard = true;
+  const FIELD = '[data-testid="stMultiSelect"], [data-testid="stSelectbox"]';
+  const openBox = () => document.querySelector('input[role="combobox"][aria-expanded="true"]');
+  const close = (input) => input.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true}));
+  document.addEventListener('pointerdown', (e) => {
+    const input = openBox(); if (!input) return;
+    const t = e.target;
+    if (!(t instanceof Element) || t.closest('[role="listbox"]')) return;
+    const field = input.closest(FIELD);
+    if (field && field.contains(t)) return;
+    close(input);
+  }, true);
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const t = e.target;
+    if (!(t instanceof Element) || !t.matches('input[role="combobox"][aria-expanded="true"]')) return;
+    close(t);
+    e.stopPropagation();          // the browser still moves focus; the menu just doesn't pick an option
+  }, true);
+  // a click anywhere on a field's surface (beside the chips, not on a button) opens its menu
+  // (pointerdown, not click: focusing the field can reflow it under the pointer, and then no click fires)
+  document.addEventListener('pointerdown', (e) => {
+    const t = e.target;
+    if (e.button !== 0 || !(t instanceof Element) || t.closest('button')) return;
+    const group = t.closest('[data-testid="stMultiSelect"] div[role="group"], [data-testid="stSelectbox"] div[role="group"]');
+    if (!group) return;
+    setTimeout(() => {
+      const input = group.querySelector('input[role="combobox"]');
+      if (input && input.getAttribute('aria-expanded') !== 'true') {
+        const open = group.querySelector('button[aria-label="Open"]');
+        if (open) open.click();
+      }
+    }, 120);
+  }, true);                       // capture: a chip's own handler stops the event before it bubbles
+})();</script>"""
+with st.container(key="jt_menu_guard"):
+    st.html(_MENU_GUARD, unsafe_allow_javascript=True)
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -3241,14 +3358,14 @@ def _filter_jobs_personal(prefix: str, jobs: list[dict], saved: dict):
         with st.container(key=f"prow_{prefix}"):
             r2 = st.columns(4)
         with r2[0]:
-            locs = st.multiselect("Location", list(job_filters.LOCATIONS), key=k["ploc"], placeholder="Any location")
+            locs = st.multiselect("Location", list(job_filters.LOCATIONS), key=k["ploc"], placeholder="Any location", wrap=True, select_all=False)
         with r2[1]:
-            fams = st.multiselect("Job family", list(job_filters.JOB_FAMILIES), key=k["pfam"], placeholder="Any family")
+            fams = st.multiselect("Job family", list(job_filters.JOB_FAMILIES), key=k["pfam"], placeholder="Any family", wrap=True, select_all=False)
         with r2[2]:
             exp = st.multiselect("Experience", list(job_filters.EXPERIENCE), key=k["pexp"], placeholder="Any level",
-                                 format_func=job_filters.EXPERIENCE_LABELS.get)
+                                 format_func=job_filters.EXPERIENCE_LABELS.get, wrap=True, select_all=False)
         with r2[3]:
-            cos = st.multiselect("Company", list(names), key=k["pco"], placeholder="Any company", format_func=names.get)
+            cos = st.multiselect("Company", list(names), key=k["pco"], placeholder="Any company", format_func=names.get, wrap=True, select_all=False)
         st.html('<p class="filter-note">Starts from your job preferences — changes here aren’t saved. Job type and work '
                 'mode aren’t stated in the postings the tracker reads, so they can’t be filtered on yet.</p>')
 
@@ -3387,17 +3504,20 @@ def _stat(label: str, value, note: str, icon: str, tint: str = "", small: bool =
 
 
 def _opportunity_cards() -> str:
-    """The hero's decorative opportunity cards (aria-hidden; abstract, no names
-    or listings): a job card in front, one behind, a smaller one below and a
-    fresher check tile."""
-    bars = '<span class="tx"><i class="l1"></i><i class="l2"></i>{}</span>'
-    badge = f'<span class="badge">{_ms("check")}<b></b></span>'
+    """The hero's decorative discovery feed (aria-hidden; abstract, no names
+    or listings): what the product does, in one loop — a search is typed,
+    three roles arrive one after another, each is checked against its own
+    posting, and the fresher seal settles."""
+    def row(n: str, icon: str, tone: str) -> str:
+        return (f'<div class="feed-row {n}"><span class="ic{tone}">{_ms(icon, "s20")}</span>'
+                '<span class="tx"><i class="l1"></i><i class="l2"></i></span>'
+                f'<span class="ok">{_ms("check")}</span></div>')
     return ('<div class="opps-wrap" aria-hidden="true"><div class="opps"><span class="glow-bg"></span>'
-            f'<div class="oc b"><span class="ic blue">{_ms("apartment", "s20")}</span>{bars.format("")}</div>'
-            f'<div class="oc a"><span class="ic">{_ms("work", "s24")}</span>{bars.format(badge)}</div>'
-            f'<div class="oc c"><span class="ic teal">{_ms("school", "s20")}</span>{bars.format("")}</div>'
-            f'<div class="oc d"><span class="ic">{_ms("task_alt", "s24")}</span><span class="spark-dot"></span></div>'
-            '</div></div>')
+            f'<div class="feed"><div class="feed-q">{_ms("search", "s20")}<span class="qbar"><i></i></span>'
+            '<span class="spark"></span></div>'
+            + row("r1", "work", "") + row("r2", "school", " teal") + row("r3", "apartment", " blue")
+            + f'<div class="feed-seal"><span class="ic">{_ms("task_alt", "s24")}</span><span class="spark-dot"></span></div>'
+            '</div></div></div>')
 
 
 def page_home():
