@@ -14,6 +14,14 @@ on:
     - cron: "17,47 * * * *"   # plan tick: scan when the admin's interval says so
     - cron: "20 */6 * * *"  # personal alerts every 6 hours (no scan)
   workflow_dispatch:          # "Run check": always scans
+    inputs:
+      mode:
+        # "plan": the external trigger (docs/EXTERNAL_SCHEDULER.md) — scans
+        # only when one is due, like the plan tick; duplicates never re-scan
+        description: "scan = scan now; plan = scan only if the interval says one is due"
+        type: choice
+        options: [scan, plan]
+        default: scan
 
 # queue overlapping runs instead of letting them race each other's git push
 concurrency:
@@ -44,6 +52,7 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           SCHEDULE: ${{ github.event.schedule }}
+          MODE: ${{ inputs.mode }}
         run: python3 scan_schedule.py plan >> "$GITHUB_OUTPUT"
 
   check:

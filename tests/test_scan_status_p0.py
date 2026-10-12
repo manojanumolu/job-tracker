@@ -226,3 +226,139 @@ def test_portal_counts_follow_each_portals_own_result(app, tmp_path):
     html = _html(app([]))
     assert f"{len(companies) - 1} healthy · 1 failing" in html
     assert _overall(html)[0] == "failing"
+
+
+# ── the external trigger (workflow_dispatch mode=plan) ──────────────────────
+
+def test_external_trigger_scans_only_when_due():
+    companies = [{"id": "a", "last_checked": u(12, 6, 58).isoformat()}]
+    plan = scan_schedule.plan
+    assert plan("workflow_dispatch", "", {}, companies, u(12, 15, 5), mode="plan") == {"scan": True, "deliver": False}
+    assert plan("workflow_dispatch", "", {}, companies, u(12, 8, 5), mode="plan") == {"scan": False, "deliver": False}
+
+
+def test_run_check_without_inputs_still_scans_at_once():
+    companies = [{"id": "a", "last_checked": u(12, 8, 0).isoformat()}]
+    assert scan_schedule.plan("workflow_dispatch", "", {}, companies, u(12, 8, 5)) == {"scan": True, "deliver": False}
+    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    assert 'create_dispatch(ref="main")' in src                    # the app sends no mode: "scan"
+
+
+def test_duplicate_triggers_in_one_window_scan_once():
+    """Two external calls (and a GitHub tick) in the same window: the
+    concurrency group runs them one after another, and each later plan sees
+    the scan the first one published."""
+    companies = [{"id": "a", "last_checked": u(12, 6, 58).isoformat()}]
+    scans = 0
+    for event, sched, mode, at in [("workflow_dispatch", "", "plan", u(12, 9, 5)),
+                                   ("workflow_dispatch", "", "plan", u(12, 9, 12)),
+                                   ("schedule", scan_schedule.PLAN_CRON, "", u(12, 9, 17)),
+                                   ("schedule", scan_schedule.PLAN_CRON, "", u(12, 10, 47))]:
+        if scan_schedule.plan(event, sched, {}, companies, at, mode=mode or "scan")["scan"]:
+            scans += 1
+            companies = [{"id": "a", "last_checked": (at + timedelta(minutes=1)).isoformat()}]
+    assert scans == 1
+    head = WORKFLOW.split("\njobs:\n", 1)[0]
+    assert "group: check-jobs" in head and "cancel-in-progress: false" in head
+
+
+def test_the_dispatch_input_is_a_closed_choice_defaulting_to_scan():
+    block = WORKFLOW.split("workflow_dispatch:", 1)[1].split("\nconcurrency:", 1)[0]
+    assert "type: choice" in block and "options: [scan, plan]" in block and "default: scan" in block
+    plan_job = WORKFLOW.split("\n  plan:\n", 1)[1].split("\n  check:\n", 1)[0]
+    assert "MODE: ${{ inputs.mode }}" in plan_job
+    assert WORKFLOW.count("inputs.mode") == 1                       # only the plan step reads it
+
+
+def _run_plan(tmp_path, env_extra, companies_text):
+    import os
+    import subprocess
+    import sys
+    (tmp_path / "scan_schedule.py").write_text((REPO / "scan_schedule.py").read_text("utf-8"), "utf-8")
+    (tmp_path / "settings.json").write_text("{}")
+    (tmp_path / "companies.json").write_text(companies_text)
+    summary = tmp_path / "summary.md"
+    env = {**os.environ, "GITHUB_STEP_SUMMARY": str(summary), **env_extra}
+    r = subprocess.run([sys.executable, "scan_schedule.py", "plan"], cwd=tmp_path, env=env,
+                       capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+    return r.stdout.split(), summary.read_text("utf-8") if summary.exists() else ""
+
+
+def test_the_plan_step_records_what_fired_it(tmp_path):
+    recent = json.dumps([{"id": "a", "last_checked": datetime.now(timezone.utc).isoformat()}])
+    out, summary = _run_plan(tmp_path, {"EVENT": "workflow_dispatch", "MODE": "plan", "SCHEDULE": ""}, recent)
+    assert out == ["scan=false", "deliver=false"]                 # just scanned: a plan-only run
+    assert "trigger workflow_dispatch mode=plan" in summary and "scan=False" in summary
+    out, summary = _run_plan(tmp_path, {"EVENT": "schedule", "MODE": "", "SCHEDULE": scan_schedule.PLAN_CRON}, recent)
+    assert "trigger schedule 17,47 * * * *" in summary
+
+
+def test_an_unreadable_companies_file_fails_toward_scanning(tmp_path):
+    out, summary = _run_plan(tmp_path, {"EVENT": "workflow_dispatch", "MODE": "plan", "SCHEDULE": ""}, "{broken")
+    assert out == ["scan=true", "deliver=false"] and "last scan None" in summary
+
+
+def test_the_setup_doc_holds_no_credential_and_names_the_minimum_permission():
+    doc = (REPO / "docs/EXTERNAL_SCHEDULER.md").read_text("utf-8")
+    assert "Actions → Read and write" in doc and "Only select repositories" in doc
+    assert '{"ref":"main","inputs":{"mode":"plan"}}' in doc
+    assert not re.search(r"gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}", doc)
+    assert "Bearer <the token>" in doc
+
+
+# ── attempt vs last success, per portal ─────────────────────────────────────
+
+def _run_scraper(monkeypatch, companies, statuses):
+    import config_store
+    import scraper
+    saved = {}
+    monkeypatch.setattr(config_store, "load_companies", lambda: companies)
+    monkeypatch.setattr(config_store, "load_seen_jobs", lambda: [])
+    monkeypatch.setattr(config_store, "save_companies", lambda c, commit=False: saved.setdefault("companies", c))
+    monkeypatch.setattr(config_store, "save_seen_jobs", lambda s, commit=False: None)
+    monkeypatch.setattr(scraper.time, "sleep", lambda s: None)
+
+    def scan_company(c):
+        s = scraper.Scan(c["name"])
+        if statuses[c["id"]] == "ok":
+            s.sources_ok = 1
+        else:
+            s.fail("failing", "listing page timed out")
+        return s
+    monkeypatch.setattr(scraper, "scan_company", scan_company)
+    scraper.run_all()
+    return {c["id"]: c for c in saved["companies"]}
+
+
+def test_a_successful_portal_scan_records_attempt_and_success(monkeypatch):
+    out = _run_scraper(monkeypatch, [{"id": "a", "name": "A", "url": "https://a.example"}], {"a": "ok"})
+    assert out["a"]["status"] == "active" and out["a"]["last_success"] == out["a"]["last_checked"]
+
+
+def test_a_failed_portal_scan_keeps_the_older_success(monkeypatch):
+    before = "2026-10-11T12:16:25+00:00"
+    out = _run_scraper(monkeypatch, [{"id": "a", "name": "A", "url": "https://a.example", "last_success": before}],
+                       {"a": "fail"})
+    assert out["a"]["status"] == "failing" and out["a"]["last_success"] == before
+    assert out["a"]["last_checked"] > before                       # the attempt is still recorded
+
+
+def test_publishing_carries_the_last_success_field():
+    import repo_sync
+    remote = [{"id": "a", "name": "A", "last_success": "old"}]
+    local = [{"id": "a", "name": "A", "last_success": "new", "last_checked": "new"}]
+    assert repo_sync.merge_companies(remote, local)[0]["last_success"] == "new"
+
+
+def test_monitoring_shows_when_a_failing_portal_last_succeeded(app, tmp_path):
+    now = datetime.now(timezone.utc)
+    companies = json.loads((REPO / "companies.json").read_text("utf-8"))
+    for c in companies:
+        c["status"], c["last_checked"] = "active", (now - timedelta(minutes=20)).isoformat()
+        c["last_success"] = c["last_checked"]
+    companies[0].update(status="failing", status_reason="listing page timed out",
+                        last_success=(now - timedelta(days=2, minutes=5)).isoformat())
+    (tmp_path / "companies.json").write_text(json.dumps(companies))
+    html = _html(app([], page="monitoring"))
+    assert "listing page timed out · last succeeded 2 days ago" in html

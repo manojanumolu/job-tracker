@@ -3944,7 +3944,9 @@ def page_monitoring():
         curl = safe_url(c.get("url", ""))
         checked = _parse_iso(c.get("last_checked", ""))
         reason = escape(c.get("status_reason") or "")
-        note = {"failing": f'{reason or "Last scan failed"} — <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">see log</a>',
+        ok_at = _parse_iso(c.get("last_success", ""))
+        since = f" · last succeeded {_ago(ok_at, NOW)}" if ok_at else ""
+        note = {"failing": f'{reason or "Last scan failed"}{since} — <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">see log</a>',
                 "delayed": f"No scan for over {_STALE_H} hours",
                 "pending": "Not scanned yet — added since the last run",
                 "checking": "Check requested"}.get(k, escape(c.get("scan_note") or "") or "—")

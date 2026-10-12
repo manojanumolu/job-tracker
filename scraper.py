@@ -823,7 +823,9 @@ def run_all() -> list[dict]:
         company["status"] = scan.status
         company["status_reason"] = scan.reason      # problems only ("" when healthy)
         company["scan_note"] = scan.user_note
-        company["last_checked"] = _now_iso()
+        company["last_checked"] = _now_iso()          # this attempt, whatever its outcome
+        if scan.status == "active":
+            company["last_success"] = company["last_checked"]   # a failed scan keeps the older one
         company["scan"] = scan.summary()
         company["source"] = source_label(company)
         # reflect what this scrape actually sees

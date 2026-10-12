@@ -27,6 +27,12 @@ when GitHub starts a tick late (measured: often by hours). A manual
 "Run check" (workflow_dispatch) always scans. Every run of the workflow
 shares one concurrency group, so scans never overlap.
 
+External trigger (optional, docs/EXTERNAL_SCHEDULER.md): an outside cron
+calls GitHub's workflow-dispatch API with input ``mode=plan``. That run is
+gated exactly like a plan tick, so a duplicate or extra trigger never
+starts a second scan in one window. "Run check" sends no input (``scan``)
+and scans at once, as before.
+
 GitHub limits worth knowing: scheduled runs can start late or, under load,
 be dropped — GitHub's docs name the start of every hour as the busiest time.
 Measured 2026-10-11/12 with the old ``0 * * * *`` tick: of ~17 ticks due in
@@ -166,13 +172,18 @@ def alert_due(now: datetime, last_sent: datetime | None) -> bool:
     return last_sent is None or now - last_sent >= timedelta(hours=MEMBER_ALERT_HOURS) - ALERT_GRACE
 
 
-def plan(event: str, schedule: str, settings, companies, now: datetime | None = None) -> dict:
+def plan(event: str, schedule: str, settings, companies, now: datetime | None = None,
+         mode: str = "scan") -> dict:
     """What one workflow run should do: {"scan": bool, "deliver": bool}.
-    * workflow_dispatch (Run check): scan (and the personal step after it)
+    * workflow_dispatch with mode "plan" (the external trigger): like the
+      plan tick — scan only if due
+    * workflow_dispatch otherwise (Run check): scan (and the personal step after it)
     * the hourly tick: scan only if due by the admin's interval
     * the 6-hourly alerts tick: no scan, only the personal alert pass
     Anything else does nothing."""
     now = now or datetime.now(timezone.utc)
+    if event == "workflow_dispatch" and mode == "plan":
+        return {"scan": scan_due(now, interval_from(settings), last_scan(companies)), "deliver": False}
     if event == "workflow_dispatch":
         return {"scan": True, "deliver": False}
     if event == "schedule" and schedule == ALERTS_CRON:
@@ -189,6 +200,18 @@ def _load(name: str, default):
         return default
 
 
+def _summary(line: str) -> None:
+    """Also show the decision on the run's summary page (never fails)."""
+    path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not path:
+        return
+    try:
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(f"**Scan plan:** {line}\n")
+    except OSError:
+        pass
+
+
 def main(argv=None) -> int:
     """``python3 scan_schedule.py plan`` — prints ``scan=true|false`` and
     ``deliver=true|false`` for $GITHUB_OUTPUT, plus a short human line on
@@ -199,13 +222,20 @@ def main(argv=None) -> int:
         return 2
     try:
         settings, companies = _load("settings.json", {}), _load("companies.json", [])
-        decision = plan(os.environ.get("EVENT", ""), os.environ.get("SCHEDULE", ""), settings, companies)
+        event, schedule = os.environ.get("EVENT", ""), os.environ.get("SCHEDULE", "")
+        mode = os.environ.get("MODE", "") or "scan"
+        decision = plan(event, schedule, settings, companies, mode=mode)
         hours, last = interval_from(settings), last_scan(companies)
         now = datetime.now(timezone.utc)
-        # the log says why a tick did or didn't scan (a plan-only run is not a scan)
-        print(f"interval {hours} h · last scan {last} · window opened {latest_boundary(now, hours)} · "
-              f"overdue={scan_overdue(now, hours, last)} · scan={decision['scan']} "
-              f"deliver={decision['deliver']}", file=sys.stderr)
+        trigger = (f"schedule {schedule}" if event == "schedule"
+                   else f"{event} mode={mode}" if event == "workflow_dispatch" else event or "unknown")
+        # the log says what fired this run and why it did or didn't scan
+        # (a plan-only run is not a scan); counts and times only, no personal data
+        line = (f"trigger {trigger} · interval {hours} h · last scan {last} · window opened "
+                f"{latest_boundary(now, hours)} · overdue={scan_overdue(now, hours, last)} · "
+                f"scan={decision['scan']} deliver={decision['deliver']}")
+        print(line, file=sys.stderr)
+        _summary(line)
     except Exception as e:                       # plan nothing rather than break
         print(f"plan failed ({type(e).__name__}); nothing runs this tick", file=sys.stderr)
         decision = {"scan": False, "deliver": False}
