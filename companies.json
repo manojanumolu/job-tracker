@@ -6,19 +6,19 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-13T03:09:12.198542+00:00",
+    "last_checked": "2026-10-13T06:04:24.366702+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
       "postings_seen": 440,
       "candidates": 64,
-      "details_read": 17,
+      "details_read": 18,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0
     },
     "source": "Avature job search",
-    "last_success": "2026-10-13T03:09:12.198542+00:00"
+    "last_success": "2026-10-13T06:04:24.366702+00:00"
   },
   {
     "id": "avalara",
@@ -27,19 +27,19 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-13T03:09:14.824286+00:00",
+    "last_checked": "2026-10-13T06:04:29.453364+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 152,
-      "candidates": 21,
+      "postings_seen": 154,
+      "candidates": 23,
       "details_read": 0,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0
     },
     "source": "Jibe/iCIMS API",
-    "last_success": "2026-10-13T03:09:14.824286+00:00"
+    "last_success": "2026-10-13T06:04:29.453364+00:00"
   },
   {
     "id": "pokerstars",
@@ -48,7 +48,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-13T03:09:16.760689+00:00",
+    "last_checked": "2026-10-13T06:04:31.429848+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -60,7 +60,7 @@
       "accepted": 0
     },
     "source": "Workday API",
-    "last_success": "2026-10-13T03:09:16.760689+00:00"
+    "last_success": "2026-10-13T06:04:31.429848+00:00"
   },
   {
     "id": "sanofi",
@@ -69,19 +69,19 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-13T03:09:37.782529+00:00",
+    "last_checked": "2026-10-13T06:04:56.304853+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 84,
-      "candidates": 84,
+      "postings_seen": 83,
+      "candidates": 83,
       "details_read": 35,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0
     },
     "source": "Workday API",
-    "last_success": "2026-10-13T03:09:37.782529+00:00"
+    "last_success": "2026-10-13T06:04:56.304853+00:00"
   },
   {
     "id": "pwc",
@@ -89,20 +89,20 @@
     "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers",
     "locked": true,
     "status": "active",
-    "last_job": "IN_Associate _ Internal Audit _Internal Audit Services_ Advisory_ Bangalore",
-    "last_checked": "2026-10-13T03:11:15.062616+00:00",
+    "last_job": "Specialist 2",
+    "last_checked": "2026-10-13T06:06:54.253579+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 618,
-      "candidates": 618,
-      "details_read": 196,
+      "postings_seen": 617,
+      "candidates": 617,
+      "details_read": 197,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 11
     },
     "source": "Workday API",
-    "last_success": "2026-10-13T03:11:15.062616+00:00"
+    "last_success": "2026-10-13T06:06:54.253579+00:00"
   },
   {
     "id": "accenture",
@@ -111,7 +111,7 @@
     "locked": true,
     "status": "active",
     "last_job": "Order to Cash Operations New Associate",
-    "last_checked": "2026-10-13T03:11:18.455592+00:00",
+    "last_checked": "2026-10-13T06:06:57.762672+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -123,7 +123,7 @@
       "accepted": 27
     },
     "source": "Accenture job-search API",
-    "last_success": "2026-10-13T03:11:18.455592+00:00"
+    "last_success": "2026-10-13T06:06:57.762672+00:00"
   },
   {
     "id": "c1783687965",
@@ -132,7 +132,7 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-13T03:11:22.114889+00:00",
+    "last_checked": "2026-10-13T06:07:01.785408+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -144,6 +144,6 @@
       "accepted": 0
     },
     "source": "Zoho Recruit career site",
-    "last_success": "2026-10-13T03:11:22.114889+00:00"
+    "last_success": "2026-10-13T06:07:01.785408+00:00"
   }
 ]
