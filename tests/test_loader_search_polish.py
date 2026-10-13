@@ -3,9 +3,9 @@
 The loading layer is the app's own .stApp::after (Streamlit's decoration bar
 and toolbar stay hidden); Streamlit's frontend marks the app element
 data-test-script-state="running" for every rerun. After a 450 ms pause it
-covers the WHOLE viewport — edge to edge — with a soft veil, a purple→blue
-frame on all four edges with one highlight travelling round the screen, and
-a large glossy briefcase in the exact centre. It takes clicks only while it
+covers the WHOLE viewport — edge to edge — with a soft solid veil, a thin
+purple→blue line on all four edges with one soft highlight travelling round
+the screen, and a medium translucent glass briefcase in the exact centre. It takes clicks only while it
 is shown, and lets them through the moment the rerun ends. Search fields
 share one premium style; other inputs, dropdowns and buttons keep theirs."""
 import ast
@@ -39,16 +39,18 @@ def test_the_loader_covers_the_whole_viewport():
     layer = _rule(".stApp::after")
     assert "position: fixed; inset: 0; box-sizing: border-box" in layer                  # edge to edge
     assert "52px" not in layer and "left: calc(50%" not in layer and "height: 3px" not in layer  # no badge, no line
-    assert "border: 5px solid transparent" in layer and "z-index: 1000010" in layer       # above the sidebar too
-    assert "@media (max-width: 767px) { .stApp::after { border-width: 3px; } }" in CSS
+    assert "border: 2px solid transparent" in layer and "z-index: 1000010" in layer       # a thin line, above the sidebar
+    assert "@media (max-width: 767px) { .stApp::after { border-width: 1.5px; } }" in CSS
+    assert "box-shadow" not in layer                                                      # no glow along the edges
 
 
 def test_the_frame_has_four_edges_and_one_travelling_highlight():
     layer = _rule(".stApp::after")
     for angle in ("90deg", "180deg", "270deg", "0deg"):                                   # top, right, bottom, left
-        assert f"linear-gradient({angle}, transparent, var(--load-hi), var(--load-blue), transparent)" in layer, angle
-    assert ("linear-gradient(135deg, color-mix(in srgb, var(--accent) 55%, transparent), "
-            "color-mix(in srgb, var(--load-blue) 55%, transparent)) 0 0 / 100% 100% no-repeat border-box") in layer
+        assert (f"linear-gradient({angle}, transparent, color-mix(in srgb, var(--load-hi) 85%, transparent), "
+                f"color-mix(in srgb, var(--load-blue) 70%, transparent), transparent)") in layer, angle
+    assert ("linear-gradient(135deg, color-mix(in srgb, var(--accent) 30%, transparent), "
+            "color-mix(in srgb, var(--load-blue) 30%, transparent)) 0 0 / 100% 100% no-repeat border-box") in layer   # a quiet base line
     turn = CSS[CSS.index("@keyframes jt-load-turn {"):CSS.index("} }", CSS.index("@keyframes jt-load-turn {")) + 3]
     assert set(re.findall(r"([a-z-]+)\s*:", turn)) == {"background-position"}
     stops = re.findall(r"(\d+)% \{ background-position: ([^;]+); \}", turn)
@@ -60,19 +62,31 @@ def test_the_frame_has_four_edges_and_one_travelling_highlight():
     assert all(lst[0] == "center" and lst[1] == "center" for lst in lists)              # briefcase and glow stay put
 
 
-def test_a_large_glossy_briefcase_sits_in_the_exact_centre():
+def test_a_medium_glass_briefcase_sits_in_the_exact_centre():
     layer = _rule(".stApp::after")
-    assert "var(--load-icon) center / clamp(150px, 27vmin, 236px) auto no-repeat padding-box" in layer
-    assert "radial-gradient(closest-side, var(--load-glow), var(--load-glow-2) 55%, transparent 100%) center" in layer
+    # the artwork is the glass tile with the case on it (the case is ~57% of its width: ~110 px on desktop)
+    assert "var(--load-icon) center / clamp(150px, 42vw, 194px) auto no-repeat padding-box" in layer
+    assert ("radial-gradient(closest-side, var(--load-glow), var(--load-glow-2) 55%, transparent 100%) center / "
+            "clamp(240px, 44vmin, 380px)") in layer
+    for name in ("LIGHT", "DARK"):                                                       # only a faint halo
+        glow = float(re.search(r"rgba\([\d,]+,([.\d]+)\)", _palette(name)["load-glow"]).group(1))
+        assert glow <= .12, (name, glow)
+        assert "rgba" not in _palette(name)["load-veil"]                                 # a clean, solid backdrop
     assert layer.index("var(--load-icon)") < layer.index("radial-gradient") < layer.index("var(--load-veil)")
     fn_src = SRC[SRC.index("def _briefcase_uri"):SRC.index("\n\n\nLIGHT = {")]
     ns = {"base64": base64}
     exec(fn_src, ns)                                                                     # the helper alone
-    uri = ns["_briefcase_uri"]("#8d80ff", "#5b4cf5", "#3b82f6", "#2a1f8a")
-    assert uri.startswith("url('data:image/svg+xml;base64,") and "<" not in uri
-    svg = base64.b64decode(uri[len("url('data:image/svg+xml;base64,"):-2]).decode()
-    for part in ('id="body"', 'id="gloss"', 'id="clasp"', 'id="sheen"', "feGaussianBlur", "<ellipse"):
-        assert part in svg, part                                                         # gradient, gloss, clasp, shadow
+    for dark in (False, True):
+        uri = ns["_briefcase_uri"](dark=dark)
+        assert uri.startswith("url('data:image/svg+xml;base64,") and "<" not in uri
+        svg = base64.b64decode(uri[len("url('data:image/svg+xml;base64,"):-2]).decode()
+        # glass tile (face, depth edge, rim), glass case (lid, body, base edge, tube handle, two clasps), faint shadow
+        for part in ('id="tile"', 'id="edge"', 'id="rim"', 'id="lid"', 'id="body"', 'id="base"', 'id="tube"', 'id="clasp"',
+                     "feGaussianBlur", "<ellipse"):
+            assert part in svg, (dark, part)
+        assert svg.count('fill="url(#clasp)"') == 2
+        opacities = [float(v) for v in re.findall(r'stop-opacity="([.\d]+)"', svg)]
+        assert opacities and min(opacities) < .9                                         # translucent glass, not solid
 
 
 def test_the_loader_appears_only_during_real_loading_and_never_sticks():
@@ -89,8 +103,9 @@ def test_reduced_motion_shows_the_same_screen_still():
     reduced = CSS[CSS.index("/* the bar appears (still after the pause)"):]
     reduced = reduced[:reduced.index("}\n}") + 3]
     assert "jt-busy-fade 1ms linear 450ms both" in reduced and "jt-load-turn" not in reduced
-    for part in ("var(--load-icon) center / clamp(150px, 27vmin, 236px)", "radial-gradient(closest-side",
-                 "var(--load-veil) padding-box", "linear-gradient(135deg, var(--accent), var(--load-blue)) border-box"):
+    for part in ("var(--load-icon) center / clamp(150px, 42vw, 194px)", "radial-gradient(closest-side",
+                 "var(--load-veil) padding-box",
+                 "linear-gradient(135deg, color-mix(in srgb, var(--accent) 45%, transparent), color-mix(in srgb, var(--load-blue) 45%, transparent)) border-box"):
         assert part in reduced, part
 
 
@@ -101,7 +116,7 @@ def test_both_themes_define_the_loader_and_search_tokens():
                       "search-tint-hover", "search-edge", "search-edge-hover", "search-edge-focus", "search-shadow",
                       "search-shadow-hover", "search-chip", "search-chip-focus", "search-icon", "search-placeholder"):
             assert pal.get(token), (name, token)
-        assert re.search(rf'{name}\["load-icon"\] = _briefcase_uri\("#[0-9a-f]{{6}}", "#[0-9a-f]{{6}}", "#[0-9a-f]{{6}}", "#[0-9a-f]{{6}}"\)', SRC)
+    assert 'LIGHT["load-icon"] = _briefcase_uri()' in SRC and 'DARK["load-icon"] = _briefcase_uri(dark=True)' in SRC
     assert "<" not in CSS and "@property" not in CSS and "conic-gradient" not in CSS
 
 

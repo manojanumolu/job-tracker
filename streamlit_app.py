@@ -383,40 +383,66 @@ def render_auth_diag() -> None:
 # product's core promise (fresher roles found, portals healthy).
 
 
-def _briefcase_uri(top: str, mid: str, bottom: str, shadow: str) -> str:
-    """The full-screen loader's centrepiece: a glossy briefcase drawn for
-    this app — a purple→blue body with a lit top edge, a gloss band, a lid
-    seam, a satin clasp, a tubular handle and a soft cast shadow — as a CSS
-    url() (inline <svg> doesn't paint in this app's hosting; a CSS
+def _briefcase_uri(dark: bool = False) -> str:
+    """The full-screen loader's centrepiece, after the reference artwork: a
+    translucent glass briefcase set into a rounded glass tile — soft
+    lavender→periwinkle faces, a thin bright rim, a visible tile edge for
+    depth, a glass-tube handle, two outlined clasps on the lid seam, a deep
+    indigo glass base edge, a few white reflections and a faint shadow. As a
+    CSS url() (inline <svg> doesn't paint in this app's hosting; a CSS
     background image does)."""
+    o = 1.12 if dark else 1.0                   # a touch more presence on the dark veil
+    a = lambda v: f"{min(1.0, v * o):.2f}"
+    t = lambda v: f"{min(1.0, v * (1.3 if dark else 1.0)):.2f}"   # the tile face: no grey cast over the dark veil
     svg = (
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 180">'
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 228">'
         '<defs>'
-        f'<linearGradient id="body" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="{top}"/>'
-        f'<stop offset=".55" stop-color="{mid}"/><stop offset="1" stop-color="{bottom}"/></linearGradient>'
-        f'<linearGradient id="handle" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{top}"/>'
-        f'<stop offset="1" stop-color="{mid}"/></linearGradient>'
-        '<linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".62"/>'
-        '<stop offset=".55" stop-color="#fff" stop-opacity=".12"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>'
-        '<linearGradient id="clasp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/>'
-        '<stop offset="1" stop-color="#dcd8ff"/></linearGradient>'
-        '<radialGradient id="sheen" cx=".3" cy=".25" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".28"/>'
-        '<stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>'
-        '<filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6"/></filter>'
+        '<linearGradient id="tile" x1="0" y1="0" x2=".85" y2="1">'
+        f'<stop offset="0" stop-color="#eef0fe" stop-opacity="{t(.72)}"/><stop offset=".55" stop-color="#ccd3fb" stop-opacity="{t(.58)}"/>'
+        f'<stop offset="1" stop-color="#a3adf8" stop-opacity="{t(.68)}"/></linearGradient>'
+        '<linearGradient id="edge" x1="0" y1="0" x2="1" y2="1">'
+        f'<stop offset="0" stop-color="#b9c1fb" stop-opacity="{a(.70)}"/><stop offset="1" stop-color="#7d87f3" stop-opacity="{a(.78)}"/></linearGradient>'
+        '<linearGradient id="rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".95"/>'
+        '<stop offset=".5" stop-color="#ffffff" stop-opacity=".35"/><stop offset="1" stop-color="#c9b8ff" stop-opacity=".75"/></linearGradient>'
+        '<linearGradient id="lid" x1="0" y1="0" x2=".7" y2="1">'
+        f'<stop offset="0" stop-color="#f1f0ff" stop-opacity="{a(.80)}"/><stop offset="1" stop-color="#c3c7fb" stop-opacity="{a(.72)}"/></linearGradient>'
+        '<linearGradient id="body" x1="0" y1="0" x2=".7" y2="1">'
+        f'<stop offset="0" stop-color="#c3c7fc" stop-opacity="{a(.82)}"/><stop offset="1" stop-color="#8e95f6" stop-opacity="{a(.88)}"/></linearGradient>'
+        '<linearGradient id="base" x1="0" y1="0" x2="1" y2="0">'
+        f'<stop offset="0" stop-color="#4f4bf3" stop-opacity="{a(.78)}"/><stop offset=".45" stop-color="#7b80fe" stop-opacity="{a(.52)}"/>'
+        f'<stop offset="1" stop-color="#4a47f6" stop-opacity="{a(.82)}"/></linearGradient>'
+        '<linearGradient id="tube" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eceaff"/>'
+        '<stop offset="1" stop-color="#858cf4"/></linearGradient>'
+        '<linearGradient id="clasp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6f5ff" stop-opacity=".9"/>'
+        '<stop offset="1" stop-color="#b8bdfb" stop-opacity=".8"/></linearGradient>'
+        '<filter id="blur" x="-40%" y="-80%" width="180%" height="260%"><feGaussianBlur stdDeviation="7"/></filter>'
         '</defs>'
-        f'<ellipse cx="100" cy="163" rx="70" ry="9" fill="{shadow}" filter="url(#soft)"/>'
-        '<rect x="70" y="16" width="60" height="38" rx="15" fill="none" stroke="url(#handle)" stroke-width="12"/>'
-        '<rect x="70" y="16" width="60" height="38" rx="15" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="2.5"'
-        ' transform="translate(0 -3.5)"/>'
-        '<rect x="20" y="46" width="160" height="108" rx="24" fill="url(#body)"/>'
-        '<rect x="20" y="46" width="160" height="108" rx="24" fill="url(#sheen)"/>'
-        '<rect x="26" y="50" width="148" height="44" rx="20" fill="url(#gloss)"/>'
-        '<rect x="20" y="92" width="160" height="4" fill="#140a50" fill-opacity=".16"/>'
-        '<rect x="20" y="96" width="160" height="1.5" fill="#fff" fill-opacity=".22"/>'
-        '<rect x="20.75" y="46.75" width="158.5" height="106.5" rx="23.25" fill="none" stroke="#fff" stroke-opacity=".38"'
-        ' stroke-width="1.5"/>'
-        f'<rect x="84" y="84" width="32" height="22" rx="7" fill="url(#clasp)" stroke="{mid}" stroke-opacity=".35"/>'
-        '<rect x="90" y="89" width="20" height="3" rx="1.5" fill="#fff" fill-opacity=".9"/>'
+        # a faint shadow beneath, then the tile: edge (depth), face, bright rim
+        '<ellipse cx="122" cy="214" rx="74" ry="7" fill="#6f78ee" fill-opacity=".16" filter="url(#blur)"/>'
+        '<rect x="26" y="20" width="198" height="184" rx="42" fill="url(#edge)"/>'
+        '<rect x="16" y="10" width="198" height="184" rx="42" fill="url(#tile)"/>'
+        '<rect x="16.75" y="10.75" width="196.5" height="182.5" rx="41.25" fill="none" stroke="url(#rim)" stroke-width="1.5"/>'
+        # handle: a glass tube with a light inner line
+        '<path d="M92 66 V54 a16 16 0 0 1 16 -16 h14 a16 16 0 0 1 16 16 V66" fill="none" stroke="url(#tube)" stroke-width="10"'
+        ' stroke-opacity=".85" stroke-linejoin="round"/>'
+        '<path d="M96 64 V55 a12 12 0 0 1 12 -12 h14 a12 12 0 0 1 12 12 V64" fill="none" stroke="#ffffff" stroke-opacity=".55"'
+        ' stroke-width="1.4"/>'
+        # body: lid and lower half (with a right-hand glass side for depth)
+        '<path d="M178 70 l7 6 v34 l-7 -4 z" fill="#7d84f2" fill-opacity=".7"/>'
+        '<path d="M182 112 l7 4 v52 l-7 4 z" fill="#5f66ee" fill-opacity=".72"/>'
+        '<rect x="50" y="66" width="128" height="42" rx="5" fill="url(#lid)" stroke="#6d73f2" stroke-opacity=".75" stroke-width="1.4"/>'
+        '<rect x="46" y="110" width="136" height="56" rx="5" fill="url(#body)" stroke="#6d73f2" stroke-opacity=".7" stroke-width="1.4"/>'
+        '<rect x="46" y="160" width="136" height="12" rx="4" fill="url(#base)"/>'
+        '<path d="M54 70 H170" stroke="#ffffff" stroke-opacity=".75" stroke-width="1.3" stroke-linecap="round"/>'
+        '<path d="M50 113 H178" stroke="#ffffff" stroke-opacity=".45" stroke-width="1"/>'
+        # reflections
+        '<path d="M64 120 l26 0 l-18 40 l-26 0 z" fill="#ffffff" fill-opacity=".16"/>'
+        '<path d="M138 72 l14 0 l-12 32 l-14 0 z" fill="#ffffff" fill-opacity=".20"/>'
+        # the seam and the two clasps (outlined, as in the reference)
+        '<path d="M50 108 H76 M98 108 H130 M152 108 H178" stroke="#6b72f1" stroke-opacity=".7" stroke-width="1.6"/>'
+        '<rect x="76" y="97" width="22" height="22" rx="6" fill="url(#clasp)" stroke="#5b60ee" stroke-opacity=".85" stroke-width="2.4"/>'
+        '<rect x="130" y="97" width="22" height="22" rx="6" fill="url(#clasp)" stroke="#5b60ee" stroke-opacity=".85" stroke-width="2.4"/>'
+        '<path d="M80 101 h14 M134 101 h14" stroke="#ffffff" stroke-opacity=".85" stroke-width="1.2" stroke-linecap="round"/>'
         '</svg>')
     return "url('data:image/svg+xml;base64," + base64.b64encode(svg.encode("utf-8")).decode("ascii") + "')"
 
@@ -457,8 +483,8 @@ LIGHT = {
     "hover-wash": "linear-gradient(180deg, rgba(255,255,255,.9), rgba(239,237,255,.75))",
     # the loading square: a purple→blue frame around a briefcase
     "load-blue": "#3b82f6", "load-hi": "#a89dff",
-    "load-veil": "linear-gradient(160deg, rgba(247,246,255,.975) 0%, rgba(240,242,255,.975) 55%, rgba(234,241,255,.98) 100%)",
-    "load-glow": "rgba(124,108,255,.30)", "load-glow-2": "rgba(59,130,246,.16)",
+    "load-veil": "linear-gradient(160deg, #f7f6ff 0%, #f0f2ff 55%, #eaf1ff 100%)",
+    "load-glow": "rgba(124,108,255,.10)", "load-glow-2": "rgba(59,130,246,.05)",
     # search fields: a lavender→ice-blue glass with a gradient edge
     "search-gloss": "linear-gradient(180deg, rgba(255,255,255,.88) 0%, rgba(255,255,255,.34) 44%, rgba(255,255,255,0) 54%)",
     "search-tint": "linear-gradient(115deg, #f4f1ff 0%, #ecefff 50%, #e6f1ff 100%)",
@@ -501,9 +527,9 @@ DARK = {
     "av-gloss": "inset 0 1px 1px rgba(255,255,255,.45), inset 0 -3px 6px rgba(0,0,0,.14)",
     "av-drop": "0 6px 14px -6px rgba(0,0,0,.7)",
     "hover-wash": "linear-gradient(180deg, rgba(124,108,255,.16), rgba(124,108,255,.08))",
-    "load-blue": "#60a5fa", "load-hi": "#d4ceff",
-    "load-veil": "linear-gradient(160deg, rgba(14,19,40,.975) 0%, rgba(12,17,36,.975) 55%, rgba(11,18,40,.98) 100%)",
-    "load-glow": "rgba(124,108,255,.34)", "load-glow-2": "rgba(96,165,250,.16)",
+    "load-blue": "#60a5fa", "load-hi": "#b9b0ff",
+    "load-veil": "linear-gradient(160deg, #0e1328 0%, #0c1124 55%, #0b1228 100%)",
+    "load-glow": "rgba(124,108,255,.12)", "load-glow-2": "rgba(96,165,250,.05)",
     "search-gloss": "linear-gradient(180deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.03) 46%, rgba(255,255,255,0) 54%)",
     "search-tint": "linear-gradient(115deg, #1f2552 0%, #1a214b 50%, #18264d 100%)",
     "search-tint-hover": "linear-gradient(115deg, #242b5c 0%, #1f2655 50%, #1c2c58 100%)",
@@ -517,8 +543,8 @@ DARK = {
 }
 # the loading square's briefcase, coloured for each theme (built here: the
 # palettes above stay plain literals)
-LIGHT["load-icon"] = _briefcase_uri("#8d80ff", "#5b4cf5", "#3b82f6", "#2a1f8a")
-DARK["load-icon"] = _briefcase_uri("#b3a8ff", "#7c6cff", "#4f8ff7", "#000000")
+LIGHT["load-icon"] = _briefcase_uri()
+DARK["load-icon"] = _briefcase_uri(dark=True)
 TH = DARK if st.session_state.dark_mode else LIGHT
 _root_vars = ":root {" + "".join(f"--{k}:{v};" for k, v in TH.items()) + "}"
 
@@ -1558,8 +1584,8 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
    and once the work has taken more than 450 ms, a full-screen loading layer
    covers the whole viewport: a soft lavender veil, a purple→blue frame on
    all four edges with one bright highlight travelling clockwise round the
-   whole screen, and a large glossy briefcase in the exact centre over a
-   restrained glow. It is one element (.stApp::after) and one background in
+   whole screen, and a medium translucent glass briefcase in the exact
+   centre over a faint halo. It is one element (.stApp::after) and one background in
    layers: the briefcase, the glow and the veil fill the inside; under them,
    in the border ring, four highlight strips (top, right, bottom, left, each
    crossing its edge in turn) and the full frame. Only background-position
@@ -1579,21 +1605,20 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 @keyframes jt-busy-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 @keyframes jt-spin { to { transform: rotate(360deg); } }
 .stApp::after { content: ""; position: fixed; inset: 0; box-sizing: border-box; z-index: 1000010;
-  visibility: hidden; pointer-events: none; opacity: 0; border: 5px solid transparent;
-  box-shadow: inset 0 0 34px -10px color-mix(in srgb, var(--accent) 55%, transparent);
+  visibility: hidden; pointer-events: none; opacity: 0; border: 2px solid transparent;
   background:
-    var(--load-icon) center / clamp(150px, 27vmin, 236px) auto no-repeat padding-box,
-    radial-gradient(closest-side, var(--load-glow), var(--load-glow-2) 55%, transparent 100%) center / clamp(320px, 60vmin, 600px) clamp(320px, 60vmin, 600px) no-repeat padding-box,
+    var(--load-icon) center / clamp(150px, 42vw, 194px) auto no-repeat padding-box,
+    radial-gradient(closest-side, var(--load-glow), var(--load-glow-2) 55%, transparent 100%) center / clamp(240px, 44vmin, 380px) clamp(240px, 44vmin, 380px) no-repeat padding-box,
     var(--load-veil) 0 0 / 100% 100% no-repeat padding-box,
-    linear-gradient(90deg, transparent, var(--load-hi), var(--load-blue), transparent) -50% 0 / 30% 12px no-repeat border-box,
-    linear-gradient(180deg, transparent, var(--load-hi), var(--load-blue), transparent) 100% -50% / 12px 30% no-repeat border-box,
-    linear-gradient(270deg, transparent, var(--load-hi), var(--load-blue), transparent) 150% 100% / 30% 12px no-repeat border-box,
-    linear-gradient(0deg, transparent, var(--load-hi), var(--load-blue), transparent) 0 150% / 12px 30% no-repeat border-box,
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 55%, transparent), color-mix(in srgb, var(--load-blue) 55%, transparent)) 0 0 / 100% 100% no-repeat border-box; }
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--load-hi) 85%, transparent), color-mix(in srgb, var(--load-blue) 70%, transparent), transparent) -50% 0 / 30% 12px no-repeat border-box,
+    linear-gradient(180deg, transparent, color-mix(in srgb, var(--load-hi) 85%, transparent), color-mix(in srgb, var(--load-blue) 70%, transparent), transparent) 100% -50% / 12px 30% no-repeat border-box,
+    linear-gradient(270deg, transparent, color-mix(in srgb, var(--load-hi) 85%, transparent), color-mix(in srgb, var(--load-blue) 70%, transparent), transparent) 150% 100% / 30% 12px no-repeat border-box,
+    linear-gradient(0deg, transparent, color-mix(in srgb, var(--load-hi) 85%, transparent), color-mix(in srgb, var(--load-blue) 70%, transparent), transparent) 0 150% / 12px 30% no-repeat border-box,
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 30%, transparent), color-mix(in srgb, var(--load-blue) 30%, transparent)) 0 0 / 100% 100% no-repeat border-box; }
 .stApp[data-test-script-state="running"]::after { animation: jt-busy-in 220ms ease-out 450ms both, jt-load-turn 6s linear 450ms infinite;
   visibility: visible; pointer-events: auto; cursor: progress; transition: visibility 0s linear 450ms; }
 /* phones: the same frame, a hair thinner */
-@media (max-width: 767px) { .stApp::after { border-width: 3px; } }
+@media (max-width: 767px) { .stApp::after { border-width: 1.5px; } }
 .stApp[data-test-script-state="running"] { cursor: progress; }
 /* the button that was just pressed shows that its work is under way:
    Refresh / Reload spin their icon at once, any other button's label
@@ -1617,9 +1642,9 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
      full-screen layer — veil, glow, briefcase and the whole purple→blue
      frame — with no travelling highlight */
   .stApp[data-test-script-state="running"]::after { animation: jt-busy-fade 1ms linear 450ms both !important;
-    background: var(--load-icon) center / clamp(150px, 27vmin, 236px) auto no-repeat padding-box,
-      radial-gradient(closest-side, var(--load-glow), var(--load-glow-2) 55%, transparent 100%) center / clamp(320px, 60vmin, 600px) clamp(320px, 60vmin, 600px) no-repeat padding-box,
-      var(--load-veil) padding-box, linear-gradient(135deg, var(--accent), var(--load-blue)) border-box !important; }
+    background: var(--load-icon) center / clamp(150px, 42vw, 194px) auto no-repeat padding-box,
+      radial-gradient(closest-side, var(--load-glow), var(--load-glow-2) 55%, transparent 100%) center / clamp(240px, 44vmin, 380px) clamp(240px, 44vmin, 380px) no-repeat padding-box,
+      var(--load-veil) padding-box, linear-gradient(135deg, color-mix(in srgb, var(--accent) 45%, transparent), color-mix(in srgb, var(--load-blue) 45%, transparent)) border-box !important; }
   .stApp[data-test-script-state="running"] [data-testid^="stBaseButton"]:focus > div,
   .stApp[data-test-script-state="running"] [data-testid="stIconMaterial"],
   .stApp[data-test-script-state="running"] [class*="st-key-av_pick_"] button::before, .jt-skel i, .jt-skel p .ms { animation: none !important; }
