@@ -32,18 +32,21 @@ concurrency:
   group: scan-scheduler
   cancel-in-progress: false
 
-permissions:
-  contents: read
-  actions: write   # dispatch Check Jobs and the next run of this workflow
+# Nothing is granted by default; the one job asks for what it needs.
+permissions: {}
 
 jobs:
   wait-and-dispatch:
     runs-on: ubuntu-latest
     timeout-minutes: 320   # the wait is capped at 5 h; GitHub's job limit is 6 h
+    permissions:
+      contents: read
+      actions: write   # dispatch Check Jobs and the next run of this workflow
     steps:
       - name: Checkout schedule inputs
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          persist-credentials: false
           sparse-checkout: |
             scan_schedule.py
             settings.json

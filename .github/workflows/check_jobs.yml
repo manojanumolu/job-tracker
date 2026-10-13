@@ -25,6 +25,11 @@ on:
         options: [scan, plan]
         default: scan
 
+# Nothing is granted by default; each job asks for exactly what it needs.
+# Third-party actions are pinned to full commit SHAs (the tag in the comment)
+# and Python packages to hashed lockfiles (requirements*.txt).
+permissions: {}
+
 # queue overlapping runs instead of letting them race each other's git push
 concurrency:
   group: check-jobs
@@ -41,8 +46,9 @@ jobs:
       deliver: ${{ steps.plan.outputs.deliver }}
     steps:
       - name: Checkout schedule inputs
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          persist-credentials: false
           sparse-checkout: |
             scan_schedule.py
             settings.json
@@ -57,35 +63,79 @@ jobs:
           MODE: ${{ inputs.mode }}
         run: python3 scan_schedule.py plan >> "$GITHUB_OUTPUT"
 
-  check:
+  # The scan reads external career sites (a headless browser and HTTP clients
+  # loading content anyone could control), so it runs with a read-only token,
+  # no stored git credentials and no secret of any kind. It hands only its two data files
+  # to the publish job, as an artifact.
+  scrape:
     needs: plan
     if: ${{ needs.plan.outputs.scan == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install --require-hashes -r requirements.txt
+          playwright install chromium --with-deps
+
+      - name: Run scraper
+        run: python scraper.py
+        working-directory: .
+
+      - name: Hand the results to the publish job
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: scan-results
+          path: |
+            companies.json
+            seen_jobs.json
+          if-no-files-found: error
+          retention-days: 1
+
+  # Publishes the scan and sends the alerts: the only job with write access
+  # and the email secrets. It never loads an external site; it takes over the
+  # scan job's two JSON files (checked by scan_handoff.py) and nothing else.
+  publish:
+    needs: [plan, scrape]
+    if: ${{ !cancelled() && needs.scrape.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0   # full history so alerts.py can fetch and build on the latest branch tip
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          playwright install chromium --with-deps
+        run: pip install --require-hashes -r requirements.txt
 
-      - name: Run scraper
-        id: scrape
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python scraper.py
-        working-directory: .
+      - name: Download the scan results
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: scan-results
+          path: scan-results
+
+      - name: Take over the scan results
+        run: python scan_handoff.py scan-results companies.json seen_jobs.json
 
       # Publish the scrape results and email new alerts — at most once per job.
       # alerts.py pushes the data (merged record-by-record with any change the
@@ -93,12 +143,11 @@ jobs:
       # email goes out, then records "sent". A failed push therefore never
       # re-sends an alert, and if the first push fails nothing is emailed.
       - name: Publish results and send email alerts
-        if: ${{ !cancelled() && steps.scrape.outcome == 'success' }}
+        if: ${{ !cancelled() }}
         env:
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          # private alert address; until this secret exists alerts.py falls
-          # back to settings.json, so delivery never stops
+          # the private alert address (alerts.py reads nothing else)
           ALERT_RECIPIENT: ${{ secrets.ALERT_RECIPIENT }}
           PUBLISH_BRANCH: ${{ github.ref_name }}
         run: |
@@ -114,7 +163,7 @@ jobs:
       # another. Until the FIREBASE_SERVICE_ACCOUNT secret exists it does
       # nothing and exits 0. Its log shows counts only — no address or UID.
       - name: Send personal email alerts
-        if: ${{ !cancelled() && steps.scrape.outcome == 'success' }}
+        if: ${{ !cancelled() }}
         continue-on-error: true
         timeout-minutes: 10
         env:
@@ -160,15 +209,17 @@ jobs:
       contents: read
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install --require-hashes -r requirements.txt
 
       - name: Send personal email alerts
         env:

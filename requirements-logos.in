@@ -1,0 +1,2 @@
+# The logo finder (company_logos.py, logos.yml) needs only httpx.
+httpx>=0.27.0

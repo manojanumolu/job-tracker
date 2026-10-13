@@ -110,7 +110,10 @@ def run_for_user(store: UserStore, uid: str, seen: list[dict], send, run_id: str
         return "disabled", 0
     if not account["email_verified"] or not account["email"]:
         return "unverified", 0
-    if not email_policy.may_receive_alerts(account["email"]):
+    check = email_policy.alert_address_check(account["email"])
+    if check == email_policy.ALERT_UNAVAILABLE:
+        return "policy_unavailable", 0               # the blocklist is broken: nothing claimed or sent (fail closed)
+    if check != email_policy.ALERT_OK:
         return "blocked_address", 0                  # a disposable address (email_policy): never emailed
     if not scan_schedule.alert_due(now, _parse_time(view.get("alerts_last_sent"))):
         return "waiting", 0                          # emailed less than 6 h ago: nothing claimed
@@ -172,7 +175,7 @@ def main(argv=None) -> int:
         log.error("personal alerts stopped: %s", type(e).__name__)
         return 1
     log.info("%s: %s", "sent" if args.send else "dry run", json.dumps(stats, sort_keys=True))
-    return 1 if stats.get("failed") or stats.get("error") else 0
+    return 1 if stats.get("failed") or stats.get("error") or stats.get("policy_unavailable") else 0
 
 
 if __name__ == "__main__":

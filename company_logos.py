@@ -692,9 +692,21 @@ def load_local(path: Path | None = None) -> dict:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Find tracked companies' own logos (logos.json).")
     ap.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
-    ap.add_argument("--publish", action="store_true", help="merge and push logos.json (the workflow)")
+    ap.add_argument("--publish", action="store_true", help="merge and push logos.json (search and publish at once)")
+    ap.add_argument("--publish-only", action="store_true",
+                    help="merge and push the checkout's logos.json without searching (the workflow's publish job, "
+                         "which never loads an external site)")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(message)s")
+    if args.publish_only:
+        doc = load_local()
+        if not isinstance(doc, dict) or not isinstance(doc.get("logos"), dict):
+            log.warning("logos: no usable logos.json to publish")
+            return 1
+        from repo_sync import publish
+        ok = publish("chore: update company logos [skip ci]", {LOGOS_FILE: doc})
+        log.info("logos: %s", "published (or already up to date)" if ok else "could not publish")
+        return 0 if ok else 1
     try:
         companies = json.loads((BASE / "companies.json").read_text("utf-8"))
     except (OSError, ValueError):

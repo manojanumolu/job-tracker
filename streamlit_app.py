@@ -2058,9 +2058,16 @@ def _refused_identity(problem: str, provider: str) -> None:
     """An identity email_policy refuses (a disposable or unverified address):
     no account, no Firebase link, no personal data — and nothing is deleted.
     The login page says why; signing in again starts from Google's or the
-    email form's own step (no automatic retry with the same identity)."""
-    for k in (ACCOUNT_KEY, firebase_auth.SESSION_KEY):
-        st.session_state.pop(k, None)
+    email form's own step (no automatic retry with the same identity).
+    When the policy itself can't be evaluated (a broken blocklist) access
+    is refused the same way, but the sign-in is kept: it is re-checked on
+    every page load and goes through by itself once the list is fixed."""
+    st.session_state.pop(ACCOUNT_KEY, None)
+    if problem == email_policy.UNAVAILABLE_MESSAGE:
+        st.session_state._login_error = problem
+        auth_event(f"{provider} identity refused: disposable-address policy unavailable")
+        return None
+    st.session_state.pop(firebase_auth.SESSION_KEY, None)
     st.session_state._signed_out = True
     if provider == "google.com" and problem == email_policy.UNVERIFIED_MESSAGE:
         problem = _GOOGLE_UNVERIFIED

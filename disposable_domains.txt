@@ -3,6 +3,7 @@
 #   disposable_email_blocklist.conf at commit d1a9c51f29de15e8dab2f5ed8bda90a711ef6cb9 (2026-10-13),
 #   CC0 1.0 (public domain). One lower-case domain per line; subdomains are covered too.
 # Refresh: python email_policy.py --update   (then review the diff and run the tests)
+# entries: 9881
 0-mail.com
 0-mailer.dynv6.net
 000-webmail.myhome-server.de

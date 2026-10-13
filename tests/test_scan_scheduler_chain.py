@@ -128,8 +128,11 @@ def test_the_chain_is_dispatch_only_one_at_a_time_and_minimally_privileged():
     # push starts it only when the chain's own file changes (data commits never do)
     assert 'paths: [".github/workflows/scan_scheduler.yml"]' in on and "branches: [main]" in on
     assert "group: scan-scheduler" in CHAIN and "cancel-in-progress: false" in CHAIN
-    perms = CHAIN.split("\npermissions:\n", 1)[1].split("\njobs:", 1)[0]
-    assert re.findall(r"^  (\w+): (\w+)", perms, re.M) == [("contents", "read"), ("actions", "write")]
+    head = CHAIN.split("\njobs:", 1)[0]
+    assert "\npermissions: {}\n" in head                       # nothing by default ...
+    perms = CHAIN.split("\n    permissions:\n", 1)[1].split("\n    steps:", 1)[0]
+    assert re.findall(r"^      (\w+): (\w+)", perms, re.M) == [("contents", "read"), ("actions", "write")]
+    assert CHAIN.count("permissions:") == 2 and "persist-credentials: false" in CHAIN
     assert "secrets." not in CHAIN                            # the run's own token, nothing else
     assert "python3 scan_schedule.py wait" in CHAIN and 'sleep "$WAIT_SECONDS"' in CHAIN
 

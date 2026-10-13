@@ -13,36 +13,81 @@ on:
     - cron: "40 2 * * *"      # daily, 08:10 IST
   workflow_dispatch:
 
+# Nothing is granted by default; each job asks for exactly what it needs.
+permissions: {}
+
 # one logo run at a time; its own group, so it never cancels a queued scan
 concurrency:
   group: company-logos
   cancel-in-progress: false
 
 jobs:
-  logos:
+  # Loads the companies' websites (external content), so: read-only token,
+  # no stored git credentials, no secret of any kind. Hands over logos.json only.
+  find:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install --require-hashes -r requirements-logos.txt
+
+      - name: Find company logos
+        run: python company_logos.py
+
+      - name: Hand logos.json to the publish job
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: logo-results
+          path: logos.json
+          if-no-files-found: error
+          retention-days: 1
+
+  # The only job that may push. It never loads an external site: it checks
+  # the find job's logos.json (scan_handoff.py) and merges it in.
+  publish:
+    needs: find
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: write
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
-        run: pip install "httpx>=0.27.0"
+      - name: Download the logos
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: logo-results
+          path: logo-results
 
-      - name: Find company logos
+      - name: Take over logos.json
+        run: python scan_handoff.py logo-results logos.json
+
+      - name: Publish company logos
         env:
           PUBLISH_BRANCH: ${{ github.ref_name }}
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          python company_logos.py --publish
+          python company_logos.py --publish-only

@@ -160,7 +160,7 @@ def test_a_scan_that_overran_a_boundary_counts_for_the_window_it_started_in():
 def test_the_plan_step_never_records_a_scan():
     """A scheduler-only run reads files and prints a decision; it cannot write
     a scan time (read-only token) and plan() does not touch its inputs."""
-    plan_job = WORKFLOW.split("\n  plan:\n", 1)[1].split("\n  check:\n", 1)[0]
+    plan_job = WORKFLOW.split("\n  plan:\n", 1)[1].split("\n  scrape:\n", 1)[0]
     assert "contents: read" in plan_job and "contents: write" not in plan_job
     assert "scraper.py" not in plan_job and "alerts.py" not in plan_job
     companies = [{"id": "a", "last_checked": u(12, 6, 58).isoformat()}]
@@ -173,10 +173,14 @@ def test_a_failed_scrape_publishes_nothing():
     """scraper.py only stamps its local checkout; the results (and so every
     last_checked) reach GitHub through alerts.py, which runs only after a
     successful scrape. A failed or skipped scan leaves the last scan as it was."""
-    check = WORKFLOW.split("\n  check:\n", 1)[1].split("\n  personal-alerts:\n", 1)[0]
-    publish = check.split("- name: Publish results and send email alerts", 1)[1]
-    assert "if: ${{ !cancelled() && steps.scrape.outcome == 'success' }}" in publish.split("run:", 1)[0]
-    assert "if: ${{ needs.plan.outputs.scan == 'true' }}" in check
+    wf = WORKFLOW.replace("\r\n", "\n")
+    scrape = wf.split("\n  scrape:\n", 1)[1].split("\n  publish:\n", 1)[0]
+    publish = wf.split("\n  publish:\n", 1)[1].split("\n  scheduler:\n", 1)[0]
+    assert "if: ${{ needs.plan.outputs.scan == 'true' }}" in scrape
+    # the publish job (the only place alerts.py runs) starts only after a successful scrape
+    assert "needs: [plan, scrape]" in publish
+    assert "if: ${{ !cancelled() && needs.scrape.result == 'success' }}" in publish.split("steps:", 1)[0]
+    assert "python alerts.py" in publish and "alerts.py" not in scrape
 
 
 # ── the dashboard ──────────────────────────────────────────────────────────
@@ -265,7 +269,7 @@ def test_duplicate_triggers_in_one_window_scan_once():
 def test_the_dispatch_input_is_a_closed_choice_defaulting_to_scan():
     block = WORKFLOW.split("workflow_dispatch:", 1)[1].split("\nconcurrency:", 1)[0]
     assert "type: choice" in block and "options: [scan, plan]" in block and "default: scan" in block
-    plan_job = WORKFLOW.split("\n  plan:\n", 1)[1].split("\n  check:\n", 1)[0]
+    plan_job = WORKFLOW.split("\n  plan:\n", 1)[1].split("\n  scrape:\n", 1)[0]
     assert "MODE: ${{ inputs.mode }}" in plan_job
     assert WORKFLOW.count("inputs.mode") == 1                       # only the plan step reads it
 

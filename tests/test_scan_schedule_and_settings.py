@@ -156,16 +156,17 @@ def test_a_broken_schedule_file_plans_a_safe_default(tmp_path):
 
 def test_the_workflow_wires_the_plan_to_one_shared_scanner():
     jobs = re.findall(r"^  ([a-z-]+):\n", WORKFLOW.split("\njobs:\n", 1)[1], re.M)
-    assert jobs == ["plan", "check", "scheduler", "personal-alerts"]
+    assert jobs == ["plan", "scrape", "publish", "scheduler", "personal-alerts"]
     assert f'cron: "{scan_schedule.PLAN_CRON}"' in WORKFLOW and f'cron: "{scan_schedule.ALERTS_CRON}"' in WORKFLOW
     assert WORKFLOW.count("cron:") == 2 and "workflow_dispatch:" in WORKFLOW
     assert WORKFLOW.count("python scraper.py") == 1                          # one scanner, in one job
+    assert WORKFLOW.count("python alerts.py") == 1 and "needs: [plan, scrape]" in WORKFLOW
     assert "needs.plan.outputs.scan == 'true'" in WORKFLOW and "needs.plan.outputs.deliver == 'true'" in WORKFLOW
     # one concurrency group for the whole workflow: scans and alert passes never overlap
     head = WORKFLOW.split("\njobs:\n", 1)[0]
     assert "concurrency:\n  group: check-jobs\n  cancel-in-progress: false" in head
     assert WORKFLOW.count("concurrency:") == 1
-    plan = WORKFLOW.split("\n  plan:\n", 1)[1].split("\n  check:\n", 1)[0]
+    plan = WORKFLOW.split("\n  plan:\n", 1)[1].split("\n  scrape:\n", 1)[0]
     assert "secrets." not in plan and "contents: read" in plan and "python3 scan_schedule.py plan" in plan
     assert "pip install" not in plan and "timeout-minutes: 5" in plan                      # the hourly tick stays tiny
 

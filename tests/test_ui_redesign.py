@@ -280,7 +280,9 @@ def test_no_new_heavy_dependencies():
                                                      "matches", "getAttribute", "click", "stopPropagation"}
     imports = set(re.findall(r'@import url\(\'https://fonts\.googleapis\.com/css2\?family=([^:&\']+)', CSS))
     assert imports <= {"Plus+Jakarta+Sans", "Material+Symbols+Rounded"}
-    req = (Path(__file__).resolve().parent.parent / "requirements.txt").read_text()
+    # the top-level list (requirements.txt is its hashed lock since JT-01)
+    req = "\n".join(line for line in (Path(__file__).resolve().parent.parent / "requirements.in").read_text().splitlines()
+                    if not line.startswith("#"))
     # Authlib: required by Streamlit's st.login (Google sign-in, Firebase auth spike)
     # firebase-admin: per-user data in Firestore (Phase 3), imported only once a service account is configured
     assert set(l.split(">=")[0] for l in req.split()) == {"streamlit", "httpx", "PyGithub", "python-dotenv", "playwright",

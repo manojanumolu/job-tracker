@@ -21,12 +21,14 @@ from user_store import MemoryBackend, UserStore, UserStoreError
 REPO = Path(__file__).resolve().parent.parent
 WORKFLOW = REPO / ".github" / "workflows" / "check_jobs.yml"
 STEP_MARK = "\n      # Personal alerts (per-user"
-# sha256 of the scan job's steps as they were on main (f77b76f) before the
-# personal step existed, line endings normalised: the global scan must stay
-# exactly so. (Since Oct 2026 a plan job runs in front of it — scan_schedule.py,
-# the admin's scan interval — and a 6-hourly personal-alerts job follows; the
-# scan steps themselves are untouched.)
-GLOBAL_SCAN_STEPS_SHA256 = "356a475c10862991327244b271c3e2d12a05f602b27a213d8e57f171a742ed6f"
+# sha256 of the scan's steps — the scrape job's, then the publish job's up to
+# the personal step — line endings normalised: the global scan must stay
+# exactly so. Re-pinned 2026-10-13 (JT-01) after a deliberate, reviewed change:
+# the scan was split into a read-only "scrape" job (no secrets, no stored git
+# credentials) and a "publish" job that takes over only its two JSON files,
+# actions pinned to commit SHAs, hashed dependency installs. The commands
+# themselves (scraper.py, alerts.py, user_alerts.py) are checked below too.
+GLOBAL_SCAN_STEPS_SHA256 = "8719218f8f1f8701e1f3a7669be812e32938979a75f9f48eb1f728d29c54ff4d"
 
 
 def _wf() -> str:
@@ -44,9 +46,9 @@ def _wf_job(text: str, name: str) -> str:
     return "\n".join(lines[:end])
 
 
-def _steps(text: str) -> dict[str, str]:
-    """name -> the step's text, for the scan job ("check")."""
-    parts = _wf_job(text, "check").split("\n      - name: ")[1:]
+def _steps(text: str, job: str = "publish") -> dict[str, str]:
+    """name -> the step's text, for one job (by default the publish job)."""
+    parts = _wf_job(text, job).split("\n      - name: ")[1:]
     return {p.split("\n", 1)[0].strip(): p for p in parts}
 
 
@@ -54,19 +56,37 @@ def _steps(text: str) -> dict[str, str]:
 # the workflow
 # ---------------------------------------------------------------------------
 
-def test_the_global_scan_is_byte_for_byte_unchanged():
+def _scan_steps(wf: str) -> str:
+    scrape = _wf_job(wf, "scrape")
+    publish = wf.index("\n  publish:\n")
+    return (scrape[scrape.index("\n    steps:\n"):]
+            + wf[wf.index("\n    steps:\n", publish):wf.index(STEP_MARK)])
+
+
+def test_the_global_scan_is_byte_for_byte_as_reviewed():
     wf = _wf()
     assert STEP_MARK in wf
-    check = wf.index("\n  check:\n")
-    steps = wf[wf.index("\n    steps:\n", check):wf.index(STEP_MARK)]
-    assert hashlib.sha256(steps.encode()).hexdigest() == GLOBAL_SCAN_STEPS_SHA256
+    assert hashlib.sha256(_scan_steps(wf).encode()).hexdigest() == GLOBAL_SCAN_STEPS_SHA256
+
+
+def test_the_scan_commands_are_unchanged():
+    scrape, publish = _steps(_wf(), "scrape"), _steps(_wf())
+    assert scrape["Run scraper"].rstrip().endswith("run: python scraper.py\n        working-directory: .".rstrip())
+    run = publish["Publish results and send email alerts"].split("run: |", 1)[1].strip().split("\n\n", 1)[0]
+    assert [line.strip() for line in run.splitlines()] == [
+        'git config user.name  "github-actions[bot]"',
+        'git config user.email "github-actions[bot]@users.noreply.github.com"',
+        "python alerts.py"]
 
 
 def test_the_personal_step_runs_last_and_can_never_fail_the_job():
     steps = _steps(_wf())
     names = list(steps)
-    assert names == ["Checkout repo", "Set up Python", "Install dependencies", "Run scraper",
-                     "Publish results and send email alerts", "Send personal email alerts"]
+    assert names == ["Checkout repo", "Set up Python", "Install dependencies", "Download the scan results",
+                     "Take over the scan results", "Publish results and send email alerts",
+                     "Send personal email alerts"]
+    assert list(_steps(_wf(), "scrape")) == ["Checkout repo", "Set up Python", "Install dependencies", "Run scraper",
+                                             "Hand the results to the publish job"]
     step = steps["Send personal email alerts"]
     assert "continue-on-error: true" in step                         # its failure leaves the job green
     assert "timeout-minutes: 10" in step                             # and can't hang the job
@@ -86,7 +106,8 @@ def test_the_personal_step_gets_only_the_secrets_it_needs():
     wf = _wf()
     # only the two personal-alert steps (after a scan, and the 6-hourly pass) see the key
     assert wf.count("secrets.FIREBASE_SERVICE_ACCOUNT") == 2
-    assert _wf_job(wf, "check").count("secrets.FIREBASE_SERVICE_ACCOUNT") == 1
+    assert _wf_job(wf, "publish").count("secrets.FIREBASE_SERVICE_ACCOUNT") == 1
+    assert "secrets." not in _wf_job(wf, "scrape")                 # the job that reads the web holds none
     assert _wf_job(wf, "personal-alerts").count("secrets.FIREBASE_SERVICE_ACCOUNT") == 1
     assert "secrets." not in _wf_job(wf, "plan")
     assert "GITHUB_TOKEN" not in step and "ALERT_RECIPIENT" not in step and "git " not in step

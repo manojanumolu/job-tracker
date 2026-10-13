@@ -128,15 +128,13 @@ def test_an_address_on_the_admin_list_is_never_refused_by_the_blocklist(monkeypa
     assert email_policy.sign_in_problem("boss@mailinator.com", False) == email_policy.UNVERIFIED_MESSAGE
 
 
-def test_a_missing_list_is_logged_never_a_crash(monkeypatch, tmp_path, capsys):
+def test_a_missing_list_is_logged_and_fails_closed(monkeypatch, tmp_path, capsys):
+    """Never an empty list (JT-02): see test_jt02_policy_fail_closed."""
     monkeypatch.setattr(email_policy, "BLOCKLIST_FILE", tmp_path / "missing.txt")
-    email_policy.disposable_domains.cache_clear()
-    try:
-        assert email_policy.disposable_domains() == frozenset()
-        assert "missing" in capsys.readouterr().err
-    finally:
-        monkeypatch.undo()
-        email_policy.disposable_domains.cache_clear()
+    with pytest.raises(email_policy.PolicyUnavailable):
+        email_policy.disposable_domains()
+    assert "unavailable" in capsys.readouterr().err
+    assert email_policy.sign_in_problem("someone@mailinator.com", True) == email_policy.UNAVAILABLE_MESSAGE
 
 
 # ---------------------------------------------------------------------------
