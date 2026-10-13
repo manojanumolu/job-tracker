@@ -1,6 +1,19 @@
+# local secrets and credentials — never committed
 .env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+*secrets*.toml
+*service-account*.json
+*serviceAccount*.json
+*-firebase-adminsdk-*.json
+*.pem
+*.key
+*.p12
+
+# build / test leftovers
 __pycache__/
 *.pyc
 .playwright/
 .pytest_cache/
-.streamlit/secrets.toml
+*.log

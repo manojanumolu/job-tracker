@@ -83,7 +83,7 @@ def test_test_email_goes_only_to_the_configured_recipient(app, monkeypatch):
     at = app([], page="email")
     at.button(key="btn_test").click().run()
     assert sent == ["me@example.com"]
-    assert json.loads((at.tmp_path / "settings.json").read_text())["recipient_email"] == "me@example.com"
+    assert json.loads((at.tmp_path / "settings.json").read_text()) == {}                  # nothing saved
     assert "Test email sent — check me@example.com" in _html(at)
 
 

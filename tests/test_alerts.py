@@ -29,12 +29,12 @@ NEW = _rec("Source-to-Pay Strategic Support Associate",
 
 @pytest.fixture
 def data(tmp_path, monkeypatch):
-    monkeypatch.delenv("ALERT_RECIPIENT", raising=False)   # settings.json below is the recipient
+    monkeypatch.setenv("ALERT_RECIPIENT", "me@example.com")   # the recipient comes only from the secret
     monkeypatch.setattr(config_store, "SEEN_FILE", tmp_path / "seen_jobs.json")
     monkeypatch.setattr(config_store, "COMPANIES_FILE", tmp_path / "companies.json")
     monkeypatch.setattr(config_store, "SETTINGS_FILE", tmp_path / "settings.json")
     (tmp_path / "companies.json").write_text("[]")
-    (tmp_path / "settings.json").write_text(json.dumps({"recipient_email": "me@example.com"}))
+    (tmp_path / "settings.json").write_text("{}")
 
     def write(seen):
         (tmp_path / "seen_jobs.json").write_text(json.dumps(seen))
@@ -163,8 +163,8 @@ def test_job_dismissed_in_the_app_before_sending_is_not_emailed(data):
     assert remote.seen[0]["notify_state"] == "skipped" and remote.seen[0]["dismissed"]
 
 
-def test_no_recipient_sends_nothing_and_keeps_jobs_pending(data, tmp_path):
-    (tmp_path / "settings.json").write_text(json.dumps({"recipient_email": ""}))
+def test_no_recipient_sends_nothing_and_keeps_jobs_pending(data, tmp_path, monkeypatch):
+    monkeypatch.delenv("ALERT_RECIPIENT")
     data([dict(NEW)])
     remote, mail = FakeRemote(), Mailer()
     assert alerts.run(send=mail, publisher=remote) == 0

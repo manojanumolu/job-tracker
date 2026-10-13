@@ -18,9 +18,9 @@ all, Run check, test email — needs admin rights. The check is made on the
 server where each operation happens, not just by hiding buttons.
 
 The alert recipient is personal, and the repository is public, so it comes
-from the ALERT_RECIPIENT secret. The ``recipient_email`` field in
-settings.json is only a legacy fallback, kept so alerts never stop while the
-secret is being set up.
+ONLY from the ALERT_RECIPIENT secret (GitHub Actions and Streamlit secrets).
+A ``recipient_email`` field in settings.json is ignored: nothing ever falls
+back to an address committed to the public repository.
 
 No Streamlit import here, so this is unit-testable on its own.
 """
@@ -253,15 +253,11 @@ class Cooldown:
 # ---------------------------------------------------------------------------
 
 def alert_recipient(settings: dict | None = None) -> tuple[str, str]:
-    """(address, source). The ALERT_RECIPIENT secret wins; the legacy
-    settings.json field is used only while the secret isn't set.
-    source is "secret", "settings.json" or "" (no recipient)."""
+    """(address, source): the ALERT_RECIPIENT secret and "secret", or
+    ("", "") when it isn't set. ``settings`` is accepted for the callers'
+    sake but never used for the address — settings.json is public."""
     secret = os.environ.get(RECIPIENT_ENV, "").strip()
-    if secret:
-        return secret, "secret"
-    legacy = (settings or {}).get("recipient_email") if isinstance(settings, dict) else ""
-    legacy = legacy.strip() if isinstance(legacy, str) else ""
-    return (legacy, "settings.json") if legacy else ("", "")
+    return (secret, "secret") if secret else ("", "")
 
 
 class OwnerRequired(PermissionError):
@@ -290,7 +286,7 @@ _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+")
 
 
 def mask_email(addr: str) -> str:
-    """"manoj@gmail.com" -> "m•••@gmail.com" (enough to recognise, not to use)."""
+    """"someone@example.com" -> "s•••@example.com" (enough to recognise, not to use)."""
     addr = (addr or "").strip()
     local, at, domain = addr.partition("@")
     if not at or not local or not domain:

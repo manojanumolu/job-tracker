@@ -11,7 +11,6 @@ from pathlib import Path
 from html import escape
 from urllib.parse import urlparse
 
-from access import mask_email
 
 
 def _smtp_creds() -> tuple[str, str]:
@@ -382,7 +381,7 @@ def test_mail(recipient: str = "") -> None:
         raise RuntimeError("No recipient email configured")
     subject, html, text = build_test_email()
     _send(recipient, subject, html, text)
-    print(f"[notifier] Test mail sent to {mask_email(recipient)}")
+    print("[notifier] Test mail sent to the configured recipient")
 
 
 # keep pytest from collecting the sender above as a test when it imports this module
@@ -396,7 +395,7 @@ def send_alerts(jobs: list[dict], recipient: str) -> None:
     subject, html, text = build_alert_email(jobs, logos, tracked)
     images = {cid: (data, subtype) for cid, data, subtype in logos.values() if f"cid:{cid}" in html}
     _send(recipient, subject, html, text, images)
-    print(f"[notifier] Alert sent to {mask_email(recipient)} with {len(jobs)} job(s)"
+    print(f"[notifier] Alert sent to the configured recipient with {len(jobs)} job(s)"
           + (f", {len(images)} company logo(s)" if images else ""))
 
 

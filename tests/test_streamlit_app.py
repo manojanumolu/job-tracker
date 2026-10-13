@@ -43,7 +43,7 @@ def app(tmp_path, monkeypatch):
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     monkeypatch.delenv("GMAIL_ADDRESS", raising=False)
     monkeypatch.delenv("GMAIL_APP_PASSWORD", raising=False)
-    monkeypatch.delenv("ALERT_RECIPIENT", raising=False)
+    monkeypatch.setenv("ALERT_RECIPIENT", "me@example.com")     # the recipient comes only from the secret
     monkeypatch.delenv("FIREBASE_WEB_API_KEY", raising=False)
     monkeypatch.delenv("FIREBASE_PROJECT_ID", raising=False)
     monkeypatch.delenv("JT_ADMIN_EMAILS", raising=False)
@@ -52,7 +52,7 @@ def app(tmp_path, monkeypatch):
         shutil.copy(REPO / name, tmp_path / name)
     shutil.copytree(REPO / "assets", tmp_path / "assets")
     shutil.copy(REPO / "companies.json", tmp_path / "companies.json")
-    (tmp_path / "settings.json").write_text(json.dumps({"recipient_email": "me@example.com"}))
+    (tmp_path / "settings.json").write_text("{}")                 # public: never holds an address
 
     import streamlit as st
     st.cache_data.clear()  # the app's GitHub snapshot cache is process-wide
@@ -473,8 +473,8 @@ def test_recipient_is_read_only_and_never_written(app):
     assert "btn_save_email" not in {b.key for b in at.button}
     html = _html(at)
     assert "Alerts on" in html and "Sending to me@example.com" in html
-    assert "Read from settings.json, which is public" in html and "ALERT_RECIPIENT" in html
-    assert json.loads((at.tmp_path / "settings.json").read_text("utf-8")) == {"recipient_email": "me@example.com"}
+    assert "Kept in a private secret" in html and "ALERT_RECIPIENT" in html
+    assert json.loads((at.tmp_path / "settings.json").read_text("utf-8")) == {}
 
 
 def test_delivery_summary_uses_notified_flags(app):

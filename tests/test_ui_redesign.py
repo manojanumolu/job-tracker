@@ -204,11 +204,11 @@ def test_monitoring_keeps_semantic_table_and_hides_empty_notes(app):
     assert '<td data-l="Notes" class="empty">—</td>' in html
 
 
-def test_email_status_card_says_whether_alerts_work(app):
+def test_email_status_card_says_whether_alerts_work(app, monkeypatch):
     at = app([GATED], page="email")
     html = _html(at)
     assert "Alerts are on" in html and "Nothing waiting to send" in html and "Jobs emailed" in html
-    (at.tmp_path / "settings.json").write_text(json.dumps({"recipient_email": ""}))
+    monkeypatch.delenv("ALERT_RECIPIENT")                # no secret -> no recipient
     at.run()
     assert "Alerts are off" in _html(at)
 

@@ -24,7 +24,7 @@ import os
 import sys
 from datetime import datetime, timezone
 
-from access import alert_recipient, mask_email, redact_emails
+from access import alert_recipient
 from config_store import alert_pending, load_companies, load_seen_jobs, load_settings
 from repo_sync import publish, record_key
 
@@ -81,13 +81,10 @@ def run(send=None, publisher=publish) -> int:
     except (OSError, ValueError):
         settings = {}
     # the address is never logged in full: Actions logs of a public repo are public
-    recipient, source = alert_recipient(settings)
+    recipient, _ = alert_recipient(settings)
     keys = claim(seen) if recipient else set()
     if not recipient:
-        log.info("No recipient email configured — publishing data only")
-    elif source == "settings.json":
-        log.warning("The alert recipient is read from settings.json, which is public — "
-                    "set the ALERT_RECIPIENT secret instead")
+        log.info("No recipient email configured (the ALERT_RECIPIENT secret) — publishing data only")
 
     if not publisher(DATA_MESSAGE, {"seen_jobs.json": seen, "companies.json": companies}):
         log.error("Could not publish the scrape results — no email sent (the jobs will be found again next run)")
@@ -102,11 +99,12 @@ def run(send=None, publisher=publish) -> int:
     if jobs:
         try:
             send(jobs, recipient)
-            log.info("Sent %d job alert(s) to %s", len(jobs), mask_email(recipient))
+            log.info("Sent %d job alert(s) to the configured recipient", len(jobs))      # no address, not even masked
         except Exception as e:
             ok = False
-            log.error("Sending the alert email failed: %s — claims released, will retry next run",
-                      redact_emails(e))
+            # the exception TYPE only: an SMTP error can echo the address
+            log.error("Sending the alert email failed (%s) — claims released, will retry next run",
+                      type(e).__name__)
     finalize(seen, keys, ok)
     if not publisher(SENT_MESSAGE, {"seen_jobs.json": seen}):
         log.error("Could not record the delivery state. The jobs stay 'claimed' and are NOT re-sent. %s",

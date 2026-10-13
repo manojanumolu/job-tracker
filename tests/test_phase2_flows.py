@@ -167,8 +167,9 @@ def test_dismiss_restore_round_trip_keeps_notification_state(app):
 
 @pytest.mark.parametrize("secret, settings, shown, source_note", [
     ("boss@example.com", "me@example.com", "Sending to boss@example.com", "Kept in a private secret"),
-    ("", "me@example.com", "Sending to me@example.com", "Read from settings.json, which is public"),
-    ("   ", "me@example.com", "Sending to me@example.com", "Read from settings.json, which is public"),
+    # settings.json is public: an address there is never used (2026-10-13)
+    ("", "me@example.com", "Add a recipient to turn alerts on", "No recipient is set"),
+    ("   ", "me@example.com", "Add a recipient to turn alerts on", "No recipient is set"),
     ("", "", "Add a recipient to turn alerts on", "No recipient is set"),
     ("boss@example.com", "", "Sending to boss@example.com", "Kept in a private secret"),
 ])
@@ -179,6 +180,7 @@ def test_recipient_comes_from_the_secret_first(app, monkeypatch, secret, setting
     at.run()
     html = _html(at)
     assert shown in html and source_note in html
+    assert "Read from settings.json" not in html and (secret.strip() or "me@example.com" not in html)
 
 
 def test_recipient_secret_is_trimmed(app, monkeypatch):
@@ -197,7 +199,7 @@ def test_failed_test_email_reports_failure_without_changing_anything(app, monkey
     at.button(key="btn_test").click().run()
     assert not at.exception
     assert "Email isn't configured" in _html(at)
-    assert json.loads((at.tmp_path / "settings.json").read_text())["recipient_email"] == "me@example.com"
+    assert json.loads((at.tmp_path / "settings.json").read_text()) == {}                  # nothing written
 
 
 def test_email_counts_only_real_pending_alerts(app):

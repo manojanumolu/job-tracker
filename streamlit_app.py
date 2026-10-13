@@ -2860,7 +2860,7 @@ for _i, _c in enumerate(c for c in _load_synced("companies.json", []) if isinsta
     if not _c.get("id") or any(str(x.get("id")) == str(_c.get("id")) for x in companies):
         _c["id"] = f"_row{_i}"
     companies.append(_c)
-settings: dict = _load_synced("settings.json", {"recipient_email": ""})
+settings: dict = _load_synced("settings.json", {})
 SCAN_HOURS = scan_schedule.interval_from(settings)        # the admin's global interval (1, 3, 6 or 12 h)
 _logo_entries = company_logos.entries(_load_synced("logos.json", {}))
 _FOUND_LOGOS = {(c.get("name") or "").strip().lower(): _logo_entries[c["id"]]
@@ -4386,9 +4386,6 @@ def page_email():
         elif recipient_source == "secret":
             note = (f'{_ms("lock", "s16")} Kept in a private secret, so it never appears in the public repository. '
                     f"To change it, {how}.")
-        elif recipient_source == "settings.json":
-            note = (f'<span style="color:var(--amber);">{_ms("warning", "s16")} Read from settings.json, which is public in the '
-                    f"GitHub repository. To keep it private, {how}, then remove it from settings.json.</span>")
         else:
             note = f'{_ms("info", "s16")} No recipient is set. To turn alerts on, {how}.'
         st.html(f'<p class="note">{note}</p>')
@@ -4668,7 +4665,7 @@ def _save_scan_interval() -> None:
         toast(str(e), "error")
         return
     _, saved, err = _save_change("settings.json", lambda latest: scan_schedule.with_interval(latest, hours),
-                                 {"recipient_email": ""}, f"chore: set the scan interval to {hours} h [skip ci]")
+                                 {}, f"chore: set the scan interval to {hours} h [skip ci]")
     if saved:
         toast(f"Scan interval saved — {interval_label(hours).lower()}. It applies from the next hourly check; "
               "no scan was started.", "success")

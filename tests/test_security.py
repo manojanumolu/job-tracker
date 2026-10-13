@@ -88,8 +88,9 @@ def test_cooldown_is_one_slot_and_can_be_given_back():
 @pytest.mark.parametrize("secret, settings, expected", [
     (SECRET_ADDR, {"recipient_email": "me@example.com"}, (SECRET_ADDR, "secret")),
     (f"  {SECRET_ADDR} ", {}, (SECRET_ADDR, "secret")),
-    ("", {"recipient_email": " me@example.com "}, ("me@example.com", "settings.json")),
-    ("  ", {"recipient_email": "me@example.com"}, ("me@example.com", "settings.json")),
+    # settings.json is public: an address there is never used (2026-10-13)
+    ("", {"recipient_email": " me@example.com "}, ("", "")),
+    ("  ", {"recipient_email": "me@example.com"}, ("", "")),
     ("", {"recipient_email": ""}, ("", "")),
     ("", {}, ("", "")),
     ("", None, ("", "")),
@@ -103,7 +104,7 @@ def test_alert_recipient_prefers_the_secret(monkeypatch, secret, settings, expec
 
 
 @pytest.mark.parametrize("addr, masked", [
-    ("manoj@gmail.com", "m•••@gmail.com"),
+    ("someone@example.com", "s•••@example.com"),
     ("a@b.co", "a•••@b.co"),
     ("", ""),
     ("not-an-email", "•••"),
@@ -353,7 +354,8 @@ def test_no_recipient_means_no_test_email(app, monkeypatch):
     sent = []
     monkeypatch.setattr(notifier, "test_mail", lambda to: sent.append(to))
     at = app([], page="email")
-    (at.tmp_path / "settings.json").write_text(json.dumps({"recipient_email": ""}))
+    monkeypatch.delenv("ALERT_RECIPIENT")                 # no secret ...
+    (at.tmp_path / "settings.json").write_text(json.dumps({"recipient_email": "me@example.com"}))   # ... and a public address is ignored
     at.run()
     at.button(key="btn_test").click().run()
     assert sent == [] and "No alert recipient is set" in _html(at)
@@ -371,7 +373,7 @@ def test_alert_run_uses_the_secret_and_never_logs_the_address(data, monkeypatch,
     assert alerts.run(send=lambda jobs, to: got.append(to), publisher=FakeRemote()) == 0
     assert got == [SECRET_ADDR]
     assert SECRET_ADDR not in caplog.text and "me@example.com" not in caplog.text
-    assert "p•••@example.org" in caplog.text
+    assert "@example.org" not in caplog.text and "Sent 1 job alert(s)" in caplog.text     # not even masked (public log)
 
 
 def test_failed_send_error_is_logged_without_the_address(data, monkeypatch, caplog):
@@ -382,19 +384,21 @@ def test_failed_send_error_is_logged_without_the_address(data, monkeypatch, capl
         raise RuntimeError(f"{{'{to}': (550, b'5.1.1 user unknown')}}")
     caplog.set_level(logging.INFO, logger="alerts")
     assert alerts.run(send=refuse, publisher=FakeRemote()) == 1
-    assert SECRET_ADDR not in caplog.text and "p•••@example.org" in caplog.text
+    assert SECRET_ADDR not in caplog.text and "@example.org" not in caplog.text and "RuntimeError" in caplog.text
 
 
-def test_legacy_settings_recipient_still_works_and_warns(data, monkeypatch, caplog):
-    """Until the secret exists, alerts keep going to settings.json's address
-    (so nothing stops on deploy), with a warning that doesn't print it."""
+def test_settings_json_recipient_is_never_used(data, monkeypatch, caplog):
+    """settings.json is public: an address left in it is ignored (2026-10-13
+    privacy cleanup) — without the secret nothing is sent and the jobs stay
+    pending, so nothing is lost once the secret is set."""
     monkeypatch.delenv("ALERT_RECIPIENT", raising=False)
     data([dict(NEW)])
     got = []
     caplog.set_level(logging.INFO, logger="alerts")
-    assert alerts.run(send=lambda jobs, to: got.append(to), publisher=FakeRemote()) == 0
-    assert got == ["me@example.com"]
-    assert "set the ALERT_RECIPIENT secret" in caplog.text and "me@example.com" not in caplog.text
+    remote = FakeRemote()
+    assert alerts.run(send=lambda jobs, to: got.append(to), publisher=remote) == 0
+    assert got == [] and "ALERT_RECIPIENT" in caplog.text and "me@example.com" not in caplog.text
+    assert config_store.alert_pending(remote.seen[0])
 
 
 def test_missing_settings_file_is_not_fatal(data, monkeypatch, tmp_path):
@@ -410,7 +414,7 @@ def test_notifier_prints_masked_addresses(monkeypatch, capsys):
     notifier.send_alerts([{"title": "T", "company": "C", "url": "https://x.example/j/1"}], SECRET_ADDR)
     notifier.test_mail(SECRET_ADDR)
     out = capsys.readouterr().out
-    assert SECRET_ADDR not in out and out.count("p•••@example.org") == 2
+    assert SECRET_ADDR not in out and "@example.org" not in out and out.count("configured recipient") == 2
 
 
 def test_test_mail_default_recipient_prefers_the_secret(monkeypatch, tmp_path):
@@ -508,9 +512,11 @@ def test_owner_test_email_goes_to_the_secret_recipient(mail_layer, monkeypatch):
     assert mail_layer == [(SECRET_ADDR, "Test email from Fresher Job Tracker")]
 
 
-def test_owner_test_email_falls_back_to_settings_recipient(mail_layer):
-    to = access.send_test_email(_owner_session(), {"recipient_email": " me@example.com "})
-    assert to == "me@example.com" and [t for t, _ in mail_layer] == ["me@example.com"]
+def test_owner_test_email_never_uses_a_settings_recipient(mail_layer, monkeypatch):
+    monkeypatch.delenv("ALERT_RECIPIENT", raising=False)
+    with pytest.raises(LookupError):
+        access.send_test_email(_owner_session(), {"recipient_email": " me@example.com "})
+    assert mail_layer == []
 
 
 def test_owner_test_email_without_a_recipient_sends_nothing(mail_layer):
