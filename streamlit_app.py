@@ -383,68 +383,35 @@ def render_auth_diag() -> None:
 # product's core promise (fresher roles found, portals healthy).
 
 
-def _briefcase_uri(dark: bool = False) -> str:
-    """The full-screen loader's centrepiece, after the reference artwork: a
-    translucent glass briefcase set into a rounded glass tile — soft
-    lavender→periwinkle faces, a thin bright rim, a visible tile edge for
-    depth, a glass-tube handle, two outlined clasps on the lid seam, a deep
-    indigo glass base edge, a few white reflections and a faint shadow. As a
-    CSS url() (inline <svg> doesn't paint in this app's hosting; a CSS
-    background image does)."""
-    o = 1.12 if dark else 1.0                   # a touch more presence on the dark veil
-    a = lambda v: f"{min(1.0, v * o):.2f}"
-    t = lambda v: f"{min(1.0, v * (1.3 if dark else 1.0)):.2f}"   # the tile face: no grey cast over the dark veil
-    svg = (
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 228">'
-        '<defs>'
-        '<linearGradient id="tile" x1="0" y1="0" x2=".85" y2="1">'
-        f'<stop offset="0" stop-color="#eef0fe" stop-opacity="{t(.72)}"/><stop offset=".55" stop-color="#ccd3fb" stop-opacity="{t(.58)}"/>'
-        f'<stop offset="1" stop-color="#a3adf8" stop-opacity="{t(.68)}"/></linearGradient>'
-        '<linearGradient id="edge" x1="0" y1="0" x2="1" y2="1">'
-        f'<stop offset="0" stop-color="#b9c1fb" stop-opacity="{a(.70)}"/><stop offset="1" stop-color="#7d87f3" stop-opacity="{a(.78)}"/></linearGradient>'
-        '<linearGradient id="rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".95"/>'
-        '<stop offset=".5" stop-color="#ffffff" stop-opacity=".35"/><stop offset="1" stop-color="#c9b8ff" stop-opacity=".75"/></linearGradient>'
-        '<linearGradient id="lid" x1="0" y1="0" x2=".7" y2="1">'
-        f'<stop offset="0" stop-color="#f1f0ff" stop-opacity="{a(.80)}"/><stop offset="1" stop-color="#c3c7fb" stop-opacity="{a(.72)}"/></linearGradient>'
-        '<linearGradient id="body" x1="0" y1="0" x2=".7" y2="1">'
-        f'<stop offset="0" stop-color="#c3c7fc" stop-opacity="{a(.82)}"/><stop offset="1" stop-color="#8e95f6" stop-opacity="{a(.88)}"/></linearGradient>'
-        '<linearGradient id="base" x1="0" y1="0" x2="1" y2="0">'
-        f'<stop offset="0" stop-color="#4f4bf3" stop-opacity="{a(.78)}"/><stop offset=".45" stop-color="#7b80fe" stop-opacity="{a(.52)}"/>'
-        f'<stop offset="1" stop-color="#4a47f6" stop-opacity="{a(.82)}"/></linearGradient>'
-        '<linearGradient id="tube" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eceaff"/>'
-        '<stop offset="1" stop-color="#858cf4"/></linearGradient>'
-        '<linearGradient id="clasp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6f5ff" stop-opacity=".9"/>'
-        '<stop offset="1" stop-color="#b8bdfb" stop-opacity=".8"/></linearGradient>'
-        '<filter id="blur" x="-40%" y="-80%" width="180%" height="260%"><feGaussianBlur stdDeviation="7"/></filter>'
-        '</defs>'
-        # a faint shadow beneath, then the tile: edge (depth), face, bright rim
-        '<ellipse cx="122" cy="214" rx="74" ry="7" fill="#6f78ee" fill-opacity=".16" filter="url(#blur)"/>'
-        '<rect x="26" y="20" width="198" height="184" rx="42" fill="url(#edge)"/>'
-        '<rect x="16" y="10" width="198" height="184" rx="42" fill="url(#tile)"/>'
-        '<rect x="16.75" y="10.75" width="196.5" height="182.5" rx="41.25" fill="none" stroke="url(#rim)" stroke-width="1.5"/>'
-        # handle: a glass tube with a light inner line
-        '<path d="M92 66 V54 a16 16 0 0 1 16 -16 h14 a16 16 0 0 1 16 16 V66" fill="none" stroke="url(#tube)" stroke-width="10"'
-        ' stroke-opacity=".85" stroke-linejoin="round"/>'
-        '<path d="M96 64 V55 a12 12 0 0 1 12 -12 h14 a12 12 0 0 1 12 12 V64" fill="none" stroke="#ffffff" stroke-opacity=".55"'
-        ' stroke-width="1.4"/>'
-        # body: lid and lower half (with a right-hand glass side for depth)
-        '<path d="M178 70 l7 6 v34 l-7 -4 z" fill="#7d84f2" fill-opacity=".7"/>'
-        '<path d="M182 112 l7 4 v52 l-7 4 z" fill="#5f66ee" fill-opacity=".72"/>'
-        '<rect x="50" y="66" width="128" height="42" rx="5" fill="url(#lid)" stroke="#6d73f2" stroke-opacity=".75" stroke-width="1.4"/>'
-        '<rect x="46" y="110" width="136" height="56" rx="5" fill="url(#body)" stroke="#6d73f2" stroke-opacity=".7" stroke-width="1.4"/>'
-        '<rect x="46" y="160" width="136" height="12" rx="4" fill="url(#base)"/>'
-        '<path d="M54 70 H170" stroke="#ffffff" stroke-opacity=".75" stroke-width="1.3" stroke-linecap="round"/>'
-        '<path d="M50 113 H178" stroke="#ffffff" stroke-opacity=".45" stroke-width="1"/>'
-        # reflections
-        '<path d="M64 120 l26 0 l-18 40 l-26 0 z" fill="#ffffff" fill-opacity=".16"/>'
-        '<path d="M138 72 l14 0 l-12 32 l-14 0 z" fill="#ffffff" fill-opacity=".20"/>'
-        # the seam and the two clasps (outlined, as in the reference)
-        '<path d="M50 108 H76 M98 108 H130 M152 108 H178" stroke="#6b72f1" stroke-opacity=".7" stroke-width="1.6"/>'
-        '<rect x="76" y="97" width="22" height="22" rx="6" fill="url(#clasp)" stroke="#5b60ee" stroke-opacity=".85" stroke-width="2.4"/>'
-        '<rect x="130" y="97" width="22" height="22" rx="6" fill="url(#clasp)" stroke="#5b60ee" stroke-opacity=".85" stroke-width="2.4"/>'
-        '<path d="M80 101 h14 M134 101 h14" stroke="#ffffff" stroke-opacity=".85" stroke-width="1.2" stroke-linecap="round"/>'
-        '</svg>')
-    return "url('data:image/svg+xml;base64," + base64.b64encode(svg.encode("utf-8")).decode("ascii") + "')"
+def _loader_icons(start: str, end: str, check_start: str) -> dict:
+    """The loading screen's five small line icons, in order — search,
+    briefcase, graduation cap, building, checkmark — all on one 24px grid
+    with the same 2px rounded stroke, coloured with a purple→blue gradient
+    (the checkmark teal→blue). Each as a CSS url() (inline <svg> doesn't
+    paint in this app's hosting; a CSS background image does)."""
+    shapes = {
+        "search": '<circle cx="10.5" cy="10.5" r="6.25"/><path d="M15.2 15.2 L20.5 20.5"/>',
+        "briefcase": ('<rect x="3" y="7.5" width="18" height="12.5" rx="2.5"/>'
+                      '<path d="M9 7.5 V5.8 a1.8 1.8 0 0 1 1.8 -1.8 h2.4 a1.8 1.8 0 0 1 1.8 1.8 V7.5"/>'
+                      '<path d="M3 12.6 H21"/><path d="M12 11.4 V13.8"/>'),
+        "graduate": ('<path d="M2.5 9.2 L12 4.6 L21.5 9.2 L12 13.8 Z"/>'
+                     '<path d="M6.5 11.4 V15.4 C6.5 17.1 9 18.6 12 18.6 C15 18.6 17.5 17.1 17.5 15.4 V11.4"/>'
+                     '<path d="M21.5 9.2 V14.2"/>'),
+        "building": ('<rect x="5" y="3.5" width="14" height="17" rx="1.8"/>'
+                     '<path d="M9 7.6 H10 M14 7.6 H15 M9 11.1 H10 M14 11.1 H15 M9 14.6 H10 M14 14.6 H15"/>'
+                     '<path d="M10.4 20.5 V17.6 H13.6 V20.5"/>'),
+        "check": '<circle cx="12" cy="12" r="8.75"/><path d="M8.1 12.3 L10.8 15 L16.1 9.4"/>',
+    }
+    out = {}
+    for name, body in shapes.items():
+        a = check_start if name == "check" else start
+        svg = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><linearGradient id="g" '
+               'gradientUnits="userSpaceOnUse" x1="3" y1="3" x2="21" y2="21">'
+               f'<stop offset="0" stop-color="{a}"/><stop offset="1" stop-color="{end}"/></linearGradient></defs>'
+               '<g fill="none" stroke="url(#g)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+               f'{body}</g></svg>')
+        out[name] = "url('data:image/svg+xml;base64," + base64.b64encode(svg.encode("utf-8")).decode("ascii") + "')"
+    return out
 
 
 LIGHT = {
@@ -484,7 +451,6 @@ LIGHT = {
     # the loading square: a purple→blue frame around a briefcase
     "load-blue": "#3b82f6", "load-hi": "#a89dff",
     "load-veil": "linear-gradient(160deg, #f7f6ff 0%, #f0f2ff 55%, #eaf1ff 100%)",
-    "load-glow": "rgba(124,108,255,.10)", "load-glow-2": "rgba(59,130,246,.05)",
     # search fields: a lavender→ice-blue glass with a gradient edge
     "search-gloss": "linear-gradient(180deg, rgba(255,255,255,.88) 0%, rgba(255,255,255,.34) 44%, rgba(255,255,255,0) 54%)",
     "search-tint": "linear-gradient(115deg, #f4f1ff 0%, #ecefff 50%, #e6f1ff 100%)",
@@ -527,9 +493,8 @@ DARK = {
     "av-gloss": "inset 0 1px 1px rgba(255,255,255,.45), inset 0 -3px 6px rgba(0,0,0,.14)",
     "av-drop": "0 6px 14px -6px rgba(0,0,0,.7)",
     "hover-wash": "linear-gradient(180deg, rgba(124,108,255,.16), rgba(124,108,255,.08))",
-    "load-blue": "#60a5fa", "load-hi": "#b9b0ff",
+    "load-blue": "#60a5fa", "load-hi": "#d4ceff",
     "load-veil": "linear-gradient(160deg, #0e1328 0%, #0c1124 55%, #0b1228 100%)",
-    "load-glow": "rgba(124,108,255,.12)", "load-glow-2": "rgba(96,165,250,.05)",
     "search-gloss": "linear-gradient(180deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.03) 46%, rgba(255,255,255,0) 54%)",
     "search-tint": "linear-gradient(115deg, #1f2552 0%, #1a214b 50%, #18264d 100%)",
     "search-tint-hover": "linear-gradient(115deg, #242b5c 0%, #1f2655 50%, #1c2c58 100%)",
@@ -541,10 +506,11 @@ DARK = {
     "search-chip": "linear-gradient(135deg, rgba(124,108,255,.28), rgba(96,165,250,.20))", "search-chip-focus": "linear-gradient(135deg, #8d80ff, #4f8ff7)",
     "search-icon": "#cbc4ff", "search-placeholder": "#a6acc9",
 }
-# the loading square's briefcase, coloured for each theme (built here: the
+# the loading screen's five icons, coloured for each theme (built here: the
 # palettes above stay plain literals)
-LIGHT["load-icon"] = _briefcase_uri()
-DARK["load-icon"] = _briefcase_uri(dark=True)
+for _pal, _colours in ((LIGHT, ("#6a5cf7", "#3b82f6", "#0d9488")), (DARK, ("#a99dff", "#60a5fa", "#2dd4bf"))):
+    for _name, _uri in _loader_icons(*_colours).items():
+        _pal[f"load-{_name}"] = _uri
 TH = DARK if st.session_state.dark_mode else LIGHT
 _root_vars = ":root {" + "".join(f"--{k}:{v};" for k, v in TH.items()) + "}"
 
@@ -1582,43 +1548,74 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 /* Streamlit marks the app element data-test-script-state="running" for every
    rerun (its own frontend sets it from the script-run state). While it is,
    and once the work has taken more than 450 ms, a full-screen loading layer
-   covers the whole viewport: a soft lavender veil, a purple→blue frame on
-   all four edges with one bright highlight travelling clockwise round the
-   whole screen, and a medium translucent glass briefcase in the exact
-   centre over a faint halo. It is one element (.stApp::after) and one background in
-   layers: the briefcase, the glow and the veil fill the inside; under them,
-   in the border ring, four highlight strips (top, right, bottom, left, each
-   crossing its edge in turn) and the full frame. Only background-position
-   moves.
-   Clicks: during the first 450 ms the layer is hidden and lets every click
-   through (a quick rerun never blocks anything); once it shows, it covers
-   the page and takes the clicks, so nothing hidden under it can be pressed;
-   the moment the rerun ends it is hidden again and lets clicks through. */
+   covers the whole viewport: the pale lavender veil (navy in dark), a
+   purple→blue frame on all four edges with one highlight travelling
+   clockwise round the whole screen (.stApp::after), and in the exact centre
+   five small icons — search, briefcase, graduation cap, building, check —
+   shown one at a time, each fading in with a slight scale-up and out again
+   (.stApp::before). Only opacity, transform and background-position move.
+   Clicks: during the first 450 ms both layers are hidden and let every
+   click through (a quick rerun never blocks anything); once shown, the
+   frame layer covers the page and takes the clicks, so nothing hidden under
+   it can be pressed; the moment the rerun ends both are hidden again. */
 @keyframes jt-busy-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes jt-busy-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes jt-load-turn {
-  0% { background-position: center, center, 0 0, -50% 0, 100% -50%, 150% 100%, 0 150%, 0 0; }
-  25% { background-position: center, center, 0 0, 150% 0, 100% -50%, 150% 100%, 0 150%, 0 0; }
-  50% { background-position: center, center, 0 0, 150% 0, 100% 150%, 150% 100%, 0 150%, 0 0; }
-  75% { background-position: center, center, 0 0, 150% 0, 100% 150%, -50% 100%, 0 150%, 0 0; }
-  100% { background-position: center, center, 0 0, 150% 0, 100% 150%, -50% 100%, 0 -50%, 0 0; } }
+  0% { background-position: 0 0, -50% 0, 100% -50%, 150% 100%, 0 150%, 0 0; }
+  25% { background-position: 0 0, 150% 0, 100% -50%, 150% 100%, 0 150%, 0 0; }
+  50% { background-position: 0 0, 150% 0, 100% 150%, 150% 100%, 0 150%, 0 0; }
+  75% { background-position: 0 0, 150% 0, 100% 150%, -50% 100%, 0 150%, 0 0; }
+  100% { background-position: 0 0, 150% 0, 100% 150%, -50% 100%, 0 -50%, 0 0; } }
+@keyframes jt-load-icons {
+  0% { opacity: 0; transform: scale(.86); background-position: 50% 50%, -64px 50%, -64px 50%, -64px 50%, -64px 50%; }
+  4% { opacity: 1; transform: scale(1); background-position: 50% 50%, -64px 50%, -64px 50%, -64px 50%, -64px 50%; }
+  15% { opacity: 1; transform: scale(1); background-position: 50% 50%, -64px 50%, -64px 50%, -64px 50%, -64px 50%; }
+  19% { opacity: 0; transform: scale(.97); background-position: 50% 50%, -64px 50%, -64px 50%, -64px 50%, -64px 50%; }
+  20% { opacity: 0; transform: scale(.86); background-position: -64px 50%, 50% 50%, -64px 50%, -64px 50%, -64px 50%; }
+  24% { opacity: 1; transform: scale(1); background-position: -64px 50%, 50% 50%, -64px 50%, -64px 50%, -64px 50%; }
+  35% { opacity: 1; transform: scale(1); background-position: -64px 50%, 50% 50%, -64px 50%, -64px 50%, -64px 50%; }
+  39% { opacity: 0; transform: scale(.97); background-position: -64px 50%, 50% 50%, -64px 50%, -64px 50%, -64px 50%; }
+  40% { opacity: 0; transform: scale(.86); background-position: -64px 50%, -64px 50%, 50% 50%, -64px 50%, -64px 50%; }
+  44% { opacity: 1; transform: scale(1); background-position: -64px 50%, -64px 50%, 50% 50%, -64px 50%, -64px 50%; }
+  55% { opacity: 1; transform: scale(1); background-position: -64px 50%, -64px 50%, 50% 50%, -64px 50%, -64px 50%; }
+  59% { opacity: 0; transform: scale(.97); background-position: -64px 50%, -64px 50%, 50% 50%, -64px 50%, -64px 50%; }
+  60% { opacity: 0; transform: scale(.86); background-position: -64px 50%, -64px 50%, -64px 50%, 50% 50%, -64px 50%; }
+  64% { opacity: 1; transform: scale(1); background-position: -64px 50%, -64px 50%, -64px 50%, 50% 50%, -64px 50%; }
+  75% { opacity: 1; transform: scale(1); background-position: -64px 50%, -64px 50%, -64px 50%, 50% 50%, -64px 50%; }
+  79% { opacity: 0; transform: scale(.97); background-position: -64px 50%, -64px 50%, -64px 50%, 50% 50%, -64px 50%; }
+  80% { opacity: 0; transform: scale(.86); background-position: -64px 50%, -64px 50%, -64px 50%, -64px 50%, 50% 50%; }
+  84% { opacity: 1; transform: scale(1); background-position: -64px 50%, -64px 50%, -64px 50%, -64px 50%, 50% 50%; }
+  95% { opacity: 1; transform: scale(1); background-position: -64px 50%, -64px 50%, -64px 50%, -64px 50%, 50% 50%; }
+  99% { opacity: 0; transform: scale(.97); background-position: -64px 50%, -64px 50%, -64px 50%, -64px 50%, 50% 50%; }
+  100% { opacity: 0; transform: scale(.97); background-position: -64px 50%, -64px 50%, -64px 50%, -64px 50%, 50% 50%; } }
 @keyframes jt-busy-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 @keyframes jt-spin { to { transform: rotate(360deg); } }
 .stApp::after { content: ""; position: fixed; inset: 0; box-sizing: border-box; z-index: 1000010;
-  visibility: hidden; pointer-events: none; opacity: 0; border: 2px solid transparent;
+  visibility: hidden; pointer-events: none; opacity: 0; border: 5px solid transparent;
+  box-shadow: inset 0 0 34px -10px color-mix(in srgb, var(--accent) 55%, transparent);
   background:
-    var(--load-icon) center / clamp(150px, 42vw, 194px) auto no-repeat padding-box,
-    radial-gradient(closest-side, var(--load-glow), var(--load-glow-2) 55%, transparent 100%) center / clamp(240px, 44vmin, 380px) clamp(240px, 44vmin, 380px) no-repeat padding-box,
     var(--load-veil) 0 0 / 100% 100% no-repeat padding-box,
-    linear-gradient(90deg, transparent, color-mix(in srgb, var(--load-hi) 85%, transparent), color-mix(in srgb, var(--load-blue) 70%, transparent), transparent) -50% 0 / 30% 12px no-repeat border-box,
-    linear-gradient(180deg, transparent, color-mix(in srgb, var(--load-hi) 85%, transparent), color-mix(in srgb, var(--load-blue) 70%, transparent), transparent) 100% -50% / 12px 30% no-repeat border-box,
-    linear-gradient(270deg, transparent, color-mix(in srgb, var(--load-hi) 85%, transparent), color-mix(in srgb, var(--load-blue) 70%, transparent), transparent) 150% 100% / 30% 12px no-repeat border-box,
-    linear-gradient(0deg, transparent, color-mix(in srgb, var(--load-hi) 85%, transparent), color-mix(in srgb, var(--load-blue) 70%, transparent), transparent) 0 150% / 12px 30% no-repeat border-box,
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 30%, transparent), color-mix(in srgb, var(--load-blue) 30%, transparent)) 0 0 / 100% 100% no-repeat border-box; }
+    linear-gradient(90deg, transparent, var(--load-hi), var(--load-blue), transparent) -50% 0 / 30% 12px no-repeat border-box,
+    linear-gradient(180deg, transparent, var(--load-hi), var(--load-blue), transparent) 100% -50% / 12px 30% no-repeat border-box,
+    linear-gradient(270deg, transparent, var(--load-hi), var(--load-blue), transparent) 150% 100% / 30% 12px no-repeat border-box,
+    linear-gradient(0deg, transparent, var(--load-hi), var(--load-blue), transparent) 0 150% / 12px 30% no-repeat border-box,
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 55%, transparent), color-mix(in srgb, var(--load-blue) 55%, transparent)) 0 0 / 100% 100% no-repeat border-box; }
 .stApp[data-test-script-state="running"]::after { animation: jt-busy-in 220ms ease-out 450ms both, jt-load-turn 6s linear 450ms infinite;
   visibility: visible; pointer-events: auto; cursor: progress; transition: visibility 0s linear 450ms; }
+/* the five icons: one 40px box in the exact centre, above the frame layer */
+.stApp::before { content: ""; position: fixed; top: calc(50% - 20px); left: calc(50% - 20px); width: 40px; height: 40px;
+  z-index: 1000011; visibility: hidden; pointer-events: none; opacity: 0;
+  filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--accent) 28%, transparent));
+  background:
+    var(--load-search) -64px 50% / 32px 32px no-repeat,
+    var(--load-briefcase) -64px 50% / 32px 32px no-repeat,
+    var(--load-graduate) -64px 50% / 32px 32px no-repeat,
+    var(--load-building) -64px 50% / 32px 32px no-repeat,
+    var(--load-check) -64px 50% / 32px 32px no-repeat; }
+.stApp[data-test-script-state="running"]::before { animation: jt-load-icons 6s ease-in-out 450ms infinite both;
+  visibility: visible; transition: visibility 0s linear 450ms; }
 /* phones: the same frame, a hair thinner */
-@media (max-width: 767px) { .stApp::after { border-width: 1.5px; } }
+@media (max-width: 767px) { .stApp::after { border-width: 3px; } }
 .stApp[data-test-script-state="running"] { cursor: progress; }
 /* the button that was just pressed shows that its work is under way:
    Refresh / Reload spin their icon at once, any other button's label
@@ -1639,12 +1636,12 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 @media (max-width: 767px) { .jt-skel .row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (prefers-reduced-motion: reduce) {
   /* the bar appears (still after the pause) but stays still: the same
-     full-screen layer — veil, glow, briefcase and the whole purple→blue
-     frame — with no travelling highlight */
+     full-screen layer — veil and the whole purple→blue frame — with no
+     travelling highlight, and a single still icon (the briefcase) */
   .stApp[data-test-script-state="running"]::after { animation: jt-busy-fade 1ms linear 450ms both !important;
-    background: var(--load-icon) center / clamp(150px, 42vw, 194px) auto no-repeat padding-box,
-      radial-gradient(closest-side, var(--load-glow), var(--load-glow-2) 55%, transparent 100%) center / clamp(240px, 44vmin, 380px) clamp(240px, 44vmin, 380px) no-repeat padding-box,
-      var(--load-veil) padding-box, linear-gradient(135deg, color-mix(in srgb, var(--accent) 45%, transparent), color-mix(in srgb, var(--load-blue) 45%, transparent)) border-box !important; }
+    background: var(--load-veil) padding-box, linear-gradient(135deg, var(--accent), var(--load-blue)) border-box !important; }
+  .stApp[data-test-script-state="running"]::before { animation: jt-busy-fade 1ms linear 450ms both !important;
+    background: var(--load-search) -64px 50% / 32px 32px no-repeat, var(--load-briefcase) 50% 50% / 32px 32px no-repeat, var(--load-graduate) -64px 50% / 32px 32px no-repeat, var(--load-building) -64px 50% / 32px 32px no-repeat, var(--load-check) -64px 50% / 32px 32px no-repeat !important; }
   .stApp[data-test-script-state="running"] [data-testid^="stBaseButton"]:focus > div,
   .stApp[data-test-script-state="running"] [data-testid="stIconMaterial"],
   .stApp[data-test-script-state="running"] [class*="st-key-av_pick_"] button::before, .jt-skel i, .jt-skel p .ms { animation: none !important; }

@@ -1,4 +1,4 @@
-"""Full-screen loader and premium search fields (Oct 2026 visual polish).
+"""Full-screen loader (five small centre icons) and premium search fields.
 
 The loading layer is the app's own .stApp::after (Streamlit's decoration bar
 and toolbar stay hidden); Streamlit's frontend marks the app element
@@ -32,61 +32,87 @@ def _palette(name: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# the full-screen loader
+# the full-screen loader: the 7f407c8 frame + five small centre icons
 # ---------------------------------------------------------------------------
 
-def test_the_loader_covers_the_whole_viewport():
+ICON_NAMES = ["search", "briefcase", "graduate", "building", "check"]
+
+
+def _frame_block(src: str) -> str:
+    i = src.index('.stApp::after { content: ""; position: fixed; inset: 0;')
+    return src[i:src.index("border-box; }", i) + len("border-box; }")]
+
+
+def test_the_frame_covers_the_whole_viewport():
     layer = _rule(".stApp::after")
     assert "position: fixed; inset: 0; box-sizing: border-box" in layer                  # edge to edge
     assert "52px" not in layer and "left: calc(50%" not in layer and "height: 3px" not in layer  # no badge, no line
-    assert "border: 2px solid transparent" in layer and "z-index: 1000010" in layer       # a thin line, above the sidebar
-    assert "@media (max-width: 767px) { .stApp::after { border-width: 1.5px; } }" in CSS
-    assert "box-shadow" not in layer                                                      # no glow along the edges
+    assert "border: 5px solid transparent" in layer and "z-index: 1000010" in layer
+    assert "@media (max-width: 767px) { .stApp::after { border-width: 3px; } }" in CSS
 
 
-def test_the_frame_has_four_edges_and_one_travelling_highlight():
-    layer = _rule(".stApp::after")
+def test_the_frame_is_the_one_from_7f407c8():
+    """The user asked for the earlier full-screen border back, exactly: its
+    thickness, colours, inner shading and travelling highlight (only the
+    centre artwork layers of that version are gone)."""
+    layer = _frame_block(SRC)
+    assert "box-shadow: inset 0 0 34px -10px color-mix(in srgb, var(--accent) 55%, transparent);" in layer
     for angle in ("90deg", "180deg", "270deg", "0deg"):                                   # top, right, bottom, left
-        assert (f"linear-gradient({angle}, transparent, color-mix(in srgb, var(--load-hi) 85%, transparent), "
-                f"color-mix(in srgb, var(--load-blue) 70%, transparent), transparent)") in layer, angle
-    assert ("linear-gradient(135deg, color-mix(in srgb, var(--accent) 30%, transparent), "
-            "color-mix(in srgb, var(--load-blue) 30%, transparent)) 0 0 / 100% 100% no-repeat border-box") in layer   # a quiet base line
+        assert f"linear-gradient({angle}, transparent, var(--load-hi), var(--load-blue), transparent)" in layer, angle
+    assert ("linear-gradient(135deg, color-mix(in srgb, var(--accent) 55%, transparent), "
+            "color-mix(in srgb, var(--load-blue) 55%, transparent)) 0 0 / 100% 100% no-repeat border-box") in layer
+    assert _palette("LIGHT")["load-hi"] == "#a89dff" and _palette("DARK")["load-hi"] == "#d4ceff"
+    assert "var(--load-icon)" not in SRC and "_briefcase_uri" not in SRC and "load-glow" not in SRC   # the briefcase is gone
+
+
+def test_one_highlight_travels_round_all_four_edges():
     turn = CSS[CSS.index("@keyframes jt-load-turn {"):CSS.index("} }", CSS.index("@keyframes jt-load-turn {")) + 3]
     assert set(re.findall(r"([a-z-]+)\s*:", turn)) == {"background-position"}
     stops = re.findall(r"(\d+)% \{ background-position: ([^;]+); \}", turn)
     assert [s for s, _ in stops] == ["0", "25", "50", "75", "100"]
-    # each quarter moves exactly one edge's highlight: top, then right, bottom, left (clockwise)
     lists = [[p.strip() for p in v.split(",")] for _, v in stops]
-    moved = [[i for i in range(8) if a[i] != b[i]] for a, b in zip(lists, lists[1:])]
-    assert moved == [[3], [4], [5], [6]]
-    assert all(lst[0] == "center" and lst[1] == "center" for lst in lists)              # briefcase and glow stay put
+    moved = [[i for i in range(6) if a[i] != b[i]] for a, b in zip(lists, lists[1:])]
+    assert moved == [[1], [2], [3], [4]]                                                  # clockwise, one edge at a time
 
 
-def test_a_medium_glass_briefcase_sits_in_the_exact_centre():
-    layer = _rule(".stApp::after")
-    # the artwork is the glass tile with the case on it (the case is ~57% of its width: ~110 px on desktop)
-    assert "var(--load-icon) center / clamp(150px, 42vw, 194px) auto no-repeat padding-box" in layer
-    assert ("radial-gradient(closest-side, var(--load-glow), var(--load-glow-2) 55%, transparent 100%) center / "
-            "clamp(240px, 44vmin, 380px)") in layer
-    for name in ("LIGHT", "DARK"):                                                       # only a faint halo
-        glow = float(re.search(r"rgba\([\d,]+,([.\d]+)\)", _palette(name)["load-glow"]).group(1))
-        assert glow <= .12, (name, glow)
-        assert "rgba" not in _palette(name)["load-veil"]                                 # a clean, solid backdrop
-    assert layer.index("var(--load-icon)") < layer.index("radial-gradient") < layer.index("var(--load-veil)")
-    fn_src = SRC[SRC.index("def _briefcase_uri"):SRC.index("\n\n\nLIGHT = {")]
+def test_five_small_icons_in_the_exact_centre():
+    box = _rule(".stApp::before")
+    assert "top: calc(50% - 20px); left: calc(50% - 20px); width: 40px; height: 40px" in box
+    assert "z-index: 1000011" in box and "pointer-events: none" in box and "visibility: hidden" in box
+    layers = re.findall(r"var\(--load-([a-z]+)\) -64px 50% / 32px 32px no-repeat", box)
+    assert layers == ICON_NAMES                                                           # five, same size, in order
+    assert "drop-shadow(0 2px 6px" in box                                                 # a subtle glow at most
+    for name in ("LIGHT", "DARK"):
+        assert re.search(rf'for _pal, _colours in \(\(LIGHT, .*?\), \(DARK, .*?\)\):', SRC)
+    fn_src = SRC[SRC.index("def _loader_icons"):SRC.index("\n\n\nLIGHT = {")]
     ns = {"base64": base64}
-    exec(fn_src, ns)                                                                     # the helper alone
-    for dark in (False, True):
-        uri = ns["_briefcase_uri"](dark=dark)
+    exec(fn_src, ns)
+    icons = ns["_loader_icons"]("#6a5cf7", "#3b82f6", "#0d9488")
+    assert list(icons) == ICON_NAMES
+    for name, uri in icons.items():
         assert uri.startswith("url('data:image/svg+xml;base64,") and "<" not in uri
         svg = base64.b64decode(uri[len("url('data:image/svg+xml;base64,"):-2]).decode()
-        # glass tile (face, depth edge, rim), glass case (lid, body, base edge, tube handle, two clasps), faint shadow
-        for part in ('id="tile"', 'id="edge"', 'id="rim"', 'id="lid"', 'id="body"', 'id="base"', 'id="tube"', 'id="clasp"',
-                     "feGaussianBlur", "<ellipse"):
-            assert part in svg, (dark, part)
-        assert svg.count('fill="url(#clasp)"') == 2
-        opacities = [float(v) for v in re.findall(r'stop-opacity="([.\d]+)"', svg)]
-        assert opacities and min(opacities) < .9                                         # translucent glass, not solid
+        assert 'viewBox="0 0 24 24"' in svg and 'stroke-width="2"' in svg and 'fill="none"' in svg, name   # one line style
+
+
+def test_the_icons_appear_one_at_a_time_in_order_and_loop():
+    kf = CSS[CSS.index("@keyframes jt-load-icons {"):CSS.index("} }", CSS.index("@keyframes jt-load-icons {")) + 3]
+    assert set(re.findall(r"([a-z-]+)\s*:", kf)) == {"opacity", "transform", "background-position"}
+    stops = re.findall(r"(\d+)% \{ opacity: ([.\d]+); transform: scale\(([.\d]+)\); background-position: ([^;]+); \}", kf)
+    assert stops and stops[-1][0] == "100"
+    for pct, opacity, scale, positions in stops:
+        shown = [i for i, pos in enumerate(positions.split(",")) if pos.strip() == "50% 50%"]
+        assert len(shown) == 1, pct                                                       # never two at once
+        if float(opacity) == 1:
+            assert float(scale) == 1                                                      # fully shown = full size
+    visible = [ICON_NAMES[[i for i, pos in enumerate(v.split(",")) if pos.strip() == "50% 50%"][0]]
+               for _, o, _, v in stops if float(o) == 1]
+    order = [n for i, n in enumerate(visible) if i == 0 or visible[i - 1] != n]
+    assert order == ICON_NAMES                                                            # search → … → check
+    assert all(float(sc) >= .86 for _, _, sc, _ in stops)                                 # a slight scale, no bounce
+    running = _rule('.stApp[data-test-script-state="running"]::before')
+    assert "jt-load-icons 6s ease-in-out 450ms infinite both" in running                  # loops while loading
+    assert "visibility: visible; transition: visibility 0s linear 450ms" in running
 
 
 def test_the_loader_appears_only_during_real_loading_and_never_sticks():
@@ -96,27 +122,28 @@ def test_the_loader_appears_only_during_real_loading_and_never_sticks():
     assert running.startswith('.stApp[data-test-script-state="running"]::after { animation: jt-busy-in 220ms ease-out 450ms both')
     assert "visibility: visible; pointer-events: auto" in running
     assert "transition: visibility 0s linear 450ms" in running                           # clicks pass for the first 450 ms
-    assert "transition" not in hidden                                                    # and the moment the rerun ends
+    assert "transition" not in hidden and "transition" not in _rule(".stApp::before")    # and the moment the rerun ends
 
 
-def test_reduced_motion_shows_the_same_screen_still():
+def test_reduced_motion_shows_a_still_frame_and_one_still_icon():
     reduced = CSS[CSS.index("/* the bar appears (still after the pause)"):]
     reduced = reduced[:reduced.index("}\n}") + 3]
-    assert "jt-busy-fade 1ms linear 450ms both" in reduced and "jt-load-turn" not in reduced
-    for part in ("var(--load-icon) center / clamp(150px, 42vw, 194px)", "radial-gradient(closest-side",
-                 "var(--load-veil) padding-box",
-                 "linear-gradient(135deg, color-mix(in srgb, var(--accent) 45%, transparent), color-mix(in srgb, var(--load-blue) 45%, transparent)) border-box"):
-        assert part in reduced, part
+    assert "jt-load-turn" not in reduced and "jt-load-icons" not in reduced
+    assert reduced.count("jt-busy-fade 1ms linear 450ms both") == 2
+    assert "var(--load-veil) padding-box, linear-gradient(135deg, var(--accent), var(--load-blue)) border-box" in reduced
+    still = re.search(r'\.stApp\[data-test-script-state="running"\]::before \{[^}]*background: ([^!]+) !important', reduced)
+    shown = [l for l in still.group(1).split(", var") if "50% 50%" in l]
+    assert len(shown) == 1 and "briefcase" in shown[0]
 
 
-def test_both_themes_define_the_loader_and_search_tokens():
+def test_both_themes_define_the_loader_tokens():
     for name in ("LIGHT", "DARK"):
         pal = _palette(name)
-        for token in ("load-blue", "load-hi", "load-veil", "load-glow", "load-glow-2", "search-gloss", "search-tint",
-                      "search-tint-hover", "search-edge", "search-edge-hover", "search-edge-focus", "search-shadow",
-                      "search-shadow-hover", "search-chip", "search-chip-focus", "search-icon", "search-placeholder"):
+        for token in ("load-blue", "load-hi", "load-veil", "search-gloss", "search-tint", "search-tint-hover", "search-edge",
+                      "search-edge-hover", "search-edge-focus", "search-shadow", "search-shadow-hover", "search-chip",
+                      "search-chip-focus", "search-icon", "search-placeholder"):
             assert pal.get(token), (name, token)
-    assert 'LIGHT["load-icon"] = _briefcase_uri()' in SRC and 'DARK["load-icon"] = _briefcase_uri(dark=True)' in SRC
+        assert "rgba" not in pal["load-veil"]                                             # a clean, solid backdrop
     assert "<" not in CSS and "@property" not in CSS and "conic-gradient" not in CSS
 
 
