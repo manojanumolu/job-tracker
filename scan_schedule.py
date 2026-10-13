@@ -192,6 +192,61 @@ def chain_wait(now: datetime, hours: int, last: datetime | None) -> timedelta:
     return min(max(target - now, timedelta(0)), CHAIN_MAX_WAIT)
 
 
+def latest_run(companies) -> dict | None:
+    """The latest COMPLETED scan, from the record scraper.run_all keeps in
+    each company's "scan" field: {"started_at", "finished_at" (datetimes),
+    "jobs_found", "new_jobs", "portals", "portals_failed" (ints)}. That
+    record reaches GitHub only after the whole scan has finished, so a scan
+    still running is never described. None when there is no usable record
+    — or when a later scan left none (older scanner code), so a count from
+    an earlier scan is never passed off as the latest one."""
+    best = None
+    for c in companies or []:
+        scan = c.get("scan") if isinstance(c, dict) else None
+        run = scan.get("run") if isinstance(scan, dict) else None
+        if not isinstance(run, dict):
+            continue
+        started, finished = _parse(run.get("started_at")), _parse(run.get("finished_at"))
+        counts = {k: run.get(k, 0) for k in ("jobs_found", "new_jobs", "portals", "portals_failed")}
+        if (started is None or finished is None or finished < started
+                or any(isinstance(v, bool) or not isinstance(v, int) or v < 0 for v in counts.values())):
+            continue
+        if best is None or finished > best["finished_at"]:
+            best = {"started_at": started, "finished_at": finished, **counts}
+    if best is None:
+        return None
+    # every company a scan checks is stamped before that scan's record is
+    # written: a later stamp means a later scan that left no record
+    checked = [_parse(c.get("last_checked")) for c in companies if isinstance(c, dict)]
+    if any(t and t > best["finished_at"] for t in checked):
+        return None
+    return best
+
+
+def next_scan_state(now: datetime, hours: int, last: datetime | None) -> tuple[str, datetime | None]:
+    """(state, time) of the next scheduled scan, as the real scheduler sees
+    it (``last`` = when the last scan started, as for scan_due):
+
+      "scheduled", T  no scan is due; the chain dispatches at T (window +
+                      CHAIN_OFFSET) — also while a window has just opened
+                      and T is still ahead
+      "due", T        T (the missed window + CHAIN_OFFSET) has passed: a scan
+                      should be running or starting; the chain retries every
+                      CHAIN_RETRY and the plan ticks are the safety net
+      "overdue", T    no scan for OVERDUE_GRACE after the window it missed
+      "overdue", None no scan has ever been recorded
+    """
+    now = now.astimezone(timezone.utc)
+    if not scan_due(now, hours, last):
+        return "scheduled", latest_boundary(now, hours) + timedelta(hours=hours) + CHAIN_OFFSET
+    if last is None:
+        return "overdue", None
+    expected = latest_boundary(last, hours) + timedelta(hours=hours) + CHAIN_OFFSET
+    if now < expected:
+        return "scheduled", expected
+    return ("overdue" if scan_overdue(now, hours, last) else "due"), expected
+
+
 def alert_due(now: datetime, last_sent: datetime | None) -> bool:
     """May this person be emailed now? At most once per MEMBER_ALERT_HOURS —
     independent of the scan interval."""

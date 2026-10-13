@@ -66,6 +66,19 @@ class FirebaseAuthError(Exception):
         self.code = code
 
 
+class EmailNotVerified(FirebaseAuthError):
+    """The password was right but the address isn't verified, so the sign-in
+    grants nothing. ``sent``: Firebase was just asked to email a
+    verification link."""
+
+    def __init__(self, sent: bool):
+        super().__init__("Verify your email address first: we've sent a verification link to it. Open the link, "
+                         "then sign in again." if sent else
+                         "Verify your email address first — open the verification link we emailed you (it can take "
+                         "a few minutes to arrive, so check spam too), then sign in again.", "EMAIL_NOT_VERIFIED")
+        self.sent = sent
+
+
 @dataclass(frozen=True)
 class FirebaseConfig:
     api_key: str
@@ -262,7 +275,12 @@ def user_from_response(data: dict, config: FirebaseConfig, now: float | None = N
 # ---------------------------------------------------------------------------
 
 def sign_in_with_password(email: str, password: str, *, config: FirebaseConfig | None = None,
-                          client: httpx.Client | None = None, now: float | None = None) -> FirebaseUser:
+                          client: httpx.Client | None = None, now: float | None = None,
+                          require_verified: bool = False, may_send_verification=None) -> FirebaseUser:
+    """``require_verified``: an unverified address raises EmailNotVerified
+    (nothing is granted). Firebase is then asked to email its own
+    verification link — only when ``may_send_verification(email)`` allows it
+    (the app throttles that per address)."""
     config = config or load_config()
     email = (email or "").strip()
     if not email or not password:
@@ -272,7 +290,26 @@ def sign_in_with_password(email: str, password: str, *, config: FirebaseConfig |
     user = user_from_response(data, config, now)
     if user.provider not in ("", "password"):
         raise FirebaseAuthError("Firebase sent an incomplete sign-in answer.", "MALFORMED")
+    if require_verified and user.email_verified is not True:
+        sent = bool(may_send_verification and may_send_verification(user.email)
+                    and send_email_verification(data.get("idToken"), config=config, client=client))
+        raise EmailNotVerified(sent)
     return FirebaseUser(**{**user.as_session(), "provider": "password"})
+
+
+def send_email_verification(id_token: object, *, config: FirebaseConfig, client: httpx.Client | None = None) -> bool:
+    """Ask Firebase to email the account its verification link (Firebase's
+    own template and sender — no other mail service). The token is the one
+    from the sign-in that just happened and is never kept. True if Firebase
+    accepted the request."""
+    if not isinstance(id_token, str) or not id_token:
+        return False
+    try:
+        _post("sendOobCode", {"requestType": "VERIFY_EMAIL", "idToken": id_token}, config, client)
+    except FirebaseAuthError as e:
+        log.info("Firebase verification email not sent: %s", e.code)
+        return False
+    return True
 
 
 def sign_in_with_google_id_token(id_token: str, request_uri: str, *, config: FirebaseConfig | None = None,

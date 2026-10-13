@@ -67,7 +67,7 @@ def _stamp_fresh_local_modules() -> None:
 
 
 _LOCAL_MODULES = ["scan_schedule", "identity", "locations", "job_classifier", "sources", "scraper", "config_store", "repo_sync",
-                  "access", "firebase_auth", "job_filters", "user_store", "snapshot_cache", "notifier", "alerts"]
+                  "access", "email_policy", "firebase_auth", "job_filters", "user_store", "snapshot_cache", "notifier", "alerts"]
 _reload_changed_local_modules()
 
 from config_store import (
@@ -83,6 +83,7 @@ from notifier import category_label, friendly_reason, safe_url
 from identity import ats_job_id
 import brand_logos
 import company_logos
+import email_policy
 import firebase_auth
 import job_filters
 import scan_schedule
@@ -92,6 +93,7 @@ from access import (
     ACCOUNT_KEY,
     OWNER_SESSION_KEY,
     OWNER_SESSION_S,
+    AccountAttemptLimiter,
     AttemptLimiter,
     Cooldown,
     OwnerRequired,
@@ -1659,6 +1661,12 @@ def _ist_stamp(dt: datetime) -> str:
     return f"{dt.astimezone(IST):%b %d}, {_ist(dt)}"
 
 
+def _ist_full(dt: datetime) -> str:
+    """'13 Oct 2026, 11:08 AM IST'."""
+    local = dt.astimezone(IST)
+    return f"{local.day} {local:%b %Y}, {_ist(dt)}"
+
+
 def _ms(name: str, size: str = "") -> str:
     return f'<span class="ms {size}" aria-hidden="true">{name}</span>'
 
@@ -1759,7 +1767,11 @@ def _guards() -> dict:
     """Limits shared by every session of this server process."""
     return {"signin": AttemptLimiter(), "check": Cooldown(_CHECK_COOLDOWN_S),
             "refresh": Cooldown(_REFRESH_COOLDOWN_S),
-            "firebase_signin": AttemptLimiter()}
+            # email sign-in failures, per address (one address's failures
+            # never lock anyone else out)
+            "firebase_signin": AccountAttemptLimiter(),
+            # Firebase verification emails: one per address per 15 min
+            "verify_email": AccountAttemptLimiter(per_account=1, overall=30)}
 
 
 def is_owner() -> bool:
@@ -2039,6 +2051,25 @@ def _blocked_account() -> None:
     return None
 
 
+_GOOGLE_UNVERIFIED = "Your Google account's email address isn't verified, so it can't be used to sign in here."
+
+
+def _refused_identity(problem: str, provider: str) -> None:
+    """An identity email_policy refuses (a disposable or unverified address):
+    no account, no Firebase link, no personal data — and nothing is deleted.
+    The login page says why; signing in again starts from Google's or the
+    email form's own step (no automatic retry with the same identity)."""
+    for k in (ACCOUNT_KEY, firebase_auth.SESSION_KEY):
+        st.session_state.pop(k, None)
+    st.session_state._signed_out = True
+    if provider == "google.com" and problem == email_policy.UNVERIFIED_MESSAGE:
+        problem = _GOOGLE_UNVERIFIED
+    st.session_state._login_error = problem
+    reason = "disposable address" if problem == email_policy.DISPOSABLE_MESSAGE else "unverified or unusable address"
+    auth_event(f"{provider} identity refused: {reason}")          # never the address itself
+    return None
+
+
 def _google_setup() -> tuple[dict | None, str]:
     """Streamlit's built-in Google sign-in (st.login) as configured in the
     [auth] secrets: ({"provider": None | name, "redirect_uri": ...}, "") when
@@ -2129,6 +2160,11 @@ def resolve_account(google: dict | None, config) -> dict | None:
     if not st.session_state.get("_signed_out"):
         g = _google_identity() if google else None
         if g:
+            # before anything is linked or created in Firebase, and on every
+            # run (a session restored from Streamlit's cookie is checked too)
+            problem = email_policy.sign_in_problem(g["email"], g["email_verified"])
+            if problem:
+                return _refused_identity(problem, "google.com")
             if fb_user is None:
                 _link_google_to_firebase(google, config)
                 fb_user = firebase_auth.session_user(st.session_state)
@@ -2150,6 +2186,11 @@ def resolve_account(google: dict | None, config) -> dict | None:
         # signed in again with email/password after an explicit sign-out
         account = {"email": fb_user.get("email") or "", "email_verified": fb_user.get("email_verified") is True,
                    "name": "", "uid": fb_user["uid"], "provider": "password"}
+    if account and account["provider"] == "password":
+        # firebase_sign_in already refused these; checked again for every run
+        problem = email_policy.sign_in_problem(account["email"], account["email_verified"])
+        if problem:
+            return _refused_identity(problem, "password")
     if account and account.get("uid"):
         state = _firebase_account_state(account["uid"])
         if state == "disabled":
@@ -2194,19 +2235,38 @@ def account_sign_out() -> bool:
     return False
 
 
+def _may_send_verification(email: str) -> bool:
+    """At most one Firebase verification email per address per 15 minutes,
+    for the whole app (counted by the "verify_email" limiter)."""
+    limiter = _guards()["verify_email"]
+    if limiter.locked_for(email):
+        return False
+    limiter.failed(email)
+    return True
+
+
 def firebase_sign_in(email: str, password: str) -> tuple[bool, str]:
     limiter = _guards()["firebase_signin"]
-    wait = limiter.locked_for()
+    wait = limiter.locked_for(email)
     if wait:
         return False, f"Too many failed attempts — try again in {int(wait // 60) + 1} min."
     if _AUTH_CONFIG is None:
         return False, "Email sign-in is unavailable right now."
+    problem = email_policy.address_problem(email)            # a disposable address: Firebase isn't even asked
+    if problem:
+        return False, problem
     try:
-        user = firebase_auth.sign_in_with_password(email, password, config=_AUTH_CONFIG)
+        user = firebase_auth.sign_in_with_password(email, password, config=_AUTH_CONFIG, require_verified=True,
+                                                   may_send_verification=_may_send_verification)
     except firebase_auth.FirebaseAuthError as e:
         if e.code in _FB_CREDENTIAL_ERRORS:
-            limiter.failed()
+            limiter.failed(email)
         return False, str(e)
+    # the address Firebase answered with is the one that counts
+    problem = email_policy.sign_in_problem(user.email, user.email_verified)
+    if problem:
+        return False, problem
+    limiter.succeeded(email)
     st.session_state[firebase_auth.SESSION_KEY] = {**user.as_session(), "expires_at": time.time() + ACCOUNT_SESSION_S}
     st.session_state.pop("_signed_out", None)
     return True, ""
@@ -4681,6 +4741,68 @@ def tracker_status_card() -> None:
                   args=("monitoring",))
 
 
+def scan_details_rows(now: datetime) -> list[tuple[str, str, str]]:
+    """(label, value, note) for Settings → Scan details, from the scanner's
+    own record of its latest completed scan in companies.json (the shared
+    copy every page already uses — no extra GitHub call) and the real
+    scheduler's rules (scan_schedule). Never a guessed time or count:
+    whatever isn't known says so."""
+    run = scan_schedule.latest_run(companies)
+    if run is not None:
+        last = _ist_full(run["finished_at"])
+        failed, total = run["portals_failed"], run["portals"]
+        last_note = ("Completed, but no portal could be read" if total and failed >= total
+                     else f"Completed · {failed} of {_plural(total, 'portal')} couldn't be read" if failed
+                     else f"Completed · {_plural(total, 'portal')} read" if total else "Completed")
+        if total and failed >= total:
+            jobs, jobs_note = "Unavailable", "No portal could be read in that scan."
+        else:
+            jobs = str(run["jobs_found"])
+            jobs_note = ("Eligible fresher roles in India that scan found across all portals, including ones "
+                         "already listed" + (" (the portals that failed aren't counted)" if failed else "") + ".")
+    else:
+        stamps = [d for d in (_parse_iso(c.get("last_checked", "")) for c in companies) if d]
+        if stamps:      # a scan by the scanner before it kept this record
+            last, last_note = _ist_full(max(stamps)), "Completed"
+            jobs, jobs_note = "Unavailable", "Recorded from the next completed scan on."
+        else:
+            last, last_note = "Unavailable", "No completed scan is recorded yet."
+            jobs, jobs_note = "Unavailable", "No completed scan is recorded yet."
+    state, when = scan_schedule.next_scan_state(now, SCAN_HOURS, scan_schedule.last_scan(companies))
+    retry = int(scan_schedule.CHAIN_RETRY.total_seconds() // 60)
+    offset = int(scan_schedule.CHAIN_OFFSET.total_seconds() // 60)
+    if state == "scheduled":
+        nxt, nxt_note = _ist_full(when), (f"{interval_label(SCAN_HOURS)}, {_plural(offset, 'minute')} after each window "
+                                          "opens. GitHub may start it a little later.")
+    elif state == "due":
+        nxt, nxt_note = "Running or starting", (f"It was due at {_ist_full(when)}; it shows here once it has finished. "
+                                                f"The scheduler retries every {retry} min until it does.")
+    elif when is not None:
+        nxt, nxt_note = "Overdue", (f"Expected at {_ist_full(when)} and no scan has finished since. The scheduler "
+                                    f"retries every {retry} min; GitHub may start it later.")
+    else:
+        nxt, nxt_note = "Unavailable", f"No scan has been recorded yet; the scheduler retries every {retry} min."
+    return [("Last scan", last, last_note), ("Next scheduled scan", nxt, nxt_note), ("Jobs found", jobs, jobs_note)]
+
+
+def scan_details_card() -> None:
+    """Settings → Scan details: the administrator only. Asked again here on
+    the server (not only by the page's member check), and nothing is read
+    or computed for anyone else."""
+    if not is_owner():
+        return
+    rows = scan_details_rows(NOW)
+    with st.container(key="set_scan_details"):
+        st.html(f'<div class="set-head"><span class="ic">{_ms("history")}</span><div><div class="eyebrow">Scanning</div>'
+                '<h2 class="section-title">Scan details</h2><p class="section-sub">The latest completed scan and the next '
+                'one, from the scanner’s own records. Times are IST (Asia/Kolkata).'
+                + (" GitHub couldn’t be read just now, so these may be out of date." if DATA_STALE else "")
+                + '</p></div></div><dl class="kv scan-details">'
+                + "".join(f'<dt>{escape(k)}</dt><dd><span class="num">{escape(v)}</span>'
+                          f'<span class="kv-note">{escape(n)}</span></dd>' for k, v, n in rows)
+                + "</dl>")
+
+
 def page_settings():
     page_header("Settings", "Your account, your job search and how the app looks"
                 + ("" if MEMBER_VIEW else " — plus how the tracker is configured"))
@@ -4706,6 +4828,7 @@ def page_settings():
             '<div class="eyebrow">Admins only</div><h2 class="section-title">Administration</h2>'
             '<p class="section-sub">The shared tracker: its schedule, health and data. Members never see this section.</p>'
             '</div></div>')
+    scan_details_card()
     tracker_status_card()
     scan_schedule_card()
     with st.container(key="set_data"):

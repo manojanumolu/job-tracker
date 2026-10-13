@@ -43,6 +43,8 @@ ADMIN_EMAILS_ENV = "JT_ADMIN_EMAILS"
 ACCOUNT_KEY = "_account"            # session-state key: the signed-in account (see module doc)
 MAX_SIGNIN_FAILURES = 10         # per window, across every browser session
 SIGNIN_WINDOW_S = 15 * 60
+MAX_FAILURES_PER_ACCOUNT = 5     # email sign-in: wrong passwords for one address, per window
+MAX_FAILURES_OVERALL = 100       # ... and for all addresses together (a spraying backstop)
 
 
 # ---------------------------------------------------------------------------
@@ -165,6 +167,57 @@ class AttemptLimiter:
     def succeeded(self) -> None:
         with self._lock:
             self._failures.clear()
+
+
+class AccountAttemptLimiter:
+    """Failed email sign-ins, counted per address and shared by every
+    session of the process. A single shared counter (AttemptLimiter) let
+    anyone lock EVERY email sign-in for 15 minutes with ten wrong passwords
+    for made-up addresses; now failures lock only the address they were
+    for, plus a much higher ceiling for all addresses together against
+    password spraying (Firebase also throttles on its side)."""
+
+    def __init__(self, per_account: int = MAX_FAILURES_PER_ACCOUNT, overall: int = MAX_FAILURES_OVERALL,
+                 window_s: float = SIGNIN_WINDOW_S, clock=time.time):
+        self.per_account, self.overall, self.window_s, self._clock = per_account, overall, window_s, clock
+        self._failures: dict[str, list[float]] = {}
+        self._lock = threading.Lock()
+
+    @staticmethod
+    def _key(email: object) -> str:
+        return email.strip().lower() if isinstance(email, str) else ""
+
+    def _prune(self, now: float) -> None:
+        for k in list(self._failures):
+            kept = [t for t in self._failures[k] if now - t < self.window_s]
+            if kept:
+                self._failures[k] = kept
+            else:
+                del self._failures[k]
+
+    def locked_for(self, email: object) -> float:
+        """Seconds until this address may be tried again (0 = now)."""
+        with self._lock:
+            now = self._clock()
+            self._prune(now)
+            mine = self._failures.get(self._key(email), [])
+            every = sorted(t for ts in self._failures.values() for t in ts)
+            waits = [0.0]
+            if len(mine) >= self.per_account:
+                waits.append(self.window_s - (now - mine[-self.per_account]))
+            if len(every) >= self.overall:
+                waits.append(self.window_s - (now - every[-self.overall]))
+            return max(waits)
+
+    def failed(self, email: object) -> None:
+        with self._lock:
+            now = self._clock()
+            self._prune(now)
+            self._failures.setdefault(self._key(email), []).append(now)
+
+    def succeeded(self, email: object) -> None:
+        with self._lock:
+            self._failures.pop(self._key(email), None)
 
 
 class Cooldown:

@@ -413,9 +413,14 @@ def test_notification_settings_are_per_user_and_go_to_the_verified_email(app, go
 
 
 def test_an_unverified_email_cannot_turn_alerts_on(app, google_env, store):
-    at = _sign_in(app, google_env, A_UID, A_MAIL, verified=False, page="alerts")
-    assert at.toggle(key="my_alerts_on").disabled
+    """Since the 2026-10-13 audit an unverified address can't sign in at
+    all: no profile, no alerts page, nothing to turn on."""
+    google_env["firebase"](_password(A_UID, A_MAIL, False))
+    at = app([NEW_RECORD], secrets=GATED, owner=False)
+    _login(at, email=A_MAIL)
+    assert _login_page(at) and "my_alerts_on" not in {t.key for t in at.toggle}
     assert store.for_uid(A_UID).notification_settings()["enabled"] is False
+    assert f"users/{A_UID}" not in store.backend.docs                      # no profile was created either
 
 
 @pytest.mark.parametrize("query", [{"uid": B_UID}, {"user": B_UID}, {"user_id": B_UID}, {"page": "jobs", "uid": B_UID}])

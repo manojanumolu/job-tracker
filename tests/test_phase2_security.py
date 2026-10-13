@@ -300,6 +300,9 @@ def test_password_accounts_are_admin_only_with_a_verified_email(app, google_env,
     google_env["firebase"](_password_answer(UID, EMAIL, verified))
     at = app([NEW_RECORD], secrets=GATED, owner=False)
     _login(at)
+    if not is_admin:          # unverified: no access at all since the 2026-10-13 audit
+        assert _login_page(at) and ACCOUNT_KEY not in at.session_state and not _seen(at)[0].get("dismissed")
+        return
     assert not _login_page(at) and ('class="role admin"' in _html(at)) is is_admin
     _nav(at, "jobs")
     at.button(key=_key("dismiss", NEW_RECORD)).click().run()
@@ -362,7 +365,7 @@ def test_two_people_at_once_never_see_each_other(app, google_env, admins):
     google_env["firebase"](_password_answer(UID, EMAIL, True))
     a = app([NEW_RECORD], secrets=GATED, owner=False)
     _login(a)
-    google_env["firebase"](_password_answer(member_uid, member_email))
+    google_env["firebase"](_password_answer(member_uid, member_email, True))
     b = app([NEW_RECORD], secrets=GATED, owner=False)
     _login(b, email=member_email)
     a.run()
@@ -396,7 +399,7 @@ def test_sign_out_leaves_nothing_for_the_next_person_in_the_tab(app, google_env,
     assert {k for k in left if not k.startswith("$$")} <= allowed, left
     assert not left.get("login_email") and not left.get("login_pw")
     member = "member@example.org"
-    google_env["firebase"](_password_answer("MemberUid000000000000000001", member))
+    google_env["firebase"](_password_answer("MemberUid000000000000000001", member, True))
     _login(at, email=member)
     html = _html(at)
     assert not _login_page(at) and 'class="role admin"' not in html and ADMIN not in html

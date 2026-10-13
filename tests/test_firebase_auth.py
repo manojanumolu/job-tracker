@@ -43,6 +43,13 @@ def ok_password_answer(**over):
             "registered": True, **over}
 
 
+def verified_password_answer(**over):
+    """A password sign-in for a VERIFIED address (Firebase puts the flag in
+    the ID token's email_verified claim) — the only kind that gets in since
+    the 2026-10-13 audit."""
+    return ok_password_answer(**{"idToken": make_id_token(email_verified=True), **over})
+
+
 def ok_google_answer(**over):
     return {"localId": UID, "email": EMAIL, "providerId": "google.com", "emailVerified": True,
             "idToken": make_id_token(provider="google.com"), "refreshToken": "refresh-token-xyz",
@@ -598,13 +605,14 @@ def _login(at, email=EMAIL, password=PASSWORD):
 
 
 def test_email_sign_in_opens_the_app(app, google_env):
-    fb = google_env["firebase"](ok_password_answer())
+    answer = verified_password_answer()
+    fb = google_env["firebase"](answer)
     at = app([NEW_RECORD], secrets=GATED, owner=False)
     _login(at)
     assert not _login_page(at) and "Graduate Software Engineer" in _html(at)
     assert 'class="acct-head"' in _html(at) and EMAIL.lower() in _html(at)
     assert fb.requests[0].headers["x-goog-api-key"] == API_KEY
-    for secret in (PASSWORD, API_KEY, "refresh-token-xyz", ok_password_answer()["idToken"]):
+    for secret in (PASSWORD, API_KEY, "refresh-token-xyz", answer["idToken"]):
         assert secret not in _dump(at) and secret not in _html(at)
 
 
@@ -621,13 +629,15 @@ def test_wrong_password_stays_on_the_login_page_with_a_lasting_message(app, goog
 def test_password_sign_ins_are_rate_limited(app, google_env):
     fb = google_env["firebase"](error_answer("INVALID_LOGIN_CREDENTIALS"))
     at = app([], secrets=GATED, owner=False)
-    for _ in range(11):
+    # per address since the 2026-10-13 audit (one shared counter let anyone
+    # lock every email sign-in): 5 wrong passwords, then that address waits
+    for _ in range(6):
         _login(at, password="nope-nope-nope")
-    assert len(fb.requests) == 10 and "Too many failed attempts" in _html(at)
+    assert len(fb.requests) == 5 and "Too many failed attempts" in _html(at)
 
 
 def test_email_sign_out_and_session_expiry(app, google_env):
-    google_env["firebase"](ok_password_answer())
+    google_env["firebase"](verified_password_answer())
     at = app([], secrets=GATED, owner=False)
     _login(at)
     at.button(key="btn_account_sign_out").click().run()
@@ -687,14 +697,14 @@ def test_members_are_read_only(app, google_env, admins, monkeypatch):
 
 
 def test_an_unverified_email_is_never_admin(app, google_env, admins):
-    """A fresh email/password account merely claims its address."""
+    """A fresh email/password account merely claims its address — since the
+    2026-10-13 audit it gets no access at all, let alone admin."""
     admins(EMAIL)
     google_env["firebase"](ok_password_answer())              # no emailVerified in the answer
     at = app([NEW_RECORD], secrets=GATED, owner=False)
     _login(at)
-    assert 'class="role admin"' not in _html(at)
-    _nav(at, "jobs")
-    at.button(key=_key("dismiss", NEW_RECORD)).click().run()
+    assert 'class="role admin"' not in _html(at) and _login_page(at)
+    assert "nav_jobs" not in _buttons(at) and _key("dismiss", NEW_RECORD) not in _buttons(at)
     assert not _seen(at)[0].get("dismissed")
 
 

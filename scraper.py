@@ -817,9 +817,13 @@ def run_all() -> list[dict]:
     companies = load_companies()
     seen = load_seen_jobs()
     new_jobs: list[dict] = []
+    started_at = _now_iso()
+    jobs_found = portals_failed = 0
 
     for company in companies:
         scan = scan_company(company)
+        jobs_found += len(scan.jobs)
+        portals_failed += scan.status != "active"
         company["status"] = scan.status
         company["status_reason"] = scan.reason      # problems only ("" when healthy)
         company["scan_note"] = scan.user_note
@@ -832,6 +836,19 @@ def run_all() -> list[dict]:
         company["last_job"] = scan.jobs[0]["title"] if scan.jobs else ""
         new_jobs += merge_new_jobs(seen + new_jobs, scan.jobs, company_id=company.get("id"))
         time.sleep(1)
+
+    # This scan as a whole, recorded on every company it checked (inside the
+    # "scan" field, which already travels merge-safely with each company's
+    # results — no new file or field): when it started and finished, and the
+    # eligible jobs it found across all portals (the same jobs as each
+    # portal's "accepted", already-known ones included; "new_jobs" = first
+    # seen in this scan). It only reaches GitHub once the whole scan is
+    # done, so it always describes a completed scan. Read by the admin's
+    # Settings → Scan details (scan_schedule.latest_run).
+    run = {"started_at": started_at, "finished_at": _now_iso(), "jobs_found": jobs_found,
+           "new_jobs": len(new_jobs), "portals": len(companies), "portals_failed": portals_failed}
+    for company in companies:
+        company["scan"]["run"] = dict(run)
 
     # commit=False: alerts.py publishes the data (merge-safe) before and
     # after emailing — see alerts.py

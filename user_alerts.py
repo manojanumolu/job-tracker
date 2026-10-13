@@ -11,7 +11,9 @@ Who gets what:
      chosen job family; none chosen = every job that passed 1-4)
 Where it goes: the account's CURRENT verified email, read from Firebase
 Authentication by UID at send time — never an address anyone typed. A
-deleted, disabled or unverified account gets nothing.
+deleted, disabled or unverified account gets nothing, and neither does a
+disposable address (email_policy.py; accounts made before that policy keep
+their data).
 
 How often: at most one email per person per 6 hours
 (scan_schedule.MEMBER_ALERT_HOURS), whatever the admin's global scan interval
@@ -53,6 +55,7 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
+import email_policy
 import job_filters
 import scan_schedule
 from config_store import job_key
@@ -107,6 +110,8 @@ def run_for_user(store: UserStore, uid: str, seen: list[dict], send, run_id: str
         return "disabled", 0
     if not account["email_verified"] or not account["email"]:
         return "unverified", 0
+    if not email_policy.may_receive_alerts(account["email"]):
+        return "blocked_address", 0                  # a disposable address (email_policy): never emailed
     if not scan_schedule.alert_due(now, _parse_time(view.get("alerts_last_sent"))):
         return "waiting", 0                          # emailed less than 6 h ago: nothing claimed
     jobs = select_jobs(seen, view, user.dismissed(), since)

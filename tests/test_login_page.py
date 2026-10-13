@@ -10,7 +10,7 @@ import pytest
 
 from test_firebase_auth import (  # noqa: F401  (fixture re-export)
     AUTH_GOOGLE, EMAIL, FB_SECRETS, GATED, PASSWORD, _buttons, _login, _login_page, error_answer, google_env, no_env,
-    ok_password_answer,
+    verified_password_answer,
 )
 from test_streamlit_app import NEW_RECORD, REPO, _html, app  # noqa: F401
 
@@ -67,7 +67,7 @@ def test_no_inline_svg(app, google_env):
 
 
 def test_sign_in_uses_the_existing_firebase_handler(app, google_env):
-    fb = google_env["firebase"](ok_password_answer())
+    fb = google_env["firebase"](verified_password_answer())
     at = app([NEW_RECORD], secrets=GATED, owner=False)
     _login(at)
     assert not _login_page(at) and len(fb.requests) == 1
