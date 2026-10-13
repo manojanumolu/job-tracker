@@ -381,6 +381,19 @@ def render_auth_diag() -> None:
 # Design tokens. Two hand-tuned palettes (dark is designed, not inverted):
 # an indigo-violet primary for intent/actions and a teal "signal" for the
 # product's core promise (fresher roles found, portals healthy).
+
+
+def _briefcase_uri(top: str, bottom: str) -> str:
+    """The loading square's briefcase (Material Symbols "work", Apache 2.0)
+    in a purple→blue gradient, as a CSS url(): inline <svg> doesn't paint in
+    this app's hosting, a CSS background image does."""
+    svg = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><linearGradient id="g" x1="0" y1="0" '
+           f'x2="1" y2="1"><stop offset="0" stop-color="{top}"/><stop offset="1" stop-color="{bottom}"/></linearGradient>'
+           '</defs><path fill="url(#g)" d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 '
+           '2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>')
+    return "url('data:image/svg+xml;base64," + base64.b64encode(svg.encode("utf-8")).decode("ascii") + "')"
+
+
 LIGHT = {
     "bg": "#f4f5fb", "surface": "#ffffff", "surface-2": "#f7f8fc", "raised": "#ffffff", "hover": "#f0f1f8",
     "border": "#e5e7f0", "border-strong": "#d3d6e3",
@@ -415,6 +428,17 @@ LIGHT = {
     "av-drop": "0 6px 12px -6px rgba(36,30,110,.45)",
     # interactive surfaces: a lit hover wash, and the busy bar
     "hover-wash": "linear-gradient(180deg, rgba(255,255,255,.9), rgba(239,237,255,.75))",
+    # the loading square: a purple→blue frame around a briefcase
+    "load-blue": "#3b82f6", "load-hi": "#a89dff",
+    "load-face": "linear-gradient(180deg, #ffffff, #f5f4ff)",
+    "load-glow": "0 12px 28px -14px rgba(91,76,245,.55), 0 2px 6px -2px rgba(36,30,110,.12)",
+    # search fields: a light lavender-blue glass
+    "search-bg": "linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(255,255,255,0) 55%), "
+                 "linear-gradient(135deg, #fcfcff 0%, #f3f1ff 55%, #eef3ff 100%)",
+    "search-border": "rgba(91,76,245,.24)", "search-border-hover": "rgba(91,76,245,.42)",
+    "search-shadow": "inset 0 1px 0 rgba(255,255,255,.95), 0 1px 2px rgba(16,24,40,.04), 0 8px 20px -14px rgba(91,76,245,.38)",
+    "search-shadow-hover": "inset 0 1px 0 rgba(255,255,255,.95), 0 1px 2px rgba(16,24,40,.05), 0 12px 26px -14px rgba(91,76,245,.48)",
+    "search-icon": "#6a5cf0",
 }
 DARK = {
     "bg": "#0b1020", "surface": "#121833", "surface-2": "#0f1530", "raised": "#171e3d", "hover": "#1b2347",
@@ -446,7 +470,20 @@ DARK = {
     "av-gloss": "inset 0 1px 1px rgba(255,255,255,.45), inset 0 -3px 6px rgba(0,0,0,.14)",
     "av-drop": "0 6px 14px -6px rgba(0,0,0,.7)",
     "hover-wash": "linear-gradient(180deg, rgba(124,108,255,.16), rgba(124,108,255,.08))",
+    "load-blue": "#60a5fa", "load-hi": "#d4ceff",
+    "load-face": "linear-gradient(180deg, #1a2148, #131936)",
+    "load-glow": "0 12px 30px -14px rgba(124,108,255,.6), 0 2px 8px -2px rgba(0,0,0,.45)",
+    "search-bg": "linear-gradient(180deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,0) 55%), "
+                 "linear-gradient(135deg, #171e40 0%, #141a3a 55%, #121a38 100%)",
+    "search-border": "rgba(150,138,255,.30)", "search-border-hover": "rgba(150,138,255,.5)",
+    "search-shadow": "inset 0 1px 0 rgba(255,255,255,.07), 0 1px 2px rgba(0,0,0,.35), 0 8px 22px -14px rgba(124,108,255,.45)",
+    "search-shadow-hover": "inset 0 1px 0 rgba(255,255,255,.09), 0 1px 2px rgba(0,0,0,.35), 0 12px 28px -14px rgba(124,108,255,.6)",
+    "search-icon": "#a99dff",
 }
+# the loading square's briefcase, coloured for each theme (built here: the
+# palettes above stay plain literals)
+LIGHT["load-icon"] = _briefcase_uri("#5b4cf5", "#3b82f6")
+DARK["load-icon"] = _briefcase_uri("#a99dff", "#60a5fa")
 TH = DARK if st.session_state.dark_mode else LIGHT
 _root_vars = ":root {" + "".join(f"--{k}:{v};" for k, v in TH.items()) + "}"
 
@@ -1034,6 +1071,25 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 }
 .stTextInput input { font-size: 14px !important; color: var(--text) !important; -webkit-text-fill-color: var(--text); padding: 8px 12px !important; }
 .stTextInput input::placeholder { color: var(--muted) !important; -webkit-text-fill-color: var(--muted); opacity: 1; }
+/* search fields (every "Search…" text input: Home, Jobs, Companies, My jobs):
+   a light lavender-blue glass with a top highlight, a purple-blue hairline
+   and a soft shadow; hover deepens the edge, focus adds the accent ring.
+   Only these inputs — other fields, dropdowns and buttons are unchanged. */
+.stTextInput:has(input[aria-label^="Search"]) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]) {
+  background: var(--search-bg) !important; border: 1px solid var(--search-border) !important; box-shadow: var(--search-shadow) !important;
+  border-radius: var(--r) !important; }
+.stTextInput:has(input[aria-label^="Search"]) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]):hover {
+  border-color: var(--search-border-hover) !important; box-shadow: var(--search-shadow-hover) !important; }
+.stTextInput:has(input[aria-label^="Search"]) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]):focus-within {
+  background: var(--search-bg) !important; border-color: var(--accent) !important;
+  box-shadow: var(--search-shadow), var(--ring), 0 10px 26px -14px var(--accent) !important; }
+.stTextInput:has(input[aria-label^="Search"]) input { font-family: var(--font) !important; font-weight: 500 !important;
+  letter-spacing: -.005em; color: var(--text) !important; -webkit-text-fill-color: var(--text); caret-color: var(--accent); }
+.stTextInput:has(input[aria-label^="Search"]) input::placeholder { font-weight: 400; color: var(--muted) !important; -webkit-text-fill-color: var(--muted); }
+.stTextInput:has(input[aria-label^="Search"]) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])::before { color: var(--search-icon) !important; }
+.stTextInput:has(input[aria-label^="Search"]) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]):focus-within::before { color: var(--accent-text) !important; }
+.stTextInput:has(input[aria-label^="Search"]:disabled) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]) {
+  background: var(--surface-2) !important; border-color: var(--border) !important; box-shadow: none !important; opacity: .7; cursor: not-allowed; }
 .stSelectbox input, .stSelectbox [role="group"] * { font-size: 14px !important; color: var(--text) !important; -webkit-text-fill-color: var(--text); }
 .stSelectbox svg { fill: var(--muted) !important; color: var(--muted) !important; }
 [data-baseweb="select"] * { font-size: 14px !important; color: var(--text) !important; }
@@ -1446,16 +1502,36 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .st-key-set_status .st-key-btn_set_monitoring, .st-key-set_status [data-testid="stElementContainer"]:has(.st-key-btn_set_monitoring) { width: auto !important; }
 
 /* ── loading: only for work that takes a moment ── */
-/* While the app works, a thin purple→teal bar slides along the top of the
-   window. It waits 450 ms first, so a quick page change never flashes it. */
-@keyframes jt-busy-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes jt-busy-slide { from { background-position: -45% 0; } to { background-position: 145% 0; } }
+/* While the app works (Streamlit marks the app element
+   data-test-script-state="running" for every rerun), a small rounded square
+   floats at the top centre: a purple→blue frame on all four sides, a soft
+   highlight travelling clockwise round it, and a briefcase in the middle.
+   It waits 450 ms first, so a quick page change never flashes it, and it
+   never takes a click (pointer-events: none). Everything is one element's
+   background, in layers: the briefcase and the face fill the inside; under
+   them, in the 2px border ring, four short light strips (one per side) and
+   the full purple→blue frame. Only background-position moves. */
+@keyframes jt-busy-in { from { opacity: 0; transform: translateY(-4px) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes jt-busy-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes jt-load-turn {
+  from { background-position: center, 0 0, -90% 0, 100% -90%, 190% 100%, 0 190%, 0 0; }
+  to { background-position: center, 0 0, 190% 0, 100% 190%, -90% 100%, 0 -90%, 0 0; } }
 @keyframes jt-busy-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 @keyframes jt-spin { to { transform: rotate(360deg); } }
-.stApp::after { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 10000; pointer-events: none; opacity: 0;
-  background: linear-gradient(90deg, transparent, var(--accent) 30%, var(--accent-2) 70%, transparent) -45% 0 / 38% 100% no-repeat,
-    color-mix(in srgb, var(--accent) 12%, transparent); }
-.stApp[data-test-script-state="running"]::after { animation: jt-busy-in 220ms ease-out 450ms both, jt-busy-slide 1.15s linear 450ms infinite; }
+.stApp::after { content: ""; position: fixed; top: 14px; left: calc(50% - 26px); width: 52px; height: 52px; box-sizing: border-box;
+  z-index: 10000; pointer-events: none; opacity: 0; border-radius: 15px; border: 2px solid transparent;
+  background:
+    var(--load-icon) center / 24px 24px no-repeat padding-box,
+    var(--load-face) 0 0 / 100% 100% no-repeat padding-box,
+    linear-gradient(90deg, transparent, var(--load-hi), var(--load-blue), transparent) -90% 0 / 45% 6px no-repeat border-box,
+    linear-gradient(180deg, transparent, var(--load-hi), var(--load-blue), transparent) 100% -90% / 6px 45% no-repeat border-box,
+    linear-gradient(270deg, transparent, var(--load-hi), var(--load-blue), transparent) 190% 100% / 45% 6px no-repeat border-box,
+    linear-gradient(0deg, transparent, var(--load-hi), var(--load-blue), transparent) 0 190% / 6px 45% no-repeat border-box,
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 45%, transparent), color-mix(in srgb, var(--load-blue) 45%, transparent)) 0 0 / 100% 100% no-repeat border-box;
+  box-shadow: var(--load-glow); }
+.stApp[data-test-script-state="running"]::after { animation: jt-busy-in 220ms ease-out 450ms both, jt-load-turn 1.6s linear 450ms infinite; }
+/* phones: the top strip is the page navigation, so the square sits low instead */
+@media (max-width: 767px) { .stApp::after { top: auto; bottom: 22px; } }
 .stApp[data-test-script-state="running"] { cursor: progress; }
 /* the button that was just pressed shows that its work is under way:
    Refresh / Reload spin their icon at once, any other button's label
@@ -1475,9 +1551,11 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .jt-skel p .ms { animation: jt-spin 1.2s linear infinite; color: var(--accent-text); }
 @media (max-width: 767px) { .jt-skel .row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (prefers-reduced-motion: reduce) {
-  /* the bar appears (still after the pause) but stays still: a full, soft line */
-  .stApp[data-test-script-state="running"]::after { animation: jt-busy-in 1ms linear 450ms both !important;
-    background: color-mix(in srgb, var(--accent) 55%, transparent) !important; }
+  /* the bar appears (still after the pause) but stays still: the square's full
+     purple→blue frame and the briefcase, with no travelling highlight */
+  .stApp[data-test-script-state="running"]::after { animation: jt-busy-fade 1ms linear 450ms both !important;
+    background: var(--load-icon) center / 24px 24px no-repeat padding-box, var(--load-face) padding-box,
+      linear-gradient(135deg, var(--accent), var(--load-blue)) border-box !important; }
   .stApp[data-test-script-state="running"] [data-testid^="stBaseButton"]:focus > div,
   .stApp[data-test-script-state="running"] [data-testid="stIconMaterial"],
   .stApp[data-test-script-state="running"] [class*="st-key-av_pick_"] button::before, .jt-skel i, .jt-skel p .ms { animation: none !important; }
