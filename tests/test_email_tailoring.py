@@ -389,7 +389,7 @@ def test_m_n_the_header_shows_the_first_name_and_admin_only_for_admins(app, goog
     google_env["firebase"](ok_google_answer())
     google_env["set_user"](FakeUser(token=_fresh_google_token(), name="Manoj Anumolu"))
     at = app([NEW_RECORD], secrets=GATED, owner=False)
-    label = next(p.proto.popover.label for p in at.get("popover"))
+    label = next(p.proto.popover.label for p in at.get("popover") if p.proto.popover.label != "More")   # the account menu
     assert label == ("Manoj **ADMIN**" if admin else "Manoj")                 # first name only in the header
     html = _html(at)
     assert "Manoj Anumolu" in html and EMAIL.lower() in html                   # full name + email inside the menu

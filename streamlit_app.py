@@ -150,6 +150,7 @@ if "page" not in st.session_state or (
     st.session_state.confirm_remove = None
     if "dark_mode" in st.session_state:
         st.session_state.dark_mode = qp.get("theme") == "dark"
+    st.session_state.pop("nav_collapsed", None)       # re-read from ?menu= once signed in (below)
 if "dark_mode" not in st.session_state:
     # the theme lives in the URL (?theme=dark) so it survives reloads/bookmarks
     st.session_state.dark_mode = st.query_params.get("theme") == "dark"
@@ -1376,7 +1377,36 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   .checks { grid-template-columns: minmax(0, 1fr); }
   .add-steps { grid-template-columns: minmax(0, 1fr); }
   .st-key-add_form, .st-key-email_form, .st-key-test_panel, [class*="st-key-set_"], .st-key-job_main, .st-key-job_side, .st-key-co_side, .st-key-empty, .st-key-mail_status { padding: 18px 16px !important; }
-  .jt-toast { left: 16px; right: 16px; bottom: 16px; max-width: none; }
+  /* Streamlit Community Cloud draws its own floating badges at the bottom
+     right of the browser window, outside this app's frame (the app can't
+     move or hide them): toasts show at the top instead, and the page ends
+     with room to scroll its last buttons clear of the badges */
+  .jt-toast { left: 16px; right: 16px; top: 74px; bottom: auto; max-width: none; }
+  [data-testid="stMainBlockContainer"], .block-container { padding-bottom: 104px !important; }
+  /* the hero's three status chips: two share a line instead of one each,
+     so Refresh / Run check sit higher on the first screen */
+  .hero-status { gap: 6px; margin-top: 14px; }
+  .hero-status .chip { font-size: 12.5px; padding: 4px 9px; gap: 5px; }
+  .hero-status .chip .ms { font-size: 15px; }
+  /* each tab is tappable across its whole column, not just its label
+     (Streamlit sizes a button's containers to the button's content) */
+  .st-key-mnav [data-testid="stColumn"] > [data-testid="stVerticalBlock"] > *, .st-key-mnav [data-testid="stElementContainer"],
+  .st-key-mnav .stButton, .st-key-mnav [data-testid="stPopover"] { width: 100% !important; max-width: none !important; }
+  /* "More" (an admin's Monitor and Email): the same tab look as the others */
+  .st-key-mob_more_wrap { width: 100% !important; align-items: stretch !important; }
+  .st-key-mob_more_wrap > *, .st-key-mob_more_wrap [data-testid="stPopover"], .st-key-mob_more_wrap [data-testid="stPopover"] > div,
+  .st-key-mob_more_wrap [data-testid="stPopover"] > div > div { width: 100% !important; max-width: none !important; }
+  .st-key-mob_more_wrap [data-testid="stPopoverButton"] { width: 100% !important; border: none !important; background: transparent !important;
+    box-shadow: none !important; min-height: 52px !important; padding: 4px 0 !important; color: var(--text-2) !important; justify-content: center !important; }
+  .st-key-mob_more_wrap [data-testid="stPopoverButton"] > div > div:first-child > span { flex-direction: column !important; align-items: center !important; gap: 3px !important; }
+  .st-key-mob_more_wrap [data-testid="stPopoverButton"] > div > div:nth-child(2) { display: none !important; }   /* the chevron */
+  .st-key-mob_more_wrap [data-testid="stPopoverButton"] [data-testid="stIconMaterial"] { font-size: 20px !important; margin: 0 !important; padding: 2px 12px; border-radius: 999px; }
+  .st-key-mob_more_wrap [data-testid="stPopoverButton"] p { font-size: 10.5px !important; line-height: 13px !important; font-weight: 600 !important; white-space: nowrap; }
+  /* the More menu's choices: a compact list, left aligned */
+  :is(.st-key-mob_monitoring, .st-key-mob_email) [data-testid^="stBaseButton"] { justify-content: flex-start !important; min-height: 44px !important;
+    padding: 0 12px !important; color: var(--text) !important; }
+  :is(.st-key-mob_monitoring, .st-key-mob_email) [data-testid^="stBaseButton"] > div { justify-content: flex-start !important; gap: 10px !important; }
+  :is(.st-key-mob_monitoring, .st-key-mob_email) p { font-size: 15px !important; font-weight: 600 !important; }
 }
 @media (max-width: 360px) {
   /* size each destination to its label so "Companies" is never cut off */
@@ -1396,6 +1426,18 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 /* ── account menu, top right ── */
 .st-key-acct_bar { flex-direction: row !important; justify-content: flex-end; margin-bottom: -8px; position: relative; z-index: 6; }
 .st-key-acct_bar > div { width: auto !important; flex: 0 0 auto !important; }
+/* the menu button (laptops and desktops) opens / closes the left navigation:
+   at the left of the top bar, an icon; its label stays for screen readers */
+.st-key-acct_bar { align-items: center; }
+.st-key-acct_bar > [data-testid="stLayoutWrapper"]:has(> .st-key-nav_toggle), .st-key-acct_bar > .st-key-nav_toggle { margin-right: auto !important; }
+.st-key-btn_nav_toggle [data-testid^="stBaseButton"] { width: 42px !important; height: 42px !important; min-height: 42px !important; padding: 0 !important;
+  border-radius: 12px !important; justify-content: center !important; }
+.st-key-btn_nav_toggle [data-testid^="stBaseButton"] > div { justify-content: center !important; gap: 0 !important; }
+.st-key-btn_nav_toggle [data-testid="stIconMaterial"] { font-size: 22px !important; margin: 0 !important; color: var(--text-2); }
+.st-key-btn_nav_toggle [data-testid="stMarkdownContainer"], .st-key-btn_nav_toggle [data-testid="stMarkdownContainer"] p {
+  position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important; white-space: nowrap !important; margin: -1px !important; padding: 0 !important; border: 0 !important; }
+@media (max-width: 767px) { .st-key-nav_toggle { display: none !important; } }
 /* the compact control: avatar · first name · ADMIN · chevron — one glossy pill.
    The avatar is its own circle: a hairline-edged tile, a gap in the pill's
    colour and a thin accent ring, clear of the pill's edge on every side. */
@@ -1917,6 +1959,29 @@ def _source_label(c: dict) -> str:
         return "Playwright (headless browser)"
 
 
+_ACTIVE_RUN_STATES = {"queued", "in_progress", "waiting", "requested", "pending"}
+
+
+def _active_check_run(workflow) -> str | None:
+    """How long ago the newest Check Jobs run that is still queued or running
+    started ("2 min ago"), or None when none is. One request (the newest page
+    of runs). If GitHub can't tell us, None: Run check then works exactly as
+    before (the workflow's concurrency group still never overlaps two runs)."""
+    try:
+        for i, run in enumerate(workflow.get_runs()):
+            if i >= 10:
+                break
+            if getattr(run, "status", "") in _ACTIVE_RUN_STATES:
+                started = getattr(run, "run_started_at", None) or getattr(run, "created_at", None)
+                if isinstance(started, datetime):
+                    started = started if started.tzinfo else started.replace(tzinfo=timezone.utc)
+                    return _ago(started, datetime.now(timezone.utc))
+                return "just now"
+    except Exception as e:
+        log.warning("could not list Check Jobs runs: %s", type(e).__name__)
+    return None
+
+
 def _trigger_scrape() -> tuple[bool, str]:
     """Ask GitHub Actions to run check_jobs.yml right now (workflow_dispatch).
     Owner only, and at most once per cooldown for the whole app."""
@@ -1931,8 +1996,15 @@ def _trigger_scrape() -> tuple[bool, str]:
         # lookup and the dispatch reach GitHub (two round trips, not three)
         repo = config_store._get_repo(token)
         workflow = repo.get_workflow("check_jobs.yml")
+        running = _active_check_run(workflow)
+        if running is not None:
+            # a run is queued or in progress (a scan, or a scheduled check that
+            # may start one): a second dispatch would scan everything again
+            return False, (f"A check is already running on GitHub Actions (started {running}). Its jobs appear here "
+                           "when it finishes — use Refresh then. No second check was started.")
         if workflow.create_dispatch(ref="main"):
-            return True, "Check started — it takes a few minutes. Use Refresh afterwards to see new jobs."
+            return True, ("Check started on GitHub Actions. A full scan takes about 5–8 minutes and keeps running "
+                          "after this message — use Refresh afterwards to see new jobs.")
         return False, "GitHub declined to start a new check."
     except Exception as e:
         log.warning("workflow dispatch failed: %s", e)
@@ -1948,6 +2020,7 @@ def _trigger_scrape() -> tuple[bool, str]:
 # the URL, a cookie or a widget — and expires after OWNER_SESSION_S.
 _CHECK_COOLDOWN_S = 300
 _REFRESH_COOLDOWN_S = 15
+_TEST_EMAIL_COOLDOWN_S = 30
 
 
 @st.cache_resource(show_spinner=False)
@@ -1955,6 +2028,8 @@ def _guards() -> dict:
     """Limits shared by every session of this server process."""
     return {"signin": AttemptLimiter(), "check": Cooldown(_CHECK_COOLDOWN_S),
             "refresh": Cooldown(_REFRESH_COOLDOWN_S),
+            # one test email per 30 s for the whole app (a double click sends one)
+            "test_email": Cooldown(_TEST_EMAIL_COOLDOWN_S),
             # email sign-in failures, per address (one address's failures
             # never lock anyone else out)
             "firebase_signin": AccountAttemptLimiter(),
@@ -3329,26 +3404,75 @@ def nav_label(key: str) -> str:
     return "My companies" if key == "companies" and MEMBER_VIEW else PAGES[key][0]
 
 
-with st.sidebar:
-    logo = _logo_data_uri()
-    st.html(f"""<div class="brand"><div class="mark {overall[0] if not MEMBER_VIEW else 'healthy'}">{f'<img src="{logo}" alt="">' if logo else ''}</div>
-      <div><div class="n">Fresher Job Tracker</div><div class="s">Fresher opportunities</div></div></div>""")
-    for gi, (group, items) in enumerate(nav_groups()):
-        st.html(f'<div class="nav-group{" first" if gi == 0 else ""}">{group}</div>')
-        for key in items:
-            st.button(nav_label(key), key=f"nav_{key}", icon=PAGES[key][1], type="tertiary", use_container_width=True,
-                      on_click=go, args=(key,))
+def _toggle_nav() -> None:
+    st.session_state.nav_collapsed = not st.session_state.get("nav_collapsed", False)
+
+
+def nav_toggle() -> None:
+    """The menu button (laptops and desktops; phones use the top bar): opens
+    and closes the left navigation. A real button — keyboard reachable, its
+    label says what it does and is read out by screen readers (shown as an
+    icon). Closed, nothing is drawn in st.sidebar, so Streamlit leaves the
+    sidebar out and the page takes the full width; the page, filters and
+    scroll position stay as they are."""
+    collapsed = st.session_state.get("nav_collapsed", False)
+    label = "Show navigation" if collapsed else "Hide navigation"
+    with st.container(key="nav_toggle"):
+        st.button(label, key="btn_nav_toggle", icon=":material/menu:", help=label, on_click=_toggle_nav)
+
+
+# the desktop navigation's open/closed state lives in the URL too (?menu=hidden);
+# read only here, past the sign-in gate, so a signed-out tab holds none of it
+if "nav_collapsed" not in st.session_state:
+    st.session_state.nav_collapsed = st.query_params.get("menu") == "hidden"
+if not st.session_state.nav_collapsed:
+    with st.sidebar:
+        logo = _logo_data_uri()
+        st.html(f"""<div class="brand"><div class="mark {overall[0] if not MEMBER_VIEW else 'healthy'}">{f'<img src="{logo}" alt="">' if logo else ''}</div>
+          <div><div class="n">Fresher Job Tracker</div><div class="s">Fresher opportunities</div></div></div>""")
+        for gi, (group, items) in enumerate(nav_groups()):
+            st.html(f'<div class="nav-group{" first" if gi == 0 else ""}">{group}</div>')
+            for key in items:
+                st.button(nav_label(key), key=f"nav_{key}", icon=PAGES[key][1], type="tertiary", use_container_width=True,
+                          on_click=go, args=(key,))
     # (the scanner's health and last scan are on Home and, for admins, under
     # Settings → Tracker status — the rail holds navigation only)
 
 # phones: the sidebar is hidden and this compact bar takes over (CSS decides)
 _MOB_LABELS = {"email": "Email", "monitoring": "Monitor", "companies": "Companies", "alerts": "Alerts"}
+# At most five slots, so each stays a comfortable tap target at 360 px: with
+# more destinations (an admin's six), the admin tools go into a "More" menu
+# as the fifth slot — every page stays one tap + one choice away.
+_MOB_MAX = 5
+_MOB_OVERFLOW = ("monitoring", "email")
+
+
+def _mob_go(page: str) -> None:
+    """A destination chosen from the phone bar's More menu: go there and draw
+    the menu closed on the next page (a new key, as the account menu does)."""
+    go(page)
+    st.session_state._mob_more_n = st.session_state.get("_mob_more_n", 0) + 1
+
+
 with st.container(key="mnav"):
     _mob = [k for _, items in nav_groups() for k in items]
-    cols = st.columns(len(_mob))
+    _more = [k for k in _mob if k in _MOB_OVERFLOW] if len(_mob) > _MOB_MAX else []
+    _mob = [k for k in _mob if k not in _more]
+    cols = st.columns(len(_mob) + (1 if _more else 0))
     for col, key in zip(cols, _mob):
         with col:
             st.button(_MOB_LABELS.get(key, nav_label(key)), key=f"mob_{key}", icon=PAGES[key][1], on_click=go, args=(key,))
+    if _more:
+        with cols[-1], st.container(key="mob_more_wrap"):
+            with st.popover("More", icon=":material/more_horiz:", key=f"mob_more_{st.session_state.get('_mob_more_n', 0)}",
+                            help="More pages: " + ", ".join(PAGES[k][0] for k in _more)):
+                for key in _more:
+                    st.button(PAGES[key][0], key=f"mob_{key}", icon=PAGES[key][1], type="tertiary",
+                              use_container_width=True, on_click=_mob_go, args=(key,))
+        if current in _more:          # the page shown lives in More: light up its trigger
+            st.html("<style>.st-key-mob_more_wrap [data-testid='stPopoverButton'] {color: var(--accent-text) !important;}"
+                    ".st-key-mob_more_wrap [data-testid='stPopoverButton'] [data-testid='stIconMaterial'] "
+                    "{background: var(--accent-soft); color: var(--accent-text) !important;}</style>")
 
 
 # ── the account, top right ───────────────────────────────────────────────────
@@ -3374,6 +3498,7 @@ def account_menu() -> None:
     else:
         st.html(f'<style>{trigger} {{ content: "{_me_initial()}"; }}</style>')
     with st.container(key="acct_bar"):
+        nav_toggle()
         # a new key after an item is chosen: the next page draws the menu closed
         # (no extra round trip — the popover's own state isn't tracked)
         with st.popover(label, key=f"acct_menu_{st.session_state.get('_acct_menu_n', 0)}"):
@@ -3399,6 +3524,9 @@ def account_menu() -> None:
 
 if ACCOUNT:
     account_menu()
+else:
+    with st.container(key="acct_bar"):          # no sign-in (legacy mode): the menu button alone
+        nav_toggle()
 
 # A new destination opens at its top. Streamlit keeps the main area's scroll
 # position across reruns, so a page reached from far down another page
@@ -4537,6 +4665,41 @@ def email_tailoring_card() -> None:
         st.html(f'<p class="note tl-note">{_ms("info", "s16")}<span>{" ".join(notes)}</span></p>')
 
 
+def _send_test_click() -> None:
+    """Send test email (a callback: one script run per click, not two).
+    Owner only, and only ever to the configured recipient — never to an
+    address typed in here, so the system mailbox can't be used to send mail
+    to anyone else. At most one test email per cooldown for the whole app,
+    so a double click (or a second tab) never sends two. It only sends one
+    email: no scan, nothing else is triggered."""
+    stamp = _ist(datetime.now(timezone.utc))
+    if not owner_only("send test emails"):
+        return
+    recipient, _ = alert_recipient(settings)
+    if not recipient:
+        toast("No alert recipient is set — see Recipient above", "error")
+        return
+    cooldown = _guards()["test_email"]
+    if not cooldown.try_start():
+        toast(f"A test email was just sent — wait {int(cooldown.remaining()) + 1} s before sending another", "error")
+        return
+    try:
+        # re-checks the owner sign-in itself and sends only to the configured recipient
+        send_test_email(st.session_state, settings)
+    except OwnerRequired:
+        cooldown.cancel()
+        owner_only("send test emails")
+    except Exception as ex:
+        cooldown.cancel()                   # nothing was sent: a retry may go at once
+        log.warning("test mail failed: %s", type(ex).__name__)
+        st.session_state.test_status = (False, stamp)
+        toast("Email isn't configured for this app (Gmail address / app password missing)." if "GMAIL_" in str(ex)
+              else "Couldn't send the test email. Check the Gmail app password and try again.", "error")
+    else:
+        st.session_state.test_status = (True, stamp)
+        toast(f"Test email sent — check {recipient}", "success")
+
+
 def page_email():
     notified = [j for j in all_records if j.get("notified")]
     # when the email actually went out (older records only know when the job was found)
@@ -4594,31 +4757,8 @@ def page_email():
             st.html(f'<div><h2 class="section-title">{_ms("send")}Test delivery</h2><p class="section-sub">Send a sample alert to the recipient above to confirm emails arrive. '
                     f'<span class="num" style="color:var({"--green" if ts and ts[0] else "--red" if ts else "--muted"});">{status}</span></p></div>')
         with t2:
-            test = st.button("Send test email", key="btn_test", icon=":material/send:", use_container_width=True)
-    if test:
-        stamp = _ist(datetime.now(timezone.utc))
-        # owner only, and only ever to the configured recipient — never to an
-        # address typed in here, so the system mailbox can't be used to send
-        # mail to anyone else
-        if not owner_only("send test emails"):
-            pass
-        elif not recipient:
-            toast("No alert recipient is set — see Recipient above", "error")
-        else:
-            try:
-                # re-checks the owner sign-in itself and sends only to the configured recipient
-                send_test_email(st.session_state, settings)
-            except OwnerRequired:
-                owner_only("send test emails")
-            except Exception as ex:
-                log.warning("test mail failed: %s", type(ex).__name__)
-                st.session_state.test_status = (False, stamp)
-                toast("Email isn't configured for this app (Gmail address / app password missing)." if "GMAIL_" in str(ex)
-                      else "Couldn't send the test email. Check the Gmail app password and try again.", "error")
-            else:
-                st.session_state.test_status = (True, stamp)
-                toast(f"Test email sent — check {recipient}", "success")
-        st.rerun()
+            st.button("Send test email", key="btn_test", icon=":material/send:", use_container_width=True,
+                      on_click=_send_test_click)
 
     with st.container(key="set_behavior"):
         steps = [("travel_explore", "A check runs", f"Scheduled {interval_label(SCAN_HOURS).lower()} (GitHub often starts runs later). Every tracked portal is scanned."),
@@ -5405,6 +5545,8 @@ if st.session_state.company_view:
     want["view"] = st.session_state.company_view
 if st.session_state.dark_mode:
     want["theme"] = "dark"
+if st.session_state.nav_collapsed:
+    want["menu"] = "hidden"
 if dict(st.query_params) != want:
     st.query_params.from_dict(want)
 st.session_state._url_written = want   # a later mismatch means browser Back/Forward

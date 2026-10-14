@@ -141,6 +141,17 @@ class MemoryBackend:
         with self._lock:
             self.docs.pop(path, None)
 
+    def set_many(self, docs: dict[str, dict]) -> None:
+        """Several whole-document writes in one go (Firestore: one batch)."""
+        with self._lock:
+            for path, data in docs.items():
+                self.docs[path] = json.loads(json.dumps(data))
+
+    def delete_many(self, paths: Iterable[str]) -> None:
+        with self._lock:
+            for path in paths:
+                self.docs.pop(path, None)
+
     def list(self, collection: str) -> dict[str, dict]:
         prefix = collection.rstrip("/") + "/"
         with self._lock:
@@ -201,6 +212,28 @@ class FirestoreBackend:
 
     def delete(self, path):
         self.client.document(path).delete()
+
+    # Firestore commits at most 500 writes per batch
+    _BATCH = 500
+
+    def set_many(self, docs):
+        """Whole-document writes as batched commits: one round trip per 500
+        documents instead of one per document (dismissing 27 jobs was 27
+        sequential round trips)."""
+        items = list(docs.items())
+        for i in range(0, len(items), self._BATCH):
+            batch = self.client.batch()
+            for path, data in items[i:i + self._BATCH]:
+                batch.set(self.client.document(path), data)
+            batch.commit()
+
+    def delete_many(self, paths):
+        paths = list(paths)
+        for i in range(0, len(paths), self._BATCH):
+            batch = self.client.batch()
+            for path in paths[i:i + self._BATCH]:
+                batch.delete(self.client.document(path))
+            batch.commit()
 
     def list(self, collection):
         return {s.id: s.to_dict() for s in self.client.collection(collection).stream()}
@@ -404,15 +437,22 @@ class UserData:
     @_guard
     def dismiss(self, job_keys: Iterable[str], now: float | None = None) -> None:
         stamp = _now_iso(now)
-        for key in job_keys:
-            if isinstance(key, str) and key:
-                self._backend.set(f"{self._root}/dismissed/{_hash_id(key)}", {"job_key": key, "dismissed_at": stamp})
+        docs = {f"{self._root}/dismissed/{_hash_id(key)}": {"job_key": key, "dismissed_at": stamp}
+                for key in job_keys if isinstance(key, str) and key}
+        if len(docs) > 1 and hasattr(self._backend, "set_many"):
+            self._backend.set_many(docs)              # "Dismiss all": one batched write, not one per job
+        else:
+            for path, data in docs.items():
+                self._backend.set(path, data)
 
     @_guard
     def restore(self, job_keys: Iterable[str]) -> None:
-        for key in job_keys:
-            if isinstance(key, str) and key:
-                self._backend.delete(f"{self._root}/dismissed/{_hash_id(key)}")
+        paths = [f"{self._root}/dismissed/{_hash_id(key)}" for key in job_keys if isinstance(key, str) and key]
+        if len(paths) > 1 and hasattr(self._backend, "delete_many"):
+            self._backend.delete_many(paths)
+        else:
+            for path in paths:
+                self._backend.delete(path)
 
     # -- notification preferences --------------------------------------------
     @_guard

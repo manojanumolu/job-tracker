@@ -7,6 +7,7 @@ import smtplib
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from html import escape
 from urllib.parse import urlparse
@@ -60,7 +61,8 @@ TEXT = "#17171a"
 MUTED = "#6c6c76"
 FAINT = "#9a9aa4"
 BORDER = "#eaeaec"
-BG = "#f6f6f7"
+BG = "#f4f5f8"
+PANEL = "#f7f8fb"             # the soft details panel inside a card
 FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
 
 # category -> (label, text colour, background)
@@ -160,9 +162,31 @@ def _subject(jobs: list[dict]) -> str:
 def _field_row(label: str, value: str) -> str:
     return f"""
               <tr>
-                <td style="padding:3px 0;width:92px;vertical-align:top;font:600 12px/1.5 {FONT};color:{FAINT};text-transform:uppercase;letter-spacing:.04em;">{escape(label)}</td>
-                <td style="padding:3px 0;vertical-align:top;font:400 14px/1.5 {FONT};color:{TEXT};">{escape(value)}</td>
+                <td style="padding:4px 12px 4px 0;width:86px;vertical-align:top;font:600 11px/1.7 {FONT};color:{FAINT};text-transform:uppercase;letter-spacing:.05em;">{escape(label)}</td>
+                <td style="padding:4px 0;vertical-align:top;font:400 14px/1.5 {FONT};color:{TEXT};word-break:break-word;">{escape(value)}</td>
               </tr>"""
+
+
+_IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def _ist_label(dt: datetime) -> str:
+    """"14 Oct 2026, 3:10 PM IST" (no zero padding, on every platform)."""
+    t = dt.astimezone(_IST)
+    return f"{t.day} {t:%b %Y}, {t.hour % 12 or 12}:{t:%M} {'AM' if t.hour < 12 else 'PM'} IST"
+
+
+def _found_label(job: dict) -> str:
+    """When the tracker first found the job (its record's first_seen), in IST,
+    or "" when the record doesn't say (older records): never a guess."""
+    value = job.get("first_seen")
+    if not isinstance(value, str) or not value:
+        return ""
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return ""
+    return _ist_label(dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc))
 
 
 # ---------------------------------------------------------------------------
@@ -219,55 +243,67 @@ def _company_mark(company: str, logos: dict, tracked: list[str]) -> str:
 
 
 def _job_card(job: dict, index: int, total: int, logos: dict | None = None, tracked: list[str] | None = None) -> str:
+    """One job as a card: the employer (logo or initials, name) with the
+    category badge, the title, a details panel (location, why it qualifies,
+    when it was found) and the "View job" button with the site it opens."""
     title = _clip(job.get("title") or "Untitled posting", _MAX_TITLE)
     company = _clip(job.get("company") or "", 80)
     location = _clip(job.get("location") or "", 120)
     label, fg, bg = _CATEGORY_BADGES.get(job.get("category") or "", _DEFAULT_BADGE)
     url = safe_url(job.get("url", ""))
+    found = _found_label(job)
 
-    rows = ""
-    rows += _field_row("Location", location or "See posting")
-    rows += _field_row("Why", friendly_reason(job))
-
-    counter = (
-        f'<span style="font:600 11px/1 {FONT};color:{FAINT};letter-spacing:.04em;">'
-        f"JOB {index} OF {total}</span>&nbsp;&nbsp;"
-        if total > 1 else ""
-    )
-    # "bulletproof" button: a bgcolor'd table cell works in Outlook as well
-    # as Gmail/Apple Mail, and the whole cell is the link target
-    button = (
-        f"""
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;">
-              <tr>
-                <td bgcolor="{ACCENT}" style="border-radius:8px;">
-                  <a href="{escape(url, quote=True)}" target="_blank" rel="noopener"
-                     style="display:inline-block;padding:11px 22px;font:600 14px/1 {FONT};color:#ffffff;text-decoration:none;border-radius:8px;">View job&nbsp;&rarr;</a>
-                </td>
-              </tr>
-            </table>"""
-        if url else
-        f'<p style="margin:16px 0 0;font:400 13px/1.5 {FONT};color:{MUTED};">Open the company’s career page to apply.</p>'
-    )
-    # the employer: logo (or initials) beside its name
-    head = (f"""
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px;">
+    badge = (f'<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:{bg};color:{fg};'
+             f'font:700 11px/1.3 {FONT};letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;">{escape(label)}</span>')
+    # the employer, with the badge on the same line (or the badge alone)
+    if company:
+        head = f"""
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                     <tr>
                       <td width="40" style="width:40px;padding:0 12px 0 0;vertical-align:middle;">{_company_mark(company, logos or {}, tracked or [])}</td>
                       <td style="vertical-align:middle;font:700 15px/1.35 {FONT};color:{TEXT};word-break:break-word;">{escape(company)}</td>
+                      <td align="right" style="vertical-align:middle;padding:0 0 0 10px;">{badge}</td>
                     </tr>
-                  </table>""" if company else "")
+                  </table>"""
+    else:
+        head = f'<div>{badge}</div>'
+    counter = (f'<p style="margin:16px 0 4px;font:600 11px/1.4 {FONT};color:{FAINT};letter-spacing:.06em;">'
+               f'JOB {index} OF {total}</p>' if total > 1 else "")
+    rows = _field_row("Location", location or "See posting")
+    rows += _field_row("Eligibility", friendly_reason(job))
+    if found:
+        rows += _field_row("Found", found)
+    # "bulletproof" button: a bgcolor'd table cell works in Outlook as well
+    # as Gmail/Apple Mail, and the whole cell is the link target
+    if url:
+        host = (urlparse(url).hostname or "").removeprefix("www.")
+        action = f"""
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:18px;">
+                    <tr>
+                      <td bgcolor="{ACCENT}" style="border-radius:8px;">
+                        <a href="{escape(url, quote=True)}" target="_blank" rel="noopener"
+                           style="display:inline-block;padding:11px 20px;font:600 14px/1 {FONT};color:#ffffff;text-decoration:none;border-radius:8px;">View job&nbsp;&rarr;</a>
+                      </td>
+                      <td style="padding:0 0 0 12px;font:400 12px/1.4 {FONT};color:{FAINT};word-break:break-all;">{escape(_clip(host, 60))}</td>
+                    </tr>
+                  </table>"""
+    else:
+        action = f'<p style="margin:18px 0 0;font:400 13px/1.5 {FONT};color:{MUTED};">Open the company’s career page to apply.</p>'
     return f"""
         <tr>
-          <td style="padding:0 0 16px;">
+          <td style="padding:0 0 14px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-                   style="background:#ffffff;border:1px solid {BORDER};border-radius:12px;">
+                   style="background:#ffffff;border:1px solid {BORDER};border-radius:14px;">
               <tr>
-                <td style="padding:20px 22px;">{head}
-                  <div style="margin:0 0 8px;">{counter}<span style="display:inline-block;padding:3px 9px;border-radius:999px;background:{bg};color:{fg};font:700 11px/1.4 {FONT};letter-spacing:.03em;text-transform:uppercase;">{escape(label)}</span></div>
-                  <h2 style="margin:0 0 12px;font:700 18px/1.35 {FONT};color:{TEXT};word-break:break-word;">{escape(title)}</h2>
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;">{rows}
-                  </table>{button}
+                <td class="jt-pad" style="padding:20px 22px 22px;">{head}{counter}
+                  <h2 style="margin:{'0' if counter else '14px'} 0 0;font:700 18px/1.4 {FONT};color:{TEXT};word-break:break-word;overflow-wrap:anywhere;">{escape(title)}</h2>
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                         style="margin-top:14px;background:{PANEL};border-radius:10px;">
+                    <tr><td style="padding:10px 14px;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">{rows}
+                      </table>
+                    </td></tr>
+                  </table>{action}
                 </td>
               </tr>
             </table>
@@ -285,9 +321,56 @@ def _job_text(job: dict, index: int, total: int) -> str:
         lines.append(f"Company:  {_clip(job['company'], 80)}")
     lines.append(f"Location: {_clip(job.get('location') or '', 120) or 'See posting'}")
     lines.append(f"Why:      {friendly_reason(job)}")
+    found = _found_label(job)
+    if found:
+        lines.append(f"Found:    {found}")
     url = safe_url(job.get("url", ""))
     lines.append(f"View job: {url}" if url else "Open the company's career page to apply.")
     return "\n".join(lines)
+
+
+def _page(title: str, preheader: str, body: str) -> str:
+    """The shared frame of every email: a light page, a 600 px column (fluid
+    below that), the brand line on top. Inline styles throughout; the one
+    <style> block only tightens padding on small screens."""
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<title>{escape(title)}</title>
+<style>
+@media only screen and (max-width: 480px) {{
+  .jt-pad {{ padding: 16px !important; }}
+  .jt-outer {{ padding: 16px 8px !important; }}
+  .jt-h1 {{ font-size: 20px !important; }}
+}}
+</style>
+</head>
+<body style="margin:0;padding:0;background:{BG};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:{BG};">{escape(preheader)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{BG};">
+  <tr>
+    <td class="jt-outer" align="center" style="padding:28px 12px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;">
+        <tr>
+          <td style="padding:0 2px 18px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td width="28" height="28" align="center" valign="middle" bgcolor="{ACCENT}"
+                    style="width:28px;height:28px;border-radius:8px;font:800 12px/28px {FONT};color:#ffffff;text-align:center;">FJ</td>
+                <td style="padding:0 0 0 10px;font:700 14px/1.2 {FONT};color:{TEXT};">Fresher Job Tracker</td>
+              </tr>
+            </table>
+          </td>
+        </tr>{body}
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>"""
 
 
 def build_alert_email(jobs: list[dict], logos: dict | None = None,
@@ -301,70 +384,93 @@ def build_alert_email(jobs: list[dict], logos: dict | None = None,
         f"{_clip(j.get('title') or '', 60)}" + (f" at {j['company']}" if j.get("company") else "")
         for j in jobs[:3]
     )
+    companies = []
+    for j in jobs:
+        c = _clip(j.get("company") or "", 40)
+        if c and c not in companies:
+            companies.append(c)
+    shown = companies[:4] + ([f"{len(companies) - 4} more"] if len(companies) > 4 else [])
+    source = (("From " + (", ".join(shown[:-1]) + " and " + shown[-1] if len(shown) > 1 else shown[0]) + ". ")
+              if shown else "")
     cards = "".join(_job_card(j, i, total, logos, tracked) for i, j in enumerate(jobs, 1))
-    html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="x-apple-disable-message-reformatting">
-<title>{escape(heading)}</title>
-</head>
-<body style="margin:0;padding:0;background:{BG};">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:{BG};">{escape(preheader)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{BG};">
-  <tr>
-    <td align="center" style="padding:24px 12px;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;">
+    body = f"""
         <tr>
-          <td style="padding:0 4px 18px;">
-            <p style="margin:0;font:700 12px/1.4 {FONT};color:{ACCENT};letter-spacing:.06em;text-transform:uppercase;">🎯 Fresher Job Tracker</p>
-            <h1 style="margin:4px 0 0;font:700 22px/1.3 {FONT};color:{TEXT};">{escape(heading)}</h1>
+          <td style="padding:0 2px 18px;">
+            <p style="margin:0;font:700 11px/1.4 {FONT};color:{ACCENT};letter-spacing:.08em;text-transform:uppercase;">New job alert</p>
+            <h1 class="jt-h1" style="margin:4px 0 6px;font:700 24px/1.3 {FONT};color:{TEXT};">{escape(heading)}</h1>
+            <p style="margin:0;font:400 14px/1.55 {FONT};color:{MUTED};">{escape(source)}Fresher and entry-level roles in India, each checked against its own posting before it reached you.</p>
           </td>
         </tr>{cards}
         <tr>
-          <td style="padding:4px 4px 0;font:400 12px/1.5 {FONT};color:{FAINT};">
-            Fresher Job Tracker &middot; Automated alert. You get this because your address is set as the alert recipient.
+          <td style="padding:10px 2px 0;border-top:1px solid {BORDER};font:400 12px/1.6 {FONT};color:{FAINT};">
+            You’re receiving this because job alerts are turned on for this address. Each job is emailed once, and dismissed jobs are never sent.
+            <span style="display:block;margin-top:4px;">Fresher Job Tracker &middot; automated alert</span>
           </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-</table>
-</body>
-</html>"""
+        </tr>"""
     divider = "\n\n" + "-" * 40 + "\n\n"
     text = (
-        f"{heading.upper()}\n\n"
+        f"{heading.upper()}\n"
+        + (f"{source.strip()}\n" if source else "")
+        + "\n"
         + divider.join(_job_text(j, i, total) for i, j in enumerate(jobs, 1))
-        + "\n\n--\nFresher Job Tracker · Automated alert\n"
+        + "\n\n--\nYou're receiving this because job alerts are turned on for this address.\n"
+        + "Each job is emailed once, and dismissed jobs are never sent.\nFresher Job Tracker · automated alert\n"
     )
-    return _subject(jobs), html, text
+    return _subject(jobs), _page(heading, preheader, body), text
 
 
-def build_test_email() -> tuple[str, str, str]:
+def build_test_email(now: datetime | None = None) -> tuple[str, str, str]:
+    """The test email: a delivery check, nothing more — no jobs, no scan."""
     subject = "Test email from Fresher Job Tracker"
+    sent = _ist_label(now or datetime.now(timezone.utc))
+    rows = (_field_row("Sent", sent)
+            + _field_row("Delivered to", "This address — the configured alert recipient")
+            + _field_row("Next", "New qualifying jobs are emailed here after each scan"))
+    body = f"""
+        <tr>
+          <td style="padding:0;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="background:#ffffff;border:1px solid {BORDER};border-radius:14px;">
+              <tr>
+                <td class="jt-pad" style="padding:24px 24px 22px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td width="40" height="40" align="center" valign="middle" bgcolor="#dcfce7"
+                          style="width:40px;height:40px;border-radius:999px;font:700 20px/40px {FONT};color:#15803d;text-align:center;">&#10003;</td>
+                      <td style="padding:0 0 0 12px;font:700 11px/1.4 {FONT};color:#15803d;letter-spacing:.08em;text-transform:uppercase;">Delivery check passed</td>
+                    </tr>
+                  </table>
+                  <h1 class="jt-h1" style="margin:16px 0 8px;font:700 22px/1.3 {FONT};color:{TEXT};">Test email successful</h1>
+                  <p style="margin:0;font:400 14px/1.6 {FONT};color:{MUTED};">This is a test email from your Job Tracker. If you received this, email delivery is working correctly.</p>
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                         style="margin-top:18px;background:{PANEL};border-radius:10px;">
+                    <tr><td style="padding:10px 14px;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">{rows}
+                      </table>
+                    </td></tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 2px 0;font:400 12px/1.6 {FONT};color:{FAINT};">
+            Sent from the Email &amp; Notifications page. No jobs were scanned and no other email was sent.
+            <span style="display:block;margin-top:4px;">Fresher Job Tracker</span>
+          </td>
+        </tr>"""
     text = (
+        "TEST EMAIL SUCCESSFUL\n\n"
         "This is a test email from your Job Tracker.\n"
         "If you received this, email delivery is working correctly.\n\n"
-        "--\nFresher Job Tracker · Automated alert\n"
+        f"Sent:         {sent}\n"
+        "Delivered to: this address (the configured alert recipient)\n"
+        "Next:         new qualifying jobs are emailed here after each scan\n\n"
+        "--\nSent from the Email & Notifications page. No jobs were scanned and no other email was sent.\n"
+        "Fresher Job Tracker\n"
     )
-    html = f"""<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:{BG};">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{BG};">
-  <tr><td align="center" style="padding:24px 12px;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#ffffff;border:1px solid {BORDER};border-radius:12px;">
-      <tr><td style="padding:24px 22px;">
-        <p style="margin:0;font:700 12px/1.4 {FONT};color:{ACCENT};letter-spacing:.06em;text-transform:uppercase;">🎯 Fresher Job Tracker</p>
-        <h1 style="margin:6px 0 10px;font:700 20px/1.3 {FONT};color:{TEXT};">Test email</h1>
-        <p style="margin:0;font:400 14px/1.6 {FONT};color:{MUTED};">This is a test email from your Job Tracker. If you received this, email delivery is working correctly.</p>
-      </td></tr>
-    </table>
-  </td></tr>
-</table>
-</body></html>"""
-    return subject, html, text
+    return subject, _page("Test email successful", "Email delivery is working.", body), text
 
 
 # ---------------------------------------------------------------------------

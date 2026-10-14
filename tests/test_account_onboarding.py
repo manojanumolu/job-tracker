@@ -344,7 +344,8 @@ def test_signed_out_visitors_get_the_login_page(app, google_env, store):
 
 def test_legacy_mode_keeps_the_admin_dashboard(app):
     at = app(list(JOBS))
-    assert "Discover jobs" in _html(at) and not at.get("popover")
+    # no account menu (only the phone bar's "More" menu for the admin tools)
+    assert "Discover jobs" in _html(at) and [p.proto.popover.label for p in at.get("popover")] == ["More"]
     assert "nav_monitoring" in _buttons(at)
 
 

@@ -198,7 +198,8 @@ def ustore(monkeypatch):
 
 
 def _label(at):
-    return next(p.proto.popover.label for p in at.get("popover"))
+    # the account menu (the phone bar's "More" menu is a popover too)
+    return next(p.proto.popover.label for p in at.get("popover") if p.proto.popover.label != "More")
 
 
 def _save_name(at, name):
