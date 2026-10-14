@@ -127,20 +127,13 @@ def test_no_tracked_file_contains_a_credential():
 
 
 def test_no_secrets_file_is_tracked():
-    assert [f for f in tracked_files() if SECRET_FILES.search(f) and f != ".env.example"] == []
-
-
-def test_env_example_holds_placeholders_only():
-    for line in (REPO / ".env.example").read_text("utf-8").splitlines():
-        if "=" in line and not line.lstrip().startswith("#"):
-            value = line.split("=", 1)[1].strip()
-            assert SAFE.search(value) or re.fullmatch(r"x[x-]*", value), line.split("=", 1)[0]
+    assert [f for f in tracked_files() if SECRET_FILES.search(f)] == []     # .env.example too (removed Oct 14)
 
 
 @pytest.mark.parametrize("path, ignored", [
     (".env", True), (".env.local", True), (".env.production", True), (".streamlit/secrets.toml", True),
     ("job-tracker-3-firebase-adminsdk-a1b2c.json", True), ("service-account.json", True), ("deploy.pem", True),
-    (".env.example", False), ("data/settings.json", False), ("data/companies.json", False),
+    (".env.example", True), ("data/settings.json", False), ("data/companies.json", False),
 ])
 def test_gitignore_keeps_secrets_out(path, ignored):
     try:

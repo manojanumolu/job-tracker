@@ -373,7 +373,7 @@ def test_the_phone_and_menu_css_rules():
     assert ".st-key-btn_nav_toggle { display: none !important; }" in css # phones: the drawer's button instead
 
 
-# ── Oct 15: the desktop menu button sits in the sidebar; the email mark ──────
+# ── Oct 14: the desktop menu button sits in the sidebar; the email mark ──────
 
 def test_the_desktop_menu_button_lives_in_the_sidebar(app):
     """Open: inside the sidebar, at its upper right (not over the page).
@@ -386,7 +386,7 @@ def test_the_desktop_menu_button_lives_in_the_sidebar(app):
     frag = src[src.index("def sidebar_toggle"):src.index("# the desktop navigation's open/closed state")]
     assert "@st.fragment" in src[src.index("def sidebar_toggle") - 40:src.index("def sidebar_toggle")]
     assert 'key="btn_nav_toggle"' in frag and "_NAV_CLOSED_CSS if collapsed else _NAV_OPEN_CSS" in frag
-    controls = src[src.index("def nav_controls"):src.index("def sidebar_toggle")]
+    controls = src[src.index("def nav_controls"):src.index("_NAV_OPEN_CSS = ")]
     assert "btn_nav_toggle" not in controls.split('"""', 2)[2]          # the page area keeps only the phone button
     import re
     open_css = re.search(r'_NAV_OPEN_CSS = """(.*?)"""', src, re.S).group(1)
@@ -398,6 +398,31 @@ def test_the_desktop_menu_button_lives_in_the_sidebar(app):
     assert "left: calc(var(--sidebar-w) - 50px)" in _html(at) and not _hides_sidebar(at)
     at.button(key="btn_nav_toggle").click().run()
     assert _hides_sidebar(at) and "top: 18px; left: 14px" in _html(at)
+
+
+def test_the_desktop_menu_button_shows_on_hover_like_movie_ticket_radar(app):
+    """As Streamlit's own sidebar controls (Movie Ticket Radar uses those):
+    open — a quiet « that shows while the pointer is over the sidebar or the
+    button has keyboard focus (touch screens, with no hover, always see it);
+    closed — a small bordered » tile at the left edge, always visible.
+    Desktop only: every rule is inside a min-width: 768px query."""
+    import re
+    from test_streamlit_app import REPO
+    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    open_css = re.search(r'_NAV_OPEN_CSS = """(.*?)"""', src, re.S).group(1)
+    closed_css = re.search(r'_NAV_CLOSED_CSS = """(.*?)"""', src, re.S).group(1)
+    hover = open_css[open_css.index("@media (min-width: 768px) and (hover: hover)"):]
+    assert 'section[data-testid="stSidebar"]:not(:hover) .st-key-side_toggle:not(:has(:focus-visible)) { opacity: 0; }' in hover
+    assert "opacity" not in closed_css and "hover: hover" not in closed_css          # closed: never hidden
+    assert "width: 40px !important; height: 40px" in closed_css and "border: 1px solid var(--border-strong)" in closed_css
+    for css in (open_css, closed_css):                                              # nothing reaches phones
+        assert all(q.startswith("@media (min-width: 768px)") or q.startswith("@media (min-width: 1024px)")
+                   for q in re.findall(r"@media [^{]*", css))
+        assert css.count("@media") == len(re.findall(r"^@media", css, re.M))         # no rule outside a query
+    at = app([NEW_RECORD], page="jobs")
+    assert at.button(key="btn_nav_toggle").icon == ":material/keyboard_double_arrow_left:"
+    at.button(key="btn_nav_toggle").click().run()
+    assert at.button(key="btn_nav_toggle").icon == ":material/keyboard_double_arrow_right:"
 
 
 def test_the_emails_show_a_briefcase_not_initials():

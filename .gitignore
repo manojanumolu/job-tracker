@@ -1,7 +1,6 @@
 # local secrets and credentials — never committed
 .env
 .env.*
-!.env.example
 .streamlit/secrets.toml
 *secrets*.toml
 *service-account*.json

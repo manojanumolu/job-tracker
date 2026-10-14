@@ -1,4 +1,4 @@
-"""The repository layout (Oct 15, 2026): a short root, related files grouped.
+"""The repository layout (Oct 14, 2026): a short root, related files grouped.
 
   streamlit_app.py   the app — stays at the root, where Streamlit Community
                      Cloud runs it; it puts src/ on the import path
@@ -17,7 +17,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 ROOT_DIRS = {".devcontainer", ".github", ".streamlit", "assets", "config", "data", "docs", "requirements", "src", "tests"}
-ROOT_FILES = {".env.example", ".gitignore", "README.md", "pytest.ini", "requirements.in", "requirements.txt", "runtime.txt",
+ROOT_FILES = {".gitignore", "README.md", "pytest.ini", "requirements.in", "requirements.txt", "runtime.txt",
               "streamlit_app.py"}
 
 

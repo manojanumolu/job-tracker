@@ -3588,17 +3588,35 @@ def nav_controls() -> None:
 # there could never sit on it). Each state's rule is drawn by the same
 # fragment run, so the latest click always wins.
 #   open    at the sidebar's upper right, level with the first group label
-#           (narrow icon rail, 768-1023 px: at the top of the rail)
+#           (narrow icon rail, 768-1023 px: at the top of the rail): a quiet
+#           « icon that shows while the pointer is over the sidebar (or the
+#           button has keyboard focus), as Streamlit's own collapse control
+#           does; touch screens, which have no hover, always show it
 #   closed  the sidebar folds to zero width (it is not removed, so the button
-#           stays visible) and the button sits at the window's left edge; the
-#           page keeps a left gutter wide enough that it never covers content
+#           stays visible) and a small bordered » tile sits at the window's
+#           left edge; the page keeps a left gutter so it never covers content
 _NAV_OPEN_CSS = """@media (min-width: 1024px) {
   .st-key-side_toggle { position: fixed !important; top: 74px; left: calc(var(--sidebar-w) - 50px); width: auto !important; z-index: 5; }
+}
+@media (min-width: 768px) {
+  .st-key-btn_nav_toggle [data-testid^="stBaseButton"] { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
+  .st-key-btn_nav_toggle [data-testid^="stBaseButton"]:hover { background: var(--hover) !important; }
+  .st-key-btn_nav_toggle [data-testid="stIconMaterial"] { color: var(--muted) !important; }
+}
+@media (min-width: 768px) and (hover: hover) {
+  .st-key-side_toggle { transition: opacity .15s ease; }
+  section[data-testid="stSidebar"]:not(:hover) .st-key-side_toggle:not(:has(:focus-visible)) { opacity: 0; }
 }"""
 _NAV_CLOSED_CSS = """@media (min-width: 768px) {
   .stApp section[data-testid="stSidebar"] { width: 0 !important; min-width: 0 !important; max-width: 0 !important;
     overflow: hidden !important; visibility: hidden; border: 0 !important; box-shadow: none !important; }
   .st-key-side_toggle { visibility: visible; position: fixed !important; top: 18px; left: 14px; width: auto !important; z-index: 5; }
+  .st-key-btn_nav_toggle [data-testid^="stBaseButton"] { width: 40px !important; height: 40px !important; min-height: 40px !important;
+    border-radius: 11px !important; background: var(--surface) !important; border: 1px solid var(--border-strong) !important;
+    box-shadow: 0 8px 20px -14px rgba(13,16,36,.55) !important; }
+  .st-key-btn_nav_toggle [data-testid^="stBaseButton"]:hover { background: var(--accent-soft) !important;
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border)) !important; }
+  .st-key-btn_nav_toggle [data-testid="stIconMaterial"] { color: var(--text) !important; font-size: 22px !important; }
   .stApp [data-testid="stMainBlockContainer"], .stApp .block-container { padding-left: 72px !important; }
 }"""
 
@@ -3611,7 +3629,8 @@ def sidebar_toggle() -> None:
     collapsed = st.session_state.get("nav_collapsed", False)
     label = "Show navigation" if collapsed else "Hide navigation"
     with st.container(key="side_toggle"):
-        st.button(label, key="btn_nav_toggle", icon=":material/menu:", help=label, on_click=_toggle_nav)
+        st.button(label, key="btn_nav_toggle", help=label, on_click=_toggle_nav,
+                  icon=":material/keyboard_double_arrow_right:" if collapsed else ":material/keyboard_double_arrow_left:")
     st.html(f"<style>{_NAV_CLOSED_CSS if collapsed else _NAV_OPEN_CSS}</style>")
 
 
