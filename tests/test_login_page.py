@@ -1,6 +1,7 @@
-"""The redesigned login page: presentation only. Every control must reach
-the EXISTING sign-in handlers (Firebase email/password via _login_submit,
-Google via st.login), nothing about any account or the tracker's data may
+"""The redesigned login page. Every control must reach the right handler
+(Firebase email/password via _login_submit, sign-up via _signup_submit —
+see test_signup_flow — and Google via st.login from its own button only),
+nothing about any account or the tracker's data may
 show before sign-in, and the artwork is static. Google/Firebase are never
 contacted (test_firebase_auth's fakes)."""
 import json
@@ -82,12 +83,14 @@ def test_failed_sign_in_shows_the_existing_generic_message(app, google_env):
     assert _login_page(at) and "Email or password is incorrect." in _html(at)
 
 
-@pytest.mark.parametrize("button", ["btn_login_google", "btn_login_signup"])
-def test_google_and_sign_up_both_start_the_existing_google_sign_in(app, google_env, button):
-    """New accounts are created by the first Google sign-in, so "Sign up"
-    is that same, existing flow — no separate sign-up exists."""
+def test_only_continue_with_google_starts_google_sign_in(app, google_env):
+    """2026-10-15 production bug: "Sign up" called _login_google and opened
+    Google's account picker. "Sign up" now opens the email/password form
+    (test_signup_flow); Google starts from its own button only."""
     at = app([], secrets=GATED, owner=False)
-    at.button(key=button).click().run()
+    at.button(key="btn_login_signup").click().run()
+    assert google_env["calls"]["login"] == [] and "signup_email" in {t.key for t in at.text_input}
+    at.button(key="btn_login_google").click().run()
     assert google_env["calls"]["login"] == [None]
 
 
@@ -104,18 +107,22 @@ def test_forgot_password_is_help_text_not_an_auth_action(app, google_env):
         "btn_login_email", "btn_login_google", "btn_login_signup", "btn_login_owner"}
 
 
-def test_without_google_there_is_no_sign_up_link(app, no_env):
+def test_without_google_email_sign_up_still_works(app, no_env):
     at = app([], secrets=FB_SECRETS, owner=False)
     assert _login_page(at)
-    assert "btn_login_google" not in _buttons(at) and "btn_login_signup" not in _buttons(at)
+    assert "btn_login_google" not in _buttons(at) and "btn_login_signup" in _buttons(at)
     assert "btn_login_email" in _buttons(at) and "managed by the workspace admin" in _html(at)
     assert "continue with Google instead" not in _html(at) and '<div class="lp-or">' not in _html(at)
+    at.button(key="btn_login_signup").click().run()
+    assert {"signup_name", "signup_email", "signup_pw", "signup_pw2"} <= set(_labels(at))
 
 
-def test_without_firebase_only_google_and_sign_up(app, google_env):
+def test_without_firebase_only_google(app, google_env):
+    """No Firebase, so no email sign-up: the sign-up link is hidden rather
+    than quietly starting Google."""
     at = app([], secrets={"auth": AUTH_GOOGLE}, owner=False)
     assert "btn_login_email" not in _buttons(at) and "login_email" not in _labels(at)
-    assert {"btn_login_google", "btn_login_signup"} <= _buttons(at)
+    assert "btn_login_google" in _buttons(at) and "btn_login_signup" not in _buttons(at)
     assert "managed by the workspace admin" not in _html(at) and '<div class="lp-or">' not in _html(at)
 
 

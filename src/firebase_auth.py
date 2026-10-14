@@ -9,6 +9,10 @@ REST API, so no Firebase JavaScript or service-account credentials are
 needed:
 
   email + password  accounts:signInWithPassword
+  sign-up           accounts:signUp, then accounts:update (the name) and
+                    sendOobCode VERIFY_EMAIL (Firebase's own email) — the
+                    new account is NOT signed in; it gets in only through
+                    signInWithPassword once Firebase says it is verified
   Google            Streamlit's st.login (Google OIDC) yields a Google ID
                     token, exchanged with accounts:signInWithIdp
 
@@ -96,6 +100,7 @@ class FirebaseUser:
     provider: str            # "password" or "google.com"
     email_verified: bool | None
     expires_at: float        # when Firebase's ID token (and so this sign-in) expires
+    name: str = ""           # the Firebase profile's displayName (set at sign-up)
 
     def as_session(self) -> dict:
         return asdict(self)
@@ -176,6 +181,20 @@ _ERRORS = {
     "INVALID_IDP_RESPONSE": "Google sign-in couldn't be verified.",
     "API_KEY_INVALID": "Firebase sign-in isn't configured correctly.",
     "PROJECT_NOT_FOUND": "Firebase sign-in isn't configured correctly.",
+}
+
+# accounts:signUp answers that read differently from a sign-in
+_SIGN_UP_ERRORS = {
+    "EMAIL_EXISTS": "An account with this email already exists. Sign in instead — or, if you created it with "
+                    "Google, continue with Google.",
+    "INVALID_EMAIL": "Enter a valid email address.",
+    "WEAK_PASSWORD": "Choose a stronger password.",
+    "PASSWORD_DOES_NOT_MEET_REQUIREMENTS": "Choose a stronger password — mix upper and lower case letters, "
+                                           "numbers and symbols.",
+    "MISSING_PASSWORD": "Enter a password.",
+    "ADMIN_ONLY_OPERATION": "New email accounts can't be created right now.",
+    "OPERATION_NOT_ALLOWED": "New email accounts can't be created right now.",
+    "TOO_MANY_ATTEMPTS_TRY_LATER": "Too many attempts — try again later.",
 }
 
 
@@ -265,9 +284,10 @@ def user_from_response(data: dict, config: FirebaseConfig, now: float | None = N
     firebase_claims = claims.get("firebase") if isinstance(claims.get("firebase"), dict) else {}
     provider = data.get("providerId") or firebase_claims.get("sign_in_provider") or ""
     verified = data.get("emailVerified", claims.get("email_verified"))
+    name = data.get("displayName")
     return FirebaseUser(uid=uid, email=email.strip().lower(), provider=str(provider),
                         email_verified=verified if isinstance(verified, bool) else None,
-                        expires_at=exp)
+                        expires_at=exp, name=" ".join(name.split())[:200] if isinstance(name, str) else "")
 
 
 # ---------------------------------------------------------------------------
@@ -310,6 +330,42 @@ def send_email_verification(id_token: object, *, config: FirebaseConfig, client:
         log.info("Firebase verification email not sent: %s", e.code)
         return False
     return True
+
+
+def sign_up_with_password(email: str, password: str, name: str = "", *, config: FirebaseConfig | None = None,
+                          client: httpx.Client | None = None, now: float | None = None,
+                          may_send_verification=None) -> tuple[FirebaseUser, bool]:
+    """Create an email/password account (accounts:signUp), store ``name`` as
+    its Firebase profile displayName, and have Firebase email its own
+    verification link — when ``may_send_verification(email)`` allows it.
+    Returns (the new, UNVERIFIED user, whether the link was sent). Nothing
+    here signs anyone in: the caller keeps no session, and the account gets
+    in only through sign_in_with_password(require_verified=True). Firebase
+    itself refuses a second account for an address (EMAIL_EXISTS)."""
+    config = config or load_config()
+    email = (email or "").strip()
+    if not email or not password:
+        raise FirebaseAuthError("Enter your email and a password.", "MISSING_FIELDS")
+    try:
+        data = _post("signUp", {"email": email, "password": password, "returnSecureToken": True}, config, client)
+    except FirebaseAuthError as e:
+        if e.code in _SIGN_UP_ERRORS:
+            raise FirebaseAuthError(_SIGN_UP_ERRORS[e.code], e.code) from None
+        raise
+    user = user_from_response(data, config, now)
+    if user.provider not in ("", "password") or user.email_verified is True:
+        raise FirebaseAuthError("Firebase sent an incomplete sign-up answer.", "MALFORMED")
+    token = data.get("idToken")
+    if name:
+        try:
+            # the account exists either way; a missing name is not worth failing over
+            _post("update", {"idToken": token, "displayName": name, "returnSecureToken": False}, config, client)
+            user = FirebaseUser(**{**user.as_session(), "name": name})
+        except FirebaseAuthError as e:
+            log.info("Firebase display name not set: %s", e.code)
+    sent = bool(may_send_verification and may_send_verification(user.email)
+                and send_email_verification(token, config=config, client=client))
+    return FirebaseUser(**{**user.as_session(), "provider": "password", "email_verified": False}), sent
 
 
 def sign_in_with_google_id_token(id_token: str, request_uri: str, *, config: FirebaseConfig | None = None,

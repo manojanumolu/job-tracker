@@ -137,7 +137,7 @@ def test_email_falls_back_to_the_token_claims():
 def test_session_keeps_no_token_or_password():
     fb = FakeFirebase(ok_password_answer())
     session = firebase_auth.sign_in_with_password(EMAIL, PASSWORD, config=CONFIG, client=fb.client()).as_session()
-    assert set(session) == {"uid", "email", "provider", "email_verified", "expires_at"}
+    assert set(session) == {"uid", "email", "provider", "email_verified", "expires_at", "name"}
     dump = json.dumps(session)
     for secret in (PASSWORD, API_KEY, "refresh-token-xyz", ok_password_answer()["idToken"].split(".")[1]):
         assert secret not in dump

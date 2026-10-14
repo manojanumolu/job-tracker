@@ -2081,7 +2081,9 @@ def _guards() -> dict:
             # never lock anyone else out)
             "firebase_signin": AccountAttemptLimiter(),
             # Firebase verification emails: one per address per 15 min
-            "verify_email": AccountAttemptLimiter(per_account=1, overall=30)}
+            "verify_email": AccountAttemptLimiter(per_account=1, overall=30),
+            # email sign-ups that reached Firebase, per address and overall
+            "firebase_signup": AccountAttemptLimiter(per_account=3, overall=30)}
 
 
 def is_owner() -> bool:
@@ -2549,11 +2551,11 @@ def resolve_account(google: dict | None, config) -> dict | None:
             account = {**g, "uid": uid, "provider": "google.com"}
         elif fb_user and fb_user.get("provider") == "password":
             account = {"email": fb_user.get("email") or "", "email_verified": fb_user.get("email_verified") is True,
-                       "name": "", "uid": fb_user["uid"], "provider": "password"}
+                       "name": fb_user.get("name") or "", "uid": fb_user["uid"], "provider": "password"}
     elif fb_user and fb_user.get("provider") == "password":
         # signed in again with email/password after an explicit sign-out
         account = {"email": fb_user.get("email") or "", "email_verified": fb_user.get("email_verified") is True,
-                   "name": "", "uid": fb_user["uid"], "provider": "password"}
+                   "name": fb_user.get("name") or "", "uid": fb_user["uid"], "provider": "password"}
     if account and account["provider"] == "password":
         # firebase_sign_in already refused these; checked again for every run
         problem = email_policy.sign_in_problem(account["email"], account["email_verified"])
@@ -2638,6 +2640,96 @@ def firebase_sign_in(email: str, password: str) -> tuple[bool, str]:
     st.session_state[firebase_auth.SESSION_KEY] = {**user.as_session(), "expires_at": time.time() + ACCOUNT_SESSION_S}
     st.session_state.pop("_signed_out", None)
     return True, ""
+
+
+SIGN_UP_PASSWORD_MIN = 8
+_EMAIL_SHAPE = re.compile(r"^[^@\s]+@[^@\s]+$")
+
+
+def sign_up_problem(name: object, email: object, password: object, confirm: object) -> str:
+    """Why this sign-up form can't be sent to Firebase ("" = it can). Firebase
+    checks again (address format, existing accounts, its own password policy)."""
+    if not isinstance(name, str) or not name.strip():
+        return "Enter your full name."
+    try:
+        user_store.clean_display_name(name)
+    except user_store.InvalidInput as e:
+        return f"Full name: {e}"
+    email = email.strip() if isinstance(email, str) else ""
+    if not email:
+        return "Enter your email address."
+    if len(email) > 254 or not _EMAIL_SHAPE.match(email) or not email_policy.email_domain(email):
+        return "Enter a valid email address."
+    if not isinstance(password, str) or not password:
+        return "Enter a password."
+    if len(password) < SIGN_UP_PASSWORD_MIN:
+        return f"Use at least {SIGN_UP_PASSWORD_MIN} characters for your password."
+    if len(password) > 4096:
+        return "That password is too long."
+    if password != confirm:
+        return "The passwords don't match."
+    return email_policy.address_problem(email)         # a disposable address: Firebase isn't even asked
+
+
+def firebase_sign_up(name: str, email: str, password: str, confirm: str) -> tuple[bool, str]:
+    """Create an email/password account and have Firebase send its
+    verification link. (ok, message). Never signs anyone in and grants
+    nothing: the account gets in only through firebase_sign_in once
+    Firebase reports the address verified, and admin rights come only from
+    JT_ADMIN_EMAILS plus that verified address (access.account_is_admin)."""
+    if _AUTH_CONFIG is None:
+        return False, "Email sign-up is unavailable right now."
+    problem = sign_up_problem(name, email, password, confirm)
+    if problem:
+        return False, problem
+    email = email.strip()
+    limiter = _guards()["firebase_signup"]
+    wait = limiter.locked_for(email)
+    if wait:
+        return False, f"Too many sign-up attempts — try again in {int(wait // 60) + 1} min."
+    limiter.failed(email)                               # every request that reaches Firebase counts
+    try:
+        user, sent = firebase_auth.sign_up_with_password(email, password, user_store.clean_display_name(name),
+                                                         config=_AUTH_CONFIG,
+                                                         may_send_verification=_may_send_verification)
+    except firebase_auth.FirebaseAuthError as e:
+        return False, str(e)
+    if not sent:
+        _guards()["verify_email"].succeeded(user.email)    # the next sign-in attempt asks for a link again
+        print("[auth] email sign-up ok; verification email not sent", flush=True)
+        return True, ("Your account was created, but the verification email couldn't be sent just now. "
+                      "Sign in with your new password to have it sent again.")
+    print("[auth] email sign-up ok; verification email sent", flush=True)
+    return True, (f"Account created. We've sent a verification link to {user.email} — open it (check spam "
+                  "too), then sign in here.")
+
+
+def _login_mode(mode: str) -> None:
+    """Switch the login card between "signin" and "signup". Only switches:
+    nothing here signs in or starts Google."""
+    st.session_state._login_mode = mode
+    for k in ("_login_error", "_login_error_from", "_signup_error", "_login_notice"):
+        st.session_state.pop(k, None)
+
+
+def _signup_submit() -> None:
+    """Sign-up form callback: both passwords are wiped from session state
+    first; name and email stay on a mistake so they needn't be retyped."""
+    name = st.session_state.get("signup_name", "")
+    email = st.session_state.get("signup_email", "")
+    password = st.session_state.get("signup_pw", "")
+    confirm = st.session_state.get("signup_pw2", "")
+    st.session_state.signup_pw = ""
+    st.session_state.signup_pw2 = ""
+    ok, msg = firebase_sign_up(name, email, password, confirm)
+    if not ok:
+        st.session_state._signup_error = msg
+        return
+    _login_mode("signin")
+    st.session_state._login_notice = msg
+    st.session_state.login_email = email.strip()          # ready to sign in once verified
+    for k in ("signup_name", "signup_email"):
+        st.session_state.pop(k, None)
 
 
 def _login_submit() -> None:
@@ -2810,19 +2902,23 @@ _LOGIN_CSS = """
   background: var(--surface) !important; }
 .st-key-login_card :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]) > div, .st-key-login_card :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]) input { background: transparent !important; }
 .st-key-login_card input { font-size: 15px !important; }
-:is(.st-key-login_email, .st-key-login_pw) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])::before {
+:is(.st-key-login_email, .st-key-login_pw, .st-key-signup_name, .st-key-signup_email, .st-key-signup_pw, .st-key-signup_pw2) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])::before {
   font-family: 'Material Symbols Rounded' !important; font-feature-settings: 'liga'; font-weight: 400;
   font-size: 20px; width: 20px; overflow: hidden; white-space: nowrap; flex-shrink: 0;
   color: var(--muted); margin-left: 15px; align-self: center; line-height: 1; box-sizing: content-box; transition: color var(--fast); }
-:is(.st-key-login_email, .st-key-login_pw) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]):focus-within::before { color: var(--accent-text); }
+:is(.st-key-login_email, .st-key-login_pw, .st-key-signup_name, .st-key-signup_email, .st-key-signup_pw, .st-key-signup_pw2) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"]):focus-within::before { color: var(--accent-text); }
 .st-key-login_email :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])::before { content: "mail"; }
 .st-key-login_pw :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])::before { content: "lock"; }
+.st-key-signup_name :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])::before { content: "person"; }
+.st-key-signup_email :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])::before { content: "mail"; }
+:is(.st-key-signup_pw, .st-key-signup_pw2) :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])::before { content: "lock"; }
 .st-key-login_card [data-testid="stForm"] { gap: 10px; }
-.st-key-btn_login_email [data-testid^="stBaseButton"] { min-height: 50px !important; border-radius: 14px !important; font-size: 16px !important;
+.st-key-btn_login_email [data-testid^="stBaseButton"], .st-key-btn_signup_submit [data-testid^="stBaseButton"] { min-height: 50px !important; border-radius: 14px !important; font-size: 16px !important;
   font-weight: 700 !important; margin-top: 6px; }
 .st-key-btn_login_google [data-testid^="stBaseButton"] { min-height: 50px !important; border-radius: 14px !important; font-weight: 700 !important;
   background: var(--surface) !important; border: 1px solid var(--border-strong) !important; gap: 10px; }
-.st-key-btn_login_email [data-testid^="stBaseButton"]:hover:not(:disabled) { transform: translateY(-1px); }
+.st-key-btn_login_email [data-testid^="stBaseButton"]:hover:not(:disabled),
+.st-key-btn_signup_submit [data-testid^="stBaseButton"]:hover:not(:disabled) { transform: translateY(-1px); }
 .st-key-btn_login_google [data-testid^="stBaseButton"]:hover { border-color: color-mix(in srgb, var(--accent) 35%, var(--border-strong)) !important;
   box-shadow: var(--btn2-shadow-hover) !important; transform: translateY(-1px); }
 .st-key-btn_login_google [data-testid^="stBaseButton"]::before { content: ""; width: 20px; height: 20px; flex-shrink: 0;
@@ -2831,13 +2927,15 @@ _LOGIN_CSS = """
   letter-spacing: .08em; margin: 2px 0; }
 .lp-or::before, .lp-or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 .st-key-lp_links { justify-content: space-between; align-items: center; flex-wrap: wrap; row-gap: 4px; margin-top: 4px; }
-.st-key-btn_login_signup [data-testid^="stBaseButton"], .st-key-lp_forgot [data-testid^="stBaseButton"] {
+.st-key-btn_login_signup [data-testid^="stBaseButton"], .st-key-btn_login_signin [data-testid^="stBaseButton"],
+.st-key-lp_forgot [data-testid^="stBaseButton"] {
   min-height: 0 !important; padding: 2px 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
-.st-key-btn_login_signup p, .st-key-lp_forgot p { font-size: 14px !important; font-weight: 500 !important; color: var(--muted) !important; }
-.st-key-btn_login_signup strong { color: var(--accent-text) !important; font-weight: 700 !important; }
+.st-key-btn_login_signup p, .st-key-btn_login_signin p, .st-key-lp_forgot p { font-size: 14px !important; font-weight: 500 !important; color: var(--muted) !important; }
+.st-key-btn_login_signup strong, .st-key-btn_login_signin strong { color: var(--accent-text) !important; font-weight: 700 !important; }
 .st-key-lp_forgot p { color: var(--accent-text) !important; font-weight: 600 !important; }
 .st-key-lp_forgot [data-testid="stIconMaterial"] { display: none; }
-.st-key-btn_login_signup [data-testid^="stBaseButton"]:hover strong, .st-key-lp_forgot [data-testid^="stBaseButton"]:hover p {
+.st-key-btn_login_signup [data-testid^="stBaseButton"]:hover strong,
+.st-key-btn_login_signin [data-testid^="stBaseButton"]:hover strong, .st-key-lp_forgot [data-testid^="stBaseButton"]:hover p {
   text-decoration: underline; text-underline-offset: 3px; }
 .lp-help { margin: 0; font-family: var(--font) !important; font-size: 14px; line-height: 1.55; color: var(--text-2);
   max-width: 280px; }   /* the popover renders outside the card, so it needs the font itself */
@@ -2846,6 +2944,9 @@ _LOGIN_CSS = """
 .login-err { display: flex; gap: 9px; align-items: flex-start; padding: 11px 13px; border-radius: 12px; font-size: 13.5px; line-height: 1.5;
   color: var(--text); background: color-mix(in srgb, var(--red) 9%, transparent); border: 1px solid color-mix(in srgb, var(--red) 35%, var(--border)); }
 .login-err .ms { color: var(--red); }
+.login-ok { display: flex; gap: 9px; align-items: flex-start; padding: 11px 13px; border-radius: 12px; font-size: 13.5px; line-height: 1.5;
+  color: var(--text); background: color-mix(in srgb, var(--green) 9%, transparent); border: 1px solid color-mix(in srgb, var(--green) 35%, var(--border)); }
+.login-ok .ms { color: var(--green); }
 .login-off { display: flex; gap: 9px; align-items: flex-start; color: var(--text-2); font-size: 13.5px; line-height: 1.5; margin: 0; }
 
 /* tablet: a smaller stage */
@@ -2946,8 +3047,10 @@ def _login_art() -> str:
 
 def render_login_page() -> None:
     """The only thing a visitor ever sees: generic artwork on the left, the
-    sign-in card on the right. Every control calls the existing handlers
-    (_login_submit, _login_google, _login_owner_submit). Messages here are
+    sign-in card on the right — or, after "Sign up", the email/password
+    registration form. Each control calls its own handler (_login_submit,
+    _signup_submit, _login_mode, _login_google, _login_owner_submit); only
+    "Continue with Google" calls _login_google. Messages here are
     for people, not operators: what exactly is misconfigured goes to the
     server log."""
     st.html(f"<style>{_LOGIN_CSS}</style>")
@@ -2957,13 +3060,33 @@ def render_login_page() -> None:
         st.html(_login_art())
     with side, st.container(key="login_card"):
         logo = _logo_data_uri()
+        # "Sign up" opens the email/password registration form; only the
+        # "Continue with Google" button ever starts Google sign-in
+        signup = email_ok and st.session_state.get("_login_mode") == "signup"
+        head, sub = (("Create your account", "Sign up with your email to start discovering fresher opportunities.")
+                     if signup else ("Welcome back", "Sign in to continue discovering fresher opportunities."))
         st.html('<div class="lp-head">' + (f'<img src="{logo}" alt="">' if logo else "")
-                + '<h2 class="lp-welcome">Welcome back</h2>'
-                '<p>Sign in to continue discovering fresher opportunities.</p></div>')
-        err = st.session_state.get("_login_error") or (recent_google_failure() if _GOOGLE else "")
+                + f'<h2 class="lp-welcome">{head}</h2><p>{sub}</p></div>')
+        notice = "" if signup else st.session_state.get("_login_notice")
+        if notice:
+            st.html(f'<div class="login-ok" role="status">{_ms("mark_email_read", "s20")}<div>{escape(notice)}</div></div>')
+        err = (st.session_state.get("_signup_error") if signup else
+               st.session_state.get("_login_error") or (recent_google_failure() if _GOOGLE else ""))
         if err:
             st.html(f'<div class="login-err" role="alert">{_ms("error", "s20")}<div>{escape(err)}</div></div>')
-        if email_ok:
+        if signup:
+            with st.form("signup_form", clear_on_submit=False, border=False):
+                st.text_input("Full name", key="signup_name", autocomplete="name", placeholder="Your full name",
+                              max_chars=user_store.DISPLAY_NAME_MAX)
+                st.text_input("Email address", key="signup_email", autocomplete="email", placeholder="you@example.com")
+                st.text_input("Password", type="password", key="signup_pw", autocomplete="new-password",
+                              placeholder=f"At least {SIGN_UP_PASSWORD_MIN} characters")
+                st.text_input("Confirm password", type="password", key="signup_pw2", autocomplete="new-password",
+                              placeholder="Re-enter your password")
+                st.form_submit_button("Create account", key="btn_signup_submit", type="primary",
+                                      icon=":material/arrow_forward:", icon_position="right",
+                                      use_container_width=True, on_click=_signup_submit)
+        elif email_ok:
             with st.form("login_form", clear_on_submit=True, border=False):
                 st.text_input("Email address", key="login_email", autocomplete="email", placeholder="you@example.com")
                 st.text_input("Password", type="password", key="login_pw", autocomplete="current-password",
@@ -2982,7 +3105,7 @@ def render_login_page() -> None:
                     "Please try again later.</span></p>")
         # break-glass, only until admins come from sign-in (JT_ADMIN_EMAILS):
         # the owner can get in even if Google or Firebase misbehaves
-        if owner_password_enabled():
+        if owner_password_enabled() and not signup:
             with st.expander("Trouble signing in? Use the owner password", icon=":material/key:",
                              expanded=st.session_state.get("_login_error_from") == "owner"):
                 with st.form("login_owner_form", clear_on_submit=True, border=False):
@@ -2990,15 +3113,14 @@ def render_login_page() -> None:
                                   autocomplete="current-password")
                     st.form_submit_button("Sign in as owner", key="btn_login_owner", icon=":material/admin_panel_settings:",
                                           use_container_width=True, on_click=_login_owner_submit)
-        if _GOOGLE or email_ok:
+        if email_ok:
             with st.container(key="lp_links", horizontal=True):
-                if _GOOGLE:
-                    # new accounts are created by the first Google sign-in, so
-                    # "Sign up" is that same, existing Google sign-in
+                if signup:
+                    st.button("Already have an account? **Sign in**", key="btn_login_signin", type="tertiary",
+                              on_click=_login_mode, args=("signin",))
+                else:
                     st.button("Don't have an account? **Sign up**", key="btn_login_signup", type="tertiary",
-                              on_click=_login_google, help="New here? Continue with Google — your account is created "
-                                                           "automatically the first time you sign in.")
-                if email_ok:
+                              on_click=_login_mode, args=("signup",))
                     with st.popover("Forgot password?", key="lp_forgot", type="tertiary"):
                         st.html('<p class="lp-help">Email-and-password accounts are managed by the workspace admin — '
                                 'ask them to reset your password'
