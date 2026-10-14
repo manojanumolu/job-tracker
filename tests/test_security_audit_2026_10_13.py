@@ -457,7 +457,7 @@ def test_the_scanner_records_each_completed_scan(monkeypatch):
 
 
 def _write_companies(tmp_path, companies):
-    (tmp_path / "companies.json").write_text(json.dumps(companies), "utf-8")
+    (tmp_path / "data" / "companies.json").write_text(json.dumps(companies), "utf-8")   # the app fixture's data folder
 
 
 def _recent_scan(found=24, failed=0):

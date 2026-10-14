@@ -53,7 +53,7 @@ def test_no_statistics_or_tracker_data_before_sign_in(app, google_env):
     for word in ("Active fresher jobs", "Companies monitored", "Last scan", "Next scheduled", "jobs found",
                  "Graduate Software Engineer", "Alerts on", "Admin", "Member"):
         assert word not in html, word
-    catalogue = [c["name"] for c in json.loads((REPO / "companies.json").read_text("utf-8"))]
+    catalogue = [c["name"] for c in json.loads((REPO / "data" / "companies.json").read_text("utf-8"))]
     assert not [name for name in catalogue if name in html]
 
 

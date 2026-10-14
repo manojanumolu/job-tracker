@@ -21,7 +21,8 @@ import json
 import sys
 from pathlib import Path
 
-BASE = Path(__file__).parent
+BASE = Path(__file__).resolve().parent.parent          # the repository root (this file is in src/)
+DATA = BASE / "data"                 # where the handed-over files go
 MAX_BYTES = 20 * 1024 * 1024
 # the only files that may be handed over, and the JSON shape each must have
 SHAPES = {
@@ -46,7 +47,7 @@ def _check(name: str, data) -> None:
         raise HandoffError(f"{name}: not a {SHAPES[name]}")
 
 
-def take_over(src_dir: Path, names: list[str], dest_dir: Path = BASE) -> None:
+def take_over(src_dir: Path, names: list[str], dest_dir: Path = DATA) -> None:
     """Validate every file first, then copy them all (never half a hand-over)."""
     blobs = {}
     for name in names:

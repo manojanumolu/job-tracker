@@ -257,16 +257,16 @@ def test_merging_with_the_published_copy_never_loses_a_logo():
 
 def test_the_workflow_is_separate_from_the_job_scan():
     wf = (REPO / ".github" / "workflows" / "logos.yml").read_text("utf-8")
-    assert "paths: [companies.json]" in wf and "workflow_dispatch:" in wf and "schedule:" in wf
-    assert "python company_logos.py --publish" in wf and "group: company-logos" in wf
+    assert "paths: [data/companies.json]" in wf and "workflow_dispatch:" in wf and "schedule:" in wf
+    assert "python src/company_logos.py --publish" in wf and "group: company-logos" in wf
     assert "secrets." not in wf                                         # needs no secret
     scan = (REPO / ".github" / "workflows" / "check_jobs.yml").read_text("utf-8")
     assert "company_logos" not in scan and "logos" not in scan            # scans and emails never wait for it
 
 
 def test_the_published_logos_file_is_valid():
-    doc = json.loads((REPO / "logos.json").read_text("utf-8"))
-    companies = {c["id"]: c for c in json.loads((REPO / "companies.json").read_text("utf-8"))}
+    doc = json.loads((REPO / "data" / "logos.json").read_text("utf-8"))
+    companies = {c["id"]: c for c in json.loads((REPO / "data" / "companies.json").read_text("utf-8"))}
     found = L.entries(doc)
     assert set(doc["logos"]) <= set(companies) and found
     assert len(json.dumps(doc)) < L.FILE_BUDGET
@@ -314,7 +314,7 @@ def _logo_doc(**by_id):
 def with_logos(tmp_path):
     def put(*ids):
         doc = _logo_doc(**{i: True for i in ids})
-        (tmp_path / "logos.json").write_text(json.dumps(doc))
+        (tmp_path / "data" / "logos.json").write_text(json.dumps(doc))      # the app fixture's data folder
         return doc
     return put
 
@@ -350,11 +350,11 @@ def test_job_cards_and_details_use_the_found_logo(app, with_logos):
 
 def test_broken_or_missing_logo_data_means_initials(app, tmp_path):
     from test_streamlit_app import _html, _nav
-    (tmp_path / "logos.json").write_text('{"logos": {"pwc": {"status": "ok", "web": {"mime": "text/html", "data": 1}}}')
+    (tmp_path / "data" / "logos.json").write_text('{"logos": {"pwc": {"status": "ok", "web": {"mime": "text/html", "data": 1}}}')
     at = app([])
     _nav(at, "companies")
     assert not at.exception and not _co(_html(at)) and '" aria-hidden="true">Pw</div>' in _html(at)
-    (tmp_path / "logos.json").write_text("not json")
+    (tmp_path / "data" / "logos.json").write_text("not json")
     at = app([])
     _nav(at, "companies")
     assert not at.exception and not _co(_html(at))
@@ -401,8 +401,10 @@ JOB = {"title": "Graduate Analyst", "company": "PwC", "location": "Pune, India",
 
 
 def _base(tmp_path, doc=None, text=None):
-    (tmp_path / "companies.json").write_text((REPO / "companies.json").read_text("utf-8"))
-    (tmp_path / "logos.json").write_text(text if text is not None else json.dumps(doc or {}))
+    """A repository root with data/companies.json and data/logos.json."""
+    (tmp_path / "data").mkdir(exist_ok=True)
+    (tmp_path / "data" / "companies.json").write_text((REPO / "data" / "companies.json").read_text("utf-8"))
+    (tmp_path / "data" / "logos.json").write_text(text if text is not None else json.dumps(doc or {}))
     return tmp_path
 
 
@@ -424,7 +426,7 @@ def test_an_email_without_logos_is_complete_and_has_no_images():
 
 
 def test_the_initials_colour_matches_the_app():
-    tracked = [c["name"] for c in json.loads((REPO / "companies.json").read_text("utf-8"))]
+    tracked = [c["name"] for c in json.loads((REPO / "data" / "companies.json").read_text("utf-8"))]
     hue = brand_logos.tile_hue("PwC", tracked)
     assert notifier._hex(hue, .7, .94) in notifier._company_mark("PwC", {}, tracked)
 
@@ -446,8 +448,8 @@ def test_logos_are_attached_inline_to_the_message(tmp_path):
 def test_bad_or_missing_logo_data_never_stops_an_alert(tmp_path, monkeypatch, text):
     base = _base(tmp_path, text=text or "")
     if text is None:
-        (base / "logos.json").unlink()
-        (base / "companies.json").unlink()
+        (base / "data" / "logos.json").unlink()
+        (base / "data" / "companies.json").unlink()
     monkeypatch.setattr(notifier, "BASE", base)
     sent = []
     monkeypatch.setattr(notifier, "_send", lambda to, s, h, t, images=None: sent.append((to, images, h)))

@@ -324,7 +324,9 @@ def _keys(at):
 
 
 def _hides_sidebar(at):
-    return "section[data-testid='stSidebar'] { display: none !important; }" in _html(at)
+    """The closed state's rule: the sidebar folds to zero width (it stays in
+    the page, so its menu button stays visible at the window's edge)."""
+    return 'section[data-testid="stSidebar"] { width: 0 !important; min-width: 0 !important; max-width: 0 !important;' in _html(at)
 
 
 def test_the_menu_button_closes_and_opens_the_desktop_navigation(app):
@@ -369,3 +371,39 @@ def test_the_phone_and_menu_css_rules():
     assert "padding-bottom: 104px !important" in phone                   # room to scroll past Cloud's badges
     assert ".st-key-mnav" not in css and "mob_more" not in src           # the row of phone tabs is gone
     assert ".st-key-btn_nav_toggle { display: none !important; }" in css # phones: the drawer's button instead
+
+
+# ── Oct 15: the desktop menu button sits in the sidebar; the email mark ──────
+
+def test_the_desktop_menu_button_lives_in_the_sidebar(app):
+    """Open: inside the sidebar, at its upper right (not over the page).
+    Closed: at the window's left edge, with a gutter so it covers nothing.
+    Both drawn by one sidebar fragment, so a click redraws only it."""
+    from test_streamlit_app import REPO
+    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    sidebar = src[src.index("with st.sidebar:\n    sidebar_toggle()"):]
+    assert sidebar.index("sidebar_toggle()") < sidebar.index("logo = _logo_data_uri()")     # first thing in the sidebar
+    frag = src[src.index("def sidebar_toggle"):src.index("# the desktop navigation's open/closed state")]
+    assert "@st.fragment" in src[src.index("def sidebar_toggle") - 40:src.index("def sidebar_toggle")]
+    assert 'key="btn_nav_toggle"' in frag and "_NAV_CLOSED_CSS if collapsed else _NAV_OPEN_CSS" in frag
+    controls = src[src.index("def nav_controls"):src.index("def sidebar_toggle")]
+    assert "btn_nav_toggle" not in controls.split('"""', 2)[2]          # the page area keeps only the phone button
+    import re
+    open_css = re.search(r'_NAV_OPEN_CSS = """(.*?)"""', src, re.S).group(1)
+    closed_css = re.search(r'_NAV_CLOSED_CSS = """(.*?)"""', src, re.S).group(1)
+    assert "@media (min-width: 1024px)" in open_css and "left: calc(var(--sidebar-w) - 50px)" in open_css
+    assert "@media (min-width: 768px)" in closed_css and "top: 18px; left: 14px" in closed_css
+    assert "padding-left: 72px !important" in closed_css                 # the page never sits under the button
+    at = app([NEW_RECORD], page="jobs")
+    assert "left: calc(var(--sidebar-w) - 50px)" in _html(at) and not _hides_sidebar(at)
+    at.button(key="btn_nav_toggle").click().run()
+    assert _hides_sidebar(at) and "top: 18px; left: 14px" in _html(at)
+
+
+def test_the_emails_show_a_briefcase_not_initials():
+    for _, html, text in (build_alert_email([_job()]), build_test_email()):
+        head = html[html.index('title="Fresher Job Tracker"') - 200:html.index("Fresher Job Tracker</td>")]
+        assert ">FJ<" not in html and "FJ" not in head
+        assert notifier._BRIEFCASE in head and 'bgcolor="#4f46e5"' in head  # the purple tile keeps its size
+        assert 'width="30" height="30"' in head
+        assert "<img" not in html                                        # drawn, never an image to fetch

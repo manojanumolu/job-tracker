@@ -126,15 +126,25 @@ def test_run_check_always_scans_and_the_alert_tick_never_does():
     assert scan_schedule.plan("push", "", {}, [], u(2, 10)) == {"scan": False, "deliver": False}
 
 
+def _checkout(tmp_path, settings_text, companies_text=None):
+    """What the plan / wait jobs check out: src/scan_schedule.py and data/."""
+    (tmp_path / "src").mkdir(exist_ok=True)
+    (tmp_path / "data").mkdir(exist_ok=True)
+    (tmp_path / "src" / "scan_schedule.py").write_text((REPO / "src" / "scan_schedule.py").read_text("utf-8"), "utf-8")
+    (tmp_path / "data" / "settings.json").write_text(settings_text)
+    if companies_text is not None:
+        (tmp_path / "data" / "companies.json").write_text(companies_text)
+
+
 @pytest.mark.parametrize("interval, last, expect", [(3, "2030-01-02T09:10:00+00:00", "false"),
                                                      (1, "2030-01-02T09:10:00+00:00", "true"),
                                                      (12, "2030-01-01T23:00:00+00:00", "true")])
 def test_the_workflow_plan_step_reads_the_saved_interval(tmp_path, interval, last, expect):
     """The exact command the plan job runs, on files like the repository's."""
-    (tmp_path / "scan_schedule.py").write_text((REPO / "scan_schedule.py").read_text("utf-8"), "utf-8")
-    (tmp_path / "settings.json").write_text(json.dumps({"recipient_email": "x", "scan_interval_hours": interval}))
-    (tmp_path / "companies.json").write_text(json.dumps([{"id": "a", "last_checked": last}]))
-    code = ("import scan_schedule, datetime as d\n"
+    _checkout(tmp_path, json.dumps({"recipient_email": "x", "scan_interval_hours": interval}),
+              json.dumps([{"id": "a", "last_checked": last}]))
+    code = ("import sys; sys.path.insert(0, 'src')\n"
+            "import scan_schedule, datetime as d\n"
             "scan_schedule.datetime = type('D', (d.datetime,), {'now': classmethod(lambda c, tz=None: d.datetime(2030,1,2,10,5,tzinfo=d.timezone.utc))})\n"
             "raise SystemExit(scan_schedule.main(['plan']))")
     env = {**os.environ, "EVENT": "schedule", "SCHEDULE": scan_schedule.PLAN_CRON}
@@ -144,11 +154,9 @@ def test_the_workflow_plan_step_reads_the_saved_interval(tmp_path, interval, las
 
 
 def test_a_broken_schedule_file_plans_a_safe_default(tmp_path):
-    (tmp_path / "scan_schedule.py").write_text((REPO / "scan_schedule.py").read_text("utf-8"), "utf-8")
-    (tmp_path / "settings.json").write_text("{not json")
-    (tmp_path / "companies.json").write_text("[]")
+    _checkout(tmp_path, "{not json", "[]")
     env = {**os.environ, "EVENT": "schedule", "SCHEDULE": scan_schedule.PLAN_CRON}
-    r = subprocess.run([sys.executable, "scan_schedule.py", "plan"], cwd=tmp_path, env=env, capture_output=True,
+    r = subprocess.run([sys.executable, "src/scan_schedule.py", "plan"], cwd=tmp_path, env=env, capture_output=True,
                        text=True, timeout=60)
     assert r.returncode == 0 and r.stdout.split() == ["scan=true", "deliver=false"]     # no scan yet: scan (default 3 h)
     assert "interval 3 h" in r.stderr
@@ -159,15 +167,15 @@ def test_the_workflow_wires_the_plan_to_one_shared_scanner():
     assert jobs == ["plan", "scrape", "publish", "scheduler", "personal-alerts"]
     assert f'cron: "{scan_schedule.PLAN_CRON}"' in WORKFLOW and f'cron: "{scan_schedule.ALERTS_CRON}"' in WORKFLOW
     assert WORKFLOW.count("cron:") == 2 and "workflow_dispatch:" in WORKFLOW
-    assert WORKFLOW.count("python scraper.py") == 1                          # one scanner, in one job
-    assert WORKFLOW.count("python alerts.py") == 1 and "needs: [plan, scrape]" in WORKFLOW
+    assert WORKFLOW.count("python src/scraper.py") == 1                          # one scanner, in one job
+    assert WORKFLOW.count("python src/alerts.py") == 1 and "needs: [plan, scrape]" in WORKFLOW
     assert "needs.plan.outputs.scan == 'true'" in WORKFLOW and "needs.plan.outputs.deliver == 'true'" in WORKFLOW
     # one concurrency group for the whole workflow: scans and alert passes never overlap
     head = WORKFLOW.split("\njobs:\n", 1)[0]
     assert "concurrency:\n  group: check-jobs\n  cancel-in-progress: false" in head
     assert WORKFLOW.count("concurrency:") == 1
     plan = WORKFLOW.split("\n  plan:\n", 1)[1].split("\n  scrape:\n", 1)[0]
-    assert "secrets." not in plan and "contents: read" in plan and "python3 scan_schedule.py plan" in plan
+    assert "secrets." not in plan and "contents: read" in plan and "python3 src/scan_schedule.py plan" in plan
     assert "pip install" not in plan and "timeout-minutes: 5" in plan                      # the hourly tick stays tiny
 
 
@@ -180,7 +188,7 @@ def store():
 
 def test_member_alerts_are_fixed_at_six_hours_and_independent_of_the_scan_interval():
     assert scan_schedule.MEMBER_ALERT_HOURS == 6
-    src = (REPO / "user_alerts.py").read_text("utf-8")
+    src = (REPO / "src" / "user_alerts.py").read_text("utf-8")
     assert "interval_from" not in src and "scan_interval_hours" not in src     # the scan interval never enters it
 
 
@@ -292,7 +300,7 @@ def test_members_never_get_the_interval_control_or_the_admin_section(app, google
 def test_a_member_cannot_change_the_interval_by_any_route(app, google_env, ustore, monkeypatch):
     """No control is drawn; a forged session value or a query parameter
     changes nothing, and nothing is written."""
-    repo = FakeRepo({"settings.json": {"recipient_email": "me@example.com"}})
+    repo = FakeRepo({"data/settings.json": {"recipient_email": "me@example.com"}})
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
     monkeypatch.setattr(config_store, "_get_repo", lambda token: repo)
     _ready(ustore, B_UID, B_MAIL)
@@ -301,15 +309,15 @@ def test_a_member_cannot_change_the_interval_by_any_route(app, google_env, ustor
     at.session_state["scan_interval_pick"] = 1
     at.run()
     assert not at.exception and repo.commits == []
-    assert "scan_interval_hours" not in repo.data("settings.json")
+    assert "scan_interval_hours" not in repo.data("data/settings.json")
 
 
 def test_admins_choose_exactly_four_intervals_and_saving_writes_only_the_setting(app, google_env, ustore, admins,
                                                                                   monkeypatch):
     import github
-    repo = FakeRepo({"settings.json": {"recipient_email": "me@example.com"},
-                     "companies.json": json.loads((REPO / "companies.json").read_text("utf-8")),
-                     "seen_jobs.json": list(JOBS)})
+    repo = FakeRepo({"data/settings.json": {"recipient_email": "me@example.com"},
+                     "data/companies.json": json.loads((REPO / "data" / "companies.json").read_text("utf-8")),
+                     "data/seen_jobs.json": list(JOBS)})
     dispatched = []
 
     class NoDispatch:                                # a save must never start a scan
@@ -322,37 +330,37 @@ def test_admins_choose_exactly_four_intervals_and_saving_writes_only_the_setting
     pick = _pills(at, "scan_interval_pick")
     assert list(pick.options) == ["Every hour", "Every 3 hours", "Every 6 hours", "Every 12 hours"]
     assert pick.value == 3 and "<dt>Current interval</dt><dd><b>Every 3 hours</b></dd>" in _html(at)
-    companies_before, seen_before = repo.files["companies.json"], repo.files["seen_jobs.json"]
+    companies_before, seen_before = repo.files["data/companies.json"], repo.files["data/seen_jobs.json"]
     for hours in (6, 12, 1, 3):
         pick = _pills(at, "scan_interval_pick")
         pick.set_value(hours).run()
         at.button(key="btn_save_interval").click().run()
         assert not at.exception
-        assert repo.data("settings.json") == {"recipient_email": "me@example.com", "scan_interval_hours": hours}
+        assert repo.data("data/settings.json") == {"recipient_email": "me@example.com", "scan_interval_hours": hours}
         assert f"<dt>Current interval</dt><dd><b>{'Every hour' if hours == 1 else f'Every {hours} hours'}</b></dd>" in _html(at)
         assert "Scan interval saved" in _html(at) and "no scan was started" in _html(at)
     assert all(m.startswith("chore: set the scan interval to") and m.endswith("[skip ci]") for m in repo.commits)
     assert len(repo.commits) == 4 and dispatched == []                                # no scan started
-    assert repo.files["companies.json"] == companies_before and repo.files["seen_jobs.json"] == seen_before
+    assert repo.files["data/companies.json"] == companies_before and repo.files["data/seen_jobs.json"] == seen_before
 
 
 def test_a_demoted_admin_cannot_save_with_a_page_drawn_while_admin(app, google_env, ustore, admins, monkeypatch):
     """The role is checked when the button is pressed, not when it was drawn."""
-    repo = FakeRepo({"settings.json": {"recipient_email": "me@example.com"}})
+    repo = FakeRepo({"data/settings.json": {"recipient_email": "me@example.com"}})
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
     monkeypatch.setattr(config_store, "_get_repo", lambda token: repo)
     at = _admin(app, google_env, ustore, admins)
     _pills(at, "scan_interval_pick").set_value(1).run()
     monkeypatch.setenv("JT_ADMIN_EMAILS", "someone.else@example.org")
     at.button(key="btn_save_interval").click().run()
-    assert repo.commits == [] and "scan_interval_hours" not in repo.data("settings.json")
+    assert repo.commits == [] and "scan_interval_hours" not in repo.data("data/settings.json")
     assert "Only admins can change the scan interval" in _html(at)
 
 
 def test_the_interval_drives_the_displayed_schedule(app, google_env, ustore, admins, monkeypatch):
-    repo = FakeRepo({"settings.json": {"recipient_email": "me@example.com", "scan_interval_hours": 12},
-                     "companies.json": json.loads((REPO / "companies.json").read_text("utf-8")),
-                     "seen_jobs.json": list(JOBS)})
+    repo = FakeRepo({"data/settings.json": {"recipient_email": "me@example.com", "scan_interval_hours": 12},
+                     "data/companies.json": json.loads((REPO / "data" / "companies.json").read_text("utf-8")),
+                     "data/seen_jobs.json": list(JOBS)})
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
     monkeypatch.setattr(config_store, "_get_repo", lambda token: repo)
     at = _admin(app, google_env, ustore, admins)

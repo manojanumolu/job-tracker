@@ -53,7 +53,7 @@ class FakeRemote:
         self.calls.append(message)
         if any(message.startswith(f) for f in self.fail):
             return False
-        self.seen = repo_sync.merge_seen(self.seen, local["seen_jobs.json"])
+        self.seen = repo_sync.merge_seen(self.seen, local["data/seen_jobs.json"])   # paths from the repository root
         config_store.SEEN_FILE.write_text(json.dumps(self.seen))
         return True
 

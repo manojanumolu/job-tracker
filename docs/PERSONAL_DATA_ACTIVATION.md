@@ -84,7 +84,7 @@ not switch personal data off until a reboot either. Streamlit reloads
 * So the first scheduled runs send **nothing** until someone opts in, and then
   only new jobs, to that person's own verified sign-in email (read from
   Firebase by UID at send time — never `ALERT_RECIPIENT`, never a typed address).
-* The shared alerts (`alerts.py`, `ALERT_RECIPIENT`) are independent and
+* The shared alerts (`src/alerts.py`, `ALERT_RECIPIENT`) are independent and
   unchanged; the personal step runs after them and can't affect them.
 
 Order: (1) Firestore database in production mode, (2) merge, (3) GitHub
@@ -97,7 +97,7 @@ Firestore, keyed by Firebase UID.
 
 ## Firestore security rules
 
-`firestore.rules` in this repository denies **all** direct client access —
+`config/firestore.rules` in this repository denies **all** direct client access —
 including a signed-in user reading their own profile, and admins. Only the
 server's Admin SDK (which rules don't apply to) reads and writes personal
 data, and the app binds every read/write to the signed-in account's own UID.

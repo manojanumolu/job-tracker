@@ -50,7 +50,7 @@ SAFE = re.compile(r"(?i)x{6,}|placeholder|fake|never-real|your-|example|dummy|no
                   r"os\.environ|getenv|st\.secrets|<[a-z_ -]+>|\.\.\.|…|redacted")
 SECRET_FILES = re.compile(r"(?i)(^|/)(\.env(\..+)?|secrets\.toml|.*service[-_]?account.*\.json|.*firebase-adminsdk.*\.json"
                           r"|.*\.(pem|key|p12|pfx)|id_rsa.*|credentials?\.json)$")
-DATA_FILES = ("settings.json", "companies.json", "seen_jobs.json", "logos.json")
+DATA_FILES = ("data/settings.json", "data/companies.json", "data/seen_jobs.json", "data/logos.json")
 
 
 def tracked_files() -> list[str]:
@@ -140,7 +140,7 @@ def test_env_example_holds_placeholders_only():
 @pytest.mark.parametrize("path, ignored", [
     (".env", True), (".env.local", True), (".env.production", True), (".streamlit/secrets.toml", True),
     ("job-tracker-3-firebase-adminsdk-a1b2c.json", True), ("service-account.json", True), ("deploy.pem", True),
-    (".env.example", False), ("settings.json", False), ("companies.json", False),
+    (".env.example", False), ("data/settings.json", False), ("data/companies.json", False),
 ])
 def test_gitignore_keeps_secrets_out(path, ignored):
     try:
@@ -159,7 +159,7 @@ def test_public_data_files_hold_no_email_address(name):
 
 
 def test_settings_json_has_no_recipient():
-    settings = json.loads((REPO / "settings.json").read_text("utf-8"))
+    settings = json.loads((REPO / "data" / "settings.json").read_text("utf-8"))
     assert isinstance(settings, dict) and "recipient_email" not in settings
 
 
@@ -197,8 +197,8 @@ def shared_data(tmp_path, monkeypatch):
     published = {}
 
     def publisher(message, local):
-        published.setdefault("seen", local.get("seen_jobs.json"))
-        config_store.SEEN_FILE.write_text(json.dumps(local["seen_jobs.json"]))
+        published.setdefault("seen", local.get("data/seen_jobs.json"))
+        config_store.SEEN_FILE.write_text(json.dumps(local["data/seen_jobs.json"]))
         return True
     return publisher, published
 
@@ -241,7 +241,7 @@ def test_test_email_needs_the_secret(shared_data, monkeypatch):
 # ---------------------------------------------------------------------------
 
 def test_committed_scan_history_still_loads_and_dedups():
-    seen = json.loads((REPO / "seen_jobs.json").read_text("utf-8"))
+    seen = json.loads((REPO / "data" / "seen_jobs.json").read_text("utf-8"))
     assert isinstance(seen, list) and seen
     keys = [repo_sync.record_key(j) for j in seen]
     assert all(keys) and len(set(keys)) == len(keys)                 # one identity per job
@@ -254,8 +254,8 @@ def test_committed_scan_history_still_loads_and_dedups():
 
 
 def test_scheduler_state_still_reads_from_the_committed_files():
-    settings = json.loads((REPO / "settings.json").read_text("utf-8"))
-    companies = json.loads((REPO / "companies.json").read_text("utf-8"))
+    settings = json.loads((REPO / "data" / "settings.json").read_text("utf-8"))
+    companies = json.loads((REPO / "data" / "companies.json").read_text("utf-8"))
     assert scan_schedule.interval_from(settings) in scan_schedule.ALLOWED_INTERVALS
     assert scan_schedule.last_scan(companies) is not None
     decision = scan_schedule.plan("schedule", scan_schedule.PLAN_CRON, settings, companies)

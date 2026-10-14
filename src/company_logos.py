@@ -57,8 +57,8 @@ from urllib.robotparser import RobotFileParser
 
 log = logging.getLogger("company_logos")
 
-BASE = Path(__file__).parent
-LOGOS_FILE = "logos.json"
+BASE = Path(__file__).resolve().parent.parent          # the repository root (this file is in src/)
+LOGOS_FILE = "data/logos.json"            # relative to the repository root (and its GitHub path)
 USER_AGENT = "FresherJobTracker-LogoFinder/1.0 (personal job tracker; fetches a site's own icon once)"
 TIMEOUT_S, CONNECT_TIMEOUT_S = 6.0, 4.0
 MAX_HTML_BYTES = 512 * 1024
@@ -717,7 +717,7 @@ def main(argv=None) -> int:
         log.info("logos: %s", "published (or already up to date)" if ok else "could not publish")
         return 0 if ok else 1
     try:
-        companies = json.loads((BASE / "companies.json").read_text("utf-8"))
+        companies = json.loads((BASE / "data" / "companies.json").read_text("utf-8"))
     except (OSError, ValueError):
         log.warning("companies.json unreadable; nothing to do")
         return 0

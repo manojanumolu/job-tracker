@@ -48,11 +48,19 @@ def app(tmp_path, monkeypatch):
     monkeypatch.delenv("FIREBASE_PROJECT_ID", raising=False)
     monkeypatch.delenv("JT_ADMIN_EMAILS", raising=False)
     monkeypatch.setenv("JT_OWNER_PASSWORD", OWNER_PASSWORD)
+    # the repository's layout: the app at the root, its modules in src/,
+    # the shared data files in data/ (at.tmp_path below is that data folder)
+    (tmp_path / "src").mkdir()
     for name in APP_FILES:
-        shutil.copy(REPO / name, tmp_path / name)
+        if name == "streamlit_app.py":
+            shutil.copy(REPO / name, tmp_path / name)
+        else:
+            shutil.copy(REPO / "src" / name, tmp_path / "src" / name)
     shutil.copytree(REPO / "assets", tmp_path / "assets")
-    shutil.copy(REPO / "companies.json", tmp_path / "companies.json")
-    (tmp_path / "settings.json").write_text("{}")                 # public: never holds an address
+    data = tmp_path / "data"
+    data.mkdir()
+    shutil.copy(REPO / "data" / "companies.json", data / "companies.json")
+    (data / "settings.json").write_text("{}")                     # public: never holds an address
 
     import streamlit as st
     st.cache_data.clear()  # the app's GitHub snapshot cache is process-wide
@@ -61,9 +69,10 @@ def app(tmp_path, monkeypatch):
     def make(seen, page=None, query=None, owner=True, secrets=None):
         """owner=True starts the session signed in as the owner (the
         behaviour tests are about the dashboard, not the sign-in)."""
-        (tmp_path / "seen_jobs.json").write_text(json.dumps(seen))
+        (data / "seen_jobs.json").write_text(json.dumps(seen))
         at = st_testing.AppTest.from_file(str(tmp_path / "streamlit_app.py"), default_timeout=30)
-        at.tmp_path = tmp_path
+        at.tmp_path = data                  # where the app's data files are (data/)
+        at.app_root = tmp_path
         if owner:
             at.session_state["_owner_until"] = time.time() + 3600
         for k, v in (secrets or {}).items():   # Streamlit secrets (st.secrets) for this run
@@ -372,7 +381,7 @@ def test_add_and_remove_company(app):
 
 
 def test_add_company_validation(app):
-    first = json.loads((REPO / "companies.json").read_text("utf-8"))[0]
+    first = json.loads((REPO / "data" / "companies.json").read_text("utf-8"))[0]
     at = app([], page="companies")
     at.button(key="btn_open_add").click().run()
     at.text_input(key="new_name").set_value(first["name"].upper()).run()
@@ -387,7 +396,7 @@ def test_add_company_validation(app):
     at.text_input(key="new_website").set_value("brand.example").run()
     at.button(key="btn_add").click().run()
     assert "website must be a full URL" in _html(at)
-    assert len(_companies(at)) == len(json.loads((REPO / "companies.json").read_text("utf-8")))
+    assert len(_companies(at)) == len(json.loads((REPO / "data" / "companies.json").read_text("utf-8")))
 
 
 def test_company_search(app):
@@ -455,7 +464,7 @@ def test_run_check_without_token_is_friendly(app):
 
 def test_metrics_are_computed_from_real_data(app):
     at = app([OLD_RECORD, NEW_RECORD])
-    n = len(json.loads((REPO / "companies.json").read_text("utf-8")))
+    n = len(json.loads((REPO / "data" / "companies.json").read_text("utf-8")))
     html = _html(at)
     assert "Companies monitored" in html and f'<div class="v">{n}</div>' in html
     assert "Verified" not in html                          # no verification concept exists
@@ -525,9 +534,9 @@ def test_stale_local_copy_is_refreshed_from_github_and_merged_on_dismiss(app, mo
     from test_config_store import FakeRepo
 
     remote_jobs = [OLD_RECORD, NEW_RECORD]
-    repo = FakeRepo({"seen_jobs.json": remote_jobs,
-                     "companies.json": json.loads((REPO / "companies.json").read_text("utf-8")),
-                     "settings.json": {"recipient_email": "me@example.com"}})
+    repo = FakeRepo({"data/seen_jobs.json": remote_jobs,
+                     "data/companies.json": json.loads((REPO / "data" / "companies.json").read_text("utf-8")),
+                     "data/settings.json": {"recipient_email": "me@example.com"}})
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
     monkeypatch.setattr(config_store, "_get_repo", lambda token: repo)
 
@@ -539,7 +548,7 @@ def test_stale_local_copy_is_refreshed_from_github_and_merged_on_dismiss(app, mo
 
     at.button(key=_key("dismiss", OLD_RECORD)).click().run()
     assert not at.exception
-    remote = repo.data("seen_jobs.json")
+    remote = repo.data("data/seen_jobs.json")
     assert [j["title"] for j in remote] == [OLD_RECORD["title"], NEW_RECORD["title"]]
     assert [j.get("dismissed", False) for j in remote] == [True, False]
     assert repo.commits == ["chore: dismiss 1 alert(s)"]

@@ -195,7 +195,7 @@ def _found_label(job: dict) -> str:
 # Reading it can never stop a mail: any problem means "initials".
 # ---------------------------------------------------------------------------
 
-BASE = Path(__file__).parent
+BASE = Path(__file__).resolve().parent.parent          # the repository root (this file is in src/)
 
 
 def email_logos(jobs: list[dict], base: Path | None = None) -> tuple[dict, list[str]]:
@@ -205,7 +205,7 @@ def email_logos(jobs: list[dict], base: Path | None = None) -> tuple[dict, list[
     base = base or BASE
     try:
         import company_logos
-        companies = [c for c in json.loads((base / "companies.json").read_text("utf-8")) if isinstance(c, dict)]
+        companies = [c for c in json.loads((base / "data" / "companies.json").read_text("utf-8")) if isinstance(c, dict)]
         found = company_logos.entries(company_logos.load_local(base / company_logos.LOGOS_FILE))
         ids = {(c.get("name") or "").strip().lower(): c.get("id") for c in companies}
         out = {}
@@ -329,6 +329,16 @@ def _job_text(job: dict, index: int, total: int) -> str:
     return "\n".join(lines)
 
 
+# The brand mark: a small white briefcase (the app's "work" icon) drawn with
+# plain styled blocks inside the purple tile — no image, so nothing is
+# fetched or attached, and mail clients that block images still show it.
+_BRIEFCASE = ('<div style="width:6px;height:2px;margin:0 auto;border:2px solid #ffffff;border-bottom:0;'
+              'border-radius:2px 2px 0 0;"></div>'
+              '<div style="width:20px;height:12px;margin:0 auto;padding-top:5px;box-sizing:border-box;'
+              'background:#ffffff;border-radius:3px;">'
+              f'<div style="width:20px;height:1px;background:{ACCENT};"></div></div>')
+
+
 def _page(title: str, preheader: str, body: str, tag: str = "") -> str:
     """The shared frame of every email: a light page, a 600 px column (fluid
     below that), the brand row on top (with the email's kind on the right).
@@ -361,8 +371,8 @@ def _page(title: str, preheader: str, body: str, tag: str = "") -> str:
           <td style="padding:0 4px 16px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
-                <td width="30" height="30" align="center" valign="middle" bgcolor="{ACCENT}"
-                    style="width:30px;height:30px;border-radius:9px;font:800 12px/30px {FONT};color:#ffffff;text-align:center;letter-spacing:.02em;">FJ</td>
+                <td width="30" height="30" align="center" valign="middle" bgcolor="{ACCENT}" title="Fresher Job Tracker"
+                    style="width:30px;height:30px;border-radius:9px;text-align:center;font-size:0;line-height:0;">{_BRIEFCASE}</td>
                 <td style="padding:0 0 0 10px;vertical-align:middle;font:700 15px/1.2 {FONT};color:{TEXT};">Fresher Job Tracker</td>
                 {tag_cell}
               </tr>

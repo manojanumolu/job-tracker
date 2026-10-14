@@ -50,9 +50,9 @@ jobs:
         with:
           persist-credentials: false
           sparse-checkout: |
-            scan_schedule.py
-            settings.json
-            companies.json
+            src/scan_schedule.py
+            data/settings.json
+            data/companies.json
           sparse-checkout-cone-mode: false
 
       - name: Decide what this run does
@@ -61,7 +61,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           SCHEDULE: ${{ github.event.schedule }}
           MODE: ${{ inputs.mode }}
-        run: python3 scan_schedule.py plan >> "$GITHUB_OUTPUT"
+        run: python3 src/scan_schedule.py plan >> "$GITHUB_OUTPUT"
 
   # The scan reads external career sites (a headless browser and HTTP clients
   # loading content anyone could control), so it runs with a read-only token,
@@ -95,7 +95,7 @@ jobs:
           playwright install chromium --with-deps
 
       - name: Run scraper
-        run: python scraper.py
+        run: python src/scraper.py
         working-directory: .
 
       - name: Hand the results to the publish job
@@ -103,8 +103,8 @@ jobs:
         with:
           name: scan-results
           path: |
-            companies.json
-            seen_jobs.json
+            data/companies.json
+            data/seen_jobs.json
           if-no-files-found: error
           retention-days: 1
 
@@ -142,7 +142,7 @@ jobs:
           path: scan-results
 
       - name: Take over the scan results
-        run: python scan_handoff.py scan-results companies.json seen_jobs.json
+        run: python src/scan_handoff.py scan-results companies.json seen_jobs.json
 
       # Publish the scrape results and email new alerts — at most once per job.
       # alerts.py pushes the data (merged record-by-record with any change the
@@ -160,7 +160,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          python alerts.py
+          python src/alerts.py
 
       # Personal alerts (per-user, Phase 3): one email per person who turned
       # alerts on, from their own ledger in Firestore (claim -> send ->
@@ -177,7 +177,7 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-        run: python user_alerts.py --send
+        run: python src/user_alerts.py --send
 
   # Safety net for the scan scheduler chain (scan_scheduler.yml): if no run
   # of it is queued or running, start one. Needs only the run's own token;
@@ -233,4 +233,4 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-        run: python user_alerts.py --send
+        run: python src/user_alerts.py --send

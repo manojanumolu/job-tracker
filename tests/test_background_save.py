@@ -32,7 +32,7 @@ from test_firebase_auth import admins, google_env, no_env  # noqa: F401  (fixtur
 from test_phase3_user_data import A_MAIL, A_UID, B_MAIL, B_UID, _sign_in, store  # noqa: F401
 from test_streamlit_app import FRESHER_RECORD, NEW_RECORD, _html, _key, _nav, app  # noqa: F401
 
-PATH = "seen_jobs.json"
+PATH = "data/seen_jobs.json"
 GOOD = {"evidence": {"checks": {"detail_read": True, "fresher_or_entry_evidence": True}}}
 JOBS = [{**NEW_RECORD, **GOOD},
         {**NEW_RECORD, **GOOD, "id": "PwC_Associate", "title": "Associate Analyst", "url": "https://pwc.example/job/3"},
@@ -99,6 +99,7 @@ def test_a_scan_publishing_mid_commit_is_never_overwritten(tmp_path):
             published.append(path)
             repo.publish(path, newer)                    # lands between our read and our write
     repo = FakeRepo({PATH: first}, on_read=scan_publishes_once)
+    (tmp_path / "data").mkdir()
     data, saved, err = update_json(tmp_path / PATH, PATH, dismiss_jobs({job_key(JOBS[1])}), [], "chore: dismiss 1 alert(s)",
                                    token="t", repo=repo)
     assert saved and err == "" and repo.attempts == 2   # the stale write was refused, the retry applied to the newer copy
@@ -112,6 +113,7 @@ def test_a_scan_publishing_mid_commit_is_never_overwritten(tmp_path):
 
 def test_a_failed_commit_changes_nothing_on_github(tmp_path):
     repo = FakeRepo({PATH: JOBS}, fail=502)
+    (tmp_path / "data").mkdir()
     data, saved, err = update_json(tmp_path / PATH, PATH, dismiss_jobs({job_key(JOBS[0])}), [], "m", token="t", repo=repo)
     assert not saved and err and repo.data() == JOBS
 

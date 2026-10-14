@@ -5,10 +5,11 @@ import logging
 import os
 from pathlib import Path
 
-BASE = Path(__file__).parent
-COMPANIES_FILE = BASE / "companies.json"
-SETTINGS_FILE = BASE / "settings.json"
-SEEN_FILE = BASE / "seen_jobs.json"
+BASE = Path(__file__).resolve().parent.parent          # the repository root (this file is in src/)
+DATA = BASE / "data"
+COMPANIES_FILE = DATA / "companies.json"
+SETTINGS_FILE = DATA / "settings.json"
+SEEN_FILE = DATA / "seen_jobs.json"
 
 # GitHub repo details (owner/repo)
 GITHUB_REPO = "manojanumolu/job-tracker"
@@ -31,7 +32,7 @@ def load_companies() -> list[dict]:
 def save_companies(companies: list[dict], commit: bool = True) -> None:
     _save(COMPANIES_FILE, companies)
     if commit:
-        _commit_file(COMPANIES_FILE, "companies.json", "chore: update companies.json")
+        _commit_file(COMPANIES_FILE, "data/companies.json", "chore: update companies.json")
 
 
 def load_settings() -> dict:
@@ -41,7 +42,7 @@ def load_settings() -> dict:
 def save_settings(settings: dict, commit: bool = True) -> None:
     _save(SETTINGS_FILE, settings)
     if commit:
-        _commit_file(SETTINGS_FILE, "settings.json", "chore: update settings.json")
+        _commit_file(SETTINGS_FILE, "data/settings.json", "chore: update settings.json")
 
 
 def load_seen_jobs() -> list[dict]:
@@ -53,7 +54,7 @@ def load_seen_jobs() -> list[dict]:
 def save_seen_jobs(jobs: list[dict], commit: bool = True) -> None:
     _save(SEEN_FILE, jobs)
     if commit:
-        _commit_file(SEEN_FILE, "seen_jobs.json", "chore: update seen_jobs.json")
+        _commit_file(SEEN_FILE, "data/seen_jobs.json", "chore: update seen_jobs.json")
 
 
 def _commit_file(local_path: Path, repo_path: str, message: str) -> None:

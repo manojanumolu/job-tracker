@@ -31,16 +31,18 @@ def _free_port() -> int:
 def server(tmp_path_factory):
     pytest.importorskip("playwright.sync_api")
     root = tmp_path_factory.mktemp("app")
-    for f in REPO.glob("*.py"):
-        shutil.copy(f, root / f.name)
+    # the repository's layout: the app at the root, modules in src/, data in data/
+    shutil.copy(REPO / "streamlit_app.py", root / "streamlit_app.py")
+    shutil.copytree(REPO / "src", root / "src", ignore=shutil.ignore_patterns("__pycache__"))
+    (root / "data").mkdir()
     for name in ("companies.json", "settings.json", "logos.json"):
-        shutil.copy(REPO / name, root / name)
+        shutil.copy(REPO / "data" / name, root / "data" / name)
     shutil.copytree(REPO / "assets", root / "assets")
     (root / ".streamlit").mkdir()
     shutil.copy(REPO / ".streamlit" / "config.toml", root / ".streamlit" / "config.toml")
     many = [dict(NEW_RECORD, id=f"nav_{i}", url=f"https://jobs.example/nav/{i}", title=f"Graduate Engineer {i}")
             for i in range(40)]
-    (root / "seen_jobs.json").write_text(json.dumps(many), "utf-8")
+    (root / "data" / "seen_jobs.json").write_text(json.dumps(many), "utf-8")
     port = _free_port()
     env = {k: v for k, v in __import__("os").environ.items()
            if not k.startswith(("GITHUB_", "GMAIL_", "FIREBASE_", "JT_", "ALERT_"))}

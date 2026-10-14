@@ -46,8 +46,8 @@ import re
 import sys
 from pathlib import Path
 
-BASE = Path(__file__).parent
-BLOCKLIST_FILE = BASE / "disposable_domains.txt"
+BASE = Path(__file__).resolve().parent.parent          # the repository root (this file is in src/)
+BLOCKLIST_FILE = BASE / "config" / "disposable_domains.txt"
 UPSTREAM_URL = ("https://raw.githubusercontent.com/disposable-email-domains/disposable-email-domains/"
                 "main/disposable_email_blocklist.conf")
 

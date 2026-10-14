@@ -59,7 +59,7 @@ def _throwaway_service_account() -> dict:
 def emu():
     if not (_local(FS_HOST) and _local(AUTH_HOST)):
         pytest.fail("emulator hosts must be local — refusing to touch anything else")
-    rules = (REPO / "firestore.rules").read_text("utf-8")
+    rules = (REPO / "config" / "firestore.rules").read_text("utf-8")
     r = httpx.put(f"http://{FS_HOST}/emulator/v1/projects/{PROJECT}:securityRules",
                   json={"rules": {"files": [{"name": "firestore.rules", "content": rules}]}}, timeout=10)
     assert r.status_code == 200, r.text                       # the repository's rules, as deployed
@@ -403,12 +403,12 @@ def test_the_workflow_step_with_failing_email_releases_and_touches_nothing_share
     next run, the shared data file is untouched, and the log is counts only."""
     import subprocess
     import sys
-    seen_file = REPO / "seen_jobs.json"
+    seen_file = REPO / "data" / "seen_jobs.json"
     before = hashlib.sha256(seen_file.read_bytes()).hexdigest()
     _subscriber(emu, A, "alice@example.org")
     emu.backend.set(f"users/{A}", {"notifications": {"enabled": True, "mode": "general",
                                                      "enabled_at": "2000-01-01T00:00:00Z"}}, merge=True)
-    r = subprocess.run([sys.executable, "user_alerts.py", "--send"], cwd=REPO, env=_workflow_env(emu),
+    r = subprocess.run([sys.executable, "src/user_alerts.py", "--send"], cwd=REPO, env=_workflow_env(emu),
                        capture_output=True, text=True, timeout=180)
     out = r.stdout + r.stderr
     assert r.returncode == 1 and '"failed": 1' in out and "Traceback" not in out
@@ -423,7 +423,8 @@ def _cli_world(emu, tmp_path, monkeypatch, jobs):
     monkeypatch.setenv("FIREBASE_SERVICE_ACCOUNT", emu.test_service_account_json)
     monkeypatch.delenv("FIREBASE_PROJECT_ID", raising=False)
     monkeypatch.setattr(user_alerts, "BASE", tmp_path)
-    (tmp_path / "seen_jobs.json").write_text(json.dumps(jobs), "utf-8")
+    (tmp_path / "data").mkdir(exist_ok=True)
+    (tmp_path / "data" / "seen_jobs.json").write_text(json.dumps(jobs), "utf-8")
     mail = Mailer()
     monkeypatch.setattr(notifier, "send_alerts", mail)
     return mail
@@ -503,7 +504,7 @@ def test_even_the_signed_in_owner_and_admins_get_no_client_access(emu):
         assert httpx.get(f"{base}/users/{A}", headers=owner, timeout=10).status_code == 200      # tokens work
         assert httpx.get(f"{base}/users/{B}", headers=owner, timeout=10).status_code == 403
     finally:
-        _load_rules((REPO / "firestore.rules").read_text("utf-8"))                               # the real rules
+        _load_rules((REPO / "config" / "firestore.rules").read_text("utf-8"))                               # the real rules
     attempts = {
         "owner reads own profile": httpx.get(f"{base}/users/{A}", headers=owner, timeout=10),
         "owner writes own profile": httpx.patch(f"{base}/users/{A}", headers=owner, timeout=10,

@@ -269,12 +269,12 @@ def test_an_avatar_change_never_touches_another_account(app, google_env, ustore)
 
 def test_navigation_menu_and_settings_clicks_fetch_and_read_nothing(app, google_env, ustore, admins, monkeypatch):
     calls = []
-    catalogue = json.loads((REPO / "companies.json").read_text("utf-8"))
+    catalogue = json.loads((REPO / "data" / "companies.json").read_text("utf-8"))
 
     def fake_fetch(paths, *a, **k):
         calls.append(list(paths))
-        return {"companies.json": catalogue, "settings.json": {"recipient_email": "me@example.com"},
-                "seen_jobs.json": list(JOBS)}
+        return {"data/companies.json": catalogue, "data/settings.json": {"recipient_email": "me@example.com"},
+                "data/seen_jobs.json": list(JOBS)}
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
     monkeypatch.setattr(config_store, "fetch_remote_json", fake_fetch)
     admins(A_MAIL)

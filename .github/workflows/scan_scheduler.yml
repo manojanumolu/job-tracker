@@ -48,14 +48,14 @@ jobs:
         with:
           persist-credentials: false
           sparse-checkout: |
-            scan_schedule.py
-            settings.json
-            companies.json
+            src/scan_schedule.py
+            data/settings.json
+            data/companies.json
           sparse-checkout-cone-mode: false
 
       - name: Work out when the next window opens
         id: wait
-        run: python3 scan_schedule.py wait >> "$GITHUB_OUTPUT"
+        run: python3 src/scan_schedule.py wait >> "$GITHUB_OUTPUT"
 
       - name: Wait until then
         # (the previous step's log and the run summary say until when)

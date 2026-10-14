@@ -100,14 +100,16 @@ def test_a_failed_scan_is_retried_about_half_an_hour_later():
 
 
 def test_the_wait_command_prints_outputs_and_never_fails(tmp_path):
-    (tmp_path / "scan_schedule.py").write_text((REPO / "scan_schedule.py").read_text("utf-8"), "utf-8")
-    (tmp_path / "settings.json").write_text("{}")
+    (tmp_path / "src").mkdir()
+    (tmp_path / "data").mkdir()
+    (tmp_path / "src" / "scan_schedule.py").write_text((REPO / "src" / "scan_schedule.py").read_text("utf-8"), "utf-8")
+    (tmp_path / "data" / "settings.json").write_text("{}")
     summary = tmp_path / "summary.md"
     env = {**os.environ, "GITHUB_STEP_SUMMARY": str(summary)}
 
     def run(companies_text):
-        (tmp_path / "companies.json").write_text(companies_text)
-        r = subprocess.run([sys.executable, "scan_schedule.py", "wait"], cwd=tmp_path, env=env,
+        (tmp_path / "data" / "companies.json").write_text(companies_text)
+        r = subprocess.run([sys.executable, "src/scan_schedule.py", "wait"], cwd=tmp_path, env=env,
                            capture_output=True, text=True, timeout=60)
         assert r.returncode == 0, r.stderr
         return dict(line.split("=", 1) for line in r.stdout.split())
@@ -134,7 +136,7 @@ def test_the_chain_is_dispatch_only_one_at_a_time_and_minimally_privileged():
     assert re.findall(r"^      (\w+): (\w+)", perms, re.M) == [("contents", "read"), ("actions", "write")]
     assert CHAIN.count("permissions:") == 2 and "persist-credentials: false" in CHAIN
     assert "secrets." not in CHAIN                            # the run's own token, nothing else
-    assert "python3 scan_schedule.py wait" in CHAIN and 'sleep "$WAIT_SECONDS"' in CHAIN
+    assert "python3 src/scan_schedule.py wait" in CHAIN and 'sleep "$WAIT_SECONDS"' in CHAIN
 
 
 def test_the_chain_dispatches_a_gated_plan_then_hands_over():
@@ -158,7 +160,7 @@ def test_every_check_jobs_run_restarts_a_stopped_chain_and_cannot_fail():
 
 def test_no_external_scheduler_anywhere():
     texts = [p.read_text("utf-8") for p in list(WF.glob("*.yml")) + list((REPO / "docs").glob("*.md"))]
-    texts.append((REPO / "scan_schedule.py").read_text("utf-8"))
+    texts.append((REPO / "src" / "scan_schedule.py").read_text("utf-8"))
     for t in texts:
         assert "cron-job" not in t.lower() and "EXTERNAL_SCHEDULER" not in t
     assert not (REPO / "docs" / "EXTERNAL_SCHEDULER.md").exists()

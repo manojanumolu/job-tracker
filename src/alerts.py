@@ -86,7 +86,7 @@ def run(send=None, publisher=publish) -> int:
     if not recipient:
         log.info("No recipient email configured (the ALERT_RECIPIENT secret) — publishing data only")
 
-    if not publisher(DATA_MESSAGE, {"seen_jobs.json": seen, "companies.json": companies}):
+    if not publisher(DATA_MESSAGE, {"data/seen_jobs.json": seen, "data/companies.json": companies}):
         log.error("Could not publish the scrape results — no email sent (the jobs will be found again next run)")
         return 1
     if not keys:
@@ -106,7 +106,7 @@ def run(send=None, publisher=publish) -> int:
             log.error("Sending the alert email failed (%s) — claims released, will retry next run",
                       type(e).__name__)
     finalize(seen, keys, ok)
-    if not publisher(SENT_MESSAGE, {"seen_jobs.json": seen}):
+    if not publisher(SENT_MESSAGE, {"data/seen_jobs.json": seen}):
         log.error("Could not record the delivery state. The jobs stay 'claimed' and are NOT re-sent. %s",
                   "" if ok else "Because sending also failed, these alerts were lost: "
                   + ", ".join(j.get("title", "?") for j in jobs))

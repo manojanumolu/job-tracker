@@ -36,7 +36,7 @@ def job(n, company="sanofi", title="Software Engineer", location="Pune · India"
 def test_global_gate_is_exactly_todays_alert_gate():
     """passes_global_gate == alert_pending without the per-recipient state
     (sent / claimed / dismissed), on every real record and edge cases."""
-    real = json.loads((REPO / "seen_jobs.json").read_text("utf-8"))
+    real = json.loads((REPO / "data" / "seen_jobs.json").read_text("utf-8"))
     edge = [job(1), job(2, category="EXPERIENCED"), job(3, category=None), job(4, evidence={}),
             job(5, evidence={"checks": {"india": True, "experience": False}}), job(6, evidence={"checks": {}}),
             job(7, evidence="nope"), {"title": "legacy keyword match"}, job(8, category="ENTRY_LEVEL")]
@@ -302,5 +302,5 @@ def test_cli_with_a_broken_service_account_fails_without_leaking(monkeypatch, ca
 def test_the_shared_notifier_is_untouched():
     """alerts.py (the shared notifier) keeps its own gate and ledger and
     knows nothing of the personal one."""
-    src = (REPO / "alerts.py").read_text("utf-8")
+    src = (REPO / "src" / "alerts.py").read_text("utf-8")
     assert "user_alerts" not in src and "user_store" not in src

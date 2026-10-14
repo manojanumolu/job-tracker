@@ -96,7 +96,7 @@ def test_github_down_keeps_the_old_copy_marked_stale_and_never_fresh():
 
 def test_the_app_bounds_its_shared_data_cache():
     src = (REPO / "streamlit_app.py").read_text("utf-8")
-    m = re.search(r"SnapshotCache\(lambda: fetch_remote_json\(_SHARED_FILES\), ttl_s=(\d+), max_stale_s=(\d+)\)", src)
+    m = re.search(r"SnapshotCache\(lambda: fetch_remote_json\(_DATA_FILES\), ttl_s=(\d+), max_stale_s=(\d+)\)", src)
     assert m and int(m.group(1)) == 300 and int(m.group(2)) <= 900
 
 
@@ -180,18 +180,18 @@ def test_a_failed_scrape_publishes_nothing():
     # the publish job (the only place alerts.py runs) starts only after a successful scrape
     assert "needs: [plan, scrape]" in publish
     assert "if: ${{ !cancelled() && needs.scrape.result == 'success' }}" in publish.split("steps:", 1)[0]
-    assert "python alerts.py" in publish and "alerts.py" not in scrape
+    assert "python src/alerts.py" in publish and "alerts.py" not in scrape
 
 
 # ── the dashboard ──────────────────────────────────────────────────────────
 
 def _stamp(tmp_path, ago: timedelta, status="active"):
     now = datetime.now(timezone.utc)
-    companies = json.loads((REPO / "companies.json").read_text("utf-8"))
+    companies = json.loads((REPO / "data" / "companies.json").read_text("utf-8"))
     for i, c in enumerate(companies):
         c["status"] = status
         c["last_checked"] = (now - ago - timedelta(seconds=10 * i)).isoformat()
-    (tmp_path / "companies.json").write_text(json.dumps(companies))
+    (tmp_path / "data" / "companies.json").write_text(json.dumps(companies))
     return len(companies)
 
 
@@ -222,11 +222,11 @@ def test_a_recent_scan_is_healthy(app, tmp_path):
 
 def test_portal_counts_follow_each_portals_own_result(app, tmp_path):
     now = datetime.now(timezone.utc)
-    companies = json.loads((REPO / "companies.json").read_text("utf-8"))
+    companies = json.loads((REPO / "data" / "companies.json").read_text("utf-8"))
     for c in companies:
         c["status"], c["last_checked"] = "active", (now - timedelta(minutes=20)).isoformat()
     companies[0]["status"] = "failing"
-    (tmp_path / "companies.json").write_text(json.dumps(companies))
+    (tmp_path / "data" / "companies.json").write_text(json.dumps(companies))
     html = _html(app([]))
     assert f"{len(companies) - 1} healthy · 1 failing" in html
     assert _overall(html)[0] == "failing"
@@ -278,12 +278,14 @@ def _run_plan(tmp_path, env_extra, companies_text):
     import os
     import subprocess
     import sys
-    (tmp_path / "scan_schedule.py").write_text((REPO / "scan_schedule.py").read_text("utf-8"), "utf-8")
-    (tmp_path / "settings.json").write_text("{}")
-    (tmp_path / "companies.json").write_text(companies_text)
+    (tmp_path / "src").mkdir(exist_ok=True)
+    (tmp_path / "data").mkdir(exist_ok=True)
+    (tmp_path / "src" / "scan_schedule.py").write_text((REPO / "src" / "scan_schedule.py").read_text("utf-8"), "utf-8")
+    (tmp_path / "data" / "settings.json").write_text("{}")
+    (tmp_path / "data" / "companies.json").write_text(companies_text)
     summary = tmp_path / "summary.md"
     env = {**os.environ, "GITHUB_STEP_SUMMARY": str(summary), **env_extra}
-    r = subprocess.run([sys.executable, "scan_schedule.py", "plan"], cwd=tmp_path, env=env,
+    r = subprocess.run([sys.executable, "src/scan_schedule.py", "plan"], cwd=tmp_path, env=env,
                        capture_output=True, text=True, timeout=60)
     assert r.returncode == 0, r.stderr
     return r.stdout.split(), summary.read_text("utf-8") if summary.exists() else ""
@@ -349,12 +351,12 @@ def test_publishing_carries_the_last_success_field():
 
 def test_monitoring_shows_when_a_failing_portal_last_succeeded(app, tmp_path):
     now = datetime.now(timezone.utc)
-    companies = json.loads((REPO / "companies.json").read_text("utf-8"))
+    companies = json.loads((REPO / "data" / "companies.json").read_text("utf-8"))
     for c in companies:
         c["status"], c["last_checked"] = "active", (now - timedelta(minutes=20)).isoformat()
         c["last_success"] = c["last_checked"]
     companies[0].update(status="failing", status_reason="listing page timed out",
                         last_success=(now - timedelta(days=2, minutes=5)).isoformat())
-    (tmp_path / "companies.json").write_text(json.dumps(companies))
+    (tmp_path / "data" / "companies.json").write_text(json.dumps(companies))
     html = _html(app([], page="monitoring"))
     assert "listing page timed out · last succeeded 2 days ago" in html

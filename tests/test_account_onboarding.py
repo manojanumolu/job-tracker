@@ -190,7 +190,7 @@ def test_admin_keeps_every_capability(app, google_env, store, admins):
 
 def test_following_writes_only_to_the_persons_own_list(app, google_env, store):
     _ready(store, A_UID, A_MAIL)
-    before = (REPO / "companies.json").read_bytes()
+    before = (REPO / "data" / "companies.json").read_bytes()
     at = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS, page="companies")
     assert "You aren&#x27;t following any companies yet." in _html(at)
     at.button(key="btn_co_pick").click().run()
@@ -201,7 +201,7 @@ def test_following_writes_only_to_the_persons_own_list(app, google_env, store):
     following = [b.key for b in at.button if (b.key or "").startswith("fu_")]
     assert len(following) == 1
     tmp_catalogue = json.loads((at.tmp_path / "companies.json").read_text("utf-8"))
-    assert len(tmp_catalogue) == 7 and (REPO / "companies.json").read_bytes() == before
+    assert len(tmp_catalogue) == 7 and (REPO / "data" / "companies.json").read_bytes() == before
     assert tmp_catalogue == json.loads(before)                       # the shared catalogue is untouched
     assert [p for p in store.backend.docs if "companies" in p] == [
         p for p in store.backend.docs if p.startswith(f"users/{A_UID}/companies/")]
@@ -214,7 +214,7 @@ def test_admin_still_sees_all_seven_tracked_companies(app, google_env, store, ad
     _ready(store, A_UID, A_MAIL)
     at = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS, page="companies")
     html = _html(at)
-    for c in json.loads((REPO / "companies.json").read_text("utf-8")):
+    for c in json.loads((REPO / "data" / "companies.json").read_text("utf-8")):
         assert (c.get("name") or "") in html
     assert "You aren&#x27;t following any companies yet." not in html
 
@@ -461,12 +461,12 @@ def test_page_clicks_do_not_refetch_github_data(app, google_env, store, monkeypa
     background only when older than 5 minutes)."""
     import config_store
     calls = []
-    catalogue = json.loads((REPO / "companies.json").read_text("utf-8"))
+    catalogue = json.loads((REPO / "data" / "companies.json").read_text("utf-8"))
 
     def fake_fetch(paths, *a, **k):
         calls.append(list(paths))
-        return {"companies.json": catalogue, "settings.json": {"recipient_email": "me@example.com"},
-                "seen_jobs.json": list(JOBS)}
+        return {"data/companies.json": catalogue, "data/settings.json": {"recipient_email": "me@example.com"},
+                "data/seen_jobs.json": list(JOBS)}
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
     monkeypatch.setattr(config_store, "fetch_remote_json", fake_fetch)
     _ready(store, A_UID, A_MAIL)

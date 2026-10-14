@@ -13,6 +13,31 @@ from urllib.parse import urlparse
 
 import streamlit as st
 
+# The app's modules live in src/ (this file stays at the repository root,
+# where Streamlit Community Cloud runs it); data files are in data/.
+_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
+if _SRC not in __import__("sys").path:
+    __import__("sys").path.insert(0, _SRC)
+
+
+def _drop_moved_local_modules() -> None:
+    """Streamlit Cloud keeps imported modules across a deploy. A module whose
+    file no longer exists (it moved — e.g. into src/ in Oct 2026) is dropped,
+    so the import below loads the current copy instead of running stale code
+    with stale paths. Every module of the app is dropped together, so none
+    keeps a reference to an old one. Tests import the same names from the
+    repository (files that exist), so nothing of theirs is touched."""
+    import sys
+
+    names = [f[:-3] for f in os.listdir(_SRC) if f.endswith(".py")] if os.path.isdir(_SRC) else []
+    gone = any(getattr(sys.modules.get(n), "__file__", None) and not os.path.exists(sys.modules[n].__file__) for n in names)
+    if gone:
+        for n in names:
+            sys.modules.pop(n, None)
+
+
+_drop_moved_local_modules()
+
 
 def _reload_changed_local_modules() -> None:
     """Streamlit (notably on Community Cloud) re-runs this script after a
@@ -24,7 +49,7 @@ def _reload_changed_local_modules() -> None:
     import importlib
     import sys
 
-    base = os.path.dirname(os.path.abspath(__file__))
+    base = _SRC
     for name in _LOCAL_MODULES:
         mod = sys.modules.get(name)
         path = getattr(mod, "__file__", None) if mod else None
@@ -53,7 +78,7 @@ def _stamp_fresh_local_modules() -> None:
     and scraper.py (0.35 s) again right after the first Monitoring visit."""
     import sys
 
-    base = os.path.dirname(os.path.abspath(__file__))
+    base = _SRC
     for name in _LOCAL_MODULES:
         mod = sys.modules.get(name)
         path = getattr(mod, "__file__", None) if mod else None
@@ -1392,11 +1417,12 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 /* the menu button (laptops and desktops) opens / closes the left navigation:
    at the left of the top bar, an icon; its label stays for screen readers */
 .st-key-acct_bar { align-items: center; }
-.st-key-acct_bar > :first-child { margin-right: auto !important; }    /* the menu-button fragment */
-.st-key-btn_nav_toggle [data-testid^="stBaseButton"] { width: 42px !important; height: 42px !important; min-height: 42px !important; padding: 0 !important;
-  border-radius: 12px !important; justify-content: center !important; }
+.st-key-acct_bar > :first-child { margin-right: auto !important; }    /* the phone menu-button fragment */
+.st-key-btn_nav_toggle [data-testid^="stBaseButton"] { width: 36px !important; height: 36px !important; min-height: 36px !important; padding: 0 !important;
+  border-radius: 10px !important; justify-content: center !important; }
+.st-key-side_toggle { align-items: center; }
 .st-key-btn_nav_toggle [data-testid^="stBaseButton"] > div { justify-content: center !important; gap: 0 !important; }
-.st-key-btn_nav_toggle [data-testid="stIconMaterial"] { font-size: 22px !important; margin: 0 !important; color: var(--text-2); }
+.st-key-btn_nav_toggle [data-testid="stIconMaterial"] { font-size: 21px !important; margin: 0 !important; color: var(--text-2); }
 .st-key-btn_nav_toggle [data-testid="stMarkdownContainer"], .st-key-btn_nav_toggle [data-testid="stMarkdownContainer"] p {
   position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important;
   clip-path: inset(50%) !important; white-space: nowrap !important; margin: -1px !important; padding: 0 !important; border: 0 !important; }
@@ -2127,7 +2153,7 @@ def _refresh_data() -> None:
         _shared_data().refresh_now()
 
 
-_SHARED_FILES = ["companies.json", "settings.json", "seen_jobs.json", "logos.json"]
+_DATA_FILES = ["data/companies.json", "data/settings.json", "data/seen_jobs.json", "data/logos.json"]
 
 
 @st.cache_resource(show_spinner=False)
@@ -2138,7 +2164,7 @@ def _shared_data() -> snapshot_cache.SnapshotCache:
     background (it took ~2.5 s, which used to freeze that click). A copy
     older than 15 minutes is never shown: the first page after an idle spell
     reads GitHub again first (it once showed a day-old scan as "delayed")."""
-    return snapshot_cache.SnapshotCache(lambda: fetch_remote_json(_SHARED_FILES), ttl_s=300, max_stale_s=900)
+    return snapshot_cache.SnapshotCache(lambda: fetch_remote_json(_DATA_FILES), ttl_s=300, max_stale_s=900)
 
 
 def _remote_snapshot() -> dict:
@@ -3194,7 +3220,7 @@ def _me_avatar(cls: str = "acct-av") -> str:
 
 # ── data ──────────────────────────────────────────────────────────────────────
 companies: list[dict] = []
-for _i, _c in enumerate(c for c in _load_synced("companies.json", []) if isinstance(c, dict)):
+for _i, _c in enumerate(c for c in _load_synced("data/companies.json", []) if isinstance(c, dict)):
     # every company needs a unique id for its widgets/links; a missing or
     # repeated id (hand-edited file) gets one for this page view only — the
     # file itself is never rewritten here
@@ -3202,16 +3228,16 @@ for _i, _c in enumerate(c for c in _load_synced("companies.json", []) if isinsta
     if not _c.get("id") or any(str(x.get("id")) == str(_c.get("id")) for x in companies):
         _c["id"] = f"_row{_i}"
     companies.append(_c)
-settings: dict = _load_synced("settings.json", {})
+settings: dict = _load_synced("data/settings.json", {})
 SCAN_HOURS = scan_schedule.interval_from(settings)        # the admin's global interval (1, 3, 6 or 12 h)
-_logo_entries = company_logos.entries(_load_synced("logos.json", {}))
+_logo_entries = company_logos.entries(_load_synced("data/logos.json", {}))
 _FOUND_LOGOS = {(c.get("name") or "").strip().lower(): _logo_entries[c["id"]]
                 for c in companies if c.get("id") in _logo_entries and (c.get("name") or "").strip()}
 # seen_jobs.json is also the scraper's dedup history: jobs are dismissed
 # (hidden), never deleted, or the scraper would email them again
 all_records: list[dict] = []
 _seen_keys: set[str] = set()
-for _j in _load_synced("seen_jobs.json", []):
+for _j in _load_synced("data/seen_jobs.json", []):
     # a duplicated record (same id + URL) would give two widgets the same
     # key and crash the page — show each job once
     if isinstance(_j, dict) and job_key(_j) not in _seen_keys:
@@ -3309,9 +3335,9 @@ def change_dismissal(keys: set[str], dismiss: bool):
         if not is_owner():
             return True, ""
         if dismiss:
-            return (True, "") if _save_change_soon("seen_jobs.json", dismiss_jobs(keys), [],
+            return (True, "") if _save_change_soon("data/seen_jobs.json", dismiss_jobs(keys), [],
                                                    f"chore: dismiss {len(keys)} alert(s)") else None
-    _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(keys) if dismiss else _restore_jobs(keys), [],
+    _, saved, err = _save_change("data/seen_jobs.json", dismiss_jobs(keys) if dismiss else _restore_jobs(keys), [],
                                  f"chore: {'dismiss' if dismiss else 'restore'} {len(keys)} alert(s)")
     return saved, err
 
@@ -3535,15 +3561,8 @@ def nav_controls() -> None:
     Real buttons throughout: keyboard reachable, each with a label that
     screen readers read (shown as icons where space is short)."""
     _leave_fragment_if_needed()
-    collapsed = st.session_state.get("nav_collapsed", False)
-    label = "Show navigation" if collapsed else "Hide navigation"
     with st.container(key="nav_toggle"):
-        st.button(label, key="btn_nav_toggle", icon=":material/menu:", help=label, on_click=_toggle_nav)
         st.button("Open menu", key="btn_drawer_open", icon=":material/menu:", on_click=_open_drawer)
-    # always drawn, so each run of this fragment REPLACES the previous rule
-    # (a rule drawn only while closed outlived the fragment run that reopened it)
-    st.html("<style>@media (min-width: 768px) { section[data-testid='stSidebar'] { display: none !important; } }</style>"
-            if collapsed else "<style>/* navigation open */</style>")     # laptops/desktops: phones never show it
     if not st.session_state.get("nav_drawer"):
         return
     st.button("Close menu", key="btn_drawer_backdrop", on_click=_close_drawer)     # the dimmed page behind
@@ -3564,6 +3583,38 @@ def nav_controls() -> None:
                 " color: var(--accent-text) !important; }</style>")
 
 
+# laptops and desktops: where the menu button sits. It is drawn INSIDE the
+# sidebar (the main area is a lower layer than the sidebar, so a button drawn
+# there could never sit on it). Each state's rule is drawn by the same
+# fragment run, so the latest click always wins.
+#   open    at the sidebar's upper right, level with the first group label
+#           (narrow icon rail, 768-1023 px: at the top of the rail)
+#   closed  the sidebar folds to zero width (it is not removed, so the button
+#           stays visible) and the button sits at the window's left edge; the
+#           page keeps a left gutter wide enough that it never covers content
+_NAV_OPEN_CSS = """@media (min-width: 1024px) {
+  .st-key-side_toggle { position: fixed !important; top: 74px; left: calc(var(--sidebar-w) - 50px); width: auto !important; z-index: 5; }
+}"""
+_NAV_CLOSED_CSS = """@media (min-width: 768px) {
+  .stApp section[data-testid="stSidebar"] { width: 0 !important; min-width: 0 !important; max-width: 0 !important;
+    overflow: hidden !important; visibility: hidden; border: 0 !important; box-shadow: none !important; }
+  .st-key-side_toggle { visibility: visible; position: fixed !important; top: 18px; left: 14px; width: auto !important; z-index: 5; }
+  .stApp [data-testid="stMainBlockContainer"], .stApp .block-container { padding-left: 72px !important; }
+}"""
+
+
+@st.fragment
+def sidebar_toggle() -> None:
+    """The laptop/desktop menu button ("Hide/Show navigation"), drawn in the
+    sidebar; a click reruns only this fragment. Phones never show the
+    sidebar, so they never see it (they have the drawer)."""
+    collapsed = st.session_state.get("nav_collapsed", False)
+    label = "Show navigation" if collapsed else "Hide navigation"
+    with st.container(key="side_toggle"):
+        st.button(label, key="btn_nav_toggle", icon=":material/menu:", help=label, on_click=_toggle_nav)
+    st.html(f"<style>{_NAV_CLOSED_CSS if collapsed else _NAV_OPEN_CSS}</style>")
+
+
 # the desktop navigation's open/closed state lives in the URL too (?menu=hidden);
 # read only here, past the sign-in gate, so a signed-out tab holds none of it
 if "nav_collapsed" not in st.session_state:
@@ -3571,6 +3622,7 @@ if "nav_collapsed" not in st.session_state:
 # always drawn (laptops and desktops; CSS hides it on phones, and nav_controls
 # hides it while closed) — so opening it again needs no page run
 with st.sidebar:
+    sidebar_toggle()
     logo = _logo_data_uri()
     st.html(f"""<div class="brand"><div class="mark {overall[0] if not MEMBER_VIEW else 'healthy'}">{f'<img src="{logo}" alt="">' if logo else ''}</div>
       <div><div class="n">Fresher Job Tracker</div><div class="s">Fresher opportunities</div></div></div>""")
@@ -4388,7 +4440,7 @@ def page_add_company():
                     latest.append(new)
                 return latest
 
-            _, saved, err = _save_change("companies.json", _add, [], f"chore: add {n}")
+            _, saved, err = _save_change("data/companies.json", _add, [], f"chore: add {n}")
             toast(f"{n} added — it will be checked on the next scan" if saved
                   else f"{n} added, but not saved permanently. {err}", "success" if saved else "error")
             st.session_state.just_added = new["id"]
@@ -4436,7 +4488,7 @@ def _remove_company(cid, name: str) -> None:
     if not owner_only("remove companies"):
         st.session_state.confirm_remove = None
         return
-    _, saved, err = _save_change("companies.json", lambda latest: [x for x in latest if x.get("id") != cid],
+    _, saved, err = _save_change("data/companies.json", lambda latest: [x for x in latest if x.get("id") != cid],
                                  [], f"chore: remove {name}")
     toast(f"Removed {name}" if saved else f"Removed {name}, but not saved permanently. {err}",
           "success" if saved else "error")
@@ -5072,10 +5124,10 @@ def _clear_all(keys: set[str]) -> None:
     # the confirmed jobs only: a job a scan published since the page was drawn
     # was never shown to the admin, so it stays active (and gets its email)
     if USER is not None:            # their own copy already changed: the shared commit needn't hold the click
-        if _save_change_soon("seen_jobs.json", dismiss_jobs(keys), [], "chore: dismiss all alerts"):
+        if _save_change_soon("data/seen_jobs.json", dismiss_jobs(keys), [], "chore: dismiss all alerts"):
             toast("All alerts cleared", "success")
         return
-    _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(keys), [], "chore: dismiss all alerts")
+    _, saved, err = _save_change("data/seen_jobs.json", dismiss_jobs(keys), [], "chore: dismiss all alerts")
     toast("All alerts cleared" if saved else f"Cleared here, but not saved permanently. {err}",
           "success" if saved else "error")
 
@@ -5103,7 +5155,7 @@ def _save_scan_interval() -> None:
     except scan_schedule.InvalidInterval as e:
         toast(str(e), "error")
         return
-    _, saved, err = _save_change("settings.json", lambda latest: scan_schedule.with_interval(latest, hours),
+    _, saved, err = _save_change("data/settings.json", lambda latest: scan_schedule.with_interval(latest, hours),
                                  {}, f"chore: set the scan interval to {hours} h [skip ci]")
     if saved:
         toast(f"Scan interval saved — {interval_label(hours).lower()}. It applies from the next hourly check; "

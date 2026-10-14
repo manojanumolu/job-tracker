@@ -8,7 +8,7 @@ name: Company Logos
 on:
   push:
     branches: [main]
-    paths: [companies.json]
+    paths: [data/companies.json]
   schedule:
     - cron: "40 2 * * *"      # daily, 08:10 IST
   workflow_dispatch:
@@ -42,16 +42,16 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install --require-hashes -r requirements-logos.txt
+        run: pip install --require-hashes -r requirements/requirements-logos.txt
 
       - name: Find company logos
-        run: python company_logos.py
+        run: python src/company_logos.py
 
       - name: Hand logos.json to the publish job
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: logo-results
-          path: logos.json
+          path: data/logos.json
           if-no-files-found: error
           retention-days: 1
 
@@ -82,7 +82,7 @@ jobs:
           path: logo-results
 
       - name: Take over logos.json
-        run: python scan_handoff.py logo-results logos.json
+        run: python src/scan_handoff.py logo-results logos.json
 
       - name: Publish company logos
         env:
@@ -90,4 +90,4 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          python company_logos.py --publish-only
+          python src/company_logos.py --publish-only

@@ -421,12 +421,12 @@ def test_o_menu_items(app, google_env, ustore):
 def test_p_navigation_and_menu_clicks_fetch_nothing(app, google_env, ustore, admins, monkeypatch):
     import config_store
     calls = []
-    catalogue = json.loads((REPO / "companies.json").read_text("utf-8"))
+    catalogue = json.loads((REPO / "data" / "companies.json").read_text("utf-8"))
 
     def fake_fetch(paths, *a, **k):
         calls.append(list(paths))
-        return {"companies.json": catalogue, "settings.json": {"recipient_email": "me@example.com"},
-                "seen_jobs.json": list(JOBS)}
+        return {"data/companies.json": catalogue, "data/settings.json": {"recipient_email": "me@example.com"},
+                "data/seen_jobs.json": list(JOBS)}
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
     monkeypatch.setattr(config_store, "fetch_remote_json", fake_fetch)
     admins(A_MAIL)

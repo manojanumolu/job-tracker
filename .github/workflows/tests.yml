@@ -21,7 +21,7 @@ jobs:
           python-version: "3.12"   # same as check_jobs.yml
       - name: Install dependencies
         run: |
-          pip install --require-hashes -r requirements-dev.txt
+          pip install --require-hashes -r requirements/requirements-dev.txt
           playwright install chromium --with-deps
       - name: Run tests
         run: python -m pytest -q

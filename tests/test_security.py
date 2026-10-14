@@ -440,7 +440,7 @@ def test_workflow_passes_the_recipient_secret_only_to_the_alert_step():
     # permissions and scan steps are otherwise unchanged; the schedule is the
     # plan tick twice an hour + the 6-hourly personal pass (scan_schedule.py decides)
     assert 'cron: "17,47 * * * *"' in wf and 'cron: "20 */6 * * *"' in wf
-    assert "contents: write" in wf and "python scraper.py" in wf
+    assert "contents: write" in wf and "python src/scraper.py" in wf
 
 
 def test_browser_never_gets_tracebacks():

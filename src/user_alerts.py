@@ -62,7 +62,7 @@ from config_store import job_key
 from user_store import UserStore, UserStoreError, configure
 
 log = logging.getLogger("user_alerts")
-BASE = Path(__file__).parent
+BASE = Path(__file__).resolve().parent.parent          # the repository root (this file is in src/)
 
 
 def _parse_time(value) -> datetime | None:
@@ -166,7 +166,7 @@ def main(argv=None) -> int:
         log.info("Per-user alerts are not set up%s — nothing to do", f" ({problem})" if problem else "")
         return 1 if problem else 0
     try:
-        seen = json.loads((BASE / "seen_jobs.json").read_text("utf-8"))
+        seen = json.loads((BASE / "data" / "seen_jobs.json").read_text("utf-8"))
         send = None
         if args.send:
             from notifier import send_alerts as send

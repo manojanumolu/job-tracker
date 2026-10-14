@@ -582,7 +582,7 @@ def test_firestore_backend_create_is_create_if_absent():
 
 def test_firestore_rules_deny_all_client_access():
     from test_streamlit_app import REPO
-    rules = (REPO / "firestore.rules").read_text("utf-8")
+    rules = (REPO / "config" / "firestore.rules").read_text("utf-8")
     assert "allow read, write: if false;" in rules and "if true" not in rules and "request.auth" not in rules
 
 

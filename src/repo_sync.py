@@ -26,8 +26,8 @@ from identity import job_uid
 
 log = logging.getLogger("repo_sync")
 
-BASE = Path(__file__).parent
-DATA_FILES = ("seen_jobs.json", "companies.json")
+BASE = Path(__file__).resolve().parent.parent          # the repository root (this file is in src/)
+DATA_FILES = ("data/seen_jobs.json", "data/companies.json")
 SCAN_FIELDS = ("status", "status_reason", "scan_note", "last_checked", "last_success", "last_job", "scan", "source")
 _STATE_RANK = {None: 0, "": 0, "pending": 0, "claimed": 1, "sent": 2, "skipped": 2}
 
@@ -149,11 +149,12 @@ def publish(message: str, local: dict[str, object], *, cwd: Path = BASE, branch:
             merged = {}
             for name, data in local.items():
                 rem = _remote_json(ref, name, cwd)
-                if name == "seen_jobs.json":
+                kind = Path(name).name            # names are paths from the repository root ("data/...")
+                if kind == "seen_jobs.json":
                     merged[name] = merge_seen(rem or [], data)
-                elif name == "companies.json":
+                elif kind == "companies.json":
                     merged[name] = merge_companies(rem, data) if rem is not None else data
-                elif name == "logos.json":
+                elif kind == "logos.json":
                     merged[name] = merge_logos(rem, data)
                 else:
                     merged[name] = data

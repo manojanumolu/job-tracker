@@ -29,7 +29,11 @@ STEP_MARK = "\n      # Personal alerts (per-user"
 # credentials) and a "publish" job that takes over only its two JSON files,
 # actions pinned to commit SHAs, hashed dependency installs. The commands
 # themselves (scraper.py, alerts.py, user_alerts.py) are checked below too.
-GLOBAL_SCAN_STEPS_SHA256 = "8719218f8f1f8701e1f3a7669be812e32938979a75f9f48eb1f728d29c54ff4d"
+# Re-pinned 2026-10-15 for the repository layout (modules in src/, data in
+# data/): the diff is paths only — "python src/scraper.py", "src/alerts.py",
+# "src/user_alerts.py", "src/scan_handoff.py" and the artifact's
+# data/companies.json, data/seen_jobs.json; no command, step or permission changed.
+GLOBAL_SCAN_STEPS_SHA256 = "4cd02d92fa0500123fb4a98f94dcf6f09d81a92a6710b826056c35459e7c7a51"
 
 
 def _wf() -> str:
@@ -72,12 +76,12 @@ def test_the_global_scan_is_byte_for_byte_as_reviewed():
 
 def test_the_scan_commands_are_unchanged():
     scrape, publish = _steps(_wf(), "scrape"), _steps(_wf())
-    assert scrape["Run scraper"].rstrip().endswith("run: python scraper.py\n        working-directory: .".rstrip())
+    assert scrape["Run scraper"].rstrip().endswith("run: python src/scraper.py\n        working-directory: .".rstrip())
     run = publish["Publish results and send email alerts"].split("run: |", 1)[1].strip().split("\n\n", 1)[0]
     assert [line.strip() for line in run.splitlines()] == [
         'git config user.name  "github-actions[bot]"',
         'git config user.email "github-actions[bot]@users.noreply.github.com"',
-        "python alerts.py"]
+        "python src/alerts.py"]
 
 
 def test_the_personal_step_runs_last_and_can_never_fail_the_job():
@@ -95,7 +99,7 @@ def test_the_personal_step_runs_last_and_can_never_fail_the_job():
     # email succeeded (one must never depend on the other)
     publish_if = steps["Publish results and send email alerts"].split("if: ", 1)[1].split("\n", 1)[0]
     assert step.split("if: ", 1)[1].split("\n", 1)[0] == publish_if
-    assert step.rstrip().endswith("run: python user_alerts.py --send")
+    assert step.rstrip().endswith("run: python src/user_alerts.py --send")
 
 
 def test_the_personal_step_gets_only_the_secrets_it_needs():
@@ -138,7 +142,7 @@ def test_every_check_jobs_job_has_a_time_limit():
 
 
 def test_the_shared_notifier_does_not_know_the_personal_one():
-    src = (REPO / "alerts.py").read_text("utf-8")
+    src = (REPO / "src" / "alerts.py").read_text("utf-8")
     assert "user_alerts" not in src and "user_store" not in src and "firebase" not in src.lower()
 
 
@@ -151,7 +155,7 @@ def _cli(env_extra: dict, args=("--send",)) -> subprocess.CompletedProcess:
            if k not in ("FIREBASE_SERVICE_ACCOUNT", "GMAIL_ADDRESS", "GMAIL_APP_PASSWORD", "FIREBASE_PROJECT_ID")}
     env.update(env_extra)
     env["PYTHONWARNINGS"] = "ignore"
-    return subprocess.run([sys.executable, "user_alerts.py", *args], cwd=REPO, env=env, capture_output=True,
+    return subprocess.run([sys.executable, "src/user_alerts.py", *args], cwd=REPO, env=env, capture_output=True,
                           text=True, timeout=120)
 
 
@@ -239,7 +243,8 @@ def cli_env(tmp_path, monkeypatch):
     monkeypatch.setattr(notifier, "send_alerts", send_alerts)
 
     def seen(jobs):
-        (tmp_path / "seen_jobs.json").write_text(json.dumps(jobs), "utf-8")
+        (tmp_path / "data").mkdir(exist_ok=True)             # the module reads <root>/data/seen_jobs.json
+        (tmp_path / "data" / "seen_jobs.json").write_text(json.dumps(jobs), "utf-8")
     return {"store": store, "sent": sent, "fail_for": fail_for, "seen": seen}
 
 
@@ -312,7 +317,7 @@ def test_the_cli_never_crashes(cli_env, monkeypatch, caplog, break_it):
     if break_it == "user_listing":
         monkeypatch.setattr(s, "user_ids", lambda: (_ for _ in ()).throw(UserStoreError("x")))
     elif break_it == "corrupt_data":
-        (user_alerts.BASE / "seen_jobs.json").write_text("{not json", "utf-8")
+        (user_alerts.BASE / "data" / "seen_jobs.json").write_text("{not json", "utf-8")
     else:
         monkeypatch.setattr(user_alerts, "run_for_user", lambda *a, **k: (_ for _ in ()).throw(KeyError("boom")))
     assert user_alerts.main(["--send"]) == 1

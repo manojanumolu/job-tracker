@@ -81,7 +81,7 @@ CHAIN_OFFSET = timedelta(minutes=2)
 CHAIN_RETRY = timedelta(minutes=30)
 CHAIN_MAX_WAIT = timedelta(hours=5)
 
-BASE = Path(__file__).parent
+BASE = Path(__file__).resolve().parent.parent          # the repository root (this file is in src/)
 
 
 class InvalidInterval(ValueError):
@@ -276,7 +276,7 @@ def plan(event: str, schedule: str, settings, companies, now: datetime | None = 
 
 def _load(name: str, default):
     try:
-        return json.loads((BASE / name).read_text("utf-8"))
+        return json.loads((BASE / "data" / name).read_text("utf-8"))
     except Exception:
         return default
 

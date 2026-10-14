@@ -44,8 +44,11 @@ EXPECTED_PERMISSIONS = {
     ("logos.yml", "publish"): {"contents": "write"},
     ("scan_scheduler.yml", "wait-and-dispatch"): {"contents": "read", "actions": "write"},
 }
-LOCKS = {"requirements.txt": "requirements.in", "requirements-dev.txt": "requirements-dev.in",
-         "requirements-logos.txt": "requirements-logos.in"}
+# the deployed lock stays at the root (Streamlit Community Cloud reads it
+# there); the test and logo-finder locks live in requirements/
+LOCKS = {"requirements.txt": "requirements.in",
+         "requirements/requirements-dev.txt": "requirements/requirements-dev.in",
+         "requirements/requirements-logos.txt": "requirements/requirements-logos.in"}
 
 
 def jobs(text: str) -> dict[str, str]:
@@ -161,21 +164,21 @@ def test_jobs_that_can_push_never_load_an_external_site(wf, job):
         assert forbidden not in block, forbidden
     assert re.search(r"run: python company_logos\.py(?! --publish-only)", block) is None
     # they take over the other job's data through the checked hand-over only
-    assert "download-artifact" in block and "python scan_handoff.py" in block
-    assert block.index("python scan_handoff.py") < block.index("python ", block.index("python scan_handoff.py") + 1)
+    assert "download-artifact" in block and "python src/scan_handoff.py" in block
+    assert block.index("python src/scan_handoff.py") < block.index("python ", block.index("python src/scan_handoff.py") + 1)
 
 
 def test_the_scan_runs_the_same_commands_in_the_right_jobs():
     wf = jobs(WORKFLOWS["check_jobs.yml"])
-    assert "run: python scraper.py" in wf["scrape"] and "scraper.py" not in wf["publish"]
-    assert "python alerts.py" in wf["publish"] and "python user_alerts.py --send" in wf["publish"]
+    assert "run: python src/scraper.py" in wf["scrape"] and "scraper.py" not in wf["publish"]
+    assert "python src/alerts.py" in wf["publish"] and "python src/user_alerts.py --send" in wf["publish"]
     assert "needs: [plan, scrape]" in wf["publish"]
-    assert "python scan_handoff.py scan-results companies.json seen_jobs.json" in wf["publish"]
+    assert "python src/scan_handoff.py scan-results companies.json seen_jobs.json" in wf["publish"]
     upload = wf["scrape"].split("upload-artifact", 1)[1]
     assert "companies.json" in upload and "seen_jobs.json" in upload and "retention-days: 1" in upload
     logos = jobs(WORKFLOWS["logos.yml"])
-    assert "run: python company_logos.py\n" in logos["find"] + "\n"
-    assert "python company_logos.py --publish-only" in logos["publish"]
+    assert "run: python src/company_logos.py\n" in logos["find"] + "\n"
+    assert "python src/company_logos.py --publish-only" in logos["publish"]
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +213,7 @@ def _top_level(name: str) -> list[Requirement]:
         if not line or line.startswith("#"):
             continue
         if line.startswith("-r "):
-            out += _top_level(line[3:].strip())
+            out += _top_level(str(Path(name).parent / line[3:].strip()))   # relative to the file
             continue
         out.append(Requirement(line))
     return out
@@ -229,13 +232,14 @@ def test_every_lock_is_exact_hashed_and_satisfies_its_inputs(lock, source):
 
 
 def test_the_locks_agree_with_each_other():
-    main, dev, logos = (_lock(n) for n in ("requirements.txt", "requirements-dev.txt", "requirements-logos.txt"))
+    main, dev, logos = (_lock(n) for n in ("requirements.txt", "requirements/requirements-dev.txt",
+                                           "requirements/requirements-logos.txt"))
     for key, (version, _, hashes) in main.items():
         assert key in dev and dev[key][0] == version and set(dev[key][2]) == set(hashes), key   # tests run what ships
     for key, (version, _, _) in logos.items():
         assert main.get(key, (version,))[0] == version, key
     assert set(dev) - set(main) <= {"pytest", "iniconfig", "pluggy", "pygments", "colorama ; sys_platform == \"win32\""}
-    assert (REPO / "requirements-dev.in").read_text("utf-8").count("-r requirements.in") == 1
+    assert (REPO / "requirements" / "requirements-dev.in").read_text("utf-8").count("-r ../requirements.in") == 1
 
 
 @pytest.mark.parametrize("name", sorted(WORKFLOWS))
@@ -243,7 +247,7 @@ def test_every_workflow_install_is_hash_locked(name):
     for script in run_blocks(WORKFLOWS[name]):
         for line in script.splitlines():
             if "pip install" in line or "pip3 install" in line:
-                m = re.fullmatch(r"\s*pip install --require-hashes -r (requirements(?:-dev|-logos)?\.txt)\s*", line)
+                m = re.fullmatch(r"\s*pip install --require-hashes -r ((?:requirements/)?requirements(?:-dev|-logos)?\.txt)\s*", line)
                 assert m, (name, line)
                 assert (REPO / m.group(1)).is_file()
 
@@ -318,7 +322,7 @@ def test_handoff_refuses_missing_oversized_and_linked_files(tmp_path, monkeypatc
 
 def test_handoff_cli_exit_codes(tmp_path, monkeypatch, capsys):
     _write(tmp_path, "seen_jobs.json", "{broken")
-    monkeypatch.setattr(scan_handoff, "BASE", tmp_path / "dest")
+    monkeypatch.setattr(scan_handoff, "DATA", tmp_path / "dest")
     assert scan_handoff.main([str(tmp_path), "seen_jobs.json"]) == 1
     assert "refused" in capsys.readouterr().err
     assert scan_handoff.main([]) == 2
@@ -331,6 +335,6 @@ def test_logo_publish_only_needs_no_search(monkeypatch, tmp_path):
     monkeypatch.setattr(repo_sync, "publish", lambda message, data: calls.append(data) or True)
     monkeypatch.setattr(company_logos, "load_local", lambda path=None: {"version": 1, "logos": {}})
     monkeypatch.setattr(company_logos, "Fetcher", lambda *a, **k: pytest.fail("publish-only must not search"))
-    assert company_logos.main(["--publish-only"]) == 0 and calls == [{"logos.json": {"version": 1, "logos": {}}}]
+    assert company_logos.main(["--publish-only"]) == 0 and calls == [{"data/logos.json": {"version": 1, "logos": {}}}]
     monkeypatch.setattr(company_logos, "load_local", lambda path=None: {})
     assert company_logos.main(["--publish-only"]) == 1

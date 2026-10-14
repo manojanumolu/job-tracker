@@ -337,7 +337,7 @@ def test_zoho_layout_change_is_broken(monkeypatch):
 def test_every_configured_company_has_a_real_source():
     import json as _json
     from pathlib import Path
-    companies = _json.loads((Path(__file__).parent.parent / "companies.json").read_text(encoding="utf-8"))
+    companies = _json.loads((Path(__file__).parent.parent / "data" / "companies.json").read_text(encoding="utf-8"))
     for c in companies:
         assert scraper.sources_for(c), f"{c['name']} has no verified job source"
 
