@@ -71,6 +71,10 @@ jobs:
     needs: plan
     if: ${{ needs.plan.outputs.scan == 'true' }}
     runs-on: ubuntu-latest
+    # a scan takes ~5 min; a hung browser or site must not hold the check-jobs
+    # group (and so every later scan) for GitHub's 6 h default. A timed-out
+    # scan publishes and emails nothing; the next window scans again.
+    timeout-minutes: 90
     permissions:
       contents: read
 
@@ -111,6 +115,9 @@ jobs:
     needs: [plan, scrape]
     if: ${{ !cancelled() && needs.scrape.result == 'success' }}
     runs-on: ubuntu-latest
+    # git pushes + one email (~1 min) and the personal step (its own 10 min
+    # cap); alerts.py claims before it sends, so a timeout never re-sends
+    timeout-minutes: 30
     permissions:
       contents: write
 

@@ -234,6 +234,25 @@ def test_clear_all_hides_but_keeps_dedup_history(app):
                                                           ("PwC", NEW_RECORD["title"])}
 
 
+def test_dismiss_all_dismisses_only_the_jobs_that_were_confirmed(app):
+    """Audit 2026-10-14: "Dismiss all N jobs" dismissed every record in the
+    shared file — also a job a scan published after the page was drawn, which
+    the admin never saw (it then vanished from their list). Only the N jobs
+    shown when the admin confirmed are dismissed."""
+    at = app([OLD_RECORD, NEW_RECORD], page="settings")
+    at.button(key="btn_clear_all").click().run()
+    assert "Dismiss all <b>2</b> active jobs" in _html(at)
+    # a scan publishes a new job while the confirmation is on screen
+    later = {**FRESHER_RECORD, "id": "MetLife_Graduate_Trainee", "url": "https://metlife.example/job/10",
+             "title": "Graduate Trainee"}
+    (at.tmp_path / "seen_jobs.json").write_text(json.dumps(_seen(at) + [later]))
+    at.button(key="btn_clear_all_confirm").click().run()
+    assert not at.exception
+    seen = {j["id"]: j for j in _seen(at)}
+    assert seen[OLD_RECORD["id"]]["dismissed"] and seen[NEW_RECORD["id"]]["dismissed"]
+    assert not seen["MetLife_Graduate_Trainee"].get("dismissed")       # never shown, so never dismissed
+
+
 def test_pagination_counts(app):
     jobs = [{**NEW_RECORD, "id": f"j{i}", "url": f"https://x/{i}", "title": f"Graduate {i}"}
             for i in range(23)]

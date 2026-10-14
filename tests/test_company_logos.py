@@ -278,6 +278,29 @@ def test_the_published_logos_file_is_valid():
         assert L.email_image(e) is not None
 
 
+def test_only_plain_base64_logo_data_is_ever_used():
+    """Audit 2026-10-14: logos.json arrives from the job that loads external
+    sites (scan_handoff only checks its shape). Its web copy is written into a
+    CSS url("data:...") on every page and hashed as ASCII for the class name,
+    so anything but plain base64 within the size cap is ignored (initials are
+    shown instead) — no style injection, no crashed page."""
+    good = base64.b64encode(png(64, 64)).decode()
+    doc = {"logos": {
+        "ok": {"status": "ok", "web": {"mime": "image/png", "data": good}},
+        "quote": {"status": "ok", "web": {"mime": "image/png", "data": good + '") } body { display: none } x{'}},
+        "tag": {"status": "ok", "web": {"mime": "image/png", "data": "AAAA</style><b>x</b>"}},
+        "unicode": {"status": "ok", "web": {"mime": "image/png", "data": "AAAAéAAA"}},
+        "huge": {"status": "ok", "web": {"mime": "image/png", "data": "A" * (L._MAX_WEB_DATA + 4)}},
+        "empty": {"status": "ok", "web": {"mime": "image/png", "data": ""}},
+    }}
+    found = L.entries(doc)
+    assert set(found) == {"ok"}
+    assert L.web_uri(found["ok"]) == f"data:image/png;base64,{good}"
+    # the cap still admits the largest logo the finder keeps
+    biggest = base64.b64encode(b"\0" * L.MAX_ICON_BYTES).decode()
+    assert L.entries({"logos": {"x": {"status": "ok", "web": {"mime": "image/png", "data": biggest}}}})
+
+
 # ── reading: the app ─────────────────────────────────────────────────────────
 
 def _logo_doc(**by_id):

@@ -449,7 +449,7 @@ def avature_detail(client: httpx.Client, url: str, title: str, job_id: str) -> D
 def avature_listings(client: httpx.Client, cfg: dict) -> SourceResult:
     search = cfg["search"].rstrip("/")
     listings, seen, total, offset = [], 0, None, 0
-    for _ in range(AVATURE_MAX_PAGES):
+    for page in range(AVATURE_MAX_PAGES):
         try:
             r = client.get(f"{search}/?jobOffset={offset}")
         except httpx.HTTPError as e:
@@ -457,7 +457,9 @@ def avature_listings(client: httpx.Client, cfg: dict) -> SourceResult:
         if r.status_code >= 400:
             raise SourceError(f"HTTP {r.status_code} from job search")
         articles = _AVATURE_ARTICLE_RE.findall(r.text)
-        if total is None:
+        # only the FIRST page decides "no results": without a result count the
+        # paging ends on an empty page, which must not discard what was read
+        if page == 0:
             m = _AVATURE_COUNT_RE.search(r.text)
             total = int(m.group(1).replace(",", "")) if m else None
             if not articles:

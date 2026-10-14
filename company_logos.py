@@ -652,6 +652,13 @@ def _size(logos: dict) -> int:
 # reading (the app and the emails) — never touches the network
 # ---------------------------------------------------------------------------
 
+# the web copy goes into a CSS url("data:...") on every page: only plain
+# base64 of at most MAX_ICON_BYTES may get there (a quote, a brace or a
+# non-ASCII character would end the url() and inject style, or break the page)
+_BASE64_RE = re.compile(r"[A-Za-z0-9+/]+={0,2}")
+_MAX_WEB_DATA = 4 * ((MAX_ICON_BYTES + 2) // 3)
+
+
 def entries(doc: object) -> dict:
     """{company id: ok entry} from a logos.json document; anything malformed
     is ignored."""
@@ -659,8 +666,10 @@ def entries(doc: object) -> dict:
     out = {}
     for k, e in (logos or {}).items() if isinstance(logos, dict) else ():
         web = e.get("web") if isinstance(e, dict) and e.get("status") == "ok" else None
-        if isinstance(web, dict) and isinstance(web.get("data"), str) and web.get("mime") in (
-                "image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml", "image/x-icon"):
+        data = web.get("data") if isinstance(web, dict) else None
+        if (isinstance(data, str) and len(data) <= _MAX_WEB_DATA and _BASE64_RE.fullmatch(data)
+                and web.get("mime") in ("image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml",
+                                        "image/x-icon")):
             out[k] = e
     return out
 

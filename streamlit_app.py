@@ -4831,7 +4831,9 @@ def _clear_all(keys: set[str]) -> None:
             toast(str(e), "error")
             return
         _personal_patched(dismissed_add=keys)
-    _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(None), [], "chore: dismiss all alerts")
+    # the confirmed jobs only: a job a scan published since the page was drawn
+    # was never shown to the admin, so it stays active (and gets its email)
+    _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(keys), [], "chore: dismiss all alerts")
     toast("All alerts cleared" if saved else f"Cleared here, but not saved permanently. {err}",
           "success" if saved else "error")
 

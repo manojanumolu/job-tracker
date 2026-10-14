@@ -242,6 +242,31 @@ def test_avature_source(monkeypatch):
     assert not any(u.endswith("/101") for u in requested)
 
 
+def test_avature_without_a_result_count_reads_to_the_end(monkeypatch):
+    """Audit 2026-10-14: when the page has no "N results" line, paging ends
+    on an empty page. That empty LAST page used to be read as "the first
+    page has no results" — the whole source failed and every listing already
+    read was dropped. Only an empty FIRST page means the layout changed."""
+    pages = {0: [_article(201, "Graduate Analyst", "Noida, India")],
+             1: [_article(202, "Associate Developer", "Hyderabad, India")]}
+
+    def handler(request):
+        off = int(request.url.params.get("jobOffset", 0))
+        return httpx.Response(200, text="".join(pages.get(off, [])))       # no "N results" anywhere
+
+    _mock(monkeypatch, handler)
+    with httpx.Client() as client:
+        result = sources.avature_listings(client, {"search": "https://m.example/SearchJobs", "delay": 0})
+    assert [x.title for x in result.listings] == ["Graduate Analyst", "Associate Developer"]
+    assert result.seen == 2
+
+    # an empty FIRST page is still a layout change (the source fails loudly)
+    monkeypatch.undo()                     # _mock patches httpx.Client globally
+    changed =httpx.MockTransport(lambda r: httpx.Response(200, text="<p>Something else entirely</p>"))
+    with httpx.Client(transport=changed) as client, pytest.raises(sources.SourceError, match="no results"):
+        sources.avature_listings(client, {"search": "https://m.example/SearchJobs", "delay": 0})
+
+
 def test_avature_detail_for_a_different_job_is_unreadable(monkeypatch):
     other = '<script type="application/ld+json">{"@type": "JobPosting", "title": "Someone else"}</script>'
     _mock(monkeypatch, lambda r: httpx.Response(200, text=other + '<div class="article__content__view__field">'

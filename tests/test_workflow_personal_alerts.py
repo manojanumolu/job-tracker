@@ -5,6 +5,7 @@ them and can never fail the job, and its CLI behaves safely in every state
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -117,6 +118,23 @@ def test_the_personal_step_gets_only_the_secrets_it_needs():
 def test_the_workflow_still_serialises_runs():
     wf = _wf()
     assert "group: check-jobs" in wf and "cancel-in-progress: false" in wf    # no overlapping runs
+
+
+def test_every_check_jobs_job_has_a_time_limit():
+    """Audit 2026-10-14: scrape and publish had none, so a hung browser or
+    site could hold the check-jobs group — and every later scan — for
+    GitHub's 6 h default. Each job now has its own limit, far above a normal
+    run (a scan takes ~5 min)."""
+    wf = _wf()
+    limits = {}
+    for job in ("plan", "scrape", "publish", "scheduler", "personal-alerts"):
+        block = _wf_job(wf, job)
+        header = block[:block.index("\n    steps:")] if "\n    steps:" in block else block
+        m = re.search(r"\n    timeout-minutes: (\d+)\n", header)
+        assert m, f"{job} has no job-level timeout-minutes"
+        limits[job] = int(m.group(1))
+    assert limits["scrape"] == 90 and limits["publish"] == 30
+    assert all(0 < v <= 90 for v in limits.values())
 
 
 def test_the_shared_notifier_does_not_know_the_personal_one():
