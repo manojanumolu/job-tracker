@@ -157,14 +157,14 @@ def test_a_member_cannot_open_admin_pages_by_address(app, google_env, store, que
     assert at.session_state.page == "home" and not at.exception
     for marker in ("btn_run_check", "btn_test_email", "add_name", "btn_add_company"):
         assert marker not in _buttons(at) and marker not in {t.key for t in at.text_input}
-    assert "here are your <em>matches</em>" in html                     # the member's own Home instead
+    assert "Your job search</div>" in html                             # the member's own Home instead
 
 
 def test_member_home_shows_no_scanner_internals(app, google_env, store):
     _ready(store, A_UID, A_MAIL)
     at = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS)
     html = _html(at)
-    assert "here are your <em>matches</em>" in html
+    assert "Your job search</div>" in html
     for internal in ("monitored", "Last scan", "Next scheduled", "Portal health", '<div class="side-foot'):
         assert internal not in html
     _nav(at, "settings")

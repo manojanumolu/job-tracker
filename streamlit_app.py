@@ -1583,7 +1583,7 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .tl-note .ms { flex-shrink: 0; margin-top: 2px; }
 
 /* ── member home ── */
-.st-key-mh_hero { position: relative; overflow: hidden; padding: 28px 30px !important; border-radius: var(--r-xl) !important;
+.st-key-mh_hero { position: relative; overflow: hidden; isolation: isolate; padding: 28px 30px !important; border-radius: var(--r-xl) !important;
   border: 1px solid var(--border) !important; box-shadow: var(--hi), var(--shadow) !important;
   background: radial-gradient(520px 220px at 92% -20%, var(--glow-1), transparent 70%), var(--surface) !important; }
 .mh-hero .page-title { font-size: 34px; line-height: 1.15; font-weight: 800; letter-spacing: -.028em; margin-top: 10px; }
@@ -3397,6 +3397,14 @@ def my_defaults() -> dict | None:
     follows = None if _VIEW["watch_all"] or not _VIEW["watchlist"] else sorted(_VIEW["watchlist"])
     return {"locations": _VIEW["prefs"]["locations"], "families": _VIEW["prefs"]["job_families"],
             "experience": _VIEW["prefs"]["experience"], "companies": follows}
+
+
+def narrowed_for_me() -> bool:
+    """Has this viewer chosen anything that narrows the job lists (a matched
+    preference or followed companies)? If not, for_me() is every shared
+    listing — and must not be called "your matches"."""
+    d = my_defaults()
+    return d is not None and (any(d[k] for k in ("locations", "families", "experience")) or d["companies"] is not None)
 
 
 def for_me(jobs: list[dict]) -> list[dict]:
@@ -5728,10 +5736,22 @@ def page_member_home():
     """A member's Home: their own job search — no scanner, no admin tools."""
     first = first_name(SHOWN_ACCOUNT) if ACCOUNT else ""
     mine = for_me(active_jobs)
+    # The listings are shared: the scanner finds them for everyone. Until this
+    # person picks preferences or companies, Home shows all of them — said
+    # plainly, never as "matches" for preferences that don't exist.
+    narrowed = narrowed_for_me()
+    hi = f'Hi{", " + escape(first) if first else ""}'
+    if narrowed:
+        title = f'{hi} — here are your <em>matches</em>'
+        sub = f'{_plural(len(mine), "job")} match your preferences right now.'
+    else:
+        title = f'{hi} — discover your next <em>opportunity</em>'
+        sub = (f'{_plural(len(mine), "open fresher and entry-level job")} across every company the tracker monitors. '
+               'Set preferences or follow companies to narrow them to your matches.')
     with st.container(key="mh_hero"):
-        st.html(f'<div class="mh-hero"><div class="eyebrow sparked">Your job search</div>'
-                f'<h1 class="page-title">Hi{", " + escape(first) if first else ""} — here are your <em>matches</em></h1>'
-                f'<p class="hero-sub">{_plural(len(mine), "job")} match your preferences right now.</p></div>')
+        # the same discovery feed as the original Home hero (_opportunity_cards)
+        st.html(f'<div class="hero mh-hero"><div><div class="eyebrow sparked">Your job search</div>'
+                f'<h1 class="page-title">{title}</h1><p class="hero-sub">{sub}</p></div>{_opportunity_cards()}</div>')
     if ME is not None:
         notif = user_store.notification_settings_from(ME["profile"])
         cols = st.columns(3)
@@ -5752,12 +5772,21 @@ def page_member_home():
                 st.button(cta, key=f"btn_{key}", on_click=go, args=args, kwargs=kw, use_container_width=True)
     elif USER_PROBLEM:
         st.html(f'<p class="note">{_ms("info", "s16")} {escape(USER_PROBLEM)}</p>')
-    st.html('<div class="sec-head"><div><div class="eyebrow sparked">Matching jobs</div><h2 class="section-title">Your matches</h2>'
-            '<p class="section-sub">Newest fresher and entry-level roles that fit your preferences</p></div></div>')
+    if narrowed:
+        st.html('<div class="sec-head"><div><div class="eyebrow sparked">Matching jobs</div><h2 class="section-title">Your matches</h2>'
+                '<p class="section-sub">Newest fresher and entry-level roles that fit your preferences</p></div></div>')
+    else:
+        st.html('<div class="sec-head"><div><div class="eyebrow sparked">Latest opportunities</div><h2 class="section-title">Latest jobs</h2>'
+                '<p class="section-sub">Newest fresher and entry-level roles from every tracked company — the same '
+                'listings every member sees</p></div></div>')
     if not mine:
-        empty_state("search_off", "No jobs match your preferences right now",
-                    "New roles appear after each scan. You can widen your preferences or browse every job.",
-                    lambda: st.button("Browse all jobs", key="btn_mh_all", on_click=go, args=("jobs",)))
+        if narrowed:
+            empty_state("search_off", "No jobs match your preferences right now",
+                        "New roles appear after each scan. You can widen your preferences or browse every job.",
+                        lambda: st.button("Browse all jobs", key="btn_mh_all", on_click=go, args=("jobs",)))
+        else:
+            empty_state("travel_explore", "No open jobs right now",
+                        "New fresher and entry-level roles appear here after each scan.")
         return
     with st.container(key="joblist_home"):
         for i, j in enumerate(mine[:HOME_LIMIT]):
@@ -5766,7 +5795,7 @@ def page_member_home():
             f1, f2 = st.columns([3, 1], vertical_alignment="center")
             with f1:
                 st.html(f'<span class="muted num" style="font-size:13px;">Showing {min(HOME_LIMIT, len(mine))} of '
-                        f'{_plural(len(mine), "match", "matches")}</span>')
+                        f'{_plural(len(mine), "match", "matches") if narrowed else _plural(len(mine), "job")}</span>')
             with f2:
                 st.button("View all jobs", key="btn_all_jobs", icon=":material/arrow_forward:", icon_position="right",
                           on_click=go, args=("jobs",))
