@@ -367,7 +367,12 @@ def test_an_admins_dismissal_also_feeds_the_shared_alerts(app, google_env, store
     assert 'class="role admin"' in _html(a)
     _nav(a, "jobs")
     a.button(key=_key("dismiss", NEW_RECORD)).click().run()
-    assert _seen(a)[0]["dismissed"] is True                                 # today's email pipeline still skips it
+    # today's email pipeline still skips it: the shared commit runs on the
+    # app's background writer (the click no longer waits for GitHub)
+    deadline = time.time() + 5
+    while not _seen(a)[0].get("dismissed") and time.time() < deadline:
+        time.sleep(0.05)
+    assert _seen(a)[0]["dismissed"] is True
     assert store.for_uid(A_UID).dismissed() == {_job_key(NEW_RECORD)}
     b = _sign_in(app, google_env, B_UID, B_MAIL)                           # a member's view ignores it
     _nav(b, "jobs")

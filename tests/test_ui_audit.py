@@ -164,9 +164,14 @@ def test_phone_layout_rules():
     phone = css[css.index("@media (max-width: 767px)"):]
     phone = phone[:phone.index('"""')]
     assert ".job-why { display: none" not in phone
-    nav_row = re.search(r"\.st-key-mnav > \[data-testid=\"stLayoutWrapper\"\][^{]*\{([^}]*)\}", phone).group(1)
-    assert "overflow-x" not in nav_row
-    assert re.search(r"\.st-key-mnav \[data-testid=\"stColumn\"\] \{ flex: 1 1 0", phone)
+    # phones: the navigation is a drawer (every destination, scrolling on its
+    # own when needed) opened by a menu button — no row of tabs to squeeze
+    assert ".st-key-mnav" not in css
+    drawer = css[css.index(".st-key-drawer { display: flex !important; position: fixed !important;"):]
+    drawer = drawer[:drawer.index("}")]
+    assert "overflow-y: auto" in drawer and "width: min(304px, 84vw)" in drawer
+    assert ".st-key-btn_drawer_open { display: block !important; }" in css
+    assert ".st-key-btn_drawer_backdrop { display: block !important; position: fixed !important; inset: 0;" in css
     assert ".stat .v, .stat .n { white-space: normal; }" in phone
 
 

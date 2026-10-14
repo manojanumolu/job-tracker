@@ -429,8 +429,12 @@ def test_shared_caches_hold_no_per_user_data():
     # _shared_data holds the shared GitHub files (companies, settings, seen
     # jobs) — the same for everyone; per-user data is cached only in the
     # session's own st.session_state.
+    # _shared_writer (Oct 14) is ONE background thread for admins' shared
+    # dismissal commits; besides the pool it keeps only a failed commit's fixed
+    # GitHub error text, under a random per-session token — no email, uid,
+    # account or job data, and nothing any other session can read.
     assert cached == {"_logo_data_uri": [], "_source_label": ["c"], "_guards": [], "_shared_data": [],
-                      "_user_store_for": ["fingerprint", "project_id"]}, cached
+                      "_user_store_for": ["fingerprint", "project_id"], "_shared_writer": []}, cached
 
 
 # ---------------------------------------------------------------------------

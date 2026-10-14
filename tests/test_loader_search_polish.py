@@ -115,16 +115,26 @@ def test_the_icons_appear_one_at_a_time_in_order_and_loop():
     order = [n for i, n in enumerate(visible) if i == 0 or visible[i - 1] != n]
     assert order == ICON_NAMES                                                            # search → … → check
     assert all(float(sc) >= .86 for _, _, sc, _ in stops)                                 # a slight scale, no bounce
-    running = _rule('.stApp[data-test-script-state="running"]::before')
+    running = _rule('.stApp[data-test-script-state="running"]:has(.jt-skel)::before')
     assert "jt-load-icons 6s ease-in-out 450ms infinite both" in running                  # loops while loading
     assert "visibility: visible; transition: visibility 0s linear 450ms" in running
 
 
 def test_the_loader_appears_only_during_real_loading_and_never_sticks():
+    """Oct 14 (2): the full-screen layer belongs to a first load only — a run
+    that draws the page skeleton (.jt-skel). Ordinary reruns (every click on
+    Streamlit Cloud takes > 450 ms) never cover the page; they get a 3 px
+    top bar after the same pause, which never takes a click."""
     hidden = _rule(".stApp::after")
     assert "visibility: hidden; pointer-events: none; opacity: 0" in hidden              # gone when idle
-    running = _rule('.stApp[data-test-script-state="running"]::after')
-    assert running.startswith('.stApp[data-test-script-state="running"]::after { animation: jt-busy-in 220ms ease-out 450ms both')
+    running = _rule('.stApp[data-test-script-state="running"]:has(.jt-skel)::after')
+    assert running.startswith('.stApp[data-test-script-state="running"]:has(.jt-skel)::after { animation: jt-busy-in 220ms ease-out 450ms both')
+    # no full-screen rule keyed on "running" alone
+    assert not re.search(r'\.stApp\[data-test-script-state="running"\]::(?:after|before)', CSS)
+    bar = _rule('.stApp[data-test-script-state="running"] [data-testid="stMain"]::before')
+    assert "visibility: visible; transition: visibility 0s linear 450ms" in bar
+    base = _rule('[data-testid="stMain"]::before')
+    assert "height: 3px" in base and "pointer-events: none" in base and "visibility: hidden" in base
     assert "visibility: visible; pointer-events: auto" in running
     assert "transition: visibility 0s linear 450ms" in running                           # clicks pass for the first 450 ms
     assert "transition" not in hidden and "transition" not in _rule(".stApp::before")    # and the moment the rerun ends
@@ -134,9 +144,10 @@ def test_reduced_motion_shows_a_still_frame_and_one_still_icon():
     reduced = CSS[CSS.index("/* the bar appears (still after the pause)"):]
     reduced = reduced[:reduced.index("}\n}") + 3]
     assert "jt-load-turn" not in reduced and "jt-load-icons" not in reduced
-    assert reduced.count("jt-busy-fade 1ms linear 450ms both") == 2
+    # first-load veil + icons, and the still top bar of an ordinary rerun
+    assert reduced.count("jt-busy-fade 1ms linear 450ms both") == 3
     assert "var(--load-veil) padding-box, linear-gradient(135deg, var(--accent), var(--load-blue)) border-box" in reduced
-    still = re.search(r'\.stApp\[data-test-script-state="running"\]::before \{[^}]*background: ([^!]+) !important', reduced)
+    still = re.search(r'\.stApp\[data-test-script-state="running"\]:has\(\.jt-skel\)::before \{[^}]*background: ([^!]+) !important', reduced)
     shown = [l for l in still.group(1).split(", var") if "50% 50%" in l]
     assert len(shown) == 1 and "briefcase" in shown[0]
 

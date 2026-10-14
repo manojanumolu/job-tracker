@@ -329,10 +329,13 @@ def _job_text(job: dict, index: int, total: int) -> str:
     return "\n".join(lines)
 
 
-def _page(title: str, preheader: str, body: str) -> str:
+def _page(title: str, preheader: str, body: str, tag: str = "") -> str:
     """The shared frame of every email: a light page, a 600 px column (fluid
-    below that), the brand line on top. Inline styles throughout; the one
-    <style> block only tightens padding on small screens."""
+    below that), the brand row on top (with the email's kind on the right).
+    Inline styles throughout; the one <style> block only tightens padding on
+    small screens."""
+    tag_cell = (f'<td align="right" style="vertical-align:middle;font:700 10px/1.4 {FONT};color:{FAINT};'
+                f'letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;">{escape(tag)}</td>' if tag else "")
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -342,9 +345,9 @@ def _page(title: str, preheader: str, body: str) -> str:
 <title>{escape(title)}</title>
 <style>
 @media only screen and (max-width: 480px) {{
-  .jt-pad {{ padding: 16px !important; }}
+  .jt-pad {{ padding: 18px 16px !important; }}
   .jt-outer {{ padding: 16px 8px !important; }}
-  .jt-h1 {{ font-size: 20px !important; }}
+  .jt-h1 {{ font-size: 21px !important; }}
 }}
 </style>
 </head>
@@ -355,12 +358,13 @@ def _page(title: str, preheader: str, body: str) -> str:
     <td class="jt-outer" align="center" style="padding:28px 12px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;">
         <tr>
-          <td style="padding:0 2px 18px;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <td style="padding:0 4px 16px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
-                <td width="28" height="28" align="center" valign="middle" bgcolor="{ACCENT}"
-                    style="width:28px;height:28px;border-radius:8px;font:800 12px/28px {FONT};color:#ffffff;text-align:center;">FJ</td>
-                <td style="padding:0 0 0 10px;font:700 14px/1.2 {FONT};color:{TEXT};">Fresher Job Tracker</td>
+                <td width="30" height="30" align="center" valign="middle" bgcolor="{ACCENT}"
+                    style="width:30px;height:30px;border-radius:9px;font:800 12px/30px {FONT};color:#ffffff;text-align:center;letter-spacing:.02em;">FJ</td>
+                <td style="padding:0 0 0 10px;vertical-align:middle;font:700 15px/1.2 {FONT};color:{TEXT};">Fresher Job Tracker</td>
+                {tag_cell}
               </tr>
             </table>
           </td>
@@ -371,6 +375,34 @@ def _page(title: str, preheader: str, body: str) -> str:
 </table>
 </body>
 </html>"""
+
+
+def _lead_card(inner: str) -> str:
+    """The first card of an email: white, a slim indigo-to-teal line on top
+    (a solid indigo where gradients don't render), then its content."""
+    return f"""
+        <tr>
+          <td style="padding:0 0 16px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="background:#ffffff;border:1px solid {BORDER};border-radius:16px;overflow:hidden;">
+              <tr><td height="4" bgcolor="{ACCENT}" style="height:4px;line-height:4px;font-size:0;background:{ACCENT};background-image:linear-gradient(90deg,{ACCENT},#0d9488);">&nbsp;</td></tr>
+              <tr>
+                <td class="jt-pad" style="padding:24px 26px 24px;">{inner}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>"""
+
+
+def _footer(lines: list[str]) -> str:
+    rows = "".join(f'<span style="display:block;margin-top:4px;">{line}</span>' for line in lines[1:])
+    return f"""
+        <tr>
+          <td style="padding:6px 4px 0;font:400 12px/1.6 {FONT};color:{FAINT};">
+            {lines[0]}{rows}
+          </td>
+        </tr>"""
 
 
 def build_alert_email(jobs: list[dict], logos: dict | None = None,
@@ -392,21 +424,24 @@ def build_alert_email(jobs: list[dict], logos: dict | None = None,
     shown = companies[:4] + ([f"{len(companies) - 4} more"] if len(companies) > 4 else [])
     source = (("From " + (", ".join(shown[:-1]) + " and " + shown[-1] if len(shown) > 1 else shown[0]) + ". ")
               if shown else "")
+    # what kinds of role these are, from the jobs' own categories
+    kinds = {}
+    for j in jobs:
+        label, fg, bg = _CATEGORY_BADGES.get(j.get("category") or "", _DEFAULT_BADGE)
+        n, _, _ = kinds.get(label, (0, fg, bg))
+        kinds[label] = (n + 1, fg, bg)
+    chips = "".join(
+        f'<span style="display:inline-block;margin:0 6px 6px 0;padding:4px 10px;border-radius:999px;background:{bg};color:{fg};'
+        f'font:700 11px/1.4 {FONT};letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;">{n} {escape(label)}</span>'
+        for label, (n, fg, bg) in kinds.items())
+    lead = _lead_card(f"""
+                  <p style="margin:0;font:700 11px/1.4 {FONT};color:{ACCENT};letter-spacing:.1em;text-transform:uppercase;">New job alert</p>
+                  <h1 class="jt-h1" style="margin:6px 0 8px;font:800 26px/1.25 {FONT};color:{TEXT};letter-spacing:-.01em;">{escape(heading)}</h1>
+                  <p style="margin:0 0 14px;font:400 14px/1.6 {FONT};color:{MUTED};">{escape(source)}Fresher and entry-level roles in India, each checked against its own posting before it reached you.</p>
+                  <div style="font-size:0;line-height:0;">{chips}</div>""")
     cards = "".join(_job_card(j, i, total, logos, tracked) for i, j in enumerate(jobs, 1))
-    body = f"""
-        <tr>
-          <td style="padding:0 2px 18px;">
-            <p style="margin:0;font:700 11px/1.4 {FONT};color:{ACCENT};letter-spacing:.08em;text-transform:uppercase;">New job alert</p>
-            <h1 class="jt-h1" style="margin:4px 0 6px;font:700 24px/1.3 {FONT};color:{TEXT};">{escape(heading)}</h1>
-            <p style="margin:0;font:400 14px/1.55 {FONT};color:{MUTED};">{escape(source)}Fresher and entry-level roles in India, each checked against its own posting before it reached you.</p>
-          </td>
-        </tr>{cards}
-        <tr>
-          <td style="padding:10px 2px 0;border-top:1px solid {BORDER};font:400 12px/1.6 {FONT};color:{FAINT};">
-            You’re receiving this because job alerts are turned on for this address. Each job is emailed once, and dismissed jobs are never sent.
-            <span style="display:block;margin-top:4px;">Fresher Job Tracker &middot; automated alert</span>
-          </td>
-        </tr>"""
+    footer = _footer(["You’re receiving this because job alerts are turned on for this address. Each job is emailed once, "
+                      "and dismissed jobs are never sent.", "Fresher Job Tracker &middot; automated alert"])
     divider = "\n\n" + "-" * 40 + "\n\n"
     text = (
         f"{heading.upper()}\n"
@@ -416,61 +451,61 @@ def build_alert_email(jobs: list[dict], logos: dict | None = None,
         + "\n\n--\nYou're receiving this because job alerts are turned on for this address.\n"
         + "Each job is emailed once, and dismissed jobs are never sent.\nFresher Job Tracker · automated alert\n"
     )
-    return _subject(jobs), _page(heading, preheader, body), text
+    return _subject(jobs), _page(heading, preheader, lead + cards + footer, "Job alert"), text
+
+
+# what a delivery test can truthfully promise: how real alerts behave
+_TEST_PROMISES = (
+    ("Fresher and entry-level roles in India", "Each one read from the company’s own posting before it is sent."),
+    ("One email per batch of new jobs", "Every job reaches you once — jobs you dismiss are never sent."),
+    ("Straight to the posting", "Every alert links to the job on the company’s own careers site."),
+)
 
 
 def build_test_email(now: datetime | None = None) -> tuple[str, str, str]:
-    """The test email: a delivery check, nothing more — no jobs, no scan."""
+    """The test email: a delivery check, nothing more — no jobs, no scan, no
+    links. It confirms delivery and says what real alerts will look like."""
     subject = "Test email from Fresher Job Tracker"
     sent = _ist_label(now or datetime.now(timezone.utc))
-    rows = (_field_row("Sent", sent)
-            + _field_row("Delivered to", "This address — the configured alert recipient")
-            + _field_row("Next", "New qualifying jobs are emailed here after each scan"))
-    body = f"""
-        <tr>
-          <td style="padding:0;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-                   style="background:#ffffff;border:1px solid {BORDER};border-radius:14px;">
-              <tr>
-                <td class="jt-pad" style="padding:24px 24px 22px;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+    steps = "".join(f"""
                     <tr>
-                      <td width="40" height="40" align="center" valign="middle" bgcolor="#dcfce7"
-                          style="width:40px;height:40px;border-radius:999px;font:700 20px/40px {FONT};color:#15803d;text-align:center;">&#10003;</td>
-                      <td style="padding:0 0 0 12px;font:700 11px/1.4 {FONT};color:#15803d;letter-spacing:.08em;text-transform:uppercase;">Delivery check passed</td>
-                    </tr>
+                      <td width="30" valign="top" style="width:30px;padding:2px 12px 14px 0;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+                          <td width="26" height="26" align="center" valign="middle" bgcolor="#eef0ff"
+                              style="width:26px;height:26px;border-radius:999px;font:700 12px/26px {FONT};color:{ACCENT};text-align:center;">{i}</td>
+                        </tr></table>
+                      </td>
+                      <td valign="top" style="padding:0 0 14px;">
+                        <p style="margin:0;font:700 14px/1.45 {FONT};color:{TEXT};">{escape(title)}</p>
+                        <p style="margin:2px 0 0;font:400 13px/1.55 {FONT};color:{MUTED};">{escape(note)}</p>
+                      </td>
+                    </tr>""" for i, (title, note) in enumerate(_TEST_PROMISES, 1))
+    lead = _lead_card(f"""
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+                    <td style="padding:5px 12px 5px 10px;border-radius:999px;background:#ecfdf3;border:1px solid #bbf7d0;font:700 11px/1.3 {FONT};color:#15803d;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;">
+                      <span style="display:inline-block;width:7px;height:7px;border-radius:999px;background:#16a34a;margin-right:7px;vertical-align:1px;"></span>Delivery test passed</td>
+                  </tr></table>
+                  <h1 class="jt-h1" style="margin:16px 0 8px;font:800 26px/1.25 {FONT};color:{TEXT};letter-spacing:-.01em;">Your job alerts can reach you</h1>
+                  <p style="margin:0;font:400 15px/1.65 {FONT};color:{MUTED};">This is a test email from your Job Tracker. If you received this, email delivery is working correctly — no jobs were scanned or sent.</p>
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 0;border-top:1px solid {BORDER};">
+                    <tr><td style="padding:18px 0 6px;font:700 11px/1.4 {FONT};color:{FAINT};letter-spacing:.1em;text-transform:uppercase;">What real alerts bring you</td></tr>
                   </table>
-                  <h1 class="jt-h1" style="margin:16px 0 8px;font:700 22px/1.3 {FONT};color:{TEXT};">Test email successful</h1>
-                  <p style="margin:0;font:400 14px/1.6 {FONT};color:{MUTED};">This is a test email from your Job Tracker. If you received this, email delivery is working correctly.</p>
-                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-                         style="margin-top:18px;background:{PANEL};border-radius:10px;">
-                    <tr><td style="padding:10px 14px;">
-                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">{rows}
-                      </table>
-                    </td></tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:14px 2px 0;font:400 12px/1.6 {FONT};color:{FAINT};">
-            Sent from the Email &amp; Notifications page. No jobs were scanned and no other email was sent.
-            <span style="display:block;margin-top:4px;">Fresher Job Tracker</span>
-          </td>
-        </tr>"""
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">{steps}
+                  </table>""")
+    footer = _footer([f"Test sent {escape(sent)} from the Email &amp; Notifications page.",
+                      "Only a test: no jobs were scanned and no other email was sent.", "Fresher Job Tracker"])
     text = (
-        "TEST EMAIL SUCCESSFUL\n\n"
-        "This is a test email from your Job Tracker.\n"
-        "If you received this, email delivery is working correctly.\n\n"
-        f"Sent:         {sent}\n"
-        "Delivered to: this address (the configured alert recipient)\n"
-        "Next:         new qualifying jobs are emailed here after each scan\n\n"
-        "--\nSent from the Email & Notifications page. No jobs were scanned and no other email was sent.\n"
-        "Fresher Job Tracker\n"
+        "DELIVERY TEST PASSED\n\n"
+        "Your job alerts can reach you.\n"
+        "This is a test email from your Job Tracker. If you received this, email delivery is working correctly\n"
+        "— no jobs were scanned or sent.\n\n"
+        "What real alerts bring you:\n"
+        + "".join(f"{i}. {t} — {n}\n" for i, (t, n) in enumerate(_TEST_PROMISES, 1))
+        + f"\n--\nTest sent {sent} from the Email & Notifications page.\n"
+        "Only a test: no jobs were scanned and no other email was sent.\nFresher Job Tracker\n"
     )
-    return subject, _page("Test email successful", "Email delivery is working.", body), text
+    return subject, _page("Delivery test passed", "Email delivery is working — your job alerts can reach you.", lead + footer,
+                          "Delivery test"), text
 
 
 # ---------------------------------------------------------------------------

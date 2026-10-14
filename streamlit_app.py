@@ -1262,8 +1262,6 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 [class*="st-key-dismiss_"] [data-testid="stMarkdownContainer"], [class*="st-key-restore_"] [data-testid="stMarkdownContainer"],
 [class*="st-key-dismiss_"] [data-testid="stMarkdownContainer"] p, [class*="st-key-restore_"] [data-testid="stMarkdownContainer"] p { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; clip-path: inset(50%) !important; white-space: nowrap !important; margin: -1px !important; padding: 0 !important; border: 0 !important; }
 
-/* mobile top nav (phones only) */
-.st-key-mnav { display: none !important; }
 
 /* ── how-it-works strip (Home) ── */
 .how { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
@@ -1330,23 +1328,11 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   .how { grid-template-columns: minmax(0, 1fr); }
   .mail-facts { grid-template-columns: minmax(0, 1fr); } .mail-facts > div + div { border-left: none; border-top: 1px solid var(--border); }
 }
-/* phone: sidebar hidden, top nav bar instead */
+/* phone: sidebar hidden; the menu button opens a drawer instead */
 @media (max-width: 767px) {
   section[data-testid="stSidebar"] { display: none !important; }
-  [data-testid="stMainBlockContainer"], .block-container { padding: 0 16px 36px !important; }
+  [data-testid="stMainBlockContainer"], .block-container { padding: 12px 16px 36px !important; }
   [data-testid="stMainBlockContainer"] > div > [data-testid="stVerticalBlock"] { gap: 18px; }
-  .st-key-mnav {
-    display: flex !important; position: sticky; top: 0; z-index: 30; margin: 0 -16px; padding: 6px 4px !important; width: calc(100% + 32px) !important; max-width: none !important;
-    background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--border);
-  }
-  /* all six destinations visible at once: equal columns, icon above a short label */
-  .st-key-mnav > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-mnav > [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 0 !important; }
-  .st-key-mnav [data-testid="stColumn"] { flex: 1 1 0 !important; width: auto !important; min-width: 0 !important; }
-  .st-key-mnav [data-testid^="stBaseButton"] { width: 100% !important; border: none !important; background: transparent !important; box-shadow: none !important; min-height: 52px !important; padding: 4px 0 !important; color: var(--text-2) !important; }
-  .st-key-mnav [data-testid^="stBaseButton"]:hover { transform: none; }
-  .st-key-mnav [data-testid^="stBaseButton"] > div, .st-key-mnav [data-testid^="stBaseButton"] > div > span { flex-direction: column !important; align-items: center !important; gap: 3px !important; min-width: 0; max-width: 100%; }
-  .st-key-mnav [data-testid="stIconMaterial"] { font-size: 20px !important; margin: 0 !important; padding: 2px 12px; border-radius: 999px; transition: background var(--normal) var(--ease), color var(--fast); }
-  .st-key-mnav p { font-size: 10.5px !important; line-height: 13px !important; font-weight: 600 !important; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 1px; }
   .page-title, .detail-title { font-size: 24px; line-height: 31px; }
   .st-key-hero { padding: 22px 18px 20px !important; }
   /* phones: not a shrunk desktop — a compact strip (the search being typed
@@ -1388,31 +1374,8 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   .hero-status { gap: 6px; margin-top: 14px; }
   .hero-status .chip { font-size: 12.5px; padding: 4px 9px; gap: 5px; }
   .hero-status .chip .ms { font-size: 15px; }
-  /* each tab is tappable across its whole column, not just its label
-     (Streamlit sizes a button's containers to the button's content) */
-  .st-key-mnav [data-testid="stColumn"] > [data-testid="stVerticalBlock"] > *, .st-key-mnav [data-testid="stElementContainer"],
-  .st-key-mnav .stButton, .st-key-mnav [data-testid="stPopover"] { width: 100% !important; max-width: none !important; }
-  /* "More" (an admin's Monitor and Email): the same tab look as the others */
-  .st-key-mob_more_wrap { width: 100% !important; align-items: stretch !important; }
-  .st-key-mob_more_wrap > *, .st-key-mob_more_wrap [data-testid="stPopover"], .st-key-mob_more_wrap [data-testid="stPopover"] > div,
-  .st-key-mob_more_wrap [data-testid="stPopover"] > div > div { width: 100% !important; max-width: none !important; }
-  .st-key-mob_more_wrap [data-testid="stPopoverButton"] { width: 100% !important; border: none !important; background: transparent !important;
-    box-shadow: none !important; min-height: 52px !important; padding: 4px 0 !important; color: var(--text-2) !important; justify-content: center !important; }
-  .st-key-mob_more_wrap [data-testid="stPopoverButton"] > div > div:first-child > span { flex-direction: column !important; align-items: center !important; gap: 3px !important; }
-  .st-key-mob_more_wrap [data-testid="stPopoverButton"] > div > div:nth-child(2) { display: none !important; }   /* the chevron */
-  .st-key-mob_more_wrap [data-testid="stPopoverButton"] [data-testid="stIconMaterial"] { font-size: 20px !important; margin: 0 !important; padding: 2px 12px; border-radius: 999px; }
-  .st-key-mob_more_wrap [data-testid="stPopoverButton"] p { font-size: 10.5px !important; line-height: 13px !important; font-weight: 600 !important; white-space: nowrap; }
-  /* the More menu's choices: a compact list, left aligned */
-  :is(.st-key-mob_monitoring, .st-key-mob_email) [data-testid^="stBaseButton"] { justify-content: flex-start !important; min-height: 44px !important;
-    padding: 0 12px !important; color: var(--text) !important; }
-  :is(.st-key-mob_monitoring, .st-key-mob_email) [data-testid^="stBaseButton"] > div { justify-content: flex-start !important; gap: 10px !important; }
-  :is(.st-key-mob_monitoring, .st-key-mob_email) p { font-size: 15px !important; font-weight: 600 !important; }
 }
 @media (max-width: 360px) {
-  /* size each destination to its label so "Companies" is never cut off */
-  .st-key-mnav [data-testid="stColumn"]:nth-child(n) { flex: 1 1 auto !important; }
-  .st-key-mnav p { font-size: 10px !important; letter-spacing: -0.02em; text-overflow: clip; }
-  .st-key-mnav [data-testid="stIconMaterial"] { padding: 2px 8px; }
   .stat .v { font-size: 21px; line-height: 27px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1429,7 +1392,7 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 /* the menu button (laptops and desktops) opens / closes the left navigation:
    at the left of the top bar, an icon; its label stays for screen readers */
 .st-key-acct_bar { align-items: center; }
-.st-key-acct_bar > [data-testid="stLayoutWrapper"]:has(> .st-key-nav_toggle), .st-key-acct_bar > .st-key-nav_toggle { margin-right: auto !important; }
+.st-key-acct_bar > :first-child { margin-right: auto !important; }    /* the menu-button fragment */
 .st-key-btn_nav_toggle [data-testid^="stBaseButton"] { width: 42px !important; height: 42px !important; min-height: 42px !important; padding: 0 !important;
   border-radius: 12px !important; justify-content: center !important; }
 .st-key-btn_nav_toggle [data-testid^="stBaseButton"] > div { justify-content: center !important; gap: 0 !important; }
@@ -1437,7 +1400,50 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .st-key-btn_nav_toggle [data-testid="stMarkdownContainer"], .st-key-btn_nav_toggle [data-testid="stMarkdownContainer"] p {
   position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important;
   clip-path: inset(50%) !important; white-space: nowrap !important; margin: -1px !important; padding: 0 !important; border: 0 !important; }
-@media (max-width: 767px) { .st-key-nav_toggle { display: none !important; } }
+/* phones: "Open menu" instead of the sidebar button, and the drawer it opens */
+.st-key-btn_drawer_open, .st-key-drawer, .st-key-btn_drawer_backdrop { display: none !important; }
+@keyframes jt-drawer-in { from { transform: translateX(-100%); } to { transform: none; } }
+@keyframes jt-scrim-in { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 767px) {
+  .st-key-btn_nav_toggle { display: none !important; }
+  .st-key-btn_drawer_open { display: block !important; }
+  .st-key-btn_drawer_open [data-testid^="stBaseButton"] { width: 46px !important; height: 46px !important; min-height: 46px !important;
+    padding: 0 !important; border-radius: 13px !important; justify-content: center !important; }
+  .st-key-btn_drawer_open [data-testid^="stBaseButton"] > div { justify-content: center !important; gap: 0 !important; }
+  .st-key-btn_drawer_open [data-testid="stIconMaterial"] { font-size: 24px !important; margin: 0 !important; color: var(--text-2); }
+  /* the dimmed page behind the drawer: one big "Close menu" button */
+  .st-key-btn_drawer_backdrop { display: block !important; position: fixed !important; inset: 0; z-index: 1000002; margin: 0 !important; }
+  .st-key-btn_drawer_backdrop [data-testid^="stBaseButton"] { width: 100vw !important; height: 100vh !important; height: 100dvh !important;
+    border: none !important; border-radius: 0 !important; box-shadow: none !important; cursor: default;
+    background: rgba(13, 16, 36, .42) !important; animation: jt-scrim-in 160ms ease-out; }
+  /* the drawer: slides in from the left, scrolls on its own if needed */
+  .st-key-drawer { display: flex !important; position: fixed !important; top: 0; left: 0; bottom: 0; z-index: 1000003;
+    width: min(304px, 84vw) !important; padding: 16px 12px calc(20px + env(safe-area-inset-bottom)) !important; gap: 2px !important;
+    overflow-y: auto; overscroll-behavior: contain; background: var(--surface); border-right: 1px solid var(--border);
+    box-shadow: 18px 0 44px -18px rgba(13, 16, 36, .45); animation: jt-drawer-in 200ms cubic-bezier(.2, .7, .2, 1); }
+  .st-key-drawer_head { flex-direction: row !important; align-items: center; justify-content: space-between; padding: 0 2px 10px; }
+  .st-key-drawer_head > * { width: auto !important; flex: 0 0 auto !important; }
+  /* the tablet icon rail hides the brand name and group labels: the drawer shows them */
+  .st-key-drawer .brand { padding: 0; justify-content: flex-start; }
+  .st-key-drawer .brand > div:not(.mark) { display: block !important; }
+  .st-key-drawer .nav-group, .st-key-drawer .nav-group.first { display: block !important; font-size: 11px !important;
+    margin: 14px 8px 4px !important; padding: 0 !important; border: none !important; }
+  .st-key-drawer [class*="st-key-drw_"] [data-testid^="stBaseButton"] { justify-content: flex-start !important; min-height: 48px !important;
+    padding: 0 14px !important; border-radius: 12px !important; color: var(--text) !important; }
+  .st-key-drawer [class*="st-key-drw_"] [data-testid^="stBaseButton"] > div { justify-content: flex-start !important; gap: 12px !important; }
+  .st-key-drawer [class*="st-key-drw_"] [data-testid="stIconMaterial"] { font-size: 21px !important; color: var(--muted); }
+  .st-key-drawer [class*="st-key-drw_"] p { font-size: 15px !important; font-weight: 600 !important; }
+  :is(.st-key-btn_drawer_close, .st-key-btn_drawer_backdrop) [data-testid="stMarkdownContainer"],
+  :is(.st-key-btn_drawer_close, .st-key-btn_drawer_backdrop) [data-testid="stMarkdownContainer"] p {
+    position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important;
+    clip-path: inset(50%) !important; white-space: nowrap !important; margin: -1px !important; padding: 0 !important; border: 0 !important; }
+  .st-key-btn_drawer_close [data-testid^="stBaseButton"] { width: 44px !important; height: 44px !important; min-height: 44px !important;
+    padding: 0 !important; border-radius: 12px !important; justify-content: center !important; }
+  .st-key-btn_drawer_close [data-testid^="stBaseButton"] > div { justify-content: center !important; gap: 0 !important; }
+}
+.st-key-btn_drawer_open [data-testid="stMarkdownContainer"], .st-key-btn_drawer_open [data-testid="stMarkdownContainer"] p {
+  position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important; white-space: nowrap !important; margin: -1px !important; padding: 0 !important; border: 0 !important; }
 /* the compact control: avatar · first name · ADMIN · chevron — one glossy pill.
    The avatar is its own circle: a hairline-edged tile, a gap in the pill's
    colour and a thin accent ring, clear of the pill's edge on every side. */
@@ -1610,11 +1616,17 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 @media (max-width: 480px) { .status-grid { grid-template-columns: minmax(0, 1fr); } }
 .st-key-set_status .st-key-btn_set_monitoring, .st-key-set_status [data-testid="stElementContainer"]:has(.st-key-btn_set_monitoring) { width: auto !important; }
 
-/* ── loading: only for work that takes a moment ── */
-/* Streamlit marks the app element data-test-script-state="running" for every
-   rerun (its own frontend sets it from the script-run state). While it is,
-   and once the work has taken more than 450 ms, a full-screen loading layer
-   covers the whole viewport: the pale lavender veil (navy in dark), a
+/* ── loading: the full screen only while the app first loads ── */
+/* Streamlit marks the app element data-test-script-state="running" for EVERY
+   rerun — each click, tab and menu. On Streamlit Cloud almost every rerun
+   takes more than 450 ms (a network round trip each way), so a full-screen
+   layer keyed on that state covered the page after every ordinary click.
+   It is now shown only for a genuine first load: a run that draws the
+   page skeleton (.jt-skel — the first read of the shared data in a server
+   process, or of a person's own data after sign-in). Ordinary reruns get a
+   thin bar along the top edge instead (after the same 450 ms, never
+   blocking a click) and the pressed button's own feedback below.
+   The first-load layer covers the whole viewport: the pale lavender veil (navy in dark), a
    purple→blue frame on all four edges with one highlight travelling
    clockwise round the whole screen (.stApp::after), and in the exact centre
    five glossy icons — search, briefcase, graduation cap, building, check —
@@ -1666,7 +1678,7 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
     linear-gradient(270deg, transparent, var(--load-hi), var(--load-blue), transparent) 150% 100% / 30% 12px no-repeat border-box,
     linear-gradient(0deg, transparent, var(--load-hi), var(--load-blue), transparent) 0 150% / 12px 30% no-repeat border-box,
     linear-gradient(135deg, color-mix(in srgb, var(--accent) 55%, transparent), color-mix(in srgb, var(--load-blue) 55%, transparent)) 0 0 / 100% 100% no-repeat border-box; }
-.stApp[data-test-script-state="running"]::after { animation: jt-busy-in 220ms ease-out 450ms both, jt-load-turn 6s linear 450ms infinite;
+.stApp[data-test-script-state="running"]:has(.jt-skel)::after { animation: jt-busy-in 220ms ease-out 450ms both, jt-load-turn 6s linear 450ms infinite;
   visibility: visible; pointer-events: auto; cursor: progress; transition: visibility 0s linear 450ms; }
 /* the five icons: one 60px box in the exact centre, above the frame layer */
 .stApp::before { content: ""; position: fixed; top: calc(50% - 30px); left: calc(50% - 30px); width: 60px; height: 60px;
@@ -1678,11 +1690,18 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
     var(--load-graduate) -64px 50% / 48px 48px no-repeat,
     var(--load-building) -64px 50% / 48px 48px no-repeat,
     var(--load-check) -64px 50% / 48px 48px no-repeat; }
-.stApp[data-test-script-state="running"]::before { animation: jt-load-icons 6s ease-in-out 450ms infinite both;
+.stApp[data-test-script-state="running"]:has(.jt-skel)::before { animation: jt-load-icons 6s ease-in-out 450ms infinite both;
   visibility: visible; transition: visibility 0s linear 450ms; }
 /* phones: the same frame, a hair thinner */
 @media (max-width: 767px) { .stApp::after { border-width: 3px; } }
-.stApp[data-test-script-state="running"] { cursor: progress; }
+.stApp[data-test-script-state="running"]:has(.jt-skel) { cursor: progress; }
+/* any other rerun that takes a moment: a 3 px bar sliding along the top edge */
+@keyframes jt-bar { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+[data-testid="stMain"]::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 1000005;
+  pointer-events: none; visibility: hidden; opacity: 0;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--load-blue), transparent) -40% 0 / 40% 100% no-repeat; }
+.stApp[data-test-script-state="running"] [data-testid="stMain"]::before { visibility: visible; transition: visibility 0s linear 450ms;
+  animation: jt-busy-in 160ms ease-out 450ms both, jt-bar 1.1s ease-in-out 450ms infinite; }
 /* the button that was just pressed shows that its work is under way:
    Refresh / Reload spin their icon at once, any other button's label
    breathes if its work takes more than a moment */
@@ -1704,13 +1723,15 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   /* the bar appears (still after the pause) but stays still: the same
      full-screen layer — veil and the whole purple→blue frame — with no
      travelling highlight, and a single still icon (the briefcase) */
-  .stApp[data-test-script-state="running"]::after { animation: jt-busy-fade 1ms linear 450ms both !important;
+  .stApp[data-test-script-state="running"]:has(.jt-skel)::after { animation: jt-busy-fade 1ms linear 450ms both !important;
     background: var(--load-veil) padding-box, linear-gradient(135deg, var(--accent), var(--load-blue)) border-box !important; }
-  .stApp[data-test-script-state="running"]::before { animation: jt-busy-fade 1ms linear 450ms both !important;
+  .stApp[data-test-script-state="running"]:has(.jt-skel)::before { animation: jt-busy-fade 1ms linear 450ms both !important;
     background: var(--load-search) -64px 50% / 48px 48px no-repeat, var(--load-briefcase) 50% 50% / 48px 48px no-repeat, var(--load-graduate) -64px 50% / 48px 48px no-repeat, var(--load-building) -64px 50% / 48px 48px no-repeat, var(--load-check) -64px 50% / 48px 48px no-repeat !important; }
   .stApp[data-test-script-state="running"] [data-testid^="stBaseButton"]:focus > div,
   .stApp[data-test-script-state="running"] [data-testid="stIconMaterial"],
   .stApp[data-test-script-state="running"] [class*="st-key-av_pick_"] button::before, .jt-skel i, .jt-skel p .ms { animation: none !important; }
+  .stApp[data-test-script-state="running"] [data-testid="stMain"]::before { animation: jt-busy-fade 1ms linear 450ms both !important;
+    background: linear-gradient(90deg, var(--accent), var(--load-blue)) !important; }
 }
 
 /* ── interaction polish: a clear, consistent answer to the pointer ── */
@@ -2134,6 +2155,57 @@ def _load_synced(name: str, default):
     local = _load(BASE / name, default)
     # a corrupt or hand-edited file ("null", "[]" for settings) must not crash the app
     return local if isinstance(local, type(default)) else default
+
+
+@st.cache_resource(show_spinner=False)
+def _shared_writer() -> dict:
+    """ONE background thread for the shared file's dismissal commits, for the
+    whole server process: commits run one at a time, in click order (no two
+    of this process ever race), and each one still reads GitHub's latest
+    copy and retries on a conflict (update_json). A failure is kept for the
+    session that asked and shown on its next run."""
+    from concurrent.futures import ThreadPoolExecutor
+    return {"pool": ThreadPoolExecutor(max_workers=1, thread_name_prefix="jt-shared-write"),
+            "failed": {}, "lock": threading.Lock()}
+
+
+def _save_change_soon(name: str, mutate, default, message: str) -> bool:
+    """_save_change for an admin's dismissal when their own (Firestore) copy
+    already changed: the owner check runs NOW, in this run; the GitHub
+    commit (two round trips, ~1 s) runs on the shared writer, so the click
+    doesn't wait for it. The admin's view already follows their own copy."""
+    if not is_owner():
+        log.warning("blocked a change to %s from a session without owner access", name)
+        return False
+    token = st.session_state.setdefault("_writer_token", os.urandom(16).hex())
+    writer, cache = _shared_writer(), _shared_data()
+
+    def commit():
+        try:
+            data, saved, err = update_json(BASE / name, name, mutate, default, message)
+        except Exception as e:                       # never lost silently
+            log.warning("background save of %s failed: %s", name, type(e).__name__)
+            data, saved, err = None, False, "GitHub couldn't be reached — the change wasn't saved for everyone."
+        if data is not None:
+            cache.put(name, data)
+        if not saved:
+            with writer["lock"]:
+                writer["failed"].setdefault(token, []).append(err)
+    writer["pool"].submit(commit)
+    return True
+
+
+def _report_background_saves() -> None:
+    """A dismissal whose shared commit failed after its click returned: say
+    so on this session's next run (the person's own copy is unaffected)."""
+    token = st.session_state.get("_writer_token")
+    if not token:
+        return
+    writer = _shared_writer()
+    with writer["lock"]:
+        failed = writer["failed"].pop(token, None)
+    if failed:
+        toast(f"A dismissal was saved for you, but not in the shared list. {failed[-1]}", "error")
 
 
 def _save_change(name: str, mutate, default, message: str):
@@ -2584,7 +2656,7 @@ _GOOGLE_G_SVG = brand_logos.GOOGLE_G_SVG
 _GOOGLE_G_URI = "data:image/svg+xml;base64," + base64.b64encode(_GOOGLE_G_SVG.encode("utf-8")).decode("ascii")
 
 _LOGIN_CSS = """
-[data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"], .st-key-mnav { display: none !important; }
+[data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"], .st-key-nav_toggle { display: none !important; }
 [data-testid="stMainBlockContainer"], .block-container { max-width: 1520px !important; margin: 0 auto !important;
   padding: 24px clamp(24px, 4.5vw, 84px) !important; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
 /* the page's own block must not stretch, or there is nothing left to centre */
@@ -3236,6 +3308,9 @@ def change_dismissal(keys: set[str], dismiss: bool):
         _personal_patched(dismissed_add=keys if dismiss else (), dismissed_remove=() if dismiss else keys)
         if not is_owner():
             return True, ""
+        if dismiss:
+            return (True, "") if _save_change_soon("seen_jobs.json", dismiss_jobs(keys), [],
+                                                   f"chore: dismiss {len(keys)} alert(s)") else None
     _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(keys) if dismiss else _restore_jobs(keys), [],
                                  f"chore: {'dismiss' if dismiss else 'restore'} {len(keys)} alert(s)")
     return saved, err
@@ -3386,10 +3461,7 @@ st.html(f"<style>{_nav_on}, {_nav_on}:hover {{"
         f"@media (max-width: 1023px) {{ {_nav_on}::before {{ left: -11px; }} }}"
         f".st-key-nav_{current} [data-testid='stIconMaterial'] {{color: var(--accent-text) !important; font-variation-settings: 'FILL' 1;"
         "text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 45%, transparent);}"
-        f".st-key-nav_{current} p {{font-weight: 700 !important;}}"
-        f".st-key-mob_{current} [data-testid^='stBaseButton'] {{color: var(--accent-text) !important;}}"
-        f".st-key-mob_{current} [data-testid='stIconMaterial'] {{background: var(--accent-soft); color: var(--accent-text) !important;}}"
-        f".st-key-mob_{current} p {{font-weight: 700 !important;}}</style>")
+        f".st-key-nav_{current} p {{font-weight: 700 !important;}}</style>")
 
 def nav_groups() -> list[tuple[str, list[str]]]:
     """The destinations of this viewer: a member gets their own job search,
@@ -3404,75 +3476,111 @@ def nav_label(key: str) -> str:
     return "My companies" if key == "companies" and MEMBER_VIEW else PAGES[key][0]
 
 
+def _leave_fragment_if_needed() -> None:
+    """In a list fragment (a run of just the list): when its callback changed
+    something outside the list — another page or job (Details, View all) or
+    the data (Dismiss/Restore) — draw the whole app instead, once."""
+    # compared with the destination the last full run drew (set before any
+    # page is drawn), so a full run itself never asks for another one
+    here = (st.session_state.page, st.session_state.get("job_id"), st.session_state.get("company_id"),
+            st.session_state.get("company_view"))
+    if st.session_state.pop("_app_rerun", False) or here != st.session_state.get("_dest"):
+        st.rerun()
+
+
 def _toggle_nav() -> None:
-    st.session_state.nav_collapsed = not st.session_state.get("nav_collapsed", False)
+    """Open/close the desktop sidebar, and say so in the URL (?menu=hidden)
+    at once — the toggle reruns only its fragment, which never reaches the
+    full run's URL bookkeeping."""
+    collapsed = not st.session_state.get("nav_collapsed", False)
+    st.session_state.nav_collapsed = collapsed
+    want = {k: v for k, v in (st.session_state.get("_url_written") or {}).items() if k != "menu"}
+    if collapsed:
+        want["menu"] = "hidden"
+    st.query_params.from_dict(want)
+    st.session_state._url_written = want
 
 
-def nav_toggle() -> None:
-    """The menu button (laptops and desktops; phones use the top bar): opens
-    and closes the left navigation. A real button — keyboard reachable, its
-    label says what it does and is read out by screen readers (shown as an
-    icon). Closed, nothing is drawn in st.sidebar, so Streamlit leaves the
-    sidebar out and the page takes the full width; the page, filters and
-    scroll position stay as they are."""
+def _open_drawer() -> None:
+    st.session_state.nav_drawer = True
+
+
+def _close_drawer() -> None:
+    st.session_state.nav_drawer = False
+
+
+def _drawer_go(page: str) -> None:
+    """A destination chosen in the phone drawer: close it and go there."""
+    st.session_state.nav_drawer = False
+    go(page)
+
+
+@st.fragment
+def nav_controls() -> None:
+    """The menu button and the phone drawer, as a FRAGMENT: opening or closing
+    the drawer, or the desktop sidebar, reruns only this small part — never
+    the page. A destination chosen in the drawer changes the page, so that
+    one click then draws the whole app (_leave_fragment_if_needed).
+
+      laptops and desktops  the left sidebar is the navigation; the button
+                            ("Hide/Show navigation") closes and opens it, and
+                            the page takes the freed width (?menu=hidden)
+      phones                the sidebar can't fit: the button ("Open menu")
+                            slides a drawer in from the left with every
+                            destination of this viewer — the admin pages for
+                            admins only (members are also turned away from
+                            them on the server, see ADMIN_PAGES) — closed by
+                            its ✕, the dimmed page behind it, or a choice
+
+    Real buttons throughout: keyboard reachable, each with a label that
+    screen readers read (shown as icons where space is short)."""
+    _leave_fragment_if_needed()
     collapsed = st.session_state.get("nav_collapsed", False)
     label = "Show navigation" if collapsed else "Hide navigation"
     with st.container(key="nav_toggle"):
         st.button(label, key="btn_nav_toggle", icon=":material/menu:", help=label, on_click=_toggle_nav)
+        st.button("Open menu", key="btn_drawer_open", icon=":material/menu:", on_click=_open_drawer)
+    # always drawn, so each run of this fragment REPLACES the previous rule
+    # (a rule drawn only while closed outlived the fragment run that reopened it)
+    st.html("<style>@media (min-width: 768px) { section[data-testid='stSidebar'] { display: none !important; } }</style>"
+            if collapsed else "<style>/* navigation open */</style>")     # laptops/desktops: phones never show it
+    if not st.session_state.get("nav_drawer"):
+        return
+    st.button("Close menu", key="btn_drawer_backdrop", on_click=_close_drawer)     # the dimmed page behind
+    with st.container(key="drawer"):
+        with st.container(key="drawer_head"):
+            logo = _logo_data_uri()
+            mark = f'<img src="{logo}" alt="">' if logo else ""
+            st.html(f'<div class="brand"><div class="mark">{mark}</div>'
+                    '<div><div class="n">Fresher Job Tracker</div><div class="s">Menu</div></div></div>')
+            st.button("Close menu", key="btn_drawer_close", icon=":material/close:", on_click=_close_drawer)
+        here = st.session_state.page
+        for group, items in nav_groups():
+            st.html(f'<div class="nav-group">{escape(group)}</div>')
+            for key in items:
+                st.button(nav_label(key), key=f"drw_{key}", icon=PAGES[key][1], type="tertiary",
+                          use_container_width=True, on_click=_drawer_go, args=(key,))
+        st.html(f"<style>.st-key-drw_{here} [data-testid^='stBaseButton'] {{ background: var(--accent-soft) !important;"
+                " color: var(--accent-text) !important; }</style>")
 
 
 # the desktop navigation's open/closed state lives in the URL too (?menu=hidden);
 # read only here, past the sign-in gate, so a signed-out tab holds none of it
 if "nav_collapsed" not in st.session_state:
     st.session_state.nav_collapsed = st.query_params.get("menu") == "hidden"
-if not st.session_state.nav_collapsed:
-    with st.sidebar:
-        logo = _logo_data_uri()
-        st.html(f"""<div class="brand"><div class="mark {overall[0] if not MEMBER_VIEW else 'healthy'}">{f'<img src="{logo}" alt="">' if logo else ''}</div>
-          <div><div class="n">Fresher Job Tracker</div><div class="s">Fresher opportunities</div></div></div>""")
-        for gi, (group, items) in enumerate(nav_groups()):
-            st.html(f'<div class="nav-group{" first" if gi == 0 else ""}">{group}</div>')
-            for key in items:
-                st.button(nav_label(key), key=f"nav_{key}", icon=PAGES[key][1], type="tertiary", use_container_width=True,
-                          on_click=go, args=(key,))
+# always drawn (laptops and desktops; CSS hides it on phones, and nav_controls
+# hides it while closed) — so opening it again needs no page run
+with st.sidebar:
+    logo = _logo_data_uri()
+    st.html(f"""<div class="brand"><div class="mark {overall[0] if not MEMBER_VIEW else 'healthy'}">{f'<img src="{logo}" alt="">' if logo else ''}</div>
+      <div><div class="n">Fresher Job Tracker</div><div class="s">Fresher opportunities</div></div></div>""")
+    for gi, (group, items) in enumerate(nav_groups()):
+        st.html(f'<div class="nav-group{" first" if gi == 0 else ""}">{group}</div>')
+        for key in items:
+            st.button(nav_label(key), key=f"nav_{key}", icon=PAGES[key][1], type="tertiary", use_container_width=True,
+                      on_click=go, args=(key,))
     # (the scanner's health and last scan are on Home and, for admins, under
     # Settings → Tracker status — the rail holds navigation only)
-
-# phones: the sidebar is hidden and this compact bar takes over (CSS decides)
-_MOB_LABELS = {"email": "Email", "monitoring": "Monitor", "companies": "Companies", "alerts": "Alerts"}
-# At most five slots, so each stays a comfortable tap target at 360 px: with
-# more destinations (an admin's six), the admin tools go into a "More" menu
-# as the fifth slot — every page stays one tap + one choice away.
-_MOB_MAX = 5
-_MOB_OVERFLOW = ("monitoring", "email")
-
-
-def _mob_go(page: str) -> None:
-    """A destination chosen from the phone bar's More menu: go there and draw
-    the menu closed on the next page (a new key, as the account menu does)."""
-    go(page)
-    st.session_state._mob_more_n = st.session_state.get("_mob_more_n", 0) + 1
-
-
-with st.container(key="mnav"):
-    _mob = [k for _, items in nav_groups() for k in items]
-    _more = [k for k in _mob if k in _MOB_OVERFLOW] if len(_mob) > _MOB_MAX else []
-    _mob = [k for k in _mob if k not in _more]
-    cols = st.columns(len(_mob) + (1 if _more else 0))
-    for col, key in zip(cols, _mob):
-        with col:
-            st.button(_MOB_LABELS.get(key, nav_label(key)), key=f"mob_{key}", icon=PAGES[key][1], on_click=go, args=(key,))
-    if _more:
-        with cols[-1], st.container(key="mob_more_wrap"):
-            with st.popover("More", icon=":material/more_horiz:", key=f"mob_more_{st.session_state.get('_mob_more_n', 0)}",
-                            help="More pages: " + ", ".join(PAGES[k][0] for k in _more)):
-                for key in _more:
-                    st.button(PAGES[key][0], key=f"mob_{key}", icon=PAGES[key][1], type="tertiary",
-                              use_container_width=True, on_click=_mob_go, args=(key,))
-        if current in _more:          # the page shown lives in More: light up its trigger
-            st.html("<style>.st-key-mob_more_wrap [data-testid='stPopoverButton'] {color: var(--accent-text) !important;}"
-                    ".st-key-mob_more_wrap [data-testid='stPopoverButton'] [data-testid='stIconMaterial'] "
-                    "{background: var(--accent-soft); color: var(--accent-text) !important;}</style>")
 
 
 # ── the account, top right ───────────────────────────────────────────────────
@@ -3498,7 +3606,7 @@ def account_menu() -> None:
     else:
         st.html(f'<style>{trigger} {{ content: "{_me_initial()}"; }}</style>')
     with st.container(key="acct_bar"):
-        nav_toggle()
+        nav_controls()
         # a new key after an item is chosen: the next page draws the menu closed
         # (no extra round trip — the popover's own state isn't tracked)
         with st.popover(label, key=f"acct_menu_{st.session_state.get('_acct_menu_n', 0)}"):
@@ -3522,12 +3630,6 @@ def account_menu() -> None:
                 st.stop()
 
 
-if ACCOUNT:
-    account_menu()
-else:
-    with st.container(key="acct_bar"):          # no sign-in (legacy mode): the menu button alone
-        nav_toggle()
-
 # A new destination opens at its top. Streamlit keeps the main area's scroll
 # position across reruns, so a page reached from far down another page
 # opened mid-way. Only a run whose destination (page, job, company, view)
@@ -3543,6 +3645,13 @@ if st.session_state.get("_dest") not in (None, _dest):
                 'window.scrollTo(0, 0); }; top(); requestAnimationFrame(top); })();</script>',
                 unsafe_allow_javascript=True)
 st.session_state._dest = _dest
+
+if ACCOUNT:
+    account_menu()
+else:
+    with st.container(key="acct_bar"):          # no sign-in (legacy mode): the menu button alone
+        nav_controls()
+
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -3816,18 +3925,6 @@ def job_row(j: dict, idx: str, origin: str):
                           args=(jkey, True))
 
 
-def _leave_fragment_if_needed() -> None:
-    """In a list fragment (a run of just the list): when its callback changed
-    something outside the list — another page or job (Details, View all) or
-    the data (Dismiss/Restore) — draw the whole app instead, once."""
-    # compared with the destination the last full run drew (set before any
-    # page is drawn), so a full run itself never asks for another one
-    here = (st.session_state.page, st.session_state.get("job_id"), st.session_state.get("company_id"),
-            st.session_state.get("company_view"))
-    if st.session_state.pop("_app_rerun", False) or here != st.session_state.get("_dest"):
-        st.rerun()
-
-
 def _logo_styles(entries: dict) -> str:
     """One style block giving each found company logo its image."""
     return "<style>" + "".join(
@@ -3980,24 +4077,25 @@ def page_jobs():
     page_header("Jobs", f"{_plural(len(all_records), 'job')} found by the tracker · {len(active_jobs)} active · "
                         f"{len(dismissed_jobs)} dismissed")
     st.session_state.setdefault("jobs_tab", "active")
+    _jobs_list()
+
+
+@st.fragment
+def _jobs_list() -> None:
+    """Jobs' Active / Dismissed switch, filters, list and pagination. A
+    fragment: switching tabs, searching, sorting, filtering and paging
+    redraw only this part of the page (a dismissal still draws the whole
+    page once, since the counts around the list change too)."""
+    _leave_fragment_if_needed()
     with st.container(key="jobs_tab_wrap"):
         tab = st.pills("Show", ["active", "dismissed"], key="jobs_tab", label_visibility="collapsed",
                        format_func=lambda t: f"Active ({len(active_jobs)})" if t == "active" else f"Dismissed ({len(dismissed_jobs)})")
     tab = tab or "active"
-    source = active_jobs if tab == "active" else dismissed_jobs
-    if not source:
+    if not (active_jobs if tab == "active" else dismissed_jobs):
         empty_state("inbox", "No alerts yet" if tab == "active" else "Nothing dismissed",
                     "New jobs appear here after the next scan." if tab == "active"
                     else "Jobs you dismiss are kept here so they're never emailed twice — you can restore them anytime.")
         return
-    _jobs_list(tab)
-
-
-@st.fragment
-def _jobs_list(tab: str) -> None:
-    """Jobs' filters, list and pagination. A fragment: searching, sorting,
-    filtering and paging redraw only this part of the page."""
-    _leave_fragment_if_needed()
     before = dict(_USED_LOGOS)
     source = active_jobs if tab == "active" else dismissed_jobs
     shown, active, clear = filter_jobs("j", source)
@@ -4973,6 +5071,10 @@ def _clear_all(keys: set[str]) -> None:
         _personal_patched(dismissed_add=keys)
     # the confirmed jobs only: a job a scan published since the page was drawn
     # was never shown to the admin, so it stays active (and gets its email)
+    if USER is not None:            # their own copy already changed: the shared commit needn't hold the click
+        if _save_change_soon("seen_jobs.json", dismiss_jobs(keys), [], "chore: dismiss all alerts"):
+            toast("All alerts cleared", "success")
+        return
     _, saved, err = _save_change("seen_jobs.json", dismiss_jobs(keys), [], "chore: dismiss all alerts")
     toast("All alerts cleared" if saved else f"Cleared here, but not saved permanently. {err}",
           "success" if saved else "error")
@@ -5339,7 +5441,7 @@ def _onboarding_finish(with_preferences: bool) -> None:
 def page_onboarding():
     """First sign-in: five quick questions, then a summary. Nothing here is
     required, and alerts stay off until the person turns them on."""
-    st.html('<style>[data-testid="stSidebar"], .st-key-mnav { display: none !important; }</style>')
+    st.html('<style>[data-testid="stSidebar"], .st-key-nav_toggle { display: none !important; }</style>')
     step = int(st.session_state.get("ob_step", 0))
     vals = st.session_state.setdefault("ob_values", {})
     first = first_name(SHOWN_ACCOUNT) if ACCOUNT else ""
@@ -5509,6 +5611,7 @@ def personal_summary_card() -> None:
 # ═══════════════════════════════════════════════════════════════════════════════
 # ROUTER
 # ═══════════════════════════════════════════════════════════════════════════════
+_report_background_saves()
 page = st.session_state.page
 jobs_by_id = {_jid(j): j for j in all_records}
 if page == "jobs" and st.session_state.job_id:

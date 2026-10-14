@@ -276,20 +276,45 @@ def test_the_test_email_is_a_delivery_check_only():
     assert subject == "Test email from Fresher Job Tracker"              # unchanged
     checker = _parse(html)
     assert not checker.errors and checker.stack == [] and checker.links == []
-    assert "Test email successful" in html and "TEST EMAIL SUCCESSFUL" in text
+    assert "Delivery test passed" in html and "DELIVERY TEST PASSED" in text
+    assert "Your job alerts can reach you" in html
     assert "working correctly" in html and "working correctly" in text
     assert "14 Oct 2026, 3:10 PM IST" in html and "14 Oct 2026, 3:10 PM IST" in text
-    assert "View job" not in html and "JOB 1" not in html and "<img" not in html   # no fake jobs
-    assert "No jobs were scanned" in html and "#dcfce7" in html                     # a subtle success mark
+    assert "View job" not in html and "JOB 1" not in html and "<img" not in html   # no fake jobs, no images
+    assert "no jobs were scanned" in html and "no jobs were scanned" in text      # truthful about what a test is
+    for title, note in notifier._TEST_PROMISES:                                    # what real alerts do, nothing more
+        assert title in html and title in text
 
 
 def test_both_emails_share_the_frame_and_stay_inline():
     for _, html, _ in (build_alert_email([_job()]), build_test_email()):
         assert "<!DOCTYPE html>" in html and 'name="viewport"' in html and "max-width:600px" in html
-        assert "Fresher Job Tracker</td>" in html                       # the brand line, text only
+        assert "Fresher Job Tracker</td>" in html                       # the brand row, text only
+        assert "background-image:linear-gradient(90deg,#4f46e5,#0d9488)" in html   # the lead card's accent line
+        assert 'bgcolor="#4f46e5"' in html                               # ... with a solid fallback
         style = html[html.index("<style>"):html.index("</style>")]
         assert "@media only screen and (max-width: 480px)" in style
         assert "url(" not in style and "@import" not in style and "http" not in style
+
+
+def test_the_alert_summary_counts_the_kinds_of_role():
+    _, html, _ = build_alert_email([_job(category="FRESHER"), _job(category="FRESHER", url="https://x.example/2"),
+                                    _job(category="ENTRY_LEVEL", url="https://x.example/3")])
+    assert ">2 Fresher</span>" in html and ">1 Entry level</span>" in html
+    assert ">Job alert</td>" in html
+
+
+# ── the background writer: an admin's dismissal doesn't wait for GitHub ─────
+
+def test_an_admins_dismissal_commits_in_the_background_and_reports_failures():
+    from test_streamlit_app import REPO
+    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    soon = src[src.index("def _save_change_soon"):src.index("def _report_background_saves")]
+    assert "if not is_owner():" in soon.split("def commit")[0]          # the role is checked in the click's own run
+    assert 'ThreadPoolExecutor(max_workers=1' in src                   # one writer: commits never race each other
+    body = src[src.index("def change_dismissal"):src.index("def toast(")]
+    assert "_save_change_soon" in body and body.index("if dismiss:") < body.index("_save_change_soon")
+    assert "_report_background_saves()\npage = st.session_state.page" in src
 
 
 # ── navigation ────────────────────────────────────────────────────────────────
@@ -298,34 +323,40 @@ def _keys(at):
     return {b.key for b in at.button}
 
 
+def _hides_sidebar(at):
+    return "section[data-testid='stSidebar'] { display: none !important; }" in _html(at)
+
+
 def test_the_menu_button_closes_and_opens_the_desktop_navigation(app):
     at = app([NEW_RECORD], page="jobs")
-    assert "nav_jobs" in _keys(at) and "btn_nav_toggle" in _keys(at)
-    assert at.button(key="btn_nav_toggle").label == "Hide navigation"
+    assert {"btn_nav_toggle", "btn_drawer_open", "nav_jobs"} <= _keys(at)
+    assert at.button(key="btn_nav_toggle").label == "Hide navigation" and not _hides_sidebar(at)
     at.button(key="btn_nav_toggle").click().run()
-    assert not at.exception and at.session_state.nav_collapsed is True
-    assert not {k for k in _keys(at) if k.startswith("nav_")}             # nothing in st.sidebar: no sidebar
+    assert not at.exception and at.session_state.nav_collapsed is True and _hides_sidebar(at)
     assert at.button(key="btn_nav_toggle").label == "Show navigation"
     assert at.query_params["menu"] in ("hidden", ["hidden"]) and at.session_state.page == "jobs"
-    assert "mob_jobs" in _keys(at)                                       # phones keep their top bar
     at.button(key="btn_nav_toggle").click().run()
-    assert at.session_state.nav_collapsed is False and "nav_jobs" in _keys(at) and "menu" not in at.query_params
+    assert at.session_state.nav_collapsed is False and not _hides_sidebar(at) and "menu" not in at.query_params
 
 
 def test_a_link_with_menu_hidden_opens_with_the_navigation_closed(app):
     at = app([NEW_RECORD], query={"page": "companies", "menu": "hidden"})
-    assert at.session_state.nav_collapsed is True and at.session_state.page == "companies"
-    assert "nav_companies" not in _keys(at)
+    assert at.session_state.nav_collapsed is True and at.session_state.page == "companies" and _hides_sidebar(at)
 
 
-def test_phones_get_five_slots_with_the_admin_tools_under_more(app):
+def test_the_phone_drawer_holds_every_destination_and_closes_after_a_choice(app):
     at = app([NEW_RECORD])
-    mob = [k for k in _keys(at) if k.startswith("mob_")]
-    assert set(mob) == {"mob_home", "mob_jobs", "mob_companies", "mob_settings", "mob_monitoring", "mob_email"}
-    pops = [p for p in at.get("popover") if p.proto.popover.label == "More"]
-    assert len(pops) == 1                                                # Monitor + Email live inside it
-    at.button(key="mob_email").click().run()
-    assert at.session_state.page == "email" and not at.exception
+    assert not {k for k in _keys(at) if k.startswith(("drw_", "mob_"))}         # closed: nothing drawn
+    at.button(key="btn_drawer_open").click().run()
+    assert not at.exception and at.session_state.nav_drawer is True
+    drawer = {k for k in _keys(at) if k.startswith("drw_")}
+    assert drawer == {"drw_home", "drw_jobs", "drw_companies", "drw_monitoring", "drw_email", "drw_settings"}
+    assert {"btn_drawer_close", "btn_drawer_backdrop"} <= _keys(at)
+    at.button(key="btn_drawer_backdrop").click().run()                          # the dimmed page closes it
+    assert at.session_state.nav_drawer is False and not {k for k in _keys(at) if k.startswith("drw_")}
+    at.button(key="btn_drawer_open").click().run()
+    at.button(key="drw_email").click().run()
+    assert at.session_state.page == "email" and at.session_state.nav_drawer is False and not at.exception
 
 
 def test_the_phone_and_menu_css_rules():
@@ -336,5 +367,5 @@ def test_the_phone_and_menu_css_rules():
     phone = css[css.index("@media (max-width: 767px) {\n  section[data-testid=\"stSidebar\"]"):]
     assert ".jt-toast { left: 16px; right: 16px; top: 74px; bottom: auto;" in phone
     assert "padding-bottom: 104px !important" in phone                   # room to scroll past Cloud's badges
-    assert ".st-key-mnav .stButton" in phone and "width: 100% !important" in phone   # whole column tappable
-    assert "@media (max-width: 767px) { .st-key-nav_toggle { display: none !important; } }" in css
+    assert ".st-key-mnav" not in css and "mob_more" not in src           # the row of phone tabs is gone
+    assert ".st-key-btn_nav_toggle { display: none !important; }" in css # phones: the drawer's button instead
