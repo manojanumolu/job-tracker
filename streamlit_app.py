@@ -384,32 +384,56 @@ def render_auth_diag() -> None:
 
 
 def _loader_icons(start: str, end: str, check_start: str) -> dict:
-    """The loading screen's five small line icons, in order — search,
-    briefcase, graduation cap, building, checkmark — all on one 24px grid
-    with the same 2px rounded stroke, coloured with a purple→blue gradient
-    (the checkmark teal→blue). Each as a CSS url() (inline <svg> doesn't
-    paint in this app's hosting; a CSS background image does)."""
+    """The loading screen's five icons, in order — search, briefcase,
+    graduation cap, building, checkmark — drawn as small glossy solids on one
+    48px grid: a violet→blue body (the checkmark teal→blue), a soft white
+    sheen over the top half, a light rim and a faint darker base, so they
+    read as polished glass without filters. Each as a CSS url() (inline
+    <svg> doesn't paint in this app's hosting; a CSS background image does)."""
+    # each icon: its solid body (filled with the body gradient, then the sheen)
+    # and any light details drawn on top of it
     shapes = {
-        "search": '<circle cx="10.5" cy="10.5" r="6.25"/><path d="M15.2 15.2 L20.5 20.5"/>',
-        "briefcase": ('<rect x="3" y="7.5" width="18" height="12.5" rx="2.5"/>'
-                      '<path d="M9 7.5 V5.8 a1.8 1.8 0 0 1 1.8 -1.8 h2.4 a1.8 1.8 0 0 1 1.8 1.8 V7.5"/>'
-                      '<path d="M3 12.6 H21"/><path d="M12 11.4 V13.8"/>'),
-        "graduate": ('<path d="M2.5 9.2 L12 4.6 L21.5 9.2 L12 13.8 Z"/>'
-                     '<path d="M6.5 11.4 V15.4 C6.5 17.1 9 18.6 12 18.6 C15 18.6 17.5 17.1 17.5 15.4 V11.4"/>'
-                     '<path d="M21.5 9.2 V14.2"/>'),
-        "building": ('<rect x="5" y="3.5" width="14" height="17" rx="1.8"/>'
-                     '<path d="M9 7.6 H10 M14 7.6 H15 M9 11.1 H10 M14 11.1 H15 M9 14.6 H10 M14 14.6 H15"/>'
-                     '<path d="M10.4 20.5 V17.6 H13.6 V20.5"/>'),
-        "check": '<circle cx="12" cy="12" r="8.75"/><path d="M8.1 12.3 L10.8 15 L16.1 9.4"/>',
+        "search": ('<path fill-rule="evenodd" d="M20 5.5a14.5 14.5 0 1 1 0 29a14.5 14.5 0 1 1 0-29z'
+                   'M20 11a9 9 0 1 0 0 18a9 9 0 1 0 0-18z"/>'
+                   '<path d="M29.6 33.8l4.2-4.2l8.6 8.6a3 3 0 0 1-4.2 4.2z"/>',
+                   '<circle cx="20" cy="20" r="9" fill="url(#b)" fill-opacity=".22"/><circle cx="20" cy="20" r="9" fill="url(#s)"/>'
+                   '<path d="M14.6 18.2a6 6 0 0 1 5.6-4" fill="none" stroke="#fff" stroke-opacity=".9" '
+                   'stroke-width="2" stroke-linecap="round"/>'),
+        "briefcase": ('<path fill-rule="evenodd" d="M19.5 7h9a4 4 0 0 1 4 4v4h-4v-3.5h-9v3.5h-4v-4a4 4 0 0 1 4-4z"/>'
+                      '<rect x="5" y="14" width="38" height="27" rx="6"/>',
+                      '<path d="M5.5 25.5h37" stroke="#fff" stroke-opacity=".45" stroke-width="1.4"/>'
+                      '<rect x="20.5" y="22" width="7" height="7" rx="2" fill="#fff" fill-opacity=".9"/>'),
+        "graduate": ('<path d="M12 22.5l12 5.4l12-5.4v8.3c0 4.1-5.4 7.2-12 7.2s-12-3.1-12-7.2z"/>'
+                     '<path d="M24 7.5l20.5 9.2a1.4 1.4 0 0 1 0 2.6l-20.5 9.2l-20.5-9.2a1.4 1.4 0 0 1 0-2.6z"/>'
+                     '<path d="M39.6 20.7h2.8v9.8l1.6 4.6a1.2 1.2 0 0 1-1.1 1.6h-3.6a1.2 1.2 0 0 1-1.1-1.6l1.4-4.6z"/>',
+                     ''),
+        "building": ('<rect x="9" y="5" width="30" height="38" rx="5"/>',
+                     '<g fill="#fff" fill-opacity=".88">'
+                     '<rect x="15" y="11" width="6" height="5" rx="1.4"/><rect x="27" y="11" width="6" height="5" rx="1.4"/>'
+                     '<rect x="15" y="19.5" width="6" height="5" rx="1.4"/><rect x="27" y="19.5" width="6" height="5" rx="1.4"/>'
+                     '<path d="M20.5 43v-8.5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v8.5z"/></g>'),
+        "check": ('<circle cx="24" cy="24" r="19"/>',
+                  '<path d="M15.5 24.6l6 6l11-12" fill="none" stroke="#fff" stroke-width="4.4" '
+                  'stroke-linecap="round" stroke-linejoin="round"/>'),
     }
     out = {}
-    for name, body in shapes.items():
+    for name, (body, detail) in shapes.items():
         a = check_start if name == "check" else start
-        svg = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><linearGradient id="g" '
-               'gradientUnits="userSpaceOnUse" x1="3" y1="3" x2="21" y2="21">'
-               f'<stop offset="0" stop-color="{a}"/><stop offset="1" stop-color="{end}"/></linearGradient></defs>'
-               '<g fill="none" stroke="url(#g)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-               f'{body}</g></svg>')
+        svg = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><defs>'
+               # the body: violet (or teal) at the top left into blue at the bottom right
+               '<linearGradient id="b" gradientUnits="userSpaceOnUse" x1="8" y1="4" x2="40" y2="44">'
+               f'<stop offset="0" stop-color="{a}"/><stop offset="1" stop-color="{end}"/></linearGradient>'
+               # the sheen: white over the top, gone by the middle
+               '<linearGradient id="s" x1="0" y1="0" x2="0" y2="1">'
+               '<stop offset="0" stop-color="#fff" stop-opacity=".48"/><stop offset=".5" stop-color="#fff" stop-opacity=".08"/>'
+               '<stop offset=".62" stop-color="#fff" stop-opacity="0"/></linearGradient>'
+               # a faint darker base, for depth
+               '<linearGradient id="d" x1="0" y1="0" x2="0" y2="1">'
+               '<stop offset=".6" stop-color="#1e1b6b" stop-opacity="0"/><stop offset="1" stop-color="#1e1b6b" stop-opacity=".22"/>'
+               '</linearGradient></defs>'
+               f'<g fill="url(#b)">{body}</g><g fill="url(#d)">{body}</g><g fill="url(#s)">{body}</g>'
+               f'<g fill="none" stroke="#fff" stroke-opacity=".38" stroke-width=".9">{body}</g>'
+               f'{detail}</svg>')
         out[name] = "url('data:image/svg+xml;base64," + base64.b64encode(svg.encode("utf-8")).decode("ascii") + "')"
     return out
 
@@ -1551,7 +1575,7 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
    covers the whole viewport: the pale lavender veil (navy in dark), a
    purple→blue frame on all four edges with one highlight travelling
    clockwise round the whole screen (.stApp::after), and in the exact centre
-   five small icons — search, briefcase, graduation cap, building, check —
+   five glossy icons — search, briefcase, graduation cap, building, check —
    shown one at a time, each fading in with a slight scale-up and out again
    (.stApp::before). Only opacity, transform and background-position move.
    Clicks: during the first 450 ms both layers are hidden and let every
@@ -1602,16 +1626,16 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
     linear-gradient(135deg, color-mix(in srgb, var(--accent) 55%, transparent), color-mix(in srgb, var(--load-blue) 55%, transparent)) 0 0 / 100% 100% no-repeat border-box; }
 .stApp[data-test-script-state="running"]::after { animation: jt-busy-in 220ms ease-out 450ms both, jt-load-turn 6s linear 450ms infinite;
   visibility: visible; pointer-events: auto; cursor: progress; transition: visibility 0s linear 450ms; }
-/* the five icons: one 40px box in the exact centre, above the frame layer */
-.stApp::before { content: ""; position: fixed; top: calc(50% - 20px); left: calc(50% - 20px); width: 40px; height: 40px;
+/* the five icons: one 60px box in the exact centre, above the frame layer */
+.stApp::before { content: ""; position: fixed; top: calc(50% - 30px); left: calc(50% - 30px); width: 60px; height: 60px;
   z-index: 1000011; visibility: hidden; pointer-events: none; opacity: 0;
-  filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--accent) 28%, transparent));
+  filter: drop-shadow(0 3px 8px color-mix(in srgb, var(--accent) 30%, transparent));
   background:
-    var(--load-search) -64px 50% / 32px 32px no-repeat,
-    var(--load-briefcase) -64px 50% / 32px 32px no-repeat,
-    var(--load-graduate) -64px 50% / 32px 32px no-repeat,
-    var(--load-building) -64px 50% / 32px 32px no-repeat,
-    var(--load-check) -64px 50% / 32px 32px no-repeat; }
+    var(--load-search) -64px 50% / 48px 48px no-repeat,
+    var(--load-briefcase) -64px 50% / 48px 48px no-repeat,
+    var(--load-graduate) -64px 50% / 48px 48px no-repeat,
+    var(--load-building) -64px 50% / 48px 48px no-repeat,
+    var(--load-check) -64px 50% / 48px 48px no-repeat; }
 .stApp[data-test-script-state="running"]::before { animation: jt-load-icons 6s ease-in-out 450ms infinite both;
   visibility: visible; transition: visibility 0s linear 450ms; }
 /* phones: the same frame, a hair thinner */
@@ -1641,7 +1665,7 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   .stApp[data-test-script-state="running"]::after { animation: jt-busy-fade 1ms linear 450ms both !important;
     background: var(--load-veil) padding-box, linear-gradient(135deg, var(--accent), var(--load-blue)) border-box !important; }
   .stApp[data-test-script-state="running"]::before { animation: jt-busy-fade 1ms linear 450ms both !important;
-    background: var(--load-search) -64px 50% / 32px 32px no-repeat, var(--load-briefcase) 50% 50% / 32px 32px no-repeat, var(--load-graduate) -64px 50% / 32px 32px no-repeat, var(--load-building) -64px 50% / 32px 32px no-repeat, var(--load-check) -64px 50% / 32px 32px no-repeat !important; }
+    background: var(--load-search) -64px 50% / 48px 48px no-repeat, var(--load-briefcase) 50% 50% / 48px 48px no-repeat, var(--load-graduate) -64px 50% / 48px 48px no-repeat, var(--load-building) -64px 50% / 48px 48px no-repeat, var(--load-check) -64px 50% / 48px 48px no-repeat !important; }
   .stApp[data-test-script-state="running"] [data-testid^="stBaseButton"]:focus > div,
   .stApp[data-test-script-state="running"] [data-testid="stIconMaterial"],
   .stApp[data-test-script-state="running"] [class*="st-key-av_pick_"] button::before, .jt-skel i, .jt-skel p .ms { animation: none !important; }

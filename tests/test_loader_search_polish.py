@@ -75,13 +75,15 @@ def test_one_highlight_travels_round_all_four_edges():
     assert moved == [[1], [2], [3], [4]]                                                  # clockwise, one edge at a time
 
 
-def test_five_small_icons_in_the_exact_centre():
+def test_five_glossy_icons_in_the_exact_centre():
+    """1.5x the earlier 32px line icons (48px in a 60px box), glossy solids:
+    a gradient body, a white sheen, a light rim and a darker base."""
     box = _rule(".stApp::before")
-    assert "top: calc(50% - 20px); left: calc(50% - 20px); width: 40px; height: 40px" in box
+    assert "top: calc(50% - 30px); left: calc(50% - 30px); width: 60px; height: 60px" in box
     assert "z-index: 1000011" in box and "pointer-events: none" in box and "visibility: hidden" in box
-    layers = re.findall(r"var\(--load-([a-z]+)\) -64px 50% / 32px 32px no-repeat", box)
+    layers = re.findall(r"var\(--load-([a-z]+)\) -64px 50% / 48px 48px no-repeat", box)
     assert layers == ICON_NAMES                                                           # five, same size, in order
-    assert "drop-shadow(0 2px 6px" in box                                                 # a subtle glow at most
+    assert "drop-shadow(0 3px 8px" in box                                                 # a soft shadow, no halo
     for name in ("LIGHT", "DARK"):
         assert re.search(rf'for _pal, _colours in \(\(LIGHT, .*?\), \(DARK, .*?\)\):', SRC)
     fn_src = SRC[SRC.index("def _loader_icons"):SRC.index("\n\n\nLIGHT = {")]
@@ -92,7 +94,10 @@ def test_five_small_icons_in_the_exact_centre():
     for name, uri in icons.items():
         assert uri.startswith("url('data:image/svg+xml;base64,") and "<" not in uri
         svg = base64.b64decode(uri[len("url('data:image/svg+xml;base64,"):-2]).decode()
-        assert 'viewBox="0 0 24 24"' in svg and 'stroke-width="2"' in svg and 'fill="none"' in svg, name   # one line style
+        assert 'viewBox="0 0 48 48"' in svg, name                                         # one grid
+        for layer in ('fill="url(#b)"', 'fill="url(#d)"', 'fill="url(#s)"', 'stroke="#fff" stroke-opacity=".38"'):
+            assert layer in svg, (name, layer)                                            # one glossy style
+        assert "filter" not in svg and "<image" not in svg and "<text" not in svg, name   # light: shapes only
 
 
 def test_the_icons_appear_one_at_a_time_in_order_and_loop():
