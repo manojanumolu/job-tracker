@@ -603,6 +603,10 @@ class AccountIdentity(FakeIdentity):
     def account(self, uid):
         return self.states.get(uid, {"uid": uid, "email": "", "email_verified": True, "disabled": False})
 
+    def delete_account(self, uid):
+        """Admin SDK auth.delete_user: the account is gone afterwards."""
+        self.states[uid] = None
+
 
 @pytest.fixture
 def store2(monkeypatch):

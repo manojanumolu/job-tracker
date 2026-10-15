@@ -266,7 +266,19 @@ def test_no_new_heavy_dependencies():
     # outside press, Tab doesn't pick an option, a field opens its own menu) —
     # no source, no network, no storage, nothing but scrolling / menu state
     scripts = re.findall(r"<script.*?</script>", SRC, re.S | re.I)
-    assert len(scripts) == 2
+    assert len(scripts) == 3
+    # the third (2026-10-15): the email sign-in's session cookie — it only
+    # assigns document.cookie for jt_session, with fixed attributes; the
+    # value is server-made and checked against a strict pattern first
+    (cookie,) = [s for s in scripts if "document.cookie" in s]
+    scripts = [s for s in scripts if s is not cookie]
+    assert re.fullmatch(r'<script data-c="\{time\.time_ns\(\)\}">\(\(\) => \{\{ document\.cookie = "\{SESSION_COOKIE\}=\{value\}; '
+                        r"'\s*f'Path=/; Max-Age=\{max_age\}; SameSite=Lax\" \+ \(location\.protocol === \"https:\" \? \"; Secure\" : \"\"\); \}\}\)\(\);</script>",
+                        cookie, re.S), cookie
+    assert 'SESSION_COOKIE = "jt_session"' in SRC and '_COOKIE_VALUE_RE = re.compile(r"^[A-Za-z0-9_.-]{0,200}$")' in SRC
+    for banned in ("src=", "fetch", "http:", "xmlhttp", "localstorage", "sessionstorage", "eval", "innerhtml",
+                   "location.href", "location.assign", "location.replace", "import("):
+        assert banned not in cookie.lower(), banned
     for script in scripts:
         body = script.lower()
         for banned in ("src=", "fetch", "http", "xmlhttp", "cookie", "localstorage", "sessionstorage", "eval", "innerhtml",

@@ -76,7 +76,7 @@ def test_the_menu_guard_is_installed_once_hidden_and_scoped_to_select_fields():
     assert GUARD.count("document.addEventListener(") == 3 and GUARD.count("}, true);") == 3     # all capture phase
     assert "'[data-testid=\"stMultiSelect\"], [data-testid=\"stSelectbox\"]'" in GUARD
     assert 'with st.container(key="jt_menu_guard"):\n    st.html(_MENU_GUARD, unsafe_allow_javascript=True)' in SRC
-    assert ":is(.st-key-jt_scroll_top, .st-key-jt_menu_guard)" in CSS and "display: none !important" in CSS
+    assert ":is(.st-key-jt_scroll_top, .st-key-jt_menu_guard, .st-key-jt_auth_cookie)" in CSS and "display: none !important" in CSS
 
 
 def test_preference_and_onboarding_pills_share_the_polished_pill_style():

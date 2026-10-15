@@ -49,12 +49,14 @@ No Streamlit import here, so this is unit-testable on its own.
 
 from __future__ import annotations
 
+import calendar
 import functools
 import hashlib
 import json
 import logging
 import random
 import re
+import secrets
 import threading
 import time
 from collections.abc import Iterable, Mapping
@@ -63,6 +65,11 @@ log = logging.getLogger("user_store")
 
 SCHEMA_VERSION = 1
 UID_RE = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+# A browser session of an email sign-in: "<uid>.<token>" in the jt_session
+# cookie. Only the token's sha256 is stored (users/{uid}/sessions/{hash}),
+# so the database never holds a usable token.
+SESSION_TOKEN_RE = re.compile(r"^([A-Za-z0-9_-]{1,128})\.([A-Za-z0-9_-]{40,64})$")
+SESSION_MAX_S = 30 * 86400              # never longer than Streamlit's own Google sign-in cookie
 NOTIFY_MODES = ("general", "tailored")
 ONBOARDING_PENDING, ONBOARDING_COMPLETE = "pending", "complete"
 DELIVERY_CLAIMED, DELIVERY_SENT, DELIVERY_PENDING = "claimed", "sent", "pending"
@@ -99,6 +106,16 @@ def _hash_id(value: str) -> str:
 
 def _now_iso(now: float | None = None) -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() if now is None else now))
+
+
+def _iso_seconds(value: object) -> float | None:
+    """Seconds since the epoch for a stamp written by _now_iso, else None."""
+    if not isinstance(value, str):
+        return None
+    try:
+        return float(calendar.timegm(time.strptime(value, "%Y-%m-%dT%H:%M:%SZ")))
+    except ValueError:
+        return None
 
 
 def valid_uid(uid: object) -> bool:
@@ -285,6 +302,15 @@ class FirebaseIdentity:
         return {"uid": user.uid, "email": (user.email or "").strip().lower(),
                 "email_verified": bool(user.email_verified), "disabled": bool(user.disabled)}
 
+    def delete_account(self, uid: str) -> None:
+        """Delete the Firebase Authentication account with this UID (Admin
+        SDK, server side). An account that is already gone counts as done."""
+        from firebase_admin import auth
+        try:
+            auth.delete_user(uid, app=self.app)
+        except auth.UserNotFoundError:
+            pass
+
 
 # ---------------------------------------------------------------------------
 # One person's data
@@ -396,6 +422,54 @@ class UserData:
             raise InvalidInput("That avatar isn't available.")
         self._backend.set(self._root, {"avatar": choice}, merge=True)
         return choice
+
+    # -- browser sessions of an email sign-in ------------------------------------
+    def _session_path(self, token_hash: str) -> str:
+        if not isinstance(token_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", token_hash):
+            raise InvalidInput("not a session")
+        return f"{self._root}/sessions/{token_hash}"
+
+    @_guard
+    def start_session(self, email: str, name: str = "", email_verified: bool = False,
+                      now: float | None = None) -> tuple[str, str]:
+        """A new browser session for this person's email sign-in: returns
+        (cookie value "<uid>.<token>", the token's hash). The token is random
+        (secrets.token_urlsafe) and only its hash is stored."""
+        now = time.time() if now is None else now
+        token = secrets.token_urlsafe(32)
+        token_hash = _hash_id(token)
+        self._backend.set(self._session_path(token_hash), {
+            "uid": self.uid, "provider": "password", "email": (email or "").strip().lower(), "name": name or "",
+            "email_verified": email_verified is True, "created_at": _now_iso(now), "last_active_at": _now_iso(now),
+            "expires_at": _now_iso(now + SESSION_MAX_S)})
+        return f"{self.uid}.{token}", token_hash
+
+    @_guard
+    def touch_session(self, token_hash: str, now: float | None = None) -> None:
+        """This session was just used (only if it still exists: an ended
+        session is never brought back)."""
+        path = self._session_path(token_hash)
+        if self._backend.get(path) is not None:
+            self._backend.set(path, {"last_active_at": _now_iso(now)}, merge=True)
+
+    @_guard
+    def end_session(self, token_hash: str) -> None:
+        """Sign out: this browser session can't be used again."""
+        self._backend.delete(self._session_path(token_hash))
+
+    @_guard
+    def delete_personal_data(self) -> int:
+        """Delete everything this person owns in the store — users/{uid} and
+        its companies, dismissed, deliveries and sessions — and nothing
+        else (shared listings, catalogue and settings live in GitHub, not
+        here). Returns how many documents were deleted."""
+        paths = [f"{self._root}/{sub}/{doc_id}" for sub in ("companies", "dismissed", "deliveries", "sessions")
+                 for doc_id in self._backend.list(f"{self._root}/{sub}")]
+        if paths:
+            self._backend.delete_many(paths)
+        existed = self._backend.get(self._root) is not None
+        self._backend.delete(self._root)
+        return len(paths) + (1 if existed else 0)
 
     @_guard
     def record_activity(self, now: float | None = None) -> str:
@@ -694,6 +768,49 @@ class UserStore:
         except Exception as e:
             log.warning("Firebase account lookup failed: %s", type(e).__name__)
             raise UserStoreError(UNAVAILABLE, kind=type(e).__name__) from None
+
+    def resolve_session(self, cookie: object, idle_limit_s: float, now: float | None = None) -> dict | None:
+        """The live email sign-in session named by a jt_session cookie, or
+        None (malformed, unknown, ended, idle for ``idle_limit_s`` or past
+        SESSION_MAX_S). The UID in the cookie is only an address: the
+        session is accepted only if the token's hash is stored under that
+        very UID. Raises UserStoreError if the store can't be read."""
+        m = SESSION_TOKEN_RE.match(cookie) if isinstance(cookie, str) else None
+        if not m or not valid_uid(m.group(1)):
+            return None
+        uid, token_hash = m.group(1), _hash_id(m.group(2))
+        try:
+            doc = self.backend.get(f"users/{uid}/sessions/{token_hash}")
+        except Exception as e:
+            log.warning("session lookup failed: %s", type(e).__name__)
+            raise UserStoreError(UNAVAILABLE, kind=type(e).__name__) from None
+        now = time.time() if now is None else now
+        if not isinstance(doc, dict) or doc.get("uid") != uid or doc.get("provider") != "password":
+            return None
+        expires, last = _iso_seconds(doc.get("expires_at")), _iso_seconds(doc.get("last_active_at"))
+        if expires is None or last is None or now >= expires or now - last >= idle_limit_s:
+            return None
+        return {"uid": uid, "key": token_hash, "email": doc.get("email") or "", "name": doc.get("name") or "",
+                "email_verified": doc.get("email_verified") is True, "last_active": last}
+
+    def end_session(self, uid: str, token_hash: str) -> None:
+        """End a session that resolve_session found but the account no longer
+        matches (the hash came from that session's own token)."""
+        try:
+            self.for_uid(uid).end_session(token_hash)
+        except InvalidInput:
+            pass
+
+    def delete_account(self, uid: str) -> None:
+        """Delete the Firebase Authentication account (Admin SDK). Raises
+        UserStoreError if Firebase couldn't do it."""
+        if self.identity is None or not valid_uid(uid):
+            raise UserStoreError(UNAVAILABLE)
+        try:
+            self.identity.delete_account(uid)
+        except Exception as e:
+            log.warning("Firebase account deletion failed: %s", type(e).__name__)
+            raise UserStoreError("Your account couldn't be deleted right now.", kind=type(e).__name__) from None
 
     def user_ids(self) -> list[str]:
         """Every users/{uid} document (for the notifier, a server process)."""

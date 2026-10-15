@@ -636,7 +636,7 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 /* ── surfaces ── */
 .panel, [class*="st-key-filters_"], .st-key-add_form, .st-key-email_form, .st-key-test_panel, [class*="st-key-set_"],
 .st-key-job_main, .st-key-job_side, .st-key-co_side, .st-key-empty, .st-key-hero, .st-key-job_hero, .st-key-co_hero, .st-key-mail_status,
-:is(.st-key-danger_confirm, .st-key-mh_clear_ask), .mon tbody tr, [class*="st-key-jr_"], [class*="st-key-cr_"] {
+:is(.st-key-danger_confirm, .st-key-mh_clear_ask, .st-key-delete_confirm), .mon tbody tr, [class*="st-key-jr_"], [class*="st-key-cr_"] {
   background: var(--surface) !important; border: 1px solid var(--border) !important; border-radius: var(--r-lg) !important;
   box-shadow: var(--hi), var(--shadow) !important;
 }
@@ -928,12 +928,12 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 .st-key-btn_run_check [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] { transform: scale(1.15); }
 .st-key-btn_refresh [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"], .st-key-btn_reload [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] { transform: rotate(90deg); }
 /* destructive: quiet until hovered, then unmistakably red */
-:is(.st-key-danger, .st-key-btn_mh_clear) [data-testid^="stBaseButton"] { color: var(--red) !important; }
-:is(.st-key-danger, .st-key-btn_mh_clear) [data-testid^="stBaseButton"]:hover:not(:disabled) { color: var(--red) !important; background: var(--red-soft) !important; border-color: color-mix(in srgb, var(--red) 45%, transparent) !important; }
-:is(.st-key-danger_confirm, .st-key-mh_clear_ask) { padding: 16px 18px !important; gap: 12px !important; border-color: color-mix(in srgb, var(--red) 35%, var(--border)) !important;
+:is(.st-key-danger, .st-key-btn_mh_clear, .st-key-btn_delete_open) [data-testid^="stBaseButton"] { color: var(--red) !important; }
+:is(.st-key-danger, .st-key-btn_mh_clear, .st-key-btn_delete_open) [data-testid^="stBaseButton"]:hover:not(:disabled) { color: var(--red) !important; background: var(--red-soft) !important; border-color: color-mix(in srgb, var(--red) 45%, transparent) !important; }
+:is(.st-key-danger_confirm, .st-key-mh_clear_ask, .st-key-delete_confirm) { padding: 16px 18px !important; gap: 12px !important; border-color: color-mix(in srgb, var(--red) 35%, var(--border)) !important;
   background: linear-gradient(180deg, var(--red-soft), transparent 140%), var(--surface) !important; }
-:is(.st-key-danger_confirm, .st-key-mh_clear_ask) [data-testid="stBaseButton-secondary"] { color: var(--text) !important; }
-:is(.st-key-danger_confirm, .st-key-mh_clear_ask) [data-testid="stBaseButton-primary"] { background: var(--red) !important; border-color: var(--red) !important; color: #fff !important; box-shadow: 0 8px 18px -10px var(--red) !important; }
+:is(.st-key-danger_confirm, .st-key-mh_clear_ask, .st-key-delete_confirm) [data-testid="stBaseButton-secondary"] { color: var(--text) !important; }
+:is(.st-key-danger_confirm, .st-key-mh_clear_ask, .st-key-delete_confirm) [data-testid="stBaseButton-primary"] { background: var(--red) !important; border-color: var(--red) !important; color: #fff !important; box-shadow: 0 8px 18px -10px var(--red) !important; }
 [class*="st-key-dismiss_"] [data-testid^="stBaseButton"], [class*="st-key-restore_"] [data-testid^="stBaseButton"] { width: 38px !important; padding: 0 !important; color: var(--muted) !important; }
 [class*="st-key-dismiss_"] [data-testid^="stBaseButton"]:hover { color: var(--red) !important; border-color: color-mix(in srgb, var(--red) 40%, transparent) !important; background: var(--red-soft) !important; }
 [class*="st-key-restore_"] [data-testid^="stBaseButton"]:hover { color: var(--accent-text) !important; }
@@ -1457,16 +1457,16 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .acct-head .role { margin-left: 0; align-self: flex-start; margin-top: 2px; }
 .acct-sep { height: 1px; background: var(--border); margin: 5px 6px; }
 /* the menu's items: compact left-aligned rows; a soft glossy highlight follows the pointer */
-:is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts, .st-key-btn_account_sign_out)
+:is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts, .st-key-btn_account_sign_out, .st-key-btn_account_delete)
   [data-testid^="stBaseButton"] { justify-content: flex-start !important; min-height: 38px !important; padding: 0 10px !important;
   border-radius: 11px !important; border: 1px solid transparent !important; color: var(--text-2) !important;
   transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease), border-color var(--fast) var(--ease),
               box-shadow var(--fast) var(--ease), transform var(--fast) var(--ease); }
-:is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts, .st-key-btn_account_sign_out)
+:is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts, .st-key-btn_account_sign_out, .st-key-btn_account_delete)
   [data-testid^="stBaseButton"] > div { justify-content: flex-start !important; gap: 11px !important; }
-:is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts, .st-key-btn_account_sign_out)
+:is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts, .st-key-btn_account_sign_out, .st-key-btn_account_delete)
   [data-testid^="stBaseButton"] p { font-size: 14px !important; font-weight: 600 !important; color: inherit !important; }
-:is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts, .st-key-btn_account_sign_out)
+:is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts, .st-key-btn_account_sign_out, .st-key-btn_account_delete)
   [data-testid="stIconMaterial"] { color: var(--muted) !important; font-size: 19px !important; transition: color var(--fast) var(--ease); }
 :is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts)
   [data-testid^="stBaseButton"]:hover { background: linear-gradient(90deg, var(--accent-soft), color-mix(in srgb, var(--accent-soft) 40%, transparent)) !important;
@@ -1477,13 +1477,19 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .st-key-btn_account_sign_out [data-testid^="stBaseButton"]:hover { background: var(--red-soft) !important; color: var(--red) !important;
   border-color: color-mix(in srgb, var(--red) 16%, transparent) !important; transform: translateX(2px); }
 .st-key-btn_account_sign_out [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] { color: var(--red) !important; }
+/* Delete account: destructive at rest too */
+.st-key-btn_account_delete [data-testid^="stBaseButton"], .st-key-btn_account_delete [data-testid="stIconMaterial"] { color: var(--red) !important; }
+.st-key-btn_account_delete [data-testid^="stBaseButton"]:hover { background: var(--red-soft) !important;
+  border-color: color-mix(in srgb, var(--red) 16%, transparent) !important; transform: translateX(2px); }
+.del-info p { margin: 0 0 6px; font-size: 14px; line-height: 1.55; color: var(--text); }
+.del-info ul { margin: 0 0 8px; padding-left: 18px !important; font-size: 14px; line-height: 1.6; color: var(--text-2); }
 @media (max-width: 767px) {
   .st-key-acct_bar { margin: 8px 0 -8px; }
   [class*="st-key-acct_menu"] [data-testid="stPopoverButton"] { min-height: 44px !important; }
   [class*="st-key-acct_menu"] [data-testid="stPopoverButton"] p { max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
 }
 @media (prefers-reduced-motion: reduce) {
-  :is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts, .st-key-btn_account_sign_out)
+  :is(.st-key-acct_settings, .st-key-acct_preferences, .st-key-acct_companies, .st-key-acct_alerts, .st-key-btn_account_sign_out, .st-key-btn_account_delete)
     [data-testid^="stBaseButton"]:hover { transform: none; }
 }
 
@@ -1659,7 +1665,7 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 [class*="st-key-set_"], .st-key-mail_status, .st-key-email_form, .st-key-test_panel {
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 3%, var(--surface)), var(--surface) 160px) !important; }
 /* the one-line "open at the top" script of a navigation run: takes no space */
-:is(.st-key-jt_scroll_top, .st-key-jt_menu_guard), [data-testid="stLayoutWrapper"]:has(> :is(.st-key-jt_scroll_top, .st-key-jt_menu_guard)) { display: none !important; }
+:is(.st-key-jt_scroll_top, .st-key-jt_menu_guard, .st-key-jt_auth_cookie), [data-testid="stLayoutWrapper"]:has(> :is(.st-key-jt_scroll_top, .st-key-jt_menu_guard, .st-key-jt_auth_cookie)) { display: none !important; }
 /* Settings: the tracker section, drawn for admins only */
 .admin-head { display: flex; gap: 14px; align-items: flex-start; margin-top: 10px; padding: 18px 4px 4px;
   border-top: 1px dashed var(--border-strong); }
@@ -2405,6 +2411,8 @@ def resolve_account(google: dict | None, config) -> dict | None:
     under ACCOUNT_KEY for the server-side admin check), or None."""
     account = None
     fb_user = firebase_auth.session_user(st.session_state)
+    if fb_user is None and not st.session_state.get("_signed_out") and not (google and _google_identity()):
+        fb_user = _restore_email_session()
     if not st.session_state.get("_signed_out"):
         g = _google_identity() if google else None
         if g:
@@ -2465,18 +2473,105 @@ def resolve_account(google: dict | None, config) -> dict | None:
     return account
 
 
+# ── an email sign-in survives a reload ────────────────────────────────────────
+# Streamlit keeps session_state per browser connection, so a reload (or a
+# new tab) starts with nothing: an email/password sign-in, kept only there,
+# was lost on every refresh (Google sign-ins survive in Streamlit's own
+# signed cookie). Now a successful email sign-in also gets a server-side
+# session: a random token whose sha256 is stored with the person's own data
+# (user_store.start_session), and the browser keeps "<uid>.<token>" in the
+# jt_session cookie (written by _session_cookie_html, the one script that
+# touches a cookie). On a new connection the gate accepts it only if:
+#   * that token's hash is stored under that UID (the UID alone proves
+#     nothing), the session isn't ended, idle for INACTIVITY_LIMIT_S or
+#     older than user_store.SESSION_MAX_S;
+#   * Firebase (Admin SDK, by UID) says the account still exists, isn't
+#     disabled, is verified and has the same email address.
+# Sign out ends the session on the server and clears the cookie. No
+# password, Firebase token or secret is ever put in the cookie.
+SESSION_COOKIE = "jt_session"
+_COOKIE_VALUE_RE = re.compile(r"^[A-Za-z0-9_.-]{0,200}$")
+
+
+def _session_cookie_html(value: str) -> str:
+    """The script that writes (value) or clears ("") the jt_session cookie
+    in this browser: one cookie, a fixed name and attributes, SameSite=Lax,
+    Secure on https. ``value`` is server-made and checked against a strict
+    pattern before it is placed in the page."""
+    if not _COOKIE_VALUE_RE.match(value):
+        raise ValueError("unexpected session cookie value")
+    max_age = user_store.SESSION_MAX_S if value else 0
+    return (f'<script data-c="{time.time_ns()}">(() => {{ document.cookie = "{SESSION_COOKIE}={value}; '
+            f'Path=/; Max-Age={max_age}; SameSite=Lax" + (location.protocol === "https:" ? "; Secure" : ""); }})();</script>')
+
+
+def _write_session_cookie(value: str) -> None:
+    with st.container(key="jt_auth_cookie"):
+        st.html(_session_cookie_html(value), unsafe_allow_javascript=True)
+
+
+def _browser_session_cookie() -> str:
+    try:
+        value = st.context.cookies.get(SESSION_COOKIE)
+    except Exception:
+        return ""
+    return value if isinstance(value, str) else ""
+
+
+def _restore_email_session() -> dict | None:
+    """This browser's email sign-in, from its jt_session cookie (see above),
+    or None. Tried once per connection and cookie value."""
+    raw = _browser_session_cookie()
+    store = _user_store()[0] if raw else None
+    if store is None or st.session_state.get("_restore_tried") == raw:
+        return None
+    st.session_state._restore_tried = raw
+    try:
+        sess = store.resolve_session(raw, idle_limit_s=INACTIVITY_LIMIT_S)
+        acct = store.account(sess["uid"]) if sess else None
+    except user_store.UserStoreError:
+        auth_event("email session not restored: per-user data unavailable")
+        return None                                   # can't be validated: not restored
+    if not sess:
+        return None
+    if (acct is None or acct.get("disabled") or acct.get("email_verified") is not True
+            or acct.get("email") != sess["email"] or email_policy.sign_in_problem(sess["email"], True)):
+        try:
+            store.end_session(sess["uid"], sess["key"])
+        except user_store.UserStoreError:
+            pass
+        auth_event("email session refused: the Firebase account changed")
+        return None
+    st.session_state[firebase_auth.SESSION_KEY] = {
+        "uid": sess["uid"], "email": sess["email"], "email_verified": True, "provider": "password",
+        "name": sess["name"], "expires_at": time.time() + INACTIVITY_LIMIT_S}
+    st.session_state._session_key = sess["key"]
+    st.session_state._last_active = sess["last_active"]          # the server's record, not "now"
+    auth_event("email sign-in restored from this browser's session")
+    return st.session_state[firebase_auth.SESSION_KEY]
+
+
 def account_sign_out() -> bool:
     """End this sign-in. Returns True when Streamlit's Google sign-in is
     being ended too (the browser is then redirected).
     Everything this browser session held for the account is dropped — the
     sign-in itself, admin unlocks, and per-user leftovers such as the last
     test-email result or form contents — so whoever signs in next in this
-    tab starts clean. Only the theme survives."""
+    tab starts clean. Only the theme survives. An email sign-in's browser
+    session is ended on the server and its cookie cleared, so a reload
+    can't sign anyone back in."""
     google = _google_identity() is not None
+    user, key = globals().get("USER"), st.session_state.get("_session_key")
+    if user is not None and key:
+        try:
+            user.end_session(key)
+        except user_store.UserStoreError:
+            pass                       # the cookie is cleared below either way
     for k in list(st.session_state.keys()):
         if k != "dark_mode":
             del st.session_state[k]
     st.session_state._signed_out = True
+    st.session_state._clear_session_cookie = True
     if google:
         st.logout()              # clears Streamlit's sign-in cookie, back to the login page
         return True
@@ -2518,6 +2613,7 @@ def firebase_sign_in(email: str, password: str) -> tuple[bool, str]:
     st.session_state[firebase_auth.SESSION_KEY] = {**user.as_session(), "expires_at": time.time() + ACCOUNT_SESSION_S}
     st.session_state.pop("_signed_out", None)
     st.session_state._last_active = time.time()
+    st.session_state._start_session = True             # made once the gate has bound this account's data
     return True, ""
 
 
@@ -2977,6 +3073,9 @@ def render_login_page() -> None:
         st.session_state.login_pw = ""
     # popped at once: a run interrupted mid-attempt never leaves the form locked
     attempt = email_ok and bool(st.session_state.pop("_login_pending", False))
+    # a session cookie that didn't sign anyone in (signed out, expired, ended)
+    if st.session_state.pop("_clear_session_cookie", False) or _browser_session_cookie():
+        _write_session_cookie("")
     art, side = st.columns([1.6, 1], gap="large", vertical_alignment="center")
     with art:
         st.html(_login_art())
@@ -3115,6 +3214,11 @@ if ACCOUNT and ACCOUNT.get("provider") in ("google.com", "password") and (_STORE
                 if _created:     # nothing to read back: a new profile follows and dismissed nothing
                     st.session_state._pcache = {"uid": USER.uid, "at": time.time(), "profile": _profile,
                                                 "dismissed": set(), "watchlist": set()}
+            # a fresh email sign-in: a browser session, so a reload keeps it
+            if st.session_state.pop("_start_session", False) and ACCOUNT.get("provider") == "password":
+                _cookie, st.session_state._session_key = USER.start_session(
+                    ACCOUNT.get("email") or "", ACCOUNT.get("name") or "", ACCOUNT.get("email_verified") is True)
+                _write_session_cookie(_cookie)
         except user_store.UserStoreError as e:
             USER, USER_PROBLEM, USER_PROBLEM_DETAIL = None, str(e), e.kind
 
@@ -3280,6 +3384,8 @@ def enforce_inactivity(account: dict, now: float | None = None) -> bool:
     if USER is not None and now - st.session_state.get("_activity_saved", 0) >= _ACTIVITY_SAVE_S:
         try:
             USER.record_activity(now)
+            if st.session_state.get("_session_key"):
+                USER.touch_session(st.session_state._session_key, now)
             st.session_state._activity_saved = now
         except user_store.UserStoreError:
             pass                                 # retried on the next run; never blocks the page
@@ -3814,6 +3920,163 @@ with st.sidebar:
     # Settings → Tracker status — the rail holds navigation only)
 
 
+# ── deleting one's own account ────────────────────────────────────────────────
+# The same flow from the account menu and from Settings → Account
+# management: a panel that says what is deleted and what isn't, a typed
+# DELETE, and a fresh proof of identity (the current password, checked by
+# Firebase; or a Google sign-in made in the last DELETE_GOOGLE_FRESH_S).
+# Only the account the gate resolved on the server is ever deleted (its
+# UID, bound to USER) — nothing typed, no address, no URL names it.
+# Order: the person's own Firestore data first, then the Firebase account
+# (Admin SDK), then a check with Firebase that it is gone; only then is
+# "deleted" said. Shared listings, the company catalogue, settings and
+# schedules live in GitHub and are never touched; admins can't delete their
+# account here (they hold the app's administration).
+DELETE_WORD = "DELETE"
+DELETE_GOOGLE_FRESH_S = 600
+
+
+def can_delete_account() -> bool:
+    """A signed-in person with their own data (where the deletion runs)."""
+    return (AUTH_GATE and ACCOUNT is not None and USER is not None
+            and ACCOUNT.get("provider") in ("password", "google.com") and user_store.valid_uid(ACCOUNT.get("uid")))
+
+
+def _open_delete_account(from_menu: bool = False) -> None:
+    for k in ("_delete_error",):
+        st.session_state.pop(k, None)
+    st.session_state._delete_open = True
+    if from_menu:
+        _menu_go("settings")
+
+
+def _close_delete_account() -> None:
+    for k in ("_delete_open", "_delete_error"):
+        st.session_state.pop(k, None)
+    st.session_state._delete_clear = True
+
+
+def _google_sign_in_age() -> float | None:
+    return firebase_auth.token_age(_google_id_token())
+
+
+def delete_own_account() -> tuple[bool, str]:
+    """Delete the signed-in person's account (see above): (deleted, why not)."""
+    if not can_delete_account():
+        return False, "Your account can't be deleted here right now."
+    uid, email = ACCOUNT["uid"], ACCOUNT.get("email") or ""
+    if USER.uid != uid:                                           # never anyone else's
+        return False, "Your account can't be deleted here right now."
+    if is_owner():
+        return False, "Admin accounts can't be deleted here."
+    if (st.session_state.get("delete_confirm_text") or "").strip() != DELETE_WORD:
+        return False, f"Type {DELETE_WORD} to confirm."
+    if ACCOUNT["provider"] == "password":                         # prove it's still you
+        password = st.session_state.get("delete_pw") or ""
+        if not password:
+            return False, "Enter your current password."
+        limiter = _guards()["firebase_signin"]
+        if limiter.locked_for(email):
+            return False, "Too many attempts — try again in a few minutes."
+        try:
+            proof = firebase_auth.sign_in_with_password(email, password, config=_AUTH_CONFIG, require_verified=True,
+                                                        may_send_verification=lambda _e: False)
+        except firebase_auth.FirebaseAuthError as e:
+            if e.code in _FB_CREDENTIAL_ERRORS:
+                limiter.failed(email)
+                return False, "That password isn't right."
+            return False, str(e)
+        if proof.uid != uid:
+            return False, "That password belongs to a different account."
+    else:
+        age = _google_sign_in_age()
+        if age is None or age > DELETE_GOOGLE_FRESH_S:
+            return False, ("For your security, sign out, continue with Google again and then delete your account "
+                           f"within {DELETE_GOOGLE_FRESH_S // 60} minutes.")
+    try:
+        USER.delete_personal_data()
+    except user_store.UserStoreError:
+        auth_event("account deletion stopped: personal data couldn't be deleted")
+        return False, ("Your account was NOT deleted: your personal data couldn't be removed just now (some of it "
+                       "may already be gone). Please try again.")
+    try:
+        _STORE.delete_account(uid)
+        gone = _STORE.account(uid) is None
+    except user_store.UserStoreError:
+        gone = False
+    if not gone:
+        auth_event("account deletion incomplete: Firebase account still exists")
+        return False, ("Your personal data was deleted, but your sign-in account couldn't be removed just now. "
+                       "Please try again — nothing else was changed.")
+    auth_event("account deleted by its owner")
+    return True, ""
+
+
+def account_management_card() -> None:
+    """Settings → Account management: Delete account (see above)."""
+    if not can_delete_account():
+        return
+    if st.session_state.pop("_delete_clear", False):              # before the fields are drawn
+        for k in ("delete_confirm_text", "delete_pw"):
+            st.session_state[k] = ""
+    if st.session_state.pop("_delete_clear_pw", False):
+        st.session_state.delete_pw = ""
+    with st.container(key="set_delete"):
+        st.html(f'<div class="set-head"><span class="ic red">{_ms("person_remove")}</span><div>'
+                '<div class="eyebrow">Account management</div><h2 class="section-title">Delete account</h2>'
+                '<p class="section-sub">Permanently delete your account and everything saved for it.</p></div></div>')
+        if not st.session_state.get("_delete_open"):
+            with st.container(key="delete_open_row"):
+                st.button("Delete account…", key="btn_delete_open", icon=":material/delete_forever:",
+                          on_click=_open_delete_account)
+            return
+        with st.container(key="delete_confirm"):
+            st.html('<div class="del-info"><p><b>This permanently deletes your account.</b> It can’t be undone.</p>'
+                    '<ul><li>Your sign-in account, so you can’t sign in with it again</li>'
+                    '<li>Your job preferences, followed companies and dismissed jobs</li>'
+                    '<li>Your alert-email settings and your profile (name and avatar)</li></ul>'
+                    '<p>Not deleted: the shared job listings, the company list and the job scanner — other '
+                    'members keep them, and nothing of theirs changes.</p></div>')
+            if is_owner():
+                st.html(f'<p class="note">{_ms("info", "s16")} Admin accounts can’t be deleted here, because they run '
+                        'the tracker. Remove this address from the admin list first; it can then be deleted like any '
+                        'other account.</p>')
+                st.button("Cancel", key="btn_delete_cancel", on_click=_close_delete_account)
+                return
+            err = st.session_state.get("_delete_error")
+            if err:
+                st.html(f'<div class="login-err" role="alert">{_ms("error", "s20")}<div>{escape(err)}</div></div>')
+            st.text_input(f"Type {DELETE_WORD} to confirm", key="delete_confirm_text", max_chars=12,
+                          placeholder=DELETE_WORD, autocomplete="off")
+            if ACCOUNT["provider"] == "password":
+                st.text_input("Your current password", type="password", key="delete_pw",
+                              autocomplete="current-password")
+            else:
+                age = _google_sign_in_age()
+                if age is None or age > DELETE_GOOGLE_FRESH_S:
+                    st.html(f'<p class="note">{_ms("info", "s16")} For your security, deleting a Google account '
+                            f'needs a recent sign-in: sign out, continue with Google again, then delete your '
+                            f'account within {DELETE_GOOGLE_FRESH_S // 60} minutes.</p>')
+            y, n_ = st.columns([1.4, 3])
+            with y:
+                go_on = st.button("Delete my account", key="btn_delete_confirm", type="primary",
+                                  icon=":material/delete_forever:", use_container_width=True)
+            with n_:
+                st.button("Cancel", key="btn_delete_cancel", on_click=_close_delete_account)
+            if go_on:
+                ok, why = delete_own_account()
+                if not ok:
+                    st.session_state._delete_error = why
+                    st.session_state._delete_clear_pw = True
+                    st.rerun()
+                google = account_sign_out()
+                st.session_state._login_notice = ("Your account and personal data were deleted. You can create a "
+                                                  "new account at any time.")
+                if not google:
+                    st.rerun()
+                st.stop()
+
+
 # ── the account, top right ───────────────────────────────────────────────────
 def _menu_go(page: str, **extra) -> None:
     """A destination chosen from the account menu: go there and close the menu."""
@@ -3859,6 +4122,10 @@ def account_menu() -> None:
                 if not account_sign_out():
                     st.rerun()
                 st.stop()
+            if can_delete_account():
+                st.html('<div class="acct-sep"></div>')
+                st.button("Delete account", key="btn_account_delete", icon=":material/delete_forever:", type="tertiary",
+                          use_container_width=True, on_click=_open_delete_account, args=(True,))
 
 
 # A new destination opens at its top. Streamlit keeps the main area's scroll
@@ -5495,7 +5762,12 @@ def page_settings():
     page_header("Settings", "Your account, your job search and how the app looks"
                 + ("" if MEMBER_VIEW else " — plus how the tracker is configured"))
     if AUTH_GATE:
-        account_card()
+        if st.session_state.get("_delete_open"):     # an open confirmation is drawn where the eye lands
+            account_management_card()
+            account_card()
+        else:
+            account_card()
+            account_management_card()
     else:
         owner_card()
     personal_summary_card()

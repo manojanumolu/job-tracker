@@ -552,3 +552,42 @@ def test_email_tailoring_on_real_firestore(emu):
     user_alerts.run(emu, seen, mail, run_id="t1")
     assert sorted(mail.sent) == [("a@example.org", [job_key(seen[0])]),
                                  ("b@example.org", sorted(job_key(j) for j in seen))]
+
+
+# --- browser sessions and account deletion (2026-10-15) --------------------------
+
+def test_a_browser_session_lives_in_the_persons_own_data_and_ends(emu):
+    u = emu.for_uid(A)
+    u.ensure_profile("a@example.org", "A", True)
+    cookie, key = u.start_session("a@example.org", "A", True)
+    token = cookie.split(".", 1)[1]
+    stored = _docs(f"users/{A}/sessions/{key}")
+    assert stored and token not in json.dumps(stored)                    # only the hash is in Firestore
+    found = emu.resolve_session(cookie, idle_limit_s=48 * 3600)
+    assert found and found["uid"] == A and found["email"] == "a@example.org"
+    assert emu.resolve_session(f"{B}.{token}", idle_limit_s=48 * 3600) is None
+    u.touch_session(key)
+    u.end_session(key)
+    assert emu.resolve_session(cookie, idle_limit_s=48 * 3600) is None
+    u.touch_session(key)                                                 # an ended session is never brought back
+    assert not _docs(f"users/{A}/sessions/{key}")
+
+
+def test_deleting_an_account_removes_only_its_data_and_its_firebase_account(emu):
+    _account(emu, A, "a@example.org")
+    _account(emu, B, "b@example.org")
+    a, b = emu.for_uid(A), emu.for_uid(B)
+    for u, mail in ((a, "a@example.org"), (b, "b@example.org")):
+        u.ensure_profile(mail, "", True)
+        u.watch("pwc", {"pwc"})
+        u.dismiss({"job-1|https://x", "job-2|https://y"})
+        u.start_session(mail)
+    b_before = b.snapshot()
+    deleted = a.delete_personal_data()                                  # profile, 1 company, 2 dismissed, 1 session
+    assert deleted == 5 and _docs(f"users/{A}") == {} and a.snapshot() == {"profile": {}, "dismissed": set(),
+                                                                            "watchlist": set()}
+    assert not _docs(f"users/{A}/sessions").get("documents")
+    emu.delete_account(A)
+    assert emu.account(A) is None                                        # gone from Firebase Authentication
+    emu.delete_account(A)                                                # already gone: still fine
+    assert b.snapshot() == b_before and emu.account(B) is not None       # B untouched

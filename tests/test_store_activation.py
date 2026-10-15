@@ -106,7 +106,10 @@ def test_a_working_store_is_built_once_and_shared(app, google_env, admins, fake)
         first.run()
         second.run()
     assert fake.calls == 1 and len(fake.stores) == 1                          # one Firestore client per credential
-    assert set(fake.stores[0].backend.docs) == {f"users/{A_UID}", f"users/{B_UID}"}
+    docs = set(fake.stores[0].backend.docs)
+    assert {d for d in docs if d.count("/") == 1} == {f"users/{A_UID}", f"users/{B_UID}"}
+    # each email sign-in also keeps its browser session — under its own account only
+    assert {d.rsplit("/", 1)[0] for d in docs if d.count("/") > 1} == {f"users/{A_UID}/sessions", f"users/{B_UID}/sessions"}
 
 
 def test_a_new_key_gets_its_own_store(app, google_env, admins, fake):
