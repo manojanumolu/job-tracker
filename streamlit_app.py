@@ -409,61 +409,6 @@ def render_auth_diag() -> None:
 # product's core promise (fresher roles found, portals healthy).
 
 
-def _loader_icons(start: str, end: str, check_start: str) -> dict:
-    """The loading screen's five icons, in order — search, briefcase,
-    graduation cap, building, checkmark — drawn as small glossy solids on one
-    48px grid: a violet→blue body (the checkmark teal→blue), a soft white
-    sheen over the top half, a light rim and a faint darker base, so they
-    read as polished glass without filters. Each as a CSS url() (inline
-    <svg> doesn't paint in this app's hosting; a CSS background image does)."""
-    # each icon: its solid body (filled with the body gradient, then the sheen)
-    # and any light details drawn on top of it
-    shapes = {
-        "search": ('<path fill-rule="evenodd" d="M20 5.5a14.5 14.5 0 1 1 0 29a14.5 14.5 0 1 1 0-29z'
-                   'M20 11a9 9 0 1 0 0 18a9 9 0 1 0 0-18z"/>'
-                   '<path d="M29.6 33.8l4.2-4.2l8.6 8.6a3 3 0 0 1-4.2 4.2z"/>',
-                   '<circle cx="20" cy="20" r="9" fill="url(#b)" fill-opacity=".22"/><circle cx="20" cy="20" r="9" fill="url(#s)"/>'
-                   '<path d="M14.6 18.2a6 6 0 0 1 5.6-4" fill="none" stroke="#fff" stroke-opacity=".9" '
-                   'stroke-width="2" stroke-linecap="round"/>'),
-        "briefcase": ('<path fill-rule="evenodd" d="M19.5 7h9a4 4 0 0 1 4 4v4h-4v-3.5h-9v3.5h-4v-4a4 4 0 0 1 4-4z"/>'
-                      '<rect x="5" y="14" width="38" height="27" rx="6"/>',
-                      '<path d="M5.5 25.5h37" stroke="#fff" stroke-opacity=".45" stroke-width="1.4"/>'
-                      '<rect x="20.5" y="22" width="7" height="7" rx="2" fill="#fff" fill-opacity=".9"/>'),
-        "graduate": ('<path d="M12 22.5l12 5.4l12-5.4v8.3c0 4.1-5.4 7.2-12 7.2s-12-3.1-12-7.2z"/>'
-                     '<path d="M24 7.5l20.5 9.2a1.4 1.4 0 0 1 0 2.6l-20.5 9.2l-20.5-9.2a1.4 1.4 0 0 1 0-2.6z"/>'
-                     '<path d="M39.6 20.7h2.8v9.8l1.6 4.6a1.2 1.2 0 0 1-1.1 1.6h-3.6a1.2 1.2 0 0 1-1.1-1.6l1.4-4.6z"/>',
-                     ''),
-        "building": ('<rect x="9" y="5" width="30" height="38" rx="5"/>',
-                     '<g fill="#fff" fill-opacity=".88">'
-                     '<rect x="15" y="11" width="6" height="5" rx="1.4"/><rect x="27" y="11" width="6" height="5" rx="1.4"/>'
-                     '<rect x="15" y="19.5" width="6" height="5" rx="1.4"/><rect x="27" y="19.5" width="6" height="5" rx="1.4"/>'
-                     '<path d="M20.5 43v-8.5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v8.5z"/></g>'),
-        "check": ('<circle cx="24" cy="24" r="19"/>',
-                  '<path d="M15.5 24.6l6 6l11-12" fill="none" stroke="#fff" stroke-width="4.4" '
-                  'stroke-linecap="round" stroke-linejoin="round"/>'),
-    }
-    out = {}
-    for name, (body, detail) in shapes.items():
-        a = check_start if name == "check" else start
-        svg = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><defs>'
-               # the body: violet (or teal) at the top left into blue at the bottom right
-               '<linearGradient id="b" gradientUnits="userSpaceOnUse" x1="8" y1="4" x2="40" y2="44">'
-               f'<stop offset="0" stop-color="{a}"/><stop offset="1" stop-color="{end}"/></linearGradient>'
-               # the sheen: white over the top, gone by the middle
-               '<linearGradient id="s" x1="0" y1="0" x2="0" y2="1">'
-               '<stop offset="0" stop-color="#fff" stop-opacity=".48"/><stop offset=".5" stop-color="#fff" stop-opacity=".08"/>'
-               '<stop offset=".62" stop-color="#fff" stop-opacity="0"/></linearGradient>'
-               # a faint darker base, for depth
-               '<linearGradient id="d" x1="0" y1="0" x2="0" y2="1">'
-               '<stop offset=".6" stop-color="#1e1b6b" stop-opacity="0"/><stop offset="1" stop-color="#1e1b6b" stop-opacity=".22"/>'
-               '</linearGradient></defs>'
-               f'<g fill="url(#b)">{body}</g><g fill="url(#d)">{body}</g><g fill="url(#s)">{body}</g>'
-               f'<g fill="none" stroke="#fff" stroke-opacity=".38" stroke-width=".9">{body}</g>'
-               f'{detail}</svg>')
-        out[name] = "url('data:image/svg+xml;base64," + base64.b64encode(svg.encode("utf-8")).decode("ascii") + "')"
-    return out
-
-
 LIGHT = {
     "bg": "#f4f5fb", "surface": "#ffffff", "surface-2": "#f7f8fc", "raised": "#ffffff", "hover": "#f0f1f8",
     "border": "#e5e7f0", "border-strong": "#d3d6e3",
@@ -499,8 +444,6 @@ LIGHT = {
     # interactive surfaces: a lit hover wash, and the busy bar
     "hover-wash": "linear-gradient(180deg, rgba(255,255,255,.9), rgba(239,237,255,.75))",
     # the loading square: a purple→blue frame around a briefcase
-    "load-blue": "#3b82f6", "load-hi": "#a89dff",
-    "load-veil": "linear-gradient(160deg, #f7f6ff 0%, #f0f2ff 55%, #eaf1ff 100%)",
     # search fields: a lavender→ice-blue glass with a gradient edge
     "search-gloss": "linear-gradient(180deg, rgba(255,255,255,.88) 0%, rgba(255,255,255,.34) 44%, rgba(255,255,255,0) 54%)",
     "search-tint": "linear-gradient(115deg, #f4f1ff 0%, #ecefff 50%, #e6f1ff 100%)",
@@ -543,8 +486,6 @@ DARK = {
     "av-gloss": "inset 0 1px 1px rgba(255,255,255,.45), inset 0 -3px 6px rgba(0,0,0,.14)",
     "av-drop": "0 6px 14px -6px rgba(0,0,0,.7)",
     "hover-wash": "linear-gradient(180deg, rgba(124,108,255,.16), rgba(124,108,255,.08))",
-    "load-blue": "#60a5fa", "load-hi": "#d4ceff",
-    "load-veil": "linear-gradient(160deg, #0e1328 0%, #0c1124 55%, #0b1228 100%)",
     "search-gloss": "linear-gradient(180deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.03) 46%, rgba(255,255,255,0) 54%)",
     "search-tint": "linear-gradient(115deg, #1f2552 0%, #1a214b 50%, #18264d 100%)",
     "search-tint-hover": "linear-gradient(115deg, #242b5c 0%, #1f2655 50%, #1c2c58 100%)",
@@ -556,11 +497,6 @@ DARK = {
     "search-chip": "linear-gradient(135deg, rgba(124,108,255,.28), rgba(96,165,250,.20))", "search-chip-focus": "linear-gradient(135deg, #8d80ff, #4f8ff7)",
     "search-icon": "#cbc4ff", "search-placeholder": "#a6acc9",
 }
-# the loading screen's five icons, coloured for each theme (built here: the
-# palettes above stay plain literals)
-for _pal, _colours in ((LIGHT, ("#6a5cf7", "#3b82f6", "#0d9488")), (DARK, ("#a99dff", "#60a5fa", "#2dd4bf"))):
-    for _name, _uri in _loader_icons(*_colours).items():
-        _pal[f"load-{_name}"] = _uri
 TH = DARK if st.session_state.dark_mode else LIGHT
 _root_vars = ":root {" + "".join(f"--{k}:{v};" for k, v in TH.items()) + "}"
 
@@ -1657,92 +1593,21 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 @media (max-width: 480px) { .status-grid { grid-template-columns: minmax(0, 1fr); } }
 .st-key-set_status .st-key-btn_set_monitoring, .st-key-set_status [data-testid="stElementContainer"]:has(.st-key-btn_set_monitoring) { width: auto !important; }
 
-/* ── loading: the full screen only while the app first loads ── */
-/* Streamlit marks the app element data-test-script-state="running" for EVERY
-   rerun — each click, tab and menu. On Streamlit Cloud almost every rerun
-   takes more than 450 ms (a network round trip each way), so a full-screen
-   layer keyed on that state covered the page after every ordinary click.
-   It is now shown only for a genuine first load: a run that draws the
-   page skeleton (.jt-skel — the first read of the shared data in a server
-   process, or of a person's own data after sign-in). Ordinary reruns get a
-   thin bar along the top edge instead (after the same 450 ms, never
-   blocking a click) and the pressed button's own feedback below.
-   The first-load layer covers the whole viewport: the pale lavender veil (navy in dark), a
-   purple→blue frame on all four edges with one highlight travelling
-   clockwise round the whole screen (.stApp::after), and in the exact centre
-   five glossy icons — search, briefcase, graduation cap, building, check —
-   shown one at a time, each fading in with a slight scale-up and out again
-   (.stApp::before). Only opacity, transform and background-position move.
-   Clicks: during the first 450 ms both layers are hidden and let every
-   click through (a quick rerun never blocks anything); once shown, the
-   frame layer covers the page and takes the clicks, so nothing hidden under
-   it can be pressed; the moment the rerun ends both are hidden again. */
+/* ── loading: only for work that takes a moment ── */
+/* While the app works, a thin purple→teal bar slides along the top of the
+   window. It waits 450 ms first, so a quick page change never flashes it.
+   (Restored from e4c241a on 2026-10-15: the full-screen veil, frame and
+   centre icons that replaced it covered the page on every sign-in and
+   every fresh page load.) */
 @keyframes jt-busy-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes jt-busy-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes jt-load-turn {
-  0% { background-position: 0 0, -50% 0, 100% -50%, 150% 100%, 0 150%, 0 0; }
-  25% { background-position: 0 0, 150% 0, 100% -50%, 150% 100%, 0 150%, 0 0; }
-  50% { background-position: 0 0, 150% 0, 100% 150%, 150% 100%, 0 150%, 0 0; }
-  75% { background-position: 0 0, 150% 0, 100% 150%, -50% 100%, 0 150%, 0 0; }
-  100% { background-position: 0 0, 150% 0, 100% 150%, -50% 100%, 0 -50%, 0 0; } }
-@keyframes jt-load-icons {
-  0% { opacity: 0; transform: scale(.86); background-position: 50% 50%, -64px 50%, -64px 50%, -64px 50%, -64px 50%; }
-  4% { opacity: 1; transform: scale(1); background-position: 50% 50%, -64px 50%, -64px 50%, -64px 50%, -64px 50%; }
-  15% { opacity: 1; transform: scale(1); background-position: 50% 50%, -64px 50%, -64px 50%, -64px 50%, -64px 50%; }
-  19% { opacity: 0; transform: scale(.97); background-position: 50% 50%, -64px 50%, -64px 50%, -64px 50%, -64px 50%; }
-  20% { opacity: 0; transform: scale(.86); background-position: -64px 50%, 50% 50%, -64px 50%, -64px 50%, -64px 50%; }
-  24% { opacity: 1; transform: scale(1); background-position: -64px 50%, 50% 50%, -64px 50%, -64px 50%, -64px 50%; }
-  35% { opacity: 1; transform: scale(1); background-position: -64px 50%, 50% 50%, -64px 50%, -64px 50%, -64px 50%; }
-  39% { opacity: 0; transform: scale(.97); background-position: -64px 50%, 50% 50%, -64px 50%, -64px 50%, -64px 50%; }
-  40% { opacity: 0; transform: scale(.86); background-position: -64px 50%, -64px 50%, 50% 50%, -64px 50%, -64px 50%; }
-  44% { opacity: 1; transform: scale(1); background-position: -64px 50%, -64px 50%, 50% 50%, -64px 50%, -64px 50%; }
-  55% { opacity: 1; transform: scale(1); background-position: -64px 50%, -64px 50%, 50% 50%, -64px 50%, -64px 50%; }
-  59% { opacity: 0; transform: scale(.97); background-position: -64px 50%, -64px 50%, 50% 50%, -64px 50%, -64px 50%; }
-  60% { opacity: 0; transform: scale(.86); background-position: -64px 50%, -64px 50%, -64px 50%, 50% 50%, -64px 50%; }
-  64% { opacity: 1; transform: scale(1); background-position: -64px 50%, -64px 50%, -64px 50%, 50% 50%, -64px 50%; }
-  75% { opacity: 1; transform: scale(1); background-position: -64px 50%, -64px 50%, -64px 50%, 50% 50%, -64px 50%; }
-  79% { opacity: 0; transform: scale(.97); background-position: -64px 50%, -64px 50%, -64px 50%, 50% 50%, -64px 50%; }
-  80% { opacity: 0; transform: scale(.86); background-position: -64px 50%, -64px 50%, -64px 50%, -64px 50%, 50% 50%; }
-  84% { opacity: 1; transform: scale(1); background-position: -64px 50%, -64px 50%, -64px 50%, -64px 50%, 50% 50%; }
-  95% { opacity: 1; transform: scale(1); background-position: -64px 50%, -64px 50%, -64px 50%, -64px 50%, 50% 50%; }
-  99% { opacity: 0; transform: scale(.97); background-position: -64px 50%, -64px 50%, -64px 50%, -64px 50%, 50% 50%; }
-  100% { opacity: 0; transform: scale(.97); background-position: -64px 50%, -64px 50%, -64px 50%, -64px 50%, 50% 50%; } }
+@keyframes jt-busy-slide { from { background-position: -45% 0; } to { background-position: 145% 0; } }
 @keyframes jt-busy-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 @keyframes jt-spin { to { transform: rotate(360deg); } }
-.stApp::after { content: ""; position: fixed; inset: 0; box-sizing: border-box; z-index: 1000010;
-  visibility: hidden; pointer-events: none; opacity: 0; border: 5px solid transparent;
-  box-shadow: inset 0 0 34px -10px color-mix(in srgb, var(--accent) 55%, transparent);
-  background:
-    var(--load-veil) 0 0 / 100% 100% no-repeat padding-box,
-    linear-gradient(90deg, transparent, var(--load-hi), var(--load-blue), transparent) -50% 0 / 30% 12px no-repeat border-box,
-    linear-gradient(180deg, transparent, var(--load-hi), var(--load-blue), transparent) 100% -50% / 12px 30% no-repeat border-box,
-    linear-gradient(270deg, transparent, var(--load-hi), var(--load-blue), transparent) 150% 100% / 30% 12px no-repeat border-box,
-    linear-gradient(0deg, transparent, var(--load-hi), var(--load-blue), transparent) 0 150% / 12px 30% no-repeat border-box,
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 55%, transparent), color-mix(in srgb, var(--load-blue) 55%, transparent)) 0 0 / 100% 100% no-repeat border-box; }
-.stApp[data-test-script-state="running"]:has(.jt-skel)::after { animation: jt-busy-in 220ms ease-out 450ms both, jt-load-turn 6s linear 450ms infinite;
-  visibility: visible; pointer-events: auto; cursor: progress; transition: visibility 0s linear 450ms; }
-/* the five icons: one 60px box in the exact centre, above the frame layer */
-.stApp::before { content: ""; position: fixed; top: calc(50% - 30px); left: calc(50% - 30px); width: 60px; height: 60px;
-  z-index: 1000011; visibility: hidden; pointer-events: none; opacity: 0;
-  filter: drop-shadow(0 3px 8px color-mix(in srgb, var(--accent) 30%, transparent));
-  background:
-    var(--load-search) -64px 50% / 48px 48px no-repeat,
-    var(--load-briefcase) -64px 50% / 48px 48px no-repeat,
-    var(--load-graduate) -64px 50% / 48px 48px no-repeat,
-    var(--load-building) -64px 50% / 48px 48px no-repeat,
-    var(--load-check) -64px 50% / 48px 48px no-repeat; }
-.stApp[data-test-script-state="running"]:has(.jt-skel)::before { animation: jt-load-icons 6s ease-in-out 450ms infinite both;
-  visibility: visible; transition: visibility 0s linear 450ms; }
-/* phones: the same frame, a hair thinner */
-@media (max-width: 767px) { .stApp::after { border-width: 3px; } }
-.stApp[data-test-script-state="running"]:has(.jt-skel) { cursor: progress; }
-/* any other rerun that takes a moment: a 3 px bar sliding along the top edge */
-@keyframes jt-bar { from { background-position: -40% 0; } to { background-position: 140% 0; } }
-[data-testid="stMain"]::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 1000005;
-  pointer-events: none; visibility: hidden; opacity: 0;
-  background: linear-gradient(90deg, transparent, var(--accent), var(--load-blue), transparent) -40% 0 / 40% 100% no-repeat; }
-.stApp[data-test-script-state="running"] [data-testid="stMain"]::before { visibility: visible; transition: visibility 0s linear 450ms;
-  animation: jt-busy-in 160ms ease-out 450ms both, jt-bar 1.1s ease-in-out 450ms infinite; }
+.stApp::after { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 1000005; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, transparent, var(--accent) 30%, var(--accent-2) 70%, transparent) -45% 0 / 38% 100% no-repeat,
+    color-mix(in srgb, var(--accent) 12%, transparent); }
+.stApp[data-test-script-state="running"]::after { animation: jt-busy-in 220ms ease-out 450ms both, jt-busy-slide 1.15s linear 450ms infinite; }
+.stApp[data-test-script-state="running"] { cursor: progress; }
 /* the button that was just pressed shows that its work is under way:
    Refresh / Reload spin their icon at once, any other button's label
    breathes if its work takes more than a moment */
@@ -1761,18 +1626,12 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .jt-skel p .ms { animation: jt-spin 1.2s linear infinite; color: var(--accent-text); }
 @media (max-width: 767px) { .jt-skel .row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (prefers-reduced-motion: reduce) {
-  /* the bar appears (still after the pause) but stays still: the same
-     full-screen layer — veil and the whole purple→blue frame — with no
-     travelling highlight, and a single still icon (the briefcase) */
-  .stApp[data-test-script-state="running"]:has(.jt-skel)::after { animation: jt-busy-fade 1ms linear 450ms both !important;
-    background: var(--load-veil) padding-box, linear-gradient(135deg, var(--accent), var(--load-blue)) border-box !important; }
-  .stApp[data-test-script-state="running"]:has(.jt-skel)::before { animation: jt-busy-fade 1ms linear 450ms both !important;
-    background: var(--load-search) -64px 50% / 48px 48px no-repeat, var(--load-briefcase) 50% 50% / 48px 48px no-repeat, var(--load-graduate) -64px 50% / 48px 48px no-repeat, var(--load-building) -64px 50% / 48px 48px no-repeat, var(--load-check) -64px 50% / 48px 48px no-repeat !important; }
+  /* the bar appears (still after the pause) but stays still: a full, soft line */
+  .stApp[data-test-script-state="running"]::after { animation: jt-busy-in 1ms linear 450ms both !important;
+    background: color-mix(in srgb, var(--accent) 55%, transparent) !important; }
   .stApp[data-test-script-state="running"] [data-testid^="stBaseButton"]:focus > div,
   .stApp[data-test-script-state="running"] [data-testid="stIconMaterial"],
   .stApp[data-test-script-state="running"] [class*="st-key-av_pick_"] button::before, .jt-skel i, .jt-skel p .ms { animation: none !important; }
-  .stApp[data-test-script-state="running"] [data-testid="stMain"]::before { animation: jt-busy-fade 1ms linear 450ms both !important;
-    background: linear-gradient(90deg, var(--accent), var(--load-blue)) !important; }
 }
 
 /* ── interaction polish: a clear, consistent answer to the pointer ── */
@@ -2292,7 +2151,7 @@ def _restore_jobs(keys: set[str]):
 # Continue with Google, or email + password. Nothing below this block (data,
 # sidebar, pages) runs for a visitor. Who is signed in:
 #   * email/password — Firebase checked the password (firebase_auth); kept in
-#     server-side session state for ACCOUNT_SESSION_S.
+#     server-side session state until INACTIVITY_LIMIT_S passes without use.
 #   * Google — Streamlit's st.login verified Google's ID token and keeps the
 #     identity in its signed 30-day cookie, so a reload or a new tab is
 #     already signed in. The Firebase account is linked right after sign-in
@@ -2300,7 +2159,10 @@ def _restore_jobs(keys: set[str]):
 # Admin rights come from the account (access.JT_ADMIN_EMAILS, verified email).
 # No token, password or secret is ever kept in session state.
 _OIDC_KEYS = ("client_id", "client_secret", "server_metadata_url")
-ACCOUNT_SESSION_S = 12 * 3600
+# Signed out after 48 consecutive hours without using the app (an inactivity
+# limit, not a fixed time from sign-in): see enforce_inactivity().
+INACTIVITY_LIMIT_S = 48 * 3600
+ACCOUNT_SESSION_S = INACTIVITY_LIMIT_S        # an email sign-in's first expiry; each use pushes it on
 _FB_CREDENTIAL_ERRORS = {"EMAIL_NOT_FOUND", "INVALID_PASSWORD", "INVALID_LOGIN_CREDENTIALS", "INVALID_EMAIL"}
 _GOOGLE_ERROR_HINTS = {
     "INVALID_IDP_RESPONSE": "Firebase didn't accept this Google sign-in — usually the Google OAuth client used by "
@@ -2534,6 +2396,7 @@ def _link_google_to_firebase(google: dict, config) -> None:
     st.session_state._fb_link = {"state": "linked"}
     auth_event("google identity ok; firebase linked")
     st.session_state[firebase_auth.SESSION_KEY] = {**user.as_session(), "expires_at": time.time() + ACCOUNT_SESSION_S}
+    st.session_state._last_active = time.time()           # a sign-in made just now, not a restored one
     print("[auth] google sign-in ok; firebase linked", flush=True)
 
 
@@ -2654,6 +2517,7 @@ def firebase_sign_in(email: str, password: str) -> tuple[bool, str]:
     limiter.succeeded(email)
     st.session_state[firebase_auth.SESSION_KEY] = {**user.as_session(), "expires_at": time.time() + ACCOUNT_SESSION_S}
     st.session_state.pop("_signed_out", None)
+    st.session_state._last_active = time.time()
     return True, ""
 
 
@@ -2748,16 +2612,49 @@ def _signup_submit() -> None:
 
 
 def _login_submit() -> None:
-    """Login form callback: wipe the password from session state first."""
-    email = st.session_state.get("login_email", "")
-    password = st.session_state.get("login_pw", "")
-    st.session_state.login_pw = ""
-    ok, msg = firebase_sign_in(email, password)
+    """Login form callback. It only checks that both fields are filled and
+    marks an attempt pending. Firebase is asked later in this same run, by
+    _run_login_attempt, AFTER the card has drawn "Signing in…" with the
+    button disabled. A callback runs before anything can be drawn, so
+    asking Firebase here left the person looking at an unchanged form."""
+    for k in ("_login_error", "_login_error_from", "_login_notice"):
+        st.session_state.pop(k, None)
+    if not (st.session_state.get("login_email") or "").strip() or not st.session_state.get("login_pw"):
+        st.session_state._login_error = "Enter your email address and password."
+        st.session_state._login_error_from = "email"
+        return
+    st.session_state._login_pending = True
+
+
+# a moment to read "Signed in successfully" before the dashboard replaces it
+# (only in a real browser session: AppTest has no runtime and needn't wait)
+_SIGNED_IN_PAUSE_S = 0.6
+
+
+def _run_login_attempt(status) -> None:
+    """The sign-in itself, drawn into ``status`` while it runs: "Signing
+    in…", then a green check once Firebase has confirmed the account, or the
+    error. The email address stays in its field either way. The password
+    lives in the widget's session state only for this one request and is
+    wiped (before the field is drawn again) on the rerun that follows,
+    success or not."""
+    email = (st.session_state.get("login_email") or "").strip()
+    password = st.session_state.get("login_pw") or ""
+    status.html(f'<div class="login-busy" role="status" aria-live="polite">{_ms("progress_activity", "s20")}'
+                '<div>Signing in…</div></div>')
+    try:
+        ok, msg = firebase_sign_in(email, password)
+    finally:
+        st.session_state._login_clear_pw = True
     if ok:
-        st.session_state.pop("_login_error", None)
+        status.html(f'<div class="login-ok" role="status" aria-live="polite">{_ms("check_circle", "s20")}'
+                    '<div>Signed in successfully</div></div>')
+        if st.runtime.exists():
+            time.sleep(_SIGNED_IN_PAUSE_S)
     else:
         st.session_state._login_error = msg
         st.session_state._login_error_from = "email"     # keeps the email form open
+    st.rerun()
 
 
 def _login_owner_submit() -> None:
@@ -2962,6 +2859,10 @@ _LOGIN_CSS = """
 .login-ok { display: flex; gap: 9px; align-items: flex-start; padding: 11px 13px; border-radius: 12px; font-size: 13.5px; line-height: 1.5;
   color: var(--text); background: color-mix(in srgb, var(--green) 9%, transparent); border: 1px solid color-mix(in srgb, var(--green) 35%, var(--border)); }
 .login-ok .ms { color: var(--green); }
+.login-busy { display: flex; gap: 9px; align-items: center; padding: 11px 13px; border-radius: 12px; font-size: 13.5px; line-height: 1.5;
+  color: var(--text); background: color-mix(in srgb, var(--accent) 7%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border)); }
+.login-busy .ms { color: var(--accent-text); animation: jt-spin 1s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .login-busy .ms { animation: none; } }
 .login-off { display: flex; gap: 9px; align-items: flex-start; color: var(--text-2); font-size: 13.5px; line-height: 1.5; margin: 0; }
 
 /* tablet: a smaller stage */
@@ -3070,6 +2971,12 @@ def render_login_page() -> None:
     server log."""
     st.html(f"<style>{_LOGIN_CSS}</style>")
     email_ok = _AUTH_CONFIG is not None
+    # the password of a finished attempt is wiped before its field is drawn
+    # again (a widget's value can't be changed once it is on the page)
+    if st.session_state.pop("_login_clear_pw", False):
+        st.session_state.login_pw = ""
+    # popped at once: a run interrupted mid-attempt never leaves the form locked
+    attempt = email_ok and bool(st.session_state.pop("_login_pending", False))
     art, side = st.columns([1.6, 1], gap="large", vertical_alignment="center")
     with art:
         st.html(_login_art())
@@ -3085,10 +2992,11 @@ def render_login_page() -> None:
         notice = "" if signup else st.session_state.get("_login_notice")
         if notice:
             st.html(f'<div class="login-ok" role="status">{_ms("mark_email_read", "s20")}<div>{escape(notice)}</div></div>')
-        err = (st.session_state.get("_signup_error") if signup else
-               st.session_state.get("_login_error") or (recent_google_failure() if _GOOGLE else ""))
+        err = "" if attempt else (st.session_state.get("_signup_error") if signup else
+                                  st.session_state.get("_login_error") or (recent_google_failure() if _GOOGLE else ""))
         if err:
             st.html(f'<div class="login-err" role="alert">{_ms("error", "s20")}<div>{escape(err)}</div></div>')
+        login_status = st.empty()           # "Signing in…", then the outcome
         if signup:
             with st.form("signup_form", clear_on_submit=False, border=False):
                 st.text_input("Full name", key="signup_name", autocomplete="name", placeholder="Your full name",
@@ -3102,17 +3010,20 @@ def render_login_page() -> None:
                                       icon=":material/arrow_forward:", icon_position="right",
                                       use_container_width=True, on_click=_signup_submit)
         elif email_ok:
-            with st.form("login_form", clear_on_submit=True, border=False):
+            # the fields keep what was typed: the email survives a failed
+            # attempt, and the password is wiped only once the attempt is over
+            with st.form("login_form", clear_on_submit=False, border=False):
                 st.text_input("Email address", key="login_email", autocomplete="email", placeholder="you@example.com")
                 st.text_input("Password", type="password", key="login_pw", autocomplete="current-password",
                               placeholder="Enter your password")
                 st.form_submit_button("Sign in", key="btn_login_email", type="primary", icon=":material/arrow_forward:",
-                                      icon_position="right", use_container_width=True, on_click=_login_submit)
+                                      icon_position="right", use_container_width=True, on_click=_login_submit,
+                                      disabled=attempt)
         if _GOOGLE:
             if email_ok:
                 st.html('<div class="lp-or">OR</div>')
             st.button("Continue with Google", key="btn_login_google", type="secondary", use_container_width=True,
-                      on_click=_login_google)
+                      on_click=_login_google, disabled=attempt)
         elif _GOOGLE_PROBLEM:
             st.html(f'<p class="login-off">{_ms("info", "s20")}<span>Google sign-in is unavailable right now.</span></p>')
         if not email_ok and not _GOOGLE:
@@ -3140,6 +3051,10 @@ def render_login_page() -> None:
                         st.html('<p class="lp-help">Email-and-password accounts are managed by the workspace admin — '
                                 'ask them to reset your password'
                                 + (", or continue with Google instead." if _GOOGLE else ".") + '</p>')
+    if attempt:
+        # everything above (the disabled button included) is already on the
+        # screen: only now is Firebase asked
+        _run_login_attempt(login_status)
 
 
 _AUTH_CONFIG, _AUTH_PROBLEM, _AUTH_PRESENT = _firebase_config()
@@ -3161,6 +3076,8 @@ if AUTH_GATE:
     if ACCOUNT is None:
         render_login_page()
         st.stop()
+    for _k in ("login_pw", "_login_clear_pw", "_login_pending"):     # nothing of the sign-in form outlives it
+        st.session_state.pop(_k, None)
 else:
     st.session_state.pop(ACCOUNT_KEY, None)
 
@@ -3291,6 +3208,86 @@ if USER is not None:
         ME = _personal_snapshot()
     except user_store.UserStoreError as _e:
         USER, USER_PROBLEM, USER_PROBLEM_DETAIL = None, str(_e), _e.kind
+
+
+# ── 48-hour inactivity sign-out ───────────────────────────────────────────────
+# Every run of a signed-in session is something the person did (a click, a
+# page, a form: this app never reruns on a timer), so each one counts as
+# activity. The last activity is kept on the SERVER: in this session's state
+# and, for a new browser session, on the person's own profile
+# (its profile field last_active_at, written with the server's clock at most every
+# _ACTIVITY_SAVE_S). Nothing the browser sends is trusted for it. A sign-in
+# with no use for INACTIVITY_LIMIT_S is ended exactly like Sign out
+# (account_sign_out: the session is emptied and Google's sign-in cookie
+# cleared), whichever way it was restored:
+#   * a tab left open: this session's own _last_active;
+#   * a new tab or browser with Google's 30-day cookie: the profile's
+#     last_active_at (a sign-in Google issued later than that — the ID
+#     token's iat, read on the server — counts as activity too);
+#   * an email sign-in lives only in this session; its expiry moves on with
+#     each use (firebase_auth.session_user enforces it).
+# Without per-user data there is no profile to record into: a restored
+# Google sign-in is then judged only by its own session.
+_ACTIVITY_SAVE_S = 600
+INACTIVE_NOTICE = "You were signed out after 2 days without activity. Sign in again to continue."
+
+
+def _stamp_seconds(value) -> float | None:
+    """Seconds since the epoch for a stored "2026-10-15T08:00:00Z" stamp."""
+    if not isinstance(value, str) or not value:
+        return None
+    dt = _parse_iso(value.replace("Z", "+00:00"))
+    return dt.timestamp() if dt else None
+
+
+def _google_signed_in_at(now: float) -> float | None:
+    """When Google issued this sign-in (its ID token's iat), or None."""
+    age = firebase_auth.token_age(_google_id_token(), now=now)
+    return now - age if isinstance(age, (int, float)) and age >= 0 else None
+
+
+def last_activity(account: dict, profile: dict | None, now: float) -> float | None:
+    """The latest moment this person is known to have used the app (or
+    signed in), from server-side records only. None when there is no record
+    of activity at all (no per-user data, or none recorded yet): inactivity
+    can't be proven then, and a Google sign-in's age alone must never act
+    as a fixed limit counted from sign-in."""
+    records = [t for t in (st.session_state.get("_last_active"), _stamp_seconds((profile or {}).get("last_active_at")))
+               if isinstance(t, (int, float)) and t <= now + 60]
+    if not records:
+        return None
+    signed_in = _google_signed_in_at(now) if account.get("provider") == "google.com" else None
+    return max(records + ([signed_in] if signed_in is not None and signed_in <= now + 60 else []))
+
+
+def enforce_inactivity(account: dict, now: float | None = None) -> bool:
+    """End the sign-in after INACTIVITY_LIMIT_S without use (True), or
+    record this run as activity (False)."""
+    now = time.time() if now is None else now
+    last = last_activity(account, ME["profile"] if ME is not None else None, now)
+    if last is not None and now - last >= INACTIVITY_LIMIT_S:
+        auth_event(f"{account.get('provider')} sign-in ended after {INACTIVITY_LIMIT_S // 3600} h without activity")
+        google = account_sign_out()
+        st.session_state._login_notice = INACTIVE_NOTICE
+        if not google:
+            st.rerun()
+        st.stop()
+        return True
+    st.session_state._last_active = now
+    fb = st.session_state.get(firebase_auth.SESSION_KEY)
+    if isinstance(fb, dict):                     # an email sign-in lasts while it is used
+        st.session_state[firebase_auth.SESSION_KEY] = {**fb, "expires_at": now + INACTIVITY_LIMIT_S}
+    if USER is not None and now - st.session_state.get("_activity_saved", 0) >= _ACTIVITY_SAVE_S:
+        try:
+            USER.record_activity(now)
+            st.session_state._activity_saved = now
+        except user_store.UserStoreError:
+            pass                                 # retried on the next run; never blocks the page
+    return False
+
+
+if ACCOUNT and ACCOUNT.get("provider") in ("google.com", "password"):
+    enforce_inactivity(ACCOUNT)
 
 # The name shown for this account: the one the person chose (saved in their
 # own profile as preferred_name), else the sign-in provider's name

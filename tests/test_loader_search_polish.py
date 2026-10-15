@@ -1,15 +1,11 @@
-"""Full-screen loader (five small centre icons) and premium search fields.
+"""The loader (a thin bar along the top) and premium search fields.
 
-The loading layer is the app's own .stApp::after (Streamlit's decoration bar
+The loading bar is the app's own .stApp::after (Streamlit's decoration bar
 and toolbar stay hidden); Streamlit's frontend marks the app element
-data-test-script-state="running" for every rerun. After a 450 ms pause it
-covers the WHOLE viewport — edge to edge — with a soft solid veil, a thin
-purple→blue line on all four edges with one soft highlight travelling round
-the screen, and a medium translucent glass briefcase in the exact centre. It takes clicks only while it
-is shown, and lets them through the moment the rerun ends. Search fields
-share one premium style; other inputs, dropdowns and buttons keep theirs."""
-import ast
-import base64
+data-test-script-state="running" for every rerun. After a 450 ms pause a
+3px purple→teal bar slides along the top edge; it never takes clicks.
+Search fields share one premium style; other inputs, dropdowns and buttons
+keep theirs."""
 import re
 from pathlib import Path
 
@@ -25,146 +21,38 @@ def _rule(selector: str, css: str = CSS) -> str:
     return css[start:css.index("}", start)]
 
 
-def _palette(name: str) -> dict:
-    node = next(n for n in ast.parse(SRC).body
-                if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", None) == name)
-    return ast.literal_eval(node.value)
-
-
 # ---------------------------------------------------------------------------
-# the full-screen loader: the 7f407c8 frame + five small centre icons
+# the loader: the thin top bar of e4c241a, restored 2026-10-15
 # ---------------------------------------------------------------------------
+# The user found the full-screen loader (veil, four-edge frame, centre
+# icons) distracting: it covered the page on every sign-in and fresh page
+# load. The earlier behaviour is back: a 3px bar sliding along the top edge
+# after a 450 ms pause, never blocking clicks.
 
-ICON_NAMES = ["search", "briefcase", "graduate", "building", "check"]
-
-
-def _frame_block(src: str) -> str:
-    i = src.index('.stApp::after { content: ""; position: fixed; inset: 0;')
-    return src[i:src.index("border-box; }", i) + len("border-box; }")]
-
-
-def test_the_frame_covers_the_whole_viewport():
-    layer = _rule(".stApp::after")
-    assert "position: fixed; inset: 0; box-sizing: border-box" in layer                  # edge to edge
-    assert "52px" not in layer and "left: calc(50%" not in layer and "height: 3px" not in layer  # no badge, no line
-    assert "border: 5px solid transparent" in layer and "z-index: 1000010" in layer
-    assert "@media (max-width: 767px) { .stApp::after { border-width: 3px; } }" in CSS
+def test_the_loader_is_one_thin_bar_along_the_top():
+    bar = _rule(".stApp::after")
+    for part in ("position: fixed", "top: 0", "left: 0", "right: 0", "height: 3px", "pointer-events: none", "opacity: 0"):
+        assert part in bar, part
+    assert "inset: 0" not in bar and "border:" not in bar                  # no full-screen layer, no frame
+    shown = _rule('.stApp[data-test-script-state="running"]::after')
+    assert "jt-busy-in 220ms ease-out 450ms both" in shown and "jt-busy-slide 1.15s linear 450ms infinite" in shown
+    assert "@keyframes jt-busy-slide { from { background-position: -45% 0; } to { background-position: 145% 0; } }" in CSS
 
 
-def test_the_frame_is_the_one_from_7f407c8():
-    """The user asked for the earlier full-screen border back, exactly: its
-    thickness, colours, inner shading and travelling highlight (only the
-    centre artwork layers of that version are gone)."""
-    layer = _frame_block(SRC)
-    assert "box-shadow: inset 0 0 34px -10px color-mix(in srgb, var(--accent) 55%, transparent);" in layer
-    for angle in ("90deg", "180deg", "270deg", "0deg"):                                   # top, right, bottom, left
-        assert f"linear-gradient({angle}, transparent, var(--load-hi), var(--load-blue), transparent)" in layer, angle
-    assert ("linear-gradient(135deg, color-mix(in srgb, var(--accent) 55%, transparent), "
-            "color-mix(in srgb, var(--load-blue) 55%, transparent)) 0 0 / 100% 100% no-repeat border-box") in layer
-    assert _palette("LIGHT")["load-hi"] == "#a89dff" and _palette("DARK")["load-hi"] == "#d4ceff"
-    assert "var(--load-icon)" not in SRC and "_briefcase_uri" not in SRC and "load-glow" not in SRC   # the briefcase is gone
+def test_no_full_screen_loader_remains():
+    for gone in ("load-veil", "load-search", "load-briefcase", "jt-load-turn", "jt-load-icons", ":has(.jt-skel)::after",
+                 ':has(.jt-skel)::before', '[data-testid="stMain"]::before'):
+        assert gone not in CSS, gone
+    assert "_loader_icons" not in SRC
+    assert not re.search(r"\.stApp::before \{", CSS)
 
 
-def test_one_highlight_travels_round_all_four_edges():
-    turn = CSS[CSS.index("@keyframes jt-load-turn {"):CSS.index("} }", CSS.index("@keyframes jt-load-turn {")) + 3]
-    assert set(re.findall(r"([a-z-]+)\s*:", turn)) == {"background-position"}
-    stops = re.findall(r"(\d+)% \{ background-position: ([^;]+); \}", turn)
-    assert [s for s, _ in stops] == ["0", "25", "50", "75", "100"]
-    lists = [[p.strip() for p in v.split(",")] for _, v in stops]
-    moved = [[i for i in range(6) if a[i] != b[i]] for a, b in zip(lists, lists[1:])]
-    assert moved == [[1], [2], [3], [4]]                                                  # clockwise, one edge at a time
-
-
-def test_five_glossy_icons_in_the_exact_centre():
-    """1.5x the earlier 32px line icons (48px in a 60px box), glossy solids:
-    a gradient body, a white sheen, a light rim and a darker base."""
-    box = _rule(".stApp::before")
-    assert "top: calc(50% - 30px); left: calc(50% - 30px); width: 60px; height: 60px" in box
-    assert "z-index: 1000011" in box and "pointer-events: none" in box and "visibility: hidden" in box
-    layers = re.findall(r"var\(--load-([a-z]+)\) -64px 50% / 48px 48px no-repeat", box)
-    assert layers == ICON_NAMES                                                           # five, same size, in order
-    assert "drop-shadow(0 3px 8px" in box                                                 # a soft shadow, no halo
-    for name in ("LIGHT", "DARK"):
-        assert re.search(rf'for _pal, _colours in \(\(LIGHT, .*?\), \(DARK, .*?\)\):', SRC)
-    fn_src = SRC[SRC.index("def _loader_icons"):SRC.index("\n\n\nLIGHT = {")]
-    ns = {"base64": base64}
-    exec(fn_src, ns)
-    icons = ns["_loader_icons"]("#6a5cf7", "#3b82f6", "#0d9488")
-    assert list(icons) == ICON_NAMES
-    for name, uri in icons.items():
-        assert uri.startswith("url('data:image/svg+xml;base64,") and "<" not in uri
-        svg = base64.b64decode(uri[len("url('data:image/svg+xml;base64,"):-2]).decode()
-        assert 'viewBox="0 0 48 48"' in svg, name                                         # one grid
-        for layer in ('fill="url(#b)"', 'fill="url(#d)"', 'fill="url(#s)"', 'stroke="#fff" stroke-opacity=".38"'):
-            assert layer in svg, (name, layer)                                            # one glossy style
-        assert "filter" not in svg and "<image" not in svg and "<text" not in svg, name   # light: shapes only
-
-
-def test_the_icons_appear_one_at_a_time_in_order_and_loop():
-    kf = CSS[CSS.index("@keyframes jt-load-icons {"):CSS.index("} }", CSS.index("@keyframes jt-load-icons {")) + 3]
-    assert set(re.findall(r"([a-z-]+)\s*:", kf)) == {"opacity", "transform", "background-position"}
-    stops = re.findall(r"(\d+)% \{ opacity: ([.\d]+); transform: scale\(([.\d]+)\); background-position: ([^;]+); \}", kf)
-    assert stops and stops[-1][0] == "100"
-    for pct, opacity, scale, positions in stops:
-        shown = [i for i, pos in enumerate(positions.split(",")) if pos.strip() == "50% 50%"]
-        assert len(shown) == 1, pct                                                       # never two at once
-        if float(opacity) == 1:
-            assert float(scale) == 1                                                      # fully shown = full size
-    visible = [ICON_NAMES[[i for i, pos in enumerate(v.split(",")) if pos.strip() == "50% 50%"][0]]
-               for _, o, _, v in stops if float(o) == 1]
-    order = [n for i, n in enumerate(visible) if i == 0 or visible[i - 1] != n]
-    assert order == ICON_NAMES                                                            # search → … → check
-    assert all(float(sc) >= .86 for _, _, sc, _ in stops)                                 # a slight scale, no bounce
-    running = _rule('.stApp[data-test-script-state="running"]:has(.jt-skel)::before')
-    assert "jt-load-icons 6s ease-in-out 450ms infinite both" in running                  # loops while loading
-    assert "visibility: visible; transition: visibility 0s linear 450ms" in running
-
-
-def test_the_loader_appears_only_during_real_loading_and_never_sticks():
-    """Oct 14 (2): the full-screen layer belongs to a first load only — a run
-    that draws the page skeleton (.jt-skel). Ordinary reruns (every click on
-    Streamlit Cloud takes > 450 ms) never cover the page; they get a 3 px
-    top bar after the same pause, which never takes a click."""
-    hidden = _rule(".stApp::after")
-    assert "visibility: hidden; pointer-events: none; opacity: 0" in hidden              # gone when idle
-    running = _rule('.stApp[data-test-script-state="running"]:has(.jt-skel)::after')
-    assert running.startswith('.stApp[data-test-script-state="running"]:has(.jt-skel)::after { animation: jt-busy-in 220ms ease-out 450ms both')
-    # no full-screen rule keyed on "running" alone
-    assert not re.search(r'\.stApp\[data-test-script-state="running"\]::(?:after|before)', CSS)
-    bar = _rule('.stApp[data-test-script-state="running"] [data-testid="stMain"]::before')
-    assert "visibility: visible; transition: visibility 0s linear 450ms" in bar
-    base = _rule('[data-testid="stMain"]::before')
-    assert "height: 3px" in base and "pointer-events: none" in base and "visibility: hidden" in base
-    assert "visibility: visible; pointer-events: auto" in running
-    assert "transition: visibility 0s linear 450ms" in running                           # clicks pass for the first 450 ms
-    assert "transition" not in hidden and "transition" not in _rule(".stApp::before")    # and the moment the rerun ends
-
-
-def test_reduced_motion_shows_a_still_frame_and_one_still_icon():
+def test_reduced_motion_keeps_a_still_line():
     reduced = CSS[CSS.index("/* the bar appears (still after the pause)"):]
     reduced = reduced[:reduced.index("}\n}") + 3]
-    assert "jt-load-turn" not in reduced and "jt-load-icons" not in reduced
-    # first-load veil + icons, and the still top bar of an ordinary rerun
-    assert reduced.count("jt-busy-fade 1ms linear 450ms both") == 3
-    assert "var(--load-veil) padding-box, linear-gradient(135deg, var(--accent), var(--load-blue)) border-box" in reduced
-    still = re.search(r'\.stApp\[data-test-script-state="running"\]:has\(\.jt-skel\)::before \{[^}]*background: ([^!]+) !important', reduced)
-    shown = [l for l in still.group(1).split(", var") if "50% 50%" in l]
-    assert len(shown) == 1 and "briefcase" in shown[0]
+    assert "jt-busy-slide" not in reduced and "animation: jt-busy-in 1ms linear 450ms both !important" in reduced
 
 
-def test_both_themes_define_the_loader_tokens():
-    for name in ("LIGHT", "DARK"):
-        pal = _palette(name)
-        for token in ("load-blue", "load-hi", "load-veil", "search-gloss", "search-tint", "search-tint-hover", "search-edge",
-                      "search-edge-hover", "search-edge-focus", "search-shadow", "search-shadow-hover", "search-chip",
-                      "search-chip-focus", "search-icon", "search-placeholder"):
-            assert pal.get(token), (name, token)
-        assert "rgba" not in pal["load-veil"]                                             # a clean, solid backdrop
-    assert "<" not in CSS and "@property" not in CSS and "conic-gradient" not in CSS
-
-
-# ---------------------------------------------------------------------------
-# premium search fields
 # ---------------------------------------------------------------------------
 
 def test_search_fields_have_the_glossy_surface_and_gradient_edge():

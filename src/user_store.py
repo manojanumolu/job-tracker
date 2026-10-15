@@ -398,6 +398,16 @@ class UserData:
         return choice
 
     @_guard
+    def record_activity(self, now: float | None = None) -> str:
+        """This person just used the app (users/{uid}.last_active_at, a
+        server clock time — never one the browser sent). The app's 48-hour
+        inactivity sign-out reads it when a sign-in is restored in a new
+        browser session. Touches nothing else. Returns the time."""
+        stamp = _now_iso(now)
+        self._backend.set(self._root, {"last_active_at": stamp}, merge=True)
+        return stamp
+
+    @_guard
     def complete_onboarding(self, now: float | None = None) -> None:
         self._backend.set(self._root, {"onboarding": {"status": ONBOARDING_COMPLETE,
                                                       "completed_at": _now_iso(now)}}, merge=True)

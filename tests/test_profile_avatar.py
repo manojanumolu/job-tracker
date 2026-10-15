@@ -228,7 +228,7 @@ def test_an_avatar_change_leaves_every_other_setting_alone(app, google_env, usto
     _pick(at, "apple")
     after = u.snapshot()
     assert after["watchlist"] == before["watchlist"] and after["dismissed"] == before["dismissed"]
-    drop = {"avatar", "last_login_at"}
+    drop = {"avatar", "last_login_at", "last_active_at"}                   # sign-in / use bookkeeping
     assert {k: v for k, v in after["profile"].items() if k not in drop} == \
            {k: v for k, v in before["profile"].items() if k not in drop}
 

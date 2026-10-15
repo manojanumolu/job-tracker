@@ -376,11 +376,9 @@ def test_refresh_and_run_check_still_do_their_work(app, monkeypatch):
 
 def test_loading_indicators_are_only_for_real_work(app):
     # the top bar belongs to a running script and waits before it shows, so quick clicks never flash it
-    bar = re.search(r'\.stApp\[data-test-script-state="running"\]:has\(\.jt-skel\)::after \{ animation: jt-busy-in 220ms ease-out (\d+)ms both', CSS)
-    assert bar and int(bar.group(1)) >= 400                                              # (first loads only)
-    top = re.search(r'\[data-testid="stMain"\]::before \{ visibility: visible; transition: visibility 0s linear (\d+)ms', CSS)
-    assert top and int(top.group(1)) >= 400                                              # the bar of any other run
-    assert re.search(r"\.stApp::after \{[^}]*opacity: 0;", CSS)                          # hidden otherwise
+    bar = re.search(r'\.stApp\[data-test-script-state="running"\]::after \{ animation: jt-busy-in 220ms ease-out (\d+)ms both', CSS)
+    assert bar and int(bar.group(1)) >= 400                                              # every run, the same thin bar
+    assert re.search(r"\.stApp::after \{[^}]*height: 3px;[^}]*opacity: 0;", CSS)          # hidden otherwise
     # the pressed button: Refresh spins at once, others breathe only after a pause
     assert re.search(r"jt-busy-pulse 1s ease-in-out (\d+)ms infinite", CSS)
     # reduced motion: no sliding, spinning or pulsing — a still bar

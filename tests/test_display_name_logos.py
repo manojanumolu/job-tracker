@@ -294,7 +294,7 @@ def test_companies_and_alerts_are_unchanged_after_a_rename(app, google_env, usto
     after = u.snapshot()
     assert after["watchlist"] == before["watchlist"] == {"pwc"}
     assert after["dismissed"] == before["dismissed"]
-    drop = {"preferred_name", "last_login_at"}
+    drop = {"preferred_name", "last_login_at", "last_active_at"}           # sign-in / use bookkeeping
     assert {k: v for k, v in after["profile"].items() if k not in drop} == \
            {k: v for k, v in before["profile"].items() if k not in drop}
     assert u.notification_settings() == {"enabled": True, "mode": "general", "email": A_MAIL}
