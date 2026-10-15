@@ -1279,10 +1279,11 @@
     "date": "Oct 15, 12:07",
     "first_seen": "2026-10-15T12:07:15.505407+00:00",
     "id": "PwC_IN_Specialist_2_Accounts_receivable_Oper",
-    "notified": false,
+    "notified": true,
     "company_id": "pwc",
-    "notify_state": "claimed",
-    "claimed_at": "2026-10-15T12:07:56.932505+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-10-15T12:07:56.932505+00:00",
+    "notified_at": "2026-10-15T12:08:01.220308+00:00"
   },
   {
     "title": "IN_Specialist 2_Accounts receivable_BEST Operations_IFS_Gurgaon",
@@ -1319,9 +1320,10 @@
     "date": "Oct 15, 12:07",
     "first_seen": "2026-10-15T12:07:15.505407+00:00",
     "id": "PwC_IN_Specialist_2_Accounts_receivable_BEST",
-    "notified": false,
+    "notified": true,
     "company_id": "pwc",
-    "notify_state": "claimed",
-    "claimed_at": "2026-10-15T12:07:56.932505+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-10-15T12:07:56.932505+00:00",
+    "notified_at": "2026-10-15T12:08:01.220308+00:00"
   }
 ]
