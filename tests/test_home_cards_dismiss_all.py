@@ -78,7 +78,8 @@ def test_cards_stretch_to_the_row_and_buttons_sit_at_the_bottom():
 # ── Dismiss all ──────────────────────────────────────────────────────────────
 
 def test_member_dismiss_all_asks_first_and_is_theirs_alone(app, google_env, store):
-    _ready(store, B_UID, B_MAIL)
+    _ready(store, A_UID, A_MAIL).set_watch_all(True)                        # both chose "all companies"
+    _ready(store, B_UID, B_MAIL).set_watch_all(True)
     a = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS)
     assert _labels(a)["btn_mh_clear"] == "Dismiss all (2)"
     a.button(key="btn_mh_clear").click().run()
@@ -108,6 +109,7 @@ def test_member_dismiss_all_asks_first_and_is_theirs_alone(app, google_env, stor
 
 
 def test_dismissed_jobs_can_be_restored_one_by_one(app, google_env, store):
+    _ready(store, A_UID, A_MAIL).set_watch_all(True)
     a = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS)
     a.button(key="btn_mh_clear").click().run()
     a.button(key="btn_mh_clear_yes").click().run()
@@ -120,7 +122,7 @@ def test_dismissed_jobs_can_be_restored_one_by_one(app, google_env, store):
 
 
 def test_dismiss_all_covers_only_the_listed_matches(app, google_env, store):
-    _ready(store, A_UID, A_MAIL, locations=["Hyderabad"])                  # matches MetLife only
+    _ready(store, A_UID, A_MAIL, locations=["Hyderabad"]).set_watch_all(True)   # matches MetLife only
     a = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS)
     assert _labels(a)["btn_mh_clear"] == "Dismiss all (1)"
     a.button(key="btn_mh_clear").click().run()

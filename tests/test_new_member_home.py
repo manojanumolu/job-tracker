@@ -27,6 +27,7 @@ from test_streamlit_app import _html, _nav, app  # noqa: F401
 JOBS = (PWC_JOB, METLIFE_JOB)          # Software · Pune · entry level / Data · Hyderabad · fresher
 PWC_TITLE, METLIFE_TITLE = PWC_JOB["title"], METLIFE_JOB["title"]
 SHARED = "discover your next <em>opportunity</em>"
+EMPTY_FEED = "start your <em>job feed</em>"
 MATCHES = "here are your <em>matches</em>"
 
 
@@ -53,22 +54,40 @@ def _hero(html: str) -> str:
 
 # ── wording: shared listings vs. matches ─────────────────────────────────────
 
-def test_new_member_home_calls_shared_listings_what_they_are(app, google_env, store):
+def test_new_member_home_shows_no_shared_jobs_until_companies_are_chosen(app, google_env, store):
+    """2026-10-15 P0: a new account (watch_all False, no follows) had every
+    shared listing on its Home, while its alert emails — rightly — covered
+    nothing. Home now follows the same company scope."""
     at = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS)                  # onboarding skipped
+    html = _html(at)
+    hero = _hero(html)
+    assert EMPTY_FEED in hero and SHARED not in hero and MATCHES not in hero
+    assert PWC_TITLE not in html and METLIFE_TITLE not in html               # nothing selected for this person
+    assert "You aren’t following any companies yet" in html and "btn_mh_clear" not in _buttons(at)
+    assert {"btn_mh_follow", "btn_mh_browse"} <= _buttons(at)
+    assert "Not following any yet" in html
+    _nav(at, "jobs")                                                         # every shared listing stays browsable
+    assert PWC_TITLE in _html(at) and METLIFE_TITLE in _html(at)
+
+
+def test_all_companies_shows_every_shared_listing_honestly_labelled(app, google_env, store):
+    _ready(store, A_UID, A_MAIL).set_watch_all(True)                          # "all companies", chosen
+    at = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS)
     html = _html(at)
     hero = _hero(html)
     assert SHARED in hero and MATCHES not in hero and "match your preferences" not in html
     assert ("2 open fresher and entry-level jobs across every company the tracker monitors. "
             "Set preferences or follow companies to narrow them to your matches.") in hero
     assert '<h2 class="section-title">Latest jobs</h2>' in html and "Your matches" not in html
-    assert "the same listings every member sees" in html
-    assert PWC_TITLE in html and METLIFE_TITLE in html                       # the shared listings stay visible
-    assert "Not following any yet" in html and "None yet — every qualifying job is shown." in html
+    assert PWC_TITLE in html and METLIFE_TITLE in html
+    assert "None yet — every qualifying job from your companies is shown." in html
 
 
 @pytest.mark.parametrize("narrow", ["preferences", "companies"])
 def test_preferences_or_follows_turn_home_into_matches(app, google_env, store, narrow):
     u = _ready(store, A_UID, A_MAIL, **({"locations": ["Hyderabad"]} if narrow == "preferences" else {}))
+    if narrow == "preferences":
+        u.set_watch_all(True)                                                # preferences narrow "all companies"
     if narrow == "companies":
         u.watch("metlife", {"metlife", "pwc"})
         u.set_watch_all(False)
@@ -83,6 +102,7 @@ def test_saved_only_preferences_do_not_count_as_matching(app, google_env, store)
     """Job type and work mode are saved but never matched (postings don't
     state them), so they must not make Home claim "matches"."""
     u = _ready(store, A_UID, A_MAIL)
+    u.set_watch_all(True)
     u.set_preferences("general", [], [], [], ["internship"], ["remote"])
     at = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS)
     assert SHARED in _hero(_html(at))
@@ -144,10 +164,10 @@ def test_sign_up_to_dashboard_and_back_with_isolated_data(app, google_env, store
     assert user_store.notification_settings_from(prof)["enabled"] is False
     at.button(key="btn_onboarding_skip").click().run()
 
-    # 6: the dashboard: shared listings, honestly labelled, nothing of the other person
+    # 6: the dashboard: nothing selected yet (no company followed), nothing of the other person
     html = _html(at)
-    assert at.session_state.page == "home" and "Hi, Asha" in html and SHARED in _hero(html)
-    assert PWC_TITLE in html and METLIFE_TITLE in html
+    assert at.session_state.page == "home" and "Hi, Asha" in html and EMPTY_FEED in _hero(html)
+    assert PWC_TITLE not in html and METLIFE_TITLE not in html
     assert "Not following any yet" in html and B_MAIL not in html and B_UID not in html
     assert 'class="role admin"' not in html and "nav_email" not in _buttons(at)
 

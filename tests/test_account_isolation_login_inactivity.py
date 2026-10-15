@@ -1,9 +1,11 @@
 """New accounts start clean, account switching, the sign-in form's feedback,
 and the 48-hour inactivity sign-out (2026-10-15 production report).
 
-The report: a brand-new account showed 35 old listings and "Dismiss all
-(35)". Those are the scanner's SHARED listings (data/seen_jobs.json), which
-every member sees by design; nothing personal carried over. Dismissals,
+The report: a brand-new account showed the scanner's newest SHARED listings
+and "Dismiss all (37)". Root cause (fixed): the member Home read an empty
+follow list as "every company", while the account's own profile
+(watch_all False) and its alert emails meant "none". Nothing personal
+carried over between accounts. Dismissals,
 preferences, follows and alerts are per Firebase UID (users/{uid} in
 Firestore), and this browser session's copy of them (_pcache) is keyed by
 that UID. These tests pin that, plus:
@@ -70,36 +72,98 @@ def _switch_to(at, google_env, uid, email):
 
 # ── a new account starts clean ───────────────────────────────────────────────
 
-def test_a_new_account_gets_a_fresh_profile_and_sees_only_shared_listings(app, google_env, store):
-    alice = _ready(store, A_UID, A_MAIL)                         # someone already using the app
-    alice.set_preferences("general", [], ["Hyderabad"], [])
-    alice.watch("metlife", {"metlife", "pwc"})
-    alice.set_watch_all(False)
-    alice.dismiss({_job_key(PWC_JOB)})
-    alice.set_notifications(True, "general")
+FRESH = {**PWC_JOB, "id": "pwc-fresh-1", "url": "https://pwc.example/jobs/fresh-1",
+         "title": "Associate — Accounts receivable (found 18 min ago)"}
 
-    b = _sign_in(app, google_env, B_UID, B_MAIL, seen=JOBS)      # a brand-new account
+
+def test_p0_admin_scan_results_are_not_a_new_members_home(app, google_env, store, admins):
+    """The 2026-10-15 production report, step by step. Admin A follows
+    companies and gets a newly scanned job (and its alert); B is a brand-new
+    member who follows nothing. B's Home must not be filled with the
+    scanner's output; B's state must be B's alone, also after B's account
+    is deleted and created again (a new UID)."""
+    import user_alerts
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc)
+    fresh = {**FRESH, "first_seen": (now - timedelta(minutes=18)).strftime("%Y-%m-%dT%H:%M:%SZ")}
+    seen = (fresh, PWC_JOB, METLIFE_JOB)
+
+    # 1-4: the admin follows PwC, alerts on; the scan found a fresh PwC job
+    admins(A_MAIL)
+    a_user = _ready(store, A_UID, A_MAIL)
+    a_user.watch("pwc", {"pwc", "metlife"})
+    a_user.set_notifications(True, "general")
+    store.backend.set(f"users/{A_UID}", {"notifications": {"enabled_at": (now - timedelta(days=1)).strftime(
+        "%Y-%m-%dT%H:%M:%SZ")}}, merge=True)
+    a = _sign_in(app, google_env, A_UID, A_MAIL, seen=seen)
+    assert 'class="role admin"' in _html(a) and fresh["title"] in _html(a)
+    assert [j["id"] for j in user_alerts.select_jobs(list(seen), a_user.personal_view(), set(),
+                                                    now - timedelta(days=1))] == ["pwc-fresh-1"]
+
+    # 5-8: a brand-new member B: fresh profile, nothing followed, alerts off
+    b = _sign_in(app, google_env, B_UID, B_MAIL, seen=seen)
     prof = store.for_uid(B_UID).profile()
-    assert prof["uid"] == B_UID and prof["email"] == B_MAIL
-    assert prof["preferences"]["locations"] == [] and prof["watch_all"] is False
-    assert prof["notifications"]["enabled"] is False
-    assert store.for_uid(B_UID).dismissed() == set() and store.for_uid(B_UID).watchlist() == set()
+    assert prof["uid"] == B_UID and prof["watch_all"] is False and prof["notifications"]["enabled"] is False
+    assert prof["preferences"]["locations"] == [] and store.for_uid(B_UID).watchlist() == set()
     html = _html(b)
-    # the shared listings, said plainly: not "matches", not Alice's view
-    assert SHARED in html and "the same listings every member sees" in html
-    assert PWC_JOB["title"] in html and METLIFE_JOB["title"] in html          # Alice's dismissal isn't Bob's
-    assert {b_.key: b_.label for b_ in b.button}["btn_mh_clear"] == "Dismiss all (2)"
-    assert "Hyderabad" not in html.split('class="mh-card"', 1)[1].split("</ul>", 1)[0]
-    assert b.session_state["_pcache"]["uid"] == B_UID
-    assert store.for_uid(A_UID).dismissed() == {_job_key(PWC_JOB)}            # Alice untouched
-    assert not any(r.get("dismissed") for r in _seen(b))                      # the shared file untouched
+    for job in seen:                                                         # THE BUG: these were all on B's Home
+        assert job["title"] not in html, job["title"]
+    assert "btn_mh_clear" not in {x.key for x in b.button}                   # no "Dismiss all (37)"
+    assert "You aren’t following any companies yet" in html and "start your <em>job feed</em>" in html
+    assert user_alerts.select_jobs(list(seen), store.for_uid(B_UID).personal_view(), set(),
+                                   now - timedelta(days=1)) == []           # B is emailed nothing either
+    _nav(b, "jobs")                                                          # browsing the shared listings stays open
+    assert fresh["title"] in _html(b)
+
+    # 9: A dismisses the fresh job; B's dismissals are untouched
+    a.button(key=_key("dismiss", fresh)).click().run()
+    assert _job_key(fresh) in store.for_uid(A_UID).dismissed() and store.for_uid(B_UID).dismissed() == set()
+    b.run()
+    assert fresh["title"] in _html(b)                                        # still listed for B on Jobs
+
+    # 10: in ONE browser session: A signs out, B signs in -> nothing of A remains
+    _sign_out(a)
+    left = a.session_state.to_dict()
+    assert all(k not in left for k in ("_pcache", "_profile_uid", ACCOUNT_KEY, "_firebase_user"))
+    _switch_to(a, google_env, B_UID, B_MAIL)
+    assert a.session_state["_pcache"]["uid"] == B_UID and a.session_state[ACCOUNT_KEY]["uid"] == B_UID
+    assert fresh["title"] not in _html(a) and A_MAIL not in _html(a)
+
+    # 11: B deleted and created again: a NEW UID, a new empty profile, nothing stale
+    new_b = "UserBnewnewnewnewnewnewnewnew3"
+    for path in [p for p in store.backend.docs if p.startswith(f"users/{B_UID}")]:
+        del store.backend.docs[path]                                         # what deleting the account leaves
+    _sign_out(a)
+    _switch_to(a, google_env, new_b, B_MAIL)
+    assert a.session_state["_pcache"]["uid"] == new_b and a.session_state[ACCOUNT_KEY]["uid"] == new_b
+    prof = store.for_uid(new_b).profile()
+    assert prof["uid"] == new_b and prof["watch_all"] is False and store.for_uid(new_b).dismissed() == set()
+    assert all(job["title"] not in _html(a) for job in seen)
+
+    # 12: the shared records are intact; A's own data is A's
+    assert {r["id"] for r in _seen(a)} >= {"pwc-fresh-1", PWC_JOB["id"], METLIFE_JOB["id"]}
+    assert store.for_uid(A_UID).watchlist() == {"pwc"} and _job_key(fresh) in store.for_uid(A_UID).dismissed()
+
+
+def test_choosing_companies_fills_a_new_members_home(app, google_env, store):
+    """The way out of the empty Home: follow a company (or pick "all
+    companies") and its jobs appear — only that company's."""
+    b_user = _ready(store, B_UID, B_MAIL)
+    b = _sign_in(app, google_env, B_UID, B_MAIL, seen=JOBS)
+    assert PWC_JOB["title"] not in _html(b)
+    b_user.watch("metlife", {"pwc", "metlife"})
+    b.session_state["_pcache"] = {**b.session_state["_pcache"], "at": 0}     # (another device: read again)
+    del b.session_state["_pcache"]
+    b.run()
+    assert METLIFE_JOB["title"] in _html(b) and PWC_JOB["title"] not in _html(b)
+    assert {x.key: x.label for x in b.button}["btn_mh_clear"] == "Dismiss all (1)"
 
 
 # ── switching accounts in one browser session ───────────────────────────────
 
 def test_switching_from_a_to_b_carries_nothing_over(app, google_env, store):
-    _ready(store, A_UID, A_MAIL)
-    _ready(store, B_UID, B_MAIL)
+    _ready(store, A_UID, A_MAIL).set_watch_all(True)                        # A: all companies
+    _ready(store, B_UID, B_MAIL).set_watch_all(True)                        # B: all companies too
     at = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS)
     at.button(key=_key("dismiss", PWC_JOB)).click().run()                     # A dismisses a job...
     store.for_uid(A_UID).set_preferences("general", [], ["Hyderabad"], [])     # ...and narrows Home
@@ -134,7 +198,7 @@ def test_a_cached_copy_of_another_uid_is_never_shown(app, google_env, store):
     """Defence in depth: even a leftover copy of someone else's data in this
     session (which sign-out prevents) is read again for the right UID."""
     _ready(store, A_UID, A_MAIL).dismiss({_job_key(PWC_JOB), _job_key(METLIFE_JOB)})
-    _ready(store, B_UID, B_MAIL)
+    _ready(store, B_UID, B_MAIL).set_watch_all(True)
     at = _sign_in(app, google_env, B_UID, B_MAIL, seen=JOBS)
     at.session_state["_pcache"] = {"uid": A_UID, "at": time.time(), "profile": store.for_uid(A_UID).profile(),
                                    "dismissed": store.for_uid(A_UID).dismissed(), "watchlist": set()}

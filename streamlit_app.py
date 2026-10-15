@@ -3396,17 +3396,26 @@ _all_active_jobs: list[dict] = (visible_jobs(all_records) if _HIDDEN is None    
 
 # What this viewer asked to see. Saved preferences are the DEFAULTS of the
 # job lists (the viewer can change them while browsing, see filter_jobs);
-# the same model applies to admins and members. Followed companies narrow
-# the lists only once some are chosen — a new person sees every company.
+# the same model applies to admins and members.
+# Company scope, the same as the alert emails (job_filters.for_person):
+# "all companies" (watch_all) covers every company; otherwise only the
+# companies this person follows — and a new account (its profile is created
+# with watch_all False by user_store.ensure_profile) follows none, so its
+# Home has nothing yet. Until 2026-10-15 an EMPTY follow list was read here
+# as "every company", so every listing the shared scanner found landed on
+# each new member's Home. The Jobs page stays the place to browse every
+# shared listing: its company filter starts from the follows, and an empty
+# selection there means any company.
 _VIEW: dict | None = user_store.view_from(ME["profile"], ME["watchlist"]) if ME is not None else None
 
 
 def my_defaults() -> dict | None:
     """The job-list filters this viewer saved: {"locations", "families",
-    "experience", "companies" (None = every company)}."""
+    "experience", "companies"}: None = every company ("all companies"
+    chosen), else the followed company IDs — [] when none is followed."""
     if _VIEW is None:
         return None
-    follows = None if _VIEW["watch_all"] or not _VIEW["watchlist"] else sorted(_VIEW["watchlist"])
+    follows = None if _VIEW["watch_all"] else sorted(_VIEW["watchlist"])
     return {"locations": _VIEW["prefs"]["locations"], "families": _VIEW["prefs"]["job_families"],
             "experience": _VIEW["prefs"]["experience"], "companies": follows}
 
@@ -3414,13 +3423,22 @@ def my_defaults() -> dict | None:
 def narrowed_for_me() -> bool:
     """Has this viewer chosen anything that narrows the job lists (a matched
     preference or followed companies)? If not, for_me() is every shared
-    listing — and must not be called "your matches"."""
+    listing ("all companies", nothing else chosen) — and must not be called
+    "your matches"."""
     d = my_defaults()
     return d is not None and (any(d[k] for k in ("locations", "families", "experience")) or d["companies"] is not None)
 
 
+def follows_nothing() -> bool:
+    """A personal viewer whose company scope is empty: not "all companies"
+    and no followed company (every new account starts here)."""
+    d = my_defaults()
+    return d is not None and d["companies"] == []
+
+
 def for_me(jobs: list[dict]) -> list[dict]:
-    """The jobs matching this viewer's saved preferences (Home)."""
+    """The jobs for this viewer's Home: their company scope, narrowed by
+    their saved preferences. Nothing when they follow no company."""
     d = my_defaults()
     if d is None:
         return jobs
@@ -5769,12 +5787,18 @@ def page_member_home():
     """A member's Home: their own job search — no scanner, no admin tools."""
     first = first_name(SHOWN_ACCOUNT) if ACCOUNT else ""
     mine = for_me(active_jobs)
-    # The listings are shared: the scanner finds them for everyone. Until this
-    # person picks preferences or companies, Home shows all of them — said
-    # plainly, never as "matches" for preferences that don't exist.
+    # The listings are shared (the scanner finds them for everyone), but Home
+    # is this person's own feed: the companies they follow — or every company
+    # once they choose "all companies" — narrowed by their preferences. A new
+    # account follows none, so its Home starts empty, with the way to fill it.
+    empty_scope = follows_nothing()
     narrowed = narrowed_for_me()
     hi = f'Hi{", " + escape(first) if first else ""}'
-    if narrowed:
+    if empty_scope:
+        title = f'{hi} — start your <em>job feed</em>'
+        sub = ("Home shows jobs from the companies you follow, and you don’t follow any yet. Choose companies to "
+               "fill it — or browse every listing the tracker has found on the Jobs page.")
+    elif narrowed:
         title = f'{hi} — here are your <em>matches</em>'
         sub = f'{_plural(len(mine), "job")} match your preferences right now.'
     else:
@@ -5791,7 +5815,7 @@ def page_member_home():
         cols = cards_row.columns(3)
         cards = [
             ("set_mh_prefs", "tune", "Job preferences",
-             pref_list_html(_VIEW["prefs"], "None yet — every qualifying job is shown."),
+             pref_list_html(_VIEW["prefs"], "None yet — every qualifying job from your companies is shown."),
              "Edit preferences", ("preferences",), {}),
             ("set_mh_companies", "apartment", "Companies",
              (f'<li>Following {len(ME["watchlist"])}</li>' if ME["watchlist"] else '<li class="muted">Not following any yet</li>'),
@@ -5807,7 +5831,10 @@ def page_member_home():
     elif USER_PROBLEM:
         st.html(f'<p class="note">{_ms("info", "s16")} {escape(USER_PROBLEM)}</p>')
     with st.container(key="mh_list_bar"):
-        if narrowed:
+        if empty_scope:
+            st.html('<div class="sec-head"><div><div class="eyebrow sparked">Your companies</div><h2 class="section-title">Your jobs</h2>'
+                    '<p class="section-sub">Fresher and entry-level roles from the companies you follow appear here</p></div></div>')
+        elif narrowed:
             st.html('<div class="sec-head"><div><div class="eyebrow sparked">Matching jobs</div><h2 class="section-title">Your matches</h2>'
                     '<p class="section-sub">Newest fresher and entry-level roles that fit your preferences</p></div></div>')
         else:
@@ -5831,7 +5858,18 @@ def page_member_home():
                 st.button("Cancel", key="btn_mh_clear_no", on_click=st.session_state.__setitem__,
                           args=("mh_clear_confirm", False))
     if not mine:
-        if narrowed:
+        if empty_scope:
+            def _acts():
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.button("Choose companies", key="btn_mh_follow", type="primary", icon=":material/add:",
+                              on_click=go, args=("companies",), kwargs={"view": "mine"})
+                with c2:
+                    st.button("Browse all jobs", key="btn_mh_browse", on_click=go, args=("jobs",))
+            empty_state("apartment", "You aren’t following any companies yet",
+                        "Follow the companies you care about and their fresher and entry-level roles appear here. "
+                        "Every listing the tracker has found stays open to browse on the Jobs page.", _acts)
+        elif narrowed:
             empty_state("search_off", "No jobs match your preferences right now",
                         "New roles appear after each scan. You can widen your preferences or browse every job.",
                         lambda: st.button("Browse all jobs", key="btn_mh_all", on_click=go, args=("jobs",)))

@@ -97,8 +97,10 @@ def test_onboarding_saves_every_answer_and_persists(app, google_env, store):
     assert prof["preferences"] == {"mode": "general", "job_families": ["Data & analytics"], "locations": ["Hyderabad"],
                                    "experience": ["fresher"], "job_types": ["internship"], "work_modes": ["remote"]}
     assert user_store.notification_settings_from(prof)["enabled"] is False          # still off
-    html = _html(at)                                                  # member home: their matches only
-    assert METLIFE_TITLE in html and PWC_TITLE not in html
+    html = _html(at)                                                  # member home: no company followed yet
+    assert METLIFE_TITLE not in html and PWC_TITLE not in html and "You aren’t following any companies yet" in html
+    _nav(at, "jobs")                                                  # the job lists start from the answers
+    assert METLIFE_TITLE in _html(at) and PWC_TITLE not in _html(at)
     again = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS)       # a later visit: no onboarding, same answers
     assert again.session_state.page == "home" and "Where do you want to work?" not in _html(again)
     _nav(again, "settings")
@@ -113,7 +115,9 @@ def test_skipping_onboarding_saves_nothing_but_finishes_it(app, google_env, stor
     prof = store.backend.get(f"users/{A_UID}")
     assert prof["onboarding"]["status"] == "complete" and prof["preferences"]["locations"] == []
     html = _html(at)
-    assert at.session_state.page == "home" and PWC_TITLE in html and METLIFE_TITLE in html
+    assert at.session_state.page == "home" and PWC_TITLE not in html and METLIFE_TITLE not in html
+    _nav(at, "jobs")
+    assert PWC_TITLE in _html(at) and METLIFE_TITLE in _html(at)
 
 
 # ── account menu and roles ────────────────────────────────────────────────────
@@ -303,7 +307,8 @@ def test_people_never_see_each_others_choices(app, google_env, store):
     a.set_notifications(True, "general")
     b_at = _sign_in(app, google_env, B_UID, B_MAIL, seen=JOBS)            # onboarding skipped
     html = _html(b_at)
-    assert PWC_TITLE in html and METLIFE_TITLE in html                # B's defaults are B's own (none)
+    assert PWC_TITLE not in html and METLIFE_TITLE not in html        # B follows nothing: not A's MetLife
+    assert "You aren’t following any companies yet" in html
     for page in ("settings", "jobs", "alerts"):
         b_at.session_state["page"] = page
         b_at.run()
@@ -412,7 +417,9 @@ def test_a_new_family_is_saved_and_filters_the_jobs(app, google_env, store):
 
 
 def test_job_type_and_work_mode_are_saved_but_never_matched(app, google_env, store):
-    _ready(store, A_UID, A_MAIL).set_preferences("general", [], [], [], ["internship"], ["remote"])
+    u = _ready(store, A_UID, A_MAIL)
+    u.set_watch_all(True)
+    u.set_preferences("general", [], [], [], ["internship"], ["remote"])
     at = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS)
     html = _html(at)
     assert PWC_TITLE in html and METLIFE_TITLE in html                    # nothing is filtered by them
@@ -469,7 +476,7 @@ def test_page_clicks_do_not_refetch_github_data(app, google_env, store, monkeypa
                 "data/seen_jobs.json": list(JOBS)}
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
     monkeypatch.setattr(config_store, "fetch_remote_json", fake_fetch)
-    _ready(store, A_UID, A_MAIL)
+    _ready(store, A_UID, A_MAIL).set_watch_all(True)
     _ready(store, B_UID, B_MAIL)
     at = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS)
     assert len(calls) == 1 and PWC_TITLE in _html(at)                    # the first read waits once
