@@ -1243,5 +1243,85 @@
     "claimed_at": "2026-10-08T10:15:35.558203+00:00",
     "notified_at": "2026-10-08T10:15:38.079379+00:00",
     "dismissed": true
+  },
+  {
+    "title": "IN_Specialist 2_Accounts receivable_Operational Excellence_IFS_Gurgaon",
+    "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Gurugram-Novus-Tower/IN-Specialist-2-Accounts-receivable-Operational-Excellence-IFS-Gurgaon_DB_007027-1",
+    "company": "PwC",
+    "location": "Gurugram Novus Tower · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-1 year'",
+    "evidence": {
+      "experience": [
+        "0-1 year"
+      ],
+      "experience_lines": [
+        "0-1 year",
+        "Years of experience required:"
+      ],
+      "fresher_evidence": "0-1 year",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:007027-1",
+      "canonical_url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Gurugram-Novus-Tower/IN-Specialist-2-Accounts-receivable-Operational-Excellence-IFS-Gurgaon_DB_007027-1",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "pwc|workday:007027-1",
+    "date": "Oct 15, 12:07",
+    "first_seen": "2026-10-15T12:07:15.505407+00:00",
+    "id": "PwC_IN_Specialist_2_Accounts_receivable_Oper",
+    "notified": false,
+    "company_id": "pwc",
+    "notify_state": "claimed",
+    "claimed_at": "2026-10-15T12:07:56.932505+00:00"
+  },
+  {
+    "title": "IN_Specialist 2_Accounts receivable_BEST Operations_IFS_Gurgaon",
+    "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Gurugram-Novus-Tower/IN-Specialist-2-Accounts-receivable-BEST-Operations-IFS-Gurgaon_DB_007025-1",
+    "company": "PwC",
+    "location": "Gurugram Novus Tower · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-1 year'",
+    "evidence": {
+      "experience": [
+        "0-1 year"
+      ],
+      "experience_lines": [
+        "0-1 year",
+        "Years of experience required:"
+      ],
+      "fresher_evidence": "0-1 year",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:007025-1",
+      "canonical_url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Gurugram-Novus-Tower/IN-Specialist-2-Accounts-receivable-BEST-Operations-IFS-Gurgaon_DB_007025-1",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "pwc|workday:007025-1",
+    "date": "Oct 15, 12:07",
+    "first_seen": "2026-10-15T12:07:15.505407+00:00",
+    "id": "PwC_IN_Specialist_2_Accounts_receivable_BEST",
+    "notified": false,
+    "company_id": "pwc",
+    "notify_state": "claimed",
+    "claimed_at": "2026-10-15T12:07:56.932505+00:00"
   }
 ]
