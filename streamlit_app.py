@@ -700,7 +700,7 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 /* ── surfaces ── */
 .panel, [class*="st-key-filters_"], .st-key-add_form, .st-key-email_form, .st-key-test_panel, [class*="st-key-set_"],
 .st-key-job_main, .st-key-job_side, .st-key-co_side, .st-key-empty, .st-key-hero, .st-key-job_hero, .st-key-co_hero, .st-key-mail_status,
-.st-key-danger_confirm, .mon tbody tr, [class*="st-key-jr_"], [class*="st-key-cr_"] {
+:is(.st-key-danger_confirm, .st-key-mh_clear_ask), .mon tbody tr, [class*="st-key-jr_"], [class*="st-key-cr_"] {
   background: var(--surface) !important; border: 1px solid var(--border) !important; border-radius: var(--r-lg) !important;
   box-shadow: var(--hi), var(--shadow) !important;
 }
@@ -992,12 +992,12 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 .st-key-btn_run_check [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] { transform: scale(1.15); }
 .st-key-btn_refresh [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"], .st-key-btn_reload [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] { transform: rotate(90deg); }
 /* destructive: quiet until hovered, then unmistakably red */
-.st-key-danger [data-testid^="stBaseButton"] { color: var(--red) !important; }
-.st-key-danger [data-testid^="stBaseButton"]:hover:not(:disabled) { color: var(--red) !important; background: var(--red-soft) !important; border-color: color-mix(in srgb, var(--red) 45%, transparent) !important; }
-.st-key-danger_confirm { padding: 16px 18px !important; gap: 12px !important; border-color: color-mix(in srgb, var(--red) 35%, var(--border)) !important;
+:is(.st-key-danger, .st-key-btn_mh_clear) [data-testid^="stBaseButton"] { color: var(--red) !important; }
+:is(.st-key-danger, .st-key-btn_mh_clear) [data-testid^="stBaseButton"]:hover:not(:disabled) { color: var(--red) !important; background: var(--red-soft) !important; border-color: color-mix(in srgb, var(--red) 45%, transparent) !important; }
+:is(.st-key-danger_confirm, .st-key-mh_clear_ask) { padding: 16px 18px !important; gap: 12px !important; border-color: color-mix(in srgb, var(--red) 35%, var(--border)) !important;
   background: linear-gradient(180deg, var(--red-soft), transparent 140%), var(--surface) !important; }
-.st-key-danger_confirm [data-testid="stBaseButton-secondary"] { color: var(--text) !important; }
-.st-key-danger_confirm [data-testid="stBaseButton-primary"] { background: var(--red) !important; border-color: var(--red) !important; color: #fff !important; box-shadow: 0 8px 18px -10px var(--red) !important; }
+:is(.st-key-danger_confirm, .st-key-mh_clear_ask) [data-testid="stBaseButton-secondary"] { color: var(--text) !important; }
+:is(.st-key-danger_confirm, .st-key-mh_clear_ask) [data-testid="stBaseButton-primary"] { background: var(--red) !important; border-color: var(--red) !important; color: #fff !important; box-shadow: 0 8px 18px -10px var(--red) !important; }
 [class*="st-key-dismiss_"] [data-testid^="stBaseButton"], [class*="st-key-restore_"] [data-testid^="stBaseButton"] { width: 38px !important; padding: 0 !important; color: var(--muted) !important; }
 [class*="st-key-dismiss_"] [data-testid^="stBaseButton"]:hover { color: var(--red) !important; border-color: color-mix(in srgb, var(--red) 40%, transparent) !important; background: var(--red-soft) !important; }
 [class*="st-key-restore_"] [data-testid^="stBaseButton"]:hover { color: var(--accent-text) !important; }
@@ -1589,7 +1589,22 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .mh-hero .page-title { font-size: 34px; line-height: 1.15; font-weight: 800; letter-spacing: -.028em; margin-top: 10px; }
 .mh-hero .page-title em { font-style: normal; background: linear-gradient(92deg, var(--accent), var(--accent-2));
   -webkit-background-clip: text; background-clip: text; color: transparent; }
-[class*="st-key-set_mh_"] { height: 100%; justify-content: space-between; }
+/* the three summary cards: one row of equal-height cards. The keyed card sits
+   in a stLayoutWrapper inside each column, so height: 100% on the card alone
+   resolved against an auto-height parent and every card took its own content
+   height. Each level now stretches to the row's height, and the button is
+   pushed to the bottom so the three line up whatever the content. */
+:is(.st-key-mh_cards, .st-key-mh_cards > [data-testid="stLayoutWrapper"]) > [data-testid="stHorizontalBlock"] { align-items: stretch !important; }
+.st-key-mh_cards [data-testid="stColumn"] { display: flex !important; flex-direction: column !important; }
+.st-key-mh_cards [data-testid="stColumn"] > [data-testid="stVerticalBlock"] { flex: 1 1 auto !important; }
+.st-key-mh_cards [data-testid="stLayoutWrapper"]:has(> [class*="st-key-set_mh_"]) { flex: 1 1 auto !important; display: flex !important; flex-direction: column !important; }
+[class*="st-key-set_mh_"] { flex: 1 1 auto !important; justify-content: flex-start; }
+[class*="st-key-set_mh_"] > [data-testid="stElementContainer"]:last-child { margin-top: auto; }
+/* the job list's section heading, with this member's own bulk-dismiss button beside it */
+.st-key-mh_list_bar { flex-direction: row !important; align-items: flex-end !important; justify-content: space-between !important;
+  flex-wrap: wrap !important; column-gap: 12px !important; row-gap: 10px !important; }
+.st-key-mh_list_bar > [data-testid="stElementContainer"] { width: auto !important; min-width: 0 !important; flex: 0 0 auto !important; }
+.st-key-mh_list_bar > [data-testid="stElementContainer"]:first-child { flex: 1 1 320px !important; }
 .mh-card .h { display: flex; align-items: center; gap: 8px; color: var(--accent-text); }
 .mh-card .h b { color: var(--text); font-size: 15px; }
 .mh-card ul { list-style: none; padding: 0 !important; margin: 10px 0 0 !important; }
@@ -5281,6 +5296,27 @@ def _clear_all(keys: set[str]) -> None:
           "success" if saved else "error")
 
 
+def _dismiss_all_mine(keys: set[str]) -> None:
+    """Member Home's Dismiss all: the jobs listed when this was confirmed go
+    to the viewer's OWN dismissed list (one batched write). The shared
+    listings (data/seen_jobs.json) and every other person's dismissals are
+    never touched, so other members keep seeing these jobs."""
+    st.session_state.mh_clear_confirm = False
+    if USER is None:
+        toast(USER_PROBLEM or "Sign in to dismiss jobs.", "error")
+        return
+    if not keys:
+        return
+    try:
+        USER.dismiss(keys)
+    except user_store.UserStoreError as e:
+        personal_changed()
+        toast(str(e), "error")
+        return
+    _personal_patched(dismissed_add=keys)
+    toast(f"Dismissed {_plural(len(keys), 'job')} for you. Restore any of them from Jobs → Dismissed.", "success")
+
+
 def _toggle_theme() -> None:
     st.session_state.dark_mode = not st.session_state.dark_mode
 
@@ -5754,7 +5790,8 @@ def page_member_home():
                 f'<h1 class="page-title">{title}</h1><p class="hero-sub">{sub}</p></div>{_opportunity_cards()}</div>')
     if ME is not None:
         notif = user_store.notification_settings_from(ME["profile"])
-        cols = st.columns(3)
+        cards_row = st.container(key="mh_cards")
+        cols = cards_row.columns(3)
         cards = [
             ("set_mh_prefs", "tune", "Job preferences",
              pref_list_html(_VIEW["prefs"], "None yet — every qualifying job is shown."),
@@ -5772,18 +5809,41 @@ def page_member_home():
                 st.button(cta, key=f"btn_{key}", on_click=go, args=args, kwargs=kw, use_container_width=True)
     elif USER_PROBLEM:
         st.html(f'<p class="note">{_ms("info", "s16")} {escape(USER_PROBLEM)}</p>')
-    if narrowed:
-        st.html('<div class="sec-head"><div><div class="eyebrow sparked">Matching jobs</div><h2 class="section-title">Your matches</h2>'
-                '<p class="section-sub">Newest fresher and entry-level roles that fit your preferences</p></div></div>')
-    else:
-        st.html('<div class="sec-head"><div><div class="eyebrow sparked">Latest opportunities</div><h2 class="section-title">Latest jobs</h2>'
-                '<p class="section-sub">Newest fresher and entry-level roles from every tracked company — the same '
-                'listings every member sees</p></div></div>')
+    with st.container(key="mh_list_bar"):
+        if narrowed:
+            st.html('<div class="sec-head"><div><div class="eyebrow sparked">Matching jobs</div><h2 class="section-title">Your matches</h2>'
+                    '<p class="section-sub">Newest fresher and entry-level roles that fit your preferences</p></div></div>')
+        else:
+            st.html('<div class="sec-head"><div><div class="eyebrow sparked">Latest opportunities</div><h2 class="section-title">Latest jobs</h2>'
+                    '<p class="section-sub">Newest fresher and entry-level roles from every tracked company — the same '
+                    'listings every member sees</p></div></div>')
+        # this person's own Dismiss all (asks first): never the shared listings
+        if mine and USER is not None and not st.session_state.get("mh_clear_confirm"):
+            st.button(f"Dismiss all ({len(mine)})", key="btn_mh_clear", icon=":material/clear_all:",
+                      on_click=st.session_state.__setitem__, args=("mh_clear_confirm", True))
+    if mine and USER is not None and st.session_state.get("mh_clear_confirm"):
+        with st.container(key="mh_clear_ask"):
+            st.html(f'<p class="note" style="color:var(--text);">Dismiss all <b>{len(mine)}</b> '
+                    f'{"matching " if narrowed else ""}{"job" if len(mine) == 1 else "jobs"}? They’re hidden for you only '
+                    '— other members still see them. You can restore any of them from Jobs → Dismissed.</p>')
+            y, n_ = st.columns([1, 3])
+            with y:
+                st.button("Yes, dismiss all", key="btn_mh_clear_yes", type="primary", use_container_width=True,
+                          on_click=_dismiss_all_mine, args=({job_key(j) for j in mine},))
+            with n_:
+                st.button("Cancel", key="btn_mh_clear_no", on_click=st.session_state.__setitem__,
+                          args=("mh_clear_confirm", False))
     if not mine:
         if narrowed:
             empty_state("search_off", "No jobs match your preferences right now",
                         "New roles appear after each scan. You can widen your preferences or browse every job.",
                         lambda: st.button("Browse all jobs", key="btn_mh_all", on_click=go, args=("jobs",)))
+        elif dismissed_jobs:            # this person dismissed them (their own list); others still see them
+            empty_state("inbox", "You’ve dismissed every job",
+                        "New fresher and entry-level roles appear here after each scan. The ones you dismissed are "
+                        "in Jobs → Dismissed, where you can restore them.",
+                        lambda: st.button(f"View {_plural(len(dismissed_jobs), 'dismissed job')}", key="btn_mh_dismissed",
+                                          on_click=lambda: (go("jobs"), st.session_state.update(jobs_tab="dismissed"))))
         else:
             empty_state("travel_explore", "No open jobs right now",
                         "New fresher and entry-level roles appear here after each scan.")
