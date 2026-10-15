@@ -2232,18 +2232,22 @@ def _user_store():
     fb = firebase_auth.config_status(secrets)[0]
     project = fb.project_id if fb else ""
     try:
-        return _user_store_for(user_store.credential_fingerprint(secrets, project), project), ""
+        return _user_store_for(user_store.credential_fingerprint(secrets, project), project, id(user_store.UserStore)), ""
     except _StoreUnavailable as e:
         return None, str(e)
 
 
 @st.cache_resource(show_spinner=False)
-def _user_store_for(fingerprint: str, project_id: str):
+def _user_store_for(fingerprint: str, project_id: str, store_class_id: int):
     """The working store for one credential, shared by every session of
     this process (a Firestore client — it holds no one's data). Keyed by a
     fingerprint of the credential's identity (never the key itself), so a
     different credential gets its own store. A failure raises, and Streamlit
-    never caches an exception."""
+    never caches an exception. Also keyed by the UserStore class itself: a
+    deploy reloads user_store (_reload_changed_local_modules) but Streamlit
+    keeps cache_resource, so the cached store stayed an instance of the OLD
+    class and new methods (resolve_session, delete_account) raised
+    AttributeError in production until the server restarted."""
     store, problem = user_store.configure(_secrets_dict(), project_id)
     if store is None:
         raise _StoreUnavailable(problem)

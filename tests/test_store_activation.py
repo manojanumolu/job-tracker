@@ -112,6 +112,24 @@ def test_a_working_store_is_built_once_and_shared(app, google_env, admins, fake)
     assert {d.rsplit("/", 1)[0] for d in docs if d.count("/") > 1} == {f"users/{A_UID}/sessions", f"users/{B_UID}/sessions"}
 
 
+def test_a_deploy_that_reloads_user_store_gets_a_store_of_the_new_class(app, google_env, admins, fake, monkeypatch):
+    """2026-10-15 production bug: a deploy reloads user_store, but Streamlit
+    keeps cache_resource — the cached store stayed an instance of the OLD
+    UserStore class, and its new methods (resolve_session, delete_account)
+    raised AttributeError. The cache is keyed by the class, so the next run
+    builds a store of the reloaded class."""
+    at = _admin_session(app, google_env, admins, {**GATED, "FIREBASE_SERVICE_ACCOUNT": json.dumps(SA)})
+    before = fake.calls
+
+    class Reloaded(user_store.UserStore):                 # what importlib.reload makes: a new class object
+        pass
+    monkeypatch.setattr(user_store, "UserStore", Reloaded)
+    at.run()
+    assert fake.calls == before + 1 and not at.exception
+    at.run()
+    assert fake.calls == before + 1                                          # and then cached again
+
+
 def test_a_new_key_gets_its_own_store(app, google_env, admins, fake):
     at = _admin_session(app, google_env, admins, {**GATED, "FIREBASE_SERVICE_ACCOUNT": json.dumps(SA)})
     at.secrets["FIREBASE_SERVICE_ACCOUNT"] = json.dumps({**SA, "private_key_id": "key-2"})   # a rotated key

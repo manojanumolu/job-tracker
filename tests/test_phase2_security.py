@@ -424,7 +424,9 @@ def test_shared_caches_hold_no_per_user_data():
     # _source_label takes a company record (shared data), never anything per-user
     # _user_store_for is the Firestore client for one credential (Phase 3): it
     # holds no one's data; its key is a non-secret credential fingerprint and
-    # the project ID; every per-user read goes through a UserData bound to the
+    # the project ID (plus the UserStore class's identity, so a deploy that
+    # reloads user_store gets a store of the new class); every per-user read
+    # goes through a UserData bound to the
     # session's own uid. ("Not configured" and failures are never cached.)
     # _shared_data holds the shared GitHub files (companies, settings, seen
     # jobs) — the same for everyone; per-user data is cached only in the
@@ -434,7 +436,7 @@ def test_shared_caches_hold_no_per_user_data():
     # GitHub error text, under a random per-session token — no email, uid,
     # account or job data, and nothing any other session can read.
     assert cached == {"_logo_data_uri": [], "_source_label": ["c"], "_guards": [], "_shared_data": [],
-                      "_user_store_for": ["fingerprint", "project_id"], "_shared_writer": []}, cached
+                      "_user_store_for": ["fingerprint", "project_id", "store_class_id"], "_shared_writer": []}, cached
 
 
 # ---------------------------------------------------------------------------
