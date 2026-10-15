@@ -1666,6 +1666,9 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 3%, var(--surface)), var(--surface) 160px) !important; }
 /* the one-line "open at the top" script of a navigation run: takes no space */
 :is(.st-key-jt_scroll_top, .st-key-jt_menu_guard, .st-key-jt_auth_cookie), [data-testid="stLayoutWrapper"]:has(> :is(.st-key-jt_scroll_top, .st-key-jt_menu_guard, .st-key-jt_auth_cookie)) { display: none !important; }
+/* the session probe's frame: loaded and running, but taking no space */
+.st-key-jt_auth_probe, [data-testid="stLayoutWrapper"]:has(> .st-key-jt_auth_probe) { position: absolute !important; width: 1px !important;
+  height: 1px !important; overflow: hidden !important; opacity: 0 !important; pointer-events: none !important; }
 /* Settings: the tracker section, drawn for admins only */
 .admin-head { display: flex; gap: 14px; align-items: flex-start; margin-top: 10px; padding: 18px 4px 4px;
   border-top: 1px dashed var(--border-strong); }
@@ -2511,6 +2514,9 @@ def _write_session_cookie(value: str) -> None:
 
 
 def _browser_session_cookie() -> str:
+    """jt_session as the server received it. Streamlit Community Cloud's
+    proxy keeps cookies an app sets from reaching the server, so there this
+    is always "" (it works when self-hosted and locally)."""
     try:
         value = st.context.cookies.get(SESSION_COOKIE)
     except Exception:
@@ -2518,12 +2524,36 @@ def _browser_session_cookie() -> str:
     return value if isinstance(value, str) else ""
 
 
+def _browser_session_token() -> str | None:
+    """This browser's jt_session: from the request when the server can see
+    it, else from the session probe. None = the probe hasn't reported yet
+    (it does within a moment of the page loading, which runs the app again)."""
+    raw = _browser_session_cookie()
+    if raw or not _browser_connected():          # (AppTest has no browser)
+        return raw
+    with st.container(key="jt_auth_probe"):
+        import session_probe              # assets/session_probe: reads jt_session in the browser (see the module)
+        value = session_probe.probe(key="jt_session_probe", default=None)
+    return value if value is None or isinstance(value, str) else ""
+
+
+def _known_session_token() -> str:
+    """The jt_session this browser is known to hold, without asking again."""
+    value = _browser_session_cookie() or st.session_state.get("jt_session_probe")
+    return value if isinstance(value, str) else ""
+
+
 def _restore_email_session() -> dict | None:
     """This browser's email sign-in, from its jt_session cookie (see above),
     or None. Tried once per connection and cookie value."""
-    raw = _browser_session_cookie()
-    store = _user_store()[0] if raw else None
-    if store is None or st.session_state.get("_restore_tried") == raw:
+    store = _user_store()[0]
+    if store is None:                             # no per-user data: no browser sessions either
+        return None
+    raw = _browser_session_token()
+    if raw is None:
+        st.session_state._probe_pending = True    # the gate waits for the probe instead of the login page
+        return None
+    if not raw or st.session_state.get("_restore_tried") == raw:
         return None
     st.session_state._restore_tried = raw
     try:
@@ -2723,8 +2753,22 @@ def _login_submit() -> None:
 
 
 # a moment to read "Signed in successfully" before the dashboard replaces it
-# (only in a real browser session: AppTest has no runtime and needn't wait)
+# (only with a real browser connected: AppTest needn't wait)
 _SIGNED_IN_PAUSE_S = 0.6
+
+
+def _browser_connected() -> bool:
+    """A real browser is connected to this run (False under AppTest, whose
+    runtime hands out a mock client). If Streamlit's internals change,
+    assume a browser: that is what production needs."""
+    try:
+        from unittest.mock import Mock
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+        ctx = get_script_run_ctx()
+        client = st.runtime.get_instance().get_client(ctx.session_id) if ctx is not None else None
+        return client is not None and not isinstance(client, Mock)
+    except Exception:
+        return True
 
 
 def _run_login_attempt(status) -> None:
@@ -2745,7 +2789,7 @@ def _run_login_attempt(status) -> None:
     if ok:
         status.html(f'<div class="login-ok" role="status" aria-live="polite">{_ms("check_circle", "s20")}'
                     '<div>Signed in successfully</div></div>')
-        if st.runtime.exists():
+        if _browser_connected():
             time.sleep(_SIGNED_IN_PAUSE_S)
     else:
         st.session_state._login_error = msg
@@ -3074,7 +3118,7 @@ def render_login_page() -> None:
     # popped at once: a run interrupted mid-attempt never leaves the form locked
     attempt = email_ok and bool(st.session_state.pop("_login_pending", False))
     # a session cookie that didn't sign anyone in (signed out, expired, ended)
-    if st.session_state.pop("_clear_session_cookie", False) or _browser_session_cookie():
+    if st.session_state.pop("_clear_session_cookie", False) or _known_session_token():
         _write_session_cookie("")
     art, side = st.columns([1.6, 1], gap="large", vertical_alignment="center")
     with art:
@@ -3172,6 +3216,12 @@ if _GOOGLE_PROBLEM:
 ACCOUNT: dict | None = None
 if AUTH_GATE:
     ACCOUNT = resolve_account(_GOOGLE, _AUTH_CONFIG)
+    if ACCOUNT is None and st.session_state.pop("_probe_pending", False):
+        # the browser is still reporting its session (a moment after a
+        # reload): not the login page yet — the report runs the app again
+        st.html(f'<div class="jt-skel" role="status" aria-live="polite"><p>{_ms("progress_activity", "s16")}'
+                'Checking your sign-in…</p></div>')
+        st.stop()
     if ACCOUNT is None:
         render_login_page()
         st.stop()

@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>session</title></head>
+<body>
+<script>
+// Fresher Job Tracker: the email sign-in's browser session, read in the
+// browser and handed to the app's own server. Streamlit Community Cloud
+// keeps cookies an app sets from reaching the server, so the server can't
+// read jt_session itself. This frame is served by the app (same origin),
+// reads ONLY that one cookie and posts it ONLY to its own origin (never
+// "*"), using Streamlit's component messages. The server checks the value
+// like any untrusted input (a session must exist for it).
+(function () {
+  var origin = window.location.origin;
+  var match = document.cookie.match(/(?:^|;\s*)jt_session=([A-Za-z0-9_.-]{1,200})(?:;|$)/);
+  var value = match ? match[1] : "";
+  var sent = false;
+  function post(message) {
+    message.isStreamlitMessage = true;
+    window.parent.postMessage(message, origin);
+  }
+  window.addEventListener("message", function (event) {
+    if (event.origin !== origin || sent || !event.data || event.data.type !== "streamlit:render") return;
+    sent = true;
+    post({type: "streamlit:setFrameHeight", height: 0});
+    post({type: "streamlit:setComponentValue", value: value, dataType: "json"});
+  });
+  post({type: "streamlit:componentReady", apiVersion: 1});
+})();
+</script>
+</body>
+</html>

@@ -379,3 +379,29 @@ def test_admins_cannot_delete_their_account_here(app, google_env, store, jar, ad
     _open_from_menu(at)
     assert "Admin accounts can’t be deleted here" in _html(at) and "btn_delete_confirm" not in _buttons(at)
     assert store.identity.states[A_UID] is not None
+
+
+# ── the browser-side session probe (Streamlit Community Cloud) ──────────────
+
+def test_the_session_probe_reads_one_cookie_and_posts_only_to_its_own_origin():
+    """Community Cloud keeps app cookies from reaching the server, so a
+    static same-origin component reads jt_session in the browser. Reviewed
+    like the page scripts: one cookie, own origin only, no network."""
+    import re
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    html = (root / "assets" / "session_probe" / "index.html").read_text("utf-8")
+    script = html.split("<script>", 1)[1].split("</script>", 1)[0]
+    assert re.findall(r"document\.cookie", script) == ["document.cookie"]           # read once, never written
+    assert "jt_session=([A-Za-z0-9_.-]{1,200})" in script
+    assert "window.parent.postMessage(message, origin)" in script and '"*"' not in script.replace('(never\n// "*")', "")
+    assert "event.origin !== origin" in script                                       # answers only its own app
+    for banned in ("fetch", "XMLHttpRequest", "localStorage", "sessionStorage", "eval(", "innerHTML", "src=",
+                   "location.href", "location.assign", "location.replace", "import("):
+        assert banned not in script, banned
+    assert set(re.findall(r'type: "(streamlit:\w+)"', script)) == {
+        "streamlit:setFrameHeight", "streamlit:setComponentValue", "streamlit:componentReady"}
+    src = (root / "src" / "session_probe.py").read_text("utf-8")
+    assert 'declare_component("jt_session_probe", path=str(PATH))' in src
+    app_src = (root / "streamlit_app.py").read_text("utf-8")
+    assert app_src.count("session_probe.probe(") == 1                               # used only at the sign-in gate
