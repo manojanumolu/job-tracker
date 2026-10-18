@@ -1362,10 +1362,11 @@
     "date": "Oct 18, 18:07",
     "first_seen": "2026-10-18T18:07:01.229015+00:00",
     "id": "Accenture_Procure_to_Pay_Operations_New_Associate",
-    "notified": false,
+    "notified": true,
     "company_id": "accenture",
-    "notify_state": "claimed",
-    "claimed_at": "2026-10-18T18:07:40.074336+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-10-18T18:07:40.074336+00:00",
+    "notified_at": "2026-10-18T18:07:44.235155+00:00"
   },
   {
     "title": "Order to Cash Operations New Associate",
@@ -1406,10 +1407,11 @@
     "date": "Oct 18, 18:07",
     "first_seen": "2026-10-18T18:07:01.229015+00:00",
     "id": "Accenture_Order_to_Cash_Operations_New_Associate",
-    "notified": false,
+    "notified": true,
     "company_id": "accenture",
-    "notify_state": "claimed",
-    "claimed_at": "2026-10-18T18:07:40.074336+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-10-18T18:07:40.074336+00:00",
+    "notified_at": "2026-10-18T18:07:44.235155+00:00"
   },
   {
     "title": "Delivery Operations New Associate",
@@ -1449,9 +1451,10 @@
     "date": "Oct 18, 18:07",
     "first_seen": "2026-10-18T18:07:01.229015+00:00",
     "id": "Accenture_Delivery_Operations_New_Associate",
-    "notified": false,
+    "notified": true,
     "company_id": "accenture",
-    "notify_state": "claimed",
-    "claimed_at": "2026-10-18T18:07:40.074336+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-10-18T18:07:40.074336+00:00",
+    "notified_at": "2026-10-18T18:07:44.235155+00:00"
   }
 ]
