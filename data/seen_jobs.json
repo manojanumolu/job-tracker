@@ -1325,5 +1325,133 @@
     "notify_state": "sent",
     "claimed_at": "2026-10-15T12:07:56.932505+00:00",
     "notified_at": "2026-10-15T12:08:01.220308+00:00"
+  },
+  {
+    "title": "Procure to Pay Operations New Associate",
+    "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01669487_en&title=Procure+to+Pay+Operations+New+Associate",
+    "company": "Accenture",
+    "location": "Jaipur · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 to 1 years'",
+    "evidence": {
+      "experience": [
+        "0 to 1 years",
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "Years of Experience: 0 to 1 years",
+        "Accenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil"
+      ],
+      "fresher_evidence": "0 to 1 years",
+      "detail_read": true,
+      "detail_match": "ATS record of this listing",
+      "job_id": "accenture:AIOC-S01669487_en",
+      "canonical_url": "https://accenture.com/in-en/careers/jobdetails?id=AIOC-S01669487_en&title=Procure+to+Pay+Operations+New+Associate",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "accenture|accenture:AIOC-S01669487_en",
+    "date": "Oct 18, 18:07",
+    "first_seen": "2026-10-18T18:07:01.229015+00:00",
+    "id": "Accenture_Procure_to_Pay_Operations_New_Associate",
+    "notified": false,
+    "company_id": "accenture",
+    "notify_state": "claimed",
+    "claimed_at": "2026-10-18T18:07:40.074336+00:00"
+  },
+  {
+    "title": "Order to Cash Operations New Associate",
+    "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01642082_en&title=Order+to+Cash+Operations+New+Associate",
+    "company": "Accenture",
+    "location": "Jaipur · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 to 1 years'",
+    "evidence": {
+      "experience": [
+        "0 to 1 years",
+        "0 to 1 years",
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "Years of Experience: 0 to 1 years",
+        "Years of Experience :0 to 1 years",
+        "Qualifications: Any Graduation",
+        "Accenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil"
+      ],
+      "fresher_evidence": "0 to 1 years",
+      "detail_read": true,
+      "detail_match": "ATS record of this listing",
+      "job_id": "accenture:AIOC-S01642082_en",
+      "canonical_url": "https://accenture.com/in-en/careers/jobdetails?id=AIOC-S01642082_en&title=Order+to+Cash+Operations+New+Associate",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "accenture|accenture:AIOC-S01642082_en",
+    "date": "Oct 18, 18:07",
+    "first_seen": "2026-10-18T18:07:01.229015+00:00",
+    "id": "Accenture_Order_to_Cash_Operations_New_Associate",
+    "notified": false,
+    "company_id": "accenture",
+    "notify_state": "claimed",
+    "claimed_at": "2026-10-18T18:07:40.074336+00:00"
+  },
+  {
+    "title": "Delivery Operations New Associate",
+    "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01601620_en&title=Delivery+Operations+New+Associate",
+    "company": "Accenture",
+    "location": "Jaipur · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 to 1 years'",
+    "evidence": {
+      "experience": [
+        "0 to 1 years",
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "Years of Experience: 0 to 1 years",
+        "Qualifications: Any Graduation",
+        "Accenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil",
+        "Any Graduation   Important Notice"
+      ],
+      "fresher_evidence": "0 to 1 years",
+      "detail_read": true,
+      "detail_match": "ATS record of this listing",
+      "job_id": "accenture:AIOC-S01601620_en",
+      "canonical_url": "https://accenture.com/in-en/careers/jobdetails?id=AIOC-S01601620_en&title=Delivery+Operations+New+Associate",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "accenture|accenture:AIOC-S01601620_en",
+    "date": "Oct 18, 18:07",
+    "first_seen": "2026-10-18T18:07:01.229015+00:00",
+    "id": "Accenture_Delivery_Operations_New_Associate",
+    "notified": false,
+    "company_id": "accenture",
+    "notify_state": "claimed",
+    "claimed_at": "2026-10-18T18:07:40.074336+00:00"
   }
 ]
