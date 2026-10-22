@@ -6,19 +6,19 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-22T09:04:29.533645+00:00",
+    "last_checked": "2026-10-22T12:04:18.275984+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 403,
-      "candidates": 49,
+      "postings_seen": 401,
+      "candidates": 50,
       "details_read": 16,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-10-22T09:03:04.723486+00:00",
-        "finished_at": "2026-10-22T09:06:52.993777+00:00",
+        "started_at": "2026-10-22T12:02:54.772790+00:00",
+        "finished_at": "2026-10-22T12:06:50.807878+00:00",
         "jobs_found": 39,
         "new_jobs": 0,
         "portals": 7,
@@ -26,7 +26,7 @@
       }
     },
     "source": "Avature job search",
-    "last_success": "2026-10-22T09:04:29.533645+00:00"
+    "last_success": "2026-10-22T12:04:18.275984+00:00"
   },
   {
     "id": "avalara",
@@ -35,7 +35,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-22T09:04:31.990667+00:00",
+    "last_checked": "2026-10-22T12:04:21.510923+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -46,8 +46,8 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-10-22T09:03:04.723486+00:00",
-        "finished_at": "2026-10-22T09:06:52.993777+00:00",
+        "started_at": "2026-10-22T12:02:54.772790+00:00",
+        "finished_at": "2026-10-22T12:06:50.807878+00:00",
         "jobs_found": 39,
         "new_jobs": 0,
         "portals": 7,
@@ -55,7 +55,7 @@
       }
     },
     "source": "Jibe/iCIMS API",
-    "last_success": "2026-10-22T09:04:31.990667+00:00"
+    "last_success": "2026-10-22T12:04:21.510923+00:00"
   },
   {
     "id": "pokerstars",
@@ -64,7 +64,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-22T09:04:33.956898+00:00",
+    "last_checked": "2026-10-22T12:04:23.662555+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -75,8 +75,8 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-10-22T09:03:04.723486+00:00",
-        "finished_at": "2026-10-22T09:06:52.993777+00:00",
+        "started_at": "2026-10-22T12:02:54.772790+00:00",
+        "finished_at": "2026-10-22T12:06:50.807878+00:00",
         "jobs_found": 39,
         "new_jobs": 0,
         "portals": 7,
@@ -84,7 +84,7 @@
       }
     },
     "source": "Workday API",
-    "last_success": "2026-10-22T09:04:33.956898+00:00"
+    "last_success": "2026-10-22T12:04:23.662555+00:00"
   },
   {
     "id": "sanofi",
@@ -93,7 +93,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-22T09:04:55.569318+00:00",
+    "last_checked": "2026-10-22T12:04:45.967512+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -104,8 +104,8 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-10-22T09:03:04.723486+00:00",
-        "finished_at": "2026-10-22T09:06:52.993777+00:00",
+        "started_at": "2026-10-22T12:02:54.772790+00:00",
+        "finished_at": "2026-10-22T12:06:50.807878+00:00",
         "jobs_found": 39,
         "new_jobs": 0,
         "portals": 7,
@@ -113,7 +113,7 @@
       }
     },
     "source": "Workday API",
-    "last_success": "2026-10-22T09:04:55.569318+00:00"
+    "last_success": "2026-10-22T12:04:45.967512+00:00"
   },
   {
     "id": "pwc",
@@ -121,20 +121,20 @@
     "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers",
     "locked": true,
     "status": "active",
-    "last_job": "Specialist 2",
-    "last_checked": "2026-10-22T09:06:44.757087+00:00",
+    "last_job": "Associate",
+    "last_checked": "2026-10-22T12:06:42.402308+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 619,
-      "candidates": 619,
-      "details_read": 193,
+      "postings_seen": 624,
+      "candidates": 624,
+      "details_read": 195,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 9,
       "run": {
-        "started_at": "2026-10-22T09:03:04.723486+00:00",
-        "finished_at": "2026-10-22T09:06:52.993777+00:00",
+        "started_at": "2026-10-22T12:02:54.772790+00:00",
+        "finished_at": "2026-10-22T12:06:50.807878+00:00",
         "jobs_found": 39,
         "new_jobs": 0,
         "portals": 7,
@@ -142,7 +142,7 @@
       }
     },
     "source": "Workday API",
-    "last_success": "2026-10-22T09:06:44.757087+00:00"
+    "last_success": "2026-10-22T12:06:42.402308+00:00"
   },
   {
     "id": "accenture",
@@ -151,7 +151,7 @@
     "locked": true,
     "status": "active",
     "last_job": "ISSRRN000733 - Infra Tech Support Practitioner",
-    "last_checked": "2026-10-22T09:06:48.161689+00:00",
+    "last_checked": "2026-10-22T12:06:45.880300+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -162,8 +162,8 @@
       "pending": 0,
       "accepted": 30,
       "run": {
-        "started_at": "2026-10-22T09:03:04.723486+00:00",
-        "finished_at": "2026-10-22T09:06:52.993777+00:00",
+        "started_at": "2026-10-22T12:02:54.772790+00:00",
+        "finished_at": "2026-10-22T12:06:50.807878+00:00",
         "jobs_found": 39,
         "new_jobs": 0,
         "portals": 7,
@@ -171,7 +171,7 @@
       }
     },
     "source": "Accenture job-search API",
-    "last_success": "2026-10-22T09:06:48.161689+00:00"
+    "last_success": "2026-10-22T12:06:45.880300+00:00"
   },
   {
     "id": "c1783687965",
@@ -180,7 +180,7 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-22T09:06:51.992951+00:00",
+    "last_checked": "2026-10-22T12:06:49.807105+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -191,8 +191,8 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-10-22T09:03:04.723486+00:00",
-        "finished_at": "2026-10-22T09:06:52.993777+00:00",
+        "started_at": "2026-10-22T12:02:54.772790+00:00",
+        "finished_at": "2026-10-22T12:06:50.807878+00:00",
         "jobs_found": 39,
         "new_jobs": 0,
         "portals": 7,
@@ -200,6 +200,6 @@
       }
     },
     "source": "Zoho Recruit career site",
-    "last_success": "2026-10-22T09:06:51.992951+00:00"
+    "last_success": "2026-10-22T12:06:49.807105+00:00"
   }
 ]
