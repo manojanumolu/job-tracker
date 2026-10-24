@@ -53,7 +53,7 @@
       "status": "none",
       "reason": "pwc.com: HTTP 403",
       "hint": "01e065396c8f7597",
-      "checked_at": "2026-10-09T16:58:38+00:00"
+      "checked_at": "2026-10-24T07:34:58+00:00"
     },
     "accenture": {
       "status": "ok",
@@ -72,10 +72,20 @@
       "checked_at": "2026-10-09T16:58:42+00:00"
     },
     "c1783687965": {
-      "status": "none",
-      "reason": "npci.org.in: robots.txt; npci.com: ConnectError",
+      "status": "ok",
+      "domain": "npci.org.in",
+      "page": "https://www.npci.org.in/",
+      "web": {
+        "mime": "image/png",
+        "data": "iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAABwElEQVR42u2ZT0rEMBTGxxv0CBEXulEG3LiSAXHfvZseYbbiHwoiiLOYIwRP0CPMxqXQIwx4geIJ4nsQJNaXpLXYfpEJBBez+f38Mpmvr7PZbv2z9XGzX9BWvs/3VpdLdIGKtvbAK9qG/yILGLuV9N+3AhoVfuEIrAWBygpgpsDQjkBDO2sJNI6ARhSoHQHepQO/cODxUuAz34L/lgLBloKARhIoBIGvFAi2FgRwUuCr0yPQXD+cKg88Tgr2uEgC5qU83gQEpk+BIOc+eN7vtwcme74wsCkQ5DIkwJuOkYFNgQA3MQHoFGLw0CkQWN5VADKFVn1ILwWhPqSTgqc+pJNCoD6kkYJ9+jLJphCqD/ApxOoDfApck4cKXD2eheC5fmeT1ofQ8ZkaPhsCf/J0Ph183/rQE776c/jf1IeO8KP+Am9ThlfJwvetD6/3R5D1uUoWvmt96ABfIAxv04LvUh+g4WNPX293hzU6fKg+aOflBR58pD5oO7yVxof8PiBHHt5qZ/4vwc+RxufbAHyODq988FZgDQsvDG9/fCGdlxd48K36IMEraHinPohXIV+RozxFDZw+eO9xK4AJv1sjrE9a5/TXMH8sSQAAAABJRU5ErkJggg==",
+        "w": 48,
+        "h": 48,
+        "src": "https://www.npci.org.in/favicons.ico",
+        "kind": "apple-touch-icon"
+      },
+      "email": "web",
       "hint": "daaa3ae41196c101",
-      "checked_at": "2026-10-09T16:58:50+00:00"
+      "checked_at": "2026-10-24T07:34:59+00:00"
     },
     "avalara": {
       "status": "ok",
