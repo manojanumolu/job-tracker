@@ -6,19 +6,19 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-23T21:04:19.977978+00:00",
+    "last_checked": "2026-10-24T00:04:30.844119+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 404,
+      "postings_seen": 403,
       "candidates": 53,
       "details_read": 17,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-10-23T21:03:01.412215+00:00",
-        "finished_at": "2026-10-23T21:07:17.132959+00:00",
+        "started_at": "2026-10-24T00:03:04.950857+00:00",
+        "finished_at": "2026-10-24T00:07:03.799658+00:00",
         "jobs_found": 37,
         "new_jobs": 0,
         "portals": 7,
@@ -26,7 +26,7 @@
       }
     },
     "source": "Avature job search",
-    "last_success": "2026-10-23T21:04:19.977978+00:00"
+    "last_success": "2026-10-24T00:04:30.844119+00:00"
   },
   {
     "id": "avalara",
@@ -35,19 +35,19 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-23T21:04:26.749443+00:00",
+    "last_checked": "2026-10-24T00:04:40.124162+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
       "postings_seen": 165,
-      "candidates": 25,
+      "candidates": 24,
       "details_read": 0,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-10-23T21:03:01.412215+00:00",
-        "finished_at": "2026-10-23T21:07:17.132959+00:00",
+        "started_at": "2026-10-24T00:03:04.950857+00:00",
+        "finished_at": "2026-10-24T00:07:03.799658+00:00",
         "jobs_found": 37,
         "new_jobs": 0,
         "portals": 7,
@@ -55,7 +55,7 @@
       }
     },
     "source": "Jibe/iCIMS API",
-    "last_success": "2026-10-23T21:04:26.749443+00:00"
+    "last_success": "2026-10-24T00:04:40.124162+00:00"
   },
   {
     "id": "pokerstars",
@@ -64,7 +64,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-23T21:04:28.945722+00:00",
+    "last_checked": "2026-10-24T00:04:42.169141+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -75,8 +75,8 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-10-23T21:03:01.412215+00:00",
-        "finished_at": "2026-10-23T21:07:17.132959+00:00",
+        "started_at": "2026-10-24T00:03:04.950857+00:00",
+        "finished_at": "2026-10-24T00:07:03.799658+00:00",
         "jobs_found": 37,
         "new_jobs": 0,
         "portals": 7,
@@ -84,7 +84,7 @@
       }
     },
     "source": "Workday API",
-    "last_success": "2026-10-23T21:04:28.945722+00:00"
+    "last_success": "2026-10-24T00:04:42.169141+00:00"
   },
   {
     "id": "sanofi",
@@ -93,7 +93,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-23T21:04:56.392683+00:00",
+    "last_checked": "2026-10-24T00:05:05.771415+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -104,8 +104,8 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-10-23T21:03:01.412215+00:00",
-        "finished_at": "2026-10-23T21:07:17.132959+00:00",
+        "started_at": "2026-10-24T00:03:04.950857+00:00",
+        "finished_at": "2026-10-24T00:07:03.799658+00:00",
         "jobs_found": 37,
         "new_jobs": 0,
         "portals": 7,
@@ -113,7 +113,7 @@
       }
     },
     "source": "Workday API",
-    "last_success": "2026-10-23T21:04:56.392683+00:00"
+    "last_success": "2026-10-24T00:05:05.771415+00:00"
   },
   {
     "id": "pwc",
@@ -121,8 +121,8 @@
     "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers",
     "locked": true,
     "status": "active",
-    "last_job": "IN_Specialist 2_Accounts receivable_BEST Operations_IFS_Gurgaon",
-    "last_checked": "2026-10-23T21:07:08.164815+00:00",
+    "last_job": "Specialist 3",
+    "last_checked": "2026-10-24T00:06:55.631893+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -133,8 +133,8 @@
       "pending": 0,
       "accepted": 9,
       "run": {
-        "started_at": "2026-10-23T21:03:01.412215+00:00",
-        "finished_at": "2026-10-23T21:07:17.132959+00:00",
+        "started_at": "2026-10-24T00:03:04.950857+00:00",
+        "finished_at": "2026-10-24T00:07:03.799658+00:00",
         "jobs_found": 37,
         "new_jobs": 0,
         "portals": 7,
@@ -142,7 +142,7 @@
       }
     },
     "source": "Workday API",
-    "last_success": "2026-10-23T21:07:08.164815+00:00"
+    "last_success": "2026-10-24T00:06:55.631893+00:00"
   },
   {
     "id": "accenture",
@@ -151,7 +151,7 @@
     "locked": true,
     "status": "active",
     "last_job": "Order to Cash Operations New Associate",
-    "last_checked": "2026-10-23T21:07:11.964686+00:00",
+    "last_checked": "2026-10-24T00:06:58.988376+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -162,8 +162,8 @@
       "pending": 0,
       "accepted": 28,
       "run": {
-        "started_at": "2026-10-23T21:03:01.412215+00:00",
-        "finished_at": "2026-10-23T21:07:17.132959+00:00",
+        "started_at": "2026-10-24T00:03:04.950857+00:00",
+        "finished_at": "2026-10-24T00:07:03.799658+00:00",
         "jobs_found": 37,
         "new_jobs": 0,
         "portals": 7,
@@ -171,7 +171,7 @@
       }
     },
     "source": "Accenture job-search API",
-    "last_success": "2026-10-23T21:07:11.964686+00:00"
+    "last_success": "2026-10-24T00:06:58.988376+00:00"
   },
   {
     "id": "c1783687965",
@@ -180,7 +180,7 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-23T21:07:16.132195+00:00",
+    "last_checked": "2026-10-24T00:07:02.798907+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -191,8 +191,8 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-10-23T21:03:01.412215+00:00",
-        "finished_at": "2026-10-23T21:07:17.132959+00:00",
+        "started_at": "2026-10-24T00:03:04.950857+00:00",
+        "finished_at": "2026-10-24T00:07:03.799658+00:00",
         "jobs_found": 37,
         "new_jobs": 0,
         "portals": 7,
@@ -200,6 +200,6 @@
       }
     },
     "source": "Zoho Recruit career site",
-    "last_success": "2026-10-23T21:07:16.132195+00:00"
+    "last_success": "2026-10-24T00:07:02.798907+00:00"
   }
 ]
