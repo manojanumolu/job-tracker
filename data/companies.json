@@ -6,27 +6,27 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-27T18:14:31.461403+00:00",
+    "last_checked": "2026-10-27T21:04:12.234165+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 393,
+      "postings_seen": 396,
       "candidates": 53,
       "details_read": 15,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-10-27T18:13:16.909080+00:00",
-        "finished_at": "2026-10-27T18:17:56.727939+00:00",
-        "jobs_found": 30,
+        "started_at": "2026-10-27T21:02:52.925797+00:00",
+        "finished_at": "2026-10-27T21:06:59.379494+00:00",
+        "jobs_found": 39,
         "new_jobs": 0,
         "portals": 7,
         "portals_failed": 0
       }
     },
     "source": "Avature job search",
-    "last_success": "2026-10-27T18:14:31.461403+00:00"
+    "last_success": "2026-10-27T21:04:12.234165+00:00"
   },
   {
     "id": "avalara",
@@ -35,27 +35,27 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-27T18:14:38.199371+00:00",
+    "last_checked": "2026-10-27T21:04:18.546417+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 164,
+      "postings_seen": 165,
       "candidates": 25,
       "details_read": 0,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-10-27T18:13:16.909080+00:00",
-        "finished_at": "2026-10-27T18:17:56.727939+00:00",
-        "jobs_found": 30,
+        "started_at": "2026-10-27T21:02:52.925797+00:00",
+        "finished_at": "2026-10-27T21:06:59.379494+00:00",
+        "jobs_found": 39,
         "new_jobs": 0,
         "portals": 7,
         "portals_failed": 0
       }
     },
     "source": "Jibe/iCIMS API",
-    "last_success": "2026-10-27T18:14:38.199371+00:00"
+    "last_success": "2026-10-27T21:04:18.546417+00:00"
   },
   {
     "id": "pokerstars",
@@ -64,7 +64,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-27T18:14:40.601141+00:00",
+    "last_checked": "2026-10-27T21:04:20.627971+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -75,16 +75,16 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-10-27T18:13:16.909080+00:00",
-        "finished_at": "2026-10-27T18:17:56.727939+00:00",
-        "jobs_found": 30,
+        "started_at": "2026-10-27T21:02:52.925797+00:00",
+        "finished_at": "2026-10-27T21:06:59.379494+00:00",
+        "jobs_found": 39,
         "new_jobs": 0,
         "portals": 7,
         "portals_failed": 0
       }
     },
     "source": "Workday API",
-    "last_success": "2026-10-27T18:14:40.601141+00:00"
+    "last_success": "2026-10-27T21:04:20.627971+00:00"
   },
   {
     "id": "sanofi",
@@ -93,27 +93,27 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-27T18:15:08.952100+00:00",
+    "last_checked": "2026-10-27T21:04:45.662028+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 90,
-      "candidates": 90,
+      "postings_seen": 89,
+      "candidates": 89,
       "details_read": 39,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-10-27T18:13:16.909080+00:00",
-        "finished_at": "2026-10-27T18:17:56.727939+00:00",
-        "jobs_found": 30,
+        "started_at": "2026-10-27T21:02:52.925797+00:00",
+        "finished_at": "2026-10-27T21:06:59.379494+00:00",
+        "jobs_found": 39,
         "new_jobs": 0,
         "portals": 7,
         "portals_failed": 0
       }
     },
     "source": "Workday API",
-    "last_success": "2026-10-27T18:15:08.952100+00:00"
+    "last_success": "2026-10-27T21:04:45.662028+00:00"
   },
   {
     "id": "pwc",
@@ -121,28 +121,28 @@
     "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers",
     "locked": true,
     "status": "active",
-    "last_job": "IN_Associate _ Internal Audit _Internal Audit Services_ Advisory_ Bangalore",
-    "last_checked": "2026-10-27T18:17:47.578099+00:00",
+    "last_job": "IN_Specialist 2_Accounts receivable_Operational Excellence_IFS_Gurgaon",
+    "last_checked": "2026-10-27T21:06:50.316883+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 641,
-      "candidates": 641,
-      "details_read": 219,
+      "postings_seen": 624,
+      "candidates": 624,
+      "details_read": 217,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 9,
       "run": {
-        "started_at": "2026-10-27T18:13:16.909080+00:00",
-        "finished_at": "2026-10-27T18:17:56.727939+00:00",
-        "jobs_found": 30,
+        "started_at": "2026-10-27T21:02:52.925797+00:00",
+        "finished_at": "2026-10-27T21:06:59.379494+00:00",
+        "jobs_found": 39,
         "new_jobs": 0,
         "portals": 7,
         "portals_failed": 0
       }
     },
     "source": "Workday API",
-    "last_success": "2026-10-27T18:17:47.578099+00:00"
+    "last_success": "2026-10-27T21:06:50.316883+00:00"
   },
   {
     "id": "accenture",
@@ -151,7 +151,7 @@
     "locked": true,
     "status": "active",
     "last_job": "Procure to Pay Operations New Associate",
-    "last_checked": "2026-10-27T18:17:51.357348+00:00",
+    "last_checked": "2026-10-27T21:06:53.724726+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -160,18 +160,18 @@
       "details_read": 0,
       "details_unreadable": 0,
       "pending": 0,
-      "accepted": 21,
+      "accepted": 30,
       "run": {
-        "started_at": "2026-10-27T18:13:16.909080+00:00",
-        "finished_at": "2026-10-27T18:17:56.727939+00:00",
-        "jobs_found": 30,
+        "started_at": "2026-10-27T21:02:52.925797+00:00",
+        "finished_at": "2026-10-27T21:06:59.379494+00:00",
+        "jobs_found": 39,
         "new_jobs": 0,
         "portals": 7,
         "portals_failed": 0
       }
     },
     "source": "Accenture job-search API",
-    "last_success": "2026-10-27T18:17:51.357348+00:00"
+    "last_success": "2026-10-27T21:06:53.724726+00:00"
   },
   {
     "id": "c1783687965",
@@ -180,7 +180,7 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-10-27T18:17:55.727089+00:00",
+    "last_checked": "2026-10-27T21:06:58.378760+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -191,15 +191,15 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-10-27T18:13:16.909080+00:00",
-        "finished_at": "2026-10-27T18:17:56.727939+00:00",
-        "jobs_found": 30,
+        "started_at": "2026-10-27T21:02:52.925797+00:00",
+        "finished_at": "2026-10-27T21:06:59.379494+00:00",
+        "jobs_found": 39,
         "new_jobs": 0,
         "portals": 7,
         "portals_failed": 0
       }
     },
     "source": "Zoho Recruit career site",
-    "last_success": "2026-10-27T18:17:55.727089+00:00"
+    "last_success": "2026-10-27T21:06:58.378760+00:00"
   }
 ]
