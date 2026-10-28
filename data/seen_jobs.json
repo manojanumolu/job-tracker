@@ -1498,5 +1498,49 @@
     "notify_state": "sent",
     "claimed_at": "2026-10-28T09:07:37.705536+00:00",
     "notified_at": "2026-10-28T09:07:41.358016+00:00"
+  },
+  {
+    "title": "Sales Prog & Incentive Mgmt New Assoc",
+    "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01672698_en&title=Sales+Prog+%26+Incentive+Mgmt+New+Assoc",
+    "company": "Accenture",
+    "location": "Gurugram · India",
+    "category": "FRESHER",
+    "reason": "fresher signal: 'Freshers and candidates'",
+    "evidence": {
+      "experience": [
+        "0 to 1 years",
+        "up to one year",
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "Years of Experience: 0 to 1 years",
+        "Freshers and candidates with up to one year of relevant experience may apply.",
+        "Qualifications: Any Graduation",
+        "Accenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil"
+      ],
+      "fresher_evidence": "Freshers and candidates",
+      "detail_read": true,
+      "detail_match": "ATS record of this listing",
+      "job_id": "accenture:AIOC-S01672698_en",
+      "canonical_url": "https://accenture.com/in-en/careers/jobdetails?id=AIOC-S01672698_en&title=Sales+Prog+%26+Incentive+Mgmt+New+Assoc",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "accenture|accenture:AIOC-S01672698_en",
+    "date": "Oct 28, 21:09",
+    "first_seen": "2026-10-28T21:09:03.990517+00:00",
+    "id": "Accenture_Sales_Prog_&_Incentive_Mgmt_New_Assoc",
+    "notified": false,
+    "company_id": "accenture",
+    "notify_state": "claimed",
+    "claimed_at": "2026-10-28T21:09:53.331576+00:00"
   }
 ]
