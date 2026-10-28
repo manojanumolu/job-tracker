@@ -1493,9 +1493,10 @@
     "date": "Oct 28, 09:04",
     "first_seen": "2026-10-28T09:04:17.562835+00:00",
     "id": "MetLife_Associate_Big_Data_Engineer",
-    "notified": false,
+    "notified": true,
     "company_id": "metlife",
-    "notify_state": "claimed",
-    "claimed_at": "2026-10-28T09:07:37.705536+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-10-28T09:07:37.705536+00:00",
+    "notified_at": "2026-10-28T09:07:41.358016+00:00"
   }
 ]
