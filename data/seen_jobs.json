@@ -1456,5 +1456,46 @@
     "notify_state": "sent",
     "claimed_at": "2026-10-18T18:07:40.074336+00:00",
     "notified_at": "2026-10-18T18:07:44.235155+00:00"
+  },
+  {
+    "title": "Associate Big Data Engineer",
+    "url": "https://www.metlifecareers.com/en_US/ml/JobDetail/Associate-Big-Data-Engineer/20923",
+    "company": "MetLife",
+    "location": "Pune, India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-3 years'",
+    "evidence": {
+      "experience": [
+        "0-3 years"
+      ],
+      "experience_lines": [
+        "0-3 years of experience in Data Engineering, Big Data, Data Analytics, or related technology domains.",
+        "Experience with ETL/ELT pipeline development and data integration processes.",
+        "Experience working in cloud-based data engineering environments."
+      ],
+      "fresher_evidence": "0-3 years",
+      "detail_read": true,
+      "detail_match": "JobPosting title/ID",
+      "job_id": "avature:20923",
+      "canonical_url": "https://metlifecareers.com/en_US/ml/JobDetail/Associate-Big-Data-Engineer/20923",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "metlife|avature:20923",
+    "date": "Oct 28, 09:04",
+    "first_seen": "2026-10-28T09:04:17.562835+00:00",
+    "id": "MetLife_Associate_Big_Data_Engineer",
+    "notified": false,
+    "company_id": "metlife",
+    "notify_state": "claimed",
+    "claimed_at": "2026-10-28T09:07:37.705536+00:00"
   }
 ]
