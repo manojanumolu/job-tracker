@@ -135,7 +135,9 @@ from access import (
     owner_password_enabled,
     owner_session_valid,
     password_matches,
+    primary_admin_email,
     primary_session_valid,
+    scopes_separated,
     send_test_email,
 )
 
@@ -6442,9 +6444,55 @@ def personal_summary_card() -> None:
                       use_container_width=True)
 
 
+def _deployed_commit() -> str:
+    """The commit this server runs (its checkout's .git), or "unknown"."""
+    try:
+        git = BASE / ".git"
+        head = (git / "HEAD").read_text("utf-8").strip()
+        if not head.startswith("ref: "):
+            return head[:7]
+        ref = head[5:]
+        if (git / ref).is_file():
+            return (git / ref).read_text("utf-8").strip()[:7]
+        for line in (git / "packed-refs").read_text("utf-8").splitlines():
+            if line.endswith(" " + ref):
+                return line.split()[0][:7]
+    except OSError:
+        pass
+    return "unknown"
+
+
+def render_scope_diag() -> None:
+    """?diag=scope (admins only, read-only): how THIS signed-in account's
+    monitoring is resolved on this server — role, personal data, company
+    scope, followed companies and which pages it gets. Only this viewer's
+    own state, as names, booleans and counts: no email address, no UID,
+    nothing about any other account."""
+    follows = sorted(((c.get("name") or "").strip() or "Unnamed" for c in companies
+                      if ME is not None and str(c.get("id")) in ME["watchlist"]), key=str.lower)
+    rows = [("Deployed commit", _deployed_commit()),
+            ("Admin roles separated (JT_PRIMARY_ADMIN_EMAIL set)", str(scopes_separated())),
+            ("JT_PRIMARY_ADMIN_EMAIL is one of the admins", str(bool(primary_admin_email()))),
+            ("This account", "primary admin" if IS_PRIMARY else "other admin" if OTHER_ADMIN else "member"),
+            ("Personal data", "on" if ME is not None else f"off — {USER_PROBLEM or 'not set up'}"),
+            ("Company scope", "—" if _VIEW is None else "every tracked company" if _VIEW["watch_all"]
+             else "only the companies this account follows"),
+            ("Followed companies", f"{len(follows)}: {', '.join(follows)}" if follows else "0"),
+            ("Home shows", "this account's own feed" if MEMBER_VIEW or OWN_SCOPE else "the admin dashboard"),
+            ("Companies page shows", "My companies (this account's selection)" if MEMBER_VIEW or OWN_SCOPE
+             else "the tracker's catalogue"),
+            ("Tracker catalogue", _plural(len(companies), "company", "companies"))]
+    page_header("Monitoring diagnostics", "This account only · read-only")
+    st.html("<table id='scope-diag'>" + "".join(f"<tr><td>{escape(a)}</td><td><code>{escape(b)}</code></td></tr>"
+                                                 for a, b in rows) + "</table>")
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # ROUTER
 # ═══════════════════════════════════════════════════════════════════════════════
+if st.query_params.get("diag") == "scope" and IS_ADMIN and is_owner():
+    render_scope_diag()
+    st.stop()
 _report_background_saves()
 page = st.session_state.page
 jobs_by_id = {_jid(j): j for j in all_records}

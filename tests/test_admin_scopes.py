@@ -491,3 +491,95 @@ def test_changing_the_second_admins_companies_never_changes_the_first(app, googl
     user_alerts.run(UserStore(store.backend, ids), seen, personal, run_id="r1")
     assert sorted(personal.sent) == sorted([(A_MAIL, [job_key(seen[0])]),
                                             (B_MAIL, sorted([job_key(seen[1]), job_key(seen[2])]))])
+
+
+# ---------------------------------------------------------------------------
+# B follows exactly five of the seven catalogue companies
+# ---------------------------------------------------------------------------
+
+FIVE = ("metlife", "avalara", "pokerstars", "sanofi", "pwc")
+FIVE_NAMES = ("MetLife", "Avalara", "PokerStars", "Sanofi", "PwC")
+CATALOGUE_IDS = FIVE + ("accenture", "c1783687965")          # the repository's seven (Accenture, NPCI)
+
+
+def _section(html, start, end):
+    i = html.index(start)
+    j = html.find(end, i)
+    return html[i:j if j != -1 else len(html)]
+
+
+def test_the_second_admin_sees_and_follows_only_their_five_companies(app, google_env, store, two_admins):
+    assert {c["id"] for c in _companies_in_repo()} == set(CATALOGUE_IDS)
+    jobs = [rec(cid, i, company=name) for i, (cid, name) in
+            enumerate(zip(CATALOGUE_IDS, FIVE_NAMES + ("Accenture", "NPCI")))]
+    a = _sign_in(app, google_env, A_UID, A_MAIL, seen=jobs)
+    a_before = _without_activity(_docs_of(store, A_UID))
+    b = _sign_in(app, google_env, B_UID, B_MAIL, seen=jobs)
+    _nav(b, "companies")
+    b.button(key="btn_co_pick").click().run()                       # "Choose companies" on an empty My companies
+    for cid in FIVE:
+        b.button(key=f"fa_{_wkey('a', cid)}").click().run()         # Follow, from B's own page
+        assert not b.exception
+    assert store.for_uid(B_UID).watchlist() == set(FIVE)            # stored under B's UID only
+    html = _html(b)
+    assert "My companies" in html and "Following 5" in html
+    following = _section(html, "Following 5", "Add companies")
+    assert all(n in following for n in FIVE_NAMES)
+    assert "Accenture" not in following and "NPCI" not in following  # listed to add, not followed
+    _nav(b, "home")
+    feed = _html(b)
+    assert all(j["title"] in feed for j in jobs[:5])
+    assert jobs[5]["title"] not in feed and jobs[6]["title"] not in feed
+    # A: the catalogue, every listing, and the same Firestore tree as before
+    assert _without_activity(_docs_of(store, A_UID)) == a_before
+    assert store.for_uid(A_UID).watchlist() == set()
+    _nav(a, "home")
+    assert all(j["title"] in _html(a) for j in jobs)
+    _nav(a, "companies")
+    assert "7 career portals monitored" in _html(a) and "Following 5" not in _html(a)
+    assert {c["id"] for c in _companies(a)} == set(CATALOGUE_IDS)   # nothing removed or added
+
+
+def _companies_in_repo():
+    return json.loads((REPO / "data" / "companies.json").read_text("utf-8"))
+
+
+def _wkey(prefix, key):
+    import hashlib
+    return f"{prefix}_{hashlib.sha1(key.encode('utf-8')).hexdigest()[:16]}"
+
+
+def _diag(at):
+    import html
+    import re
+    table = _section(_html(at), "<table id='scope-diag'>", "</table>")
+    return {html.unescape(k): html.unescape(v)
+            for k, v in re.findall(r"<tr><td>(.*?)</td><td><code>(.*?)</code></td></tr>", table)}
+
+
+def test_the_scope_diagnostics_show_only_the_viewers_own_state(app, google_env, store, two_admins):
+    b = _sign_in(app, google_env, B_UID, B_MAIL)
+    for cid in FIVE:
+        store.for_uid(B_UID).watch(cid, CATALOGUE_IDS)
+    b = _sign_in(app, google_env, B_UID, B_MAIL, query={"diag": "scope"})
+    d = _diag(b)
+    assert d["This account"] == "other admin" and d["Personal data"] == "on"
+    assert d["Admin roles separated (JT_PRIMARY_ADMIN_EMAIL set)"] == "True"
+    assert d["Company scope"] == "only the companies this account follows"
+    assert d["Followed companies"] == "5: Avalara, MetLife, PokerStars, PwC, Sanofi"
+    assert d["Companies page shows"].startswith("My companies") and d["Tracker catalogue"] == "7 companies"
+    assert d["Deployed commit"] != ""
+    table = _section(_html(b), "<table id='scope-diag'>", "</table>")
+    for secret in (A_MAIL, B_MAIL, SHARED_RECIPIENT, A_UID, B_UID, "@"):
+        assert secret not in table                                 # no address, no UID — not even B's own
+    for other in (A_MAIL, SHARED_RECIPIENT, A_UID):
+        assert other not in _html(b)                               # (the account menu shows only B's own)
+    a = _sign_in(app, google_env, A_UID, A_MAIL, query={"diag": "scope"})
+    d = _diag(a)
+    assert d["This account"] == "primary admin" and d["Followed companies"] == "0"
+    assert d["Companies page shows"] == "the tracker's catalogue"
+
+
+def test_the_scope_diagnostics_are_admins_only(app, google_env, store, two_admins):
+    m = _sign_in(app, google_env, M_UID, M_MAIL, query={"diag": "scope"})
+    assert not m.exception and "scope-diag" not in _html(m)
