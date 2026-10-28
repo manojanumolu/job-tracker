@@ -111,3 +111,34 @@ should likewise deny client access. Publishing this file there is optional.
   session ends within 5 minutes, and they get no personal emails.
 * **Delete** = reset: if they sign in again, Firebase gives them a new UID and
   they return as a fresh Member with empty personal data.
+
+## A second admin (separate monitoring)
+
+Admins are not equal (`src/access.py`). The **primary admin** owns the shared
+monitoring: the `ALERT_RECIPIENT` email, the shared dismissals and alert
+ledger in `data/seen_jobs.json`, which catalogue companies the shared alerts
+cover, and the scan interval. **Every other admin** monitors through their
+own account: the companies they follow, their own dismissals and delivery
+ledger, and alerts to their own verified email (My alerts). They can add
+companies — saved with `"shared_alerts": false`, so they never reach the
+primary admin's email — and run checks, but they never see or change the
+primary admin's recipient, dismissals, companies or interval. One scanner and
+one job store serve both; each job's `company_id` keeps the scopes apart.
+
+To add one, in the Streamlit secrets only (never a file in this repository):
+
+1. First set `JT_PRIMARY_ADMIN_EMAIL` to the existing admin's address. Until
+   it is set every admin is primary, as before the split — so never add a
+   second admin without it. Set to an address that isn't in
+   `JT_ADMIN_EMAILS`, nobody is primary (fail closed: the shared settings are
+   locked for every admin, nothing is handed to another one); fix the value
+   to unlock them.
+2. Check the existing admin still sees the full alert recipient under
+   Email & Notifications, then add the second address to `JT_ADMIN_EMAILS`
+   (order doesn't matter).
+3. The second admin signs in with that verified email, follows companies (or
+   adds new ones) and turns on My alerts. Their emails go out at most every
+   6 hours, like every personal alert.
+
+No GitHub secret or workflow changes: the scanner already sends both kinds of
+alert (`alerts.py` for the shared one, `user_alerts.py` for personal ones).

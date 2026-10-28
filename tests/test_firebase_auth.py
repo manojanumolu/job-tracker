@@ -324,8 +324,10 @@ def no_env(monkeypatch):
     monkeypatch.delenv("FIREBASE_WEB_API_KEY", raising=False)
     monkeypatch.delenv("FIREBASE_PROJECT_ID", raising=False)
     monkeypatch.delenv("JT_ADMIN_EMAILS", raising=False)
+    monkeypatch.delenv("JT_PRIMARY_ADMIN_EMAIL", raising=False)
     yield
     os.environ.pop("JT_ADMIN_EMAILS", None)     # the app may promote it from st.secrets
+    os.environ.pop("JT_PRIMARY_ADMIN_EMAIL", None)
 
 
 @pytest.mark.parametrize("secrets", [

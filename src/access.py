@@ -17,6 +17,24 @@ Every change — dismiss/restore, adding or removing a company, dismissing
 all, Run check, test email — needs admin rights. The check is made on the
 server where each operation happens, not just by hiding buttons.
 
+Two kinds of admin (Oct 2026), so a second admin never changes the first
+one's monitoring:
+
+  * the PRIMARY admin owns the shared monitoring scope — the
+    ALERT_RECIPIENT email, the shared dismissals and alert ledger in
+    seen_jobs.json, the catalogue companies in the shared alerts and the
+    global scan interval. It is the address in the JT_PRIMARY_ADMIN_EMAIL
+    secret, which must also be in JT_ADMIN_EMAILS (if it isn't, nobody is
+    primary — fail closed: never another admin). Until that secret is set
+    every admin is primary, exactly as before the split, so deploying this
+    changes nobody's access. With the legacy owner password the one owner
+    is the primary admin.
+  * any other admin monitors through their own account (Firestore, by
+    UID): the companies they follow, their own dismissals and delivery
+    ledger, and their own verified email as the recipient. They can add
+    companies (kept out of the shared alerts) and run checks, but never
+    see or change the primary admin's recipient or shared settings.
+
 The alert recipient is personal, and the repository is public, so it comes
 ONLY from the ALERT_RECIPIENT secret (GitHub Actions and Streamlit secrets).
 A ``recipient_email`` field in settings.json is ignored: nothing ever falls
@@ -40,6 +58,7 @@ MIN_PASSWORD_LEN = 12
 OWNER_SESSION_S = 8 * 3600       # an owner sign-in lasts for one working day
 OWNER_SESSION_KEY = "_owner_until"  # session-state key: when the owner sign-in expires
 ADMIN_EMAILS_ENV = "JT_ADMIN_EMAILS"
+PRIMARY_ADMIN_ENV = "JT_PRIMARY_ADMIN_EMAIL"
 ACCOUNT_KEY = "_account"            # session-state key: the signed-in account (see module doc)
 MAX_SIGNIN_FAILURES = 10         # per window, across every browser session
 SIGNIN_WINDOW_S = 15 * 60
@@ -69,10 +88,31 @@ def password_matches(candidate: str) -> bool:
                                hashlib.sha256(expected.encode("utf-8")).digest())
 
 
+def _admin_email_list() -> list[str]:
+    """JT_ADMIN_EMAILS in the order it was written, without repeats."""
+    out: list[str] = []
+    for e in re.split(r"[,\s;]+", os.environ.get(ADMIN_EMAILS_ENV, "")):
+        e = e.strip().lower()
+        if "@" in e and e not in out:
+            out.append(e)
+    return out
+
+
 def admin_emails() -> frozenset[str]:
     """The admin allowlist: JT_ADMIN_EMAILS, comma/space separated."""
-    raw = os.environ.get(ADMIN_EMAILS_ENV, "")
-    return frozenset(e.strip().lower() for e in re.split(r"[,\s;]+", raw) if "@" in e)
+    return frozenset(_admin_email_list())
+
+
+def scopes_separated() -> bool:
+    """Is JT_PRIMARY_ADMIN_EMAIL set? Only then do admins differ."""
+    return bool(os.environ.get(PRIMARY_ADMIN_ENV, "").strip())
+
+
+def primary_admin_email() -> str:
+    """The admin who owns the shared monitoring scope (see the module doc):
+    JT_PRIMARY_ADMIN_EMAIL when it is one of the admins, else ""."""
+    chosen = os.environ.get(PRIMARY_ADMIN_ENV, "").strip().lower()
+    return chosen if chosen and chosen in _admin_email_list() else ""
 
 
 def admins_configured() -> bool:
@@ -99,6 +139,17 @@ def account_is_admin(account, now: float | None = None) -> bool:
     email = account.get("email")
     return (account.get("email_verified") is True and isinstance(email, str)
             and email.strip().lower() in admin_emails())
+
+
+def account_is_primary_admin(account, now: float | None = None) -> bool:
+    """An admin account (account_is_admin) that is also the primary admin —
+    any admin while the scopes aren't separated (scopes_separated)."""
+    if not account_is_admin(account, now):
+        return False
+    if not scopes_separated():
+        return True
+    primary = primary_admin_email()
+    return bool(primary) and account["email"].strip().lower() == primary
 
 
 def account_matches_source(account, google, firebase_user) -> bool:
@@ -134,6 +185,21 @@ def owner_session_valid(session, now: float | None = None) -> bool:
     except (TypeError, ValueError, AttributeError):
         return False
     return until > (time.time() if now is None else now)
+
+
+def primary_session_valid(session, now: float | None = None) -> bool:
+    """May this session change the SHARED monitoring scope (shared
+    dismissals, the scan interval, the shared alerts' companies, the
+    ALERT_RECIPIENT test email)? owner_session_valid, and with
+    JT_ADMIN_EMAILS set only for the primary admin's account."""
+    if not owner_session_valid(session, now):
+        return False
+    if not admins_configured():
+        return True                       # the legacy owner password: one owner, the primary
+    try:
+        return account_is_primary_admin(session.get(ACCOUNT_KEY), now)
+    except AttributeError:
+        return False
 
 
 class AttemptLimiter:
@@ -264,15 +330,29 @@ class OwnerRequired(PermissionError):
     """A protected operation was attempted without a valid owner sign-in."""
 
 
+def monitoring_recipient(session, settings: dict | None = None) -> str:
+    """Where this admin's alerts go: the primary admin's is the
+    ALERT_RECIPIENT secret; any other admin's is their own verified account
+    email (account_is_admin requires it verified) — never the other's.
+    "" when there is none (or the session isn't an admin's)."""
+    if not owner_session_valid(session):
+        return ""
+    if primary_session_valid(session):
+        return alert_recipient(settings)[0]
+    account = session.get(ACCOUNT_KEY)
+    return account["email"].strip().lower() if account_is_admin(account) else ""
+
+
 def send_test_email(session, settings: dict | None = None) -> str:
     """The test-email operation itself: refuses unless ``session`` holds a
-    valid owner sign-in, and only ever writes to the configured alert
-    recipient (never to an address supplied by the caller). Returns the
-    address it was sent to. The button that calls this checks too — this
-    is the second, server-side check."""
+    valid owner sign-in, and only ever writes to that admin's own alert
+    recipient (monitoring_recipient — never an address supplied by the
+    caller, and never another admin's). Returns the address it was sent to.
+    The button that calls this checks too — this is the second, server-side
+    check."""
     if not owner_session_valid(session):
         raise OwnerRequired("owner sign-in required to send a test email")
-    recipient, _ = alert_recipient(settings)
+    recipient = monitoring_recipient(session, settings)
     if not recipient:
         raise LookupError("no alert recipient is configured")
     from notifier import test_mail

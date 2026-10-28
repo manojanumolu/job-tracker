@@ -47,6 +47,7 @@ def app(tmp_path, monkeypatch):
     monkeypatch.delenv("FIREBASE_WEB_API_KEY", raising=False)
     monkeypatch.delenv("FIREBASE_PROJECT_ID", raising=False)
     monkeypatch.delenv("JT_ADMIN_EMAILS", raising=False)
+    monkeypatch.delenv("JT_PRIMARY_ADMIN_EMAIL", raising=False)
     monkeypatch.setenv("JT_OWNER_PASSWORD", OWNER_PASSWORD)
     # the repository's layout: the app at the root, its modules in src/,
     # the shared data files in data/ (at.tmp_path below is that data folder)

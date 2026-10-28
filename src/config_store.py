@@ -227,6 +227,29 @@ def alert_pending(job: dict) -> bool:
     )
 
 
+# The shared alerts (alerts.py -> ALERT_RECIPIENT) are the PRIMARY admin's
+# monitoring scope (access.py). A company another admin adds for their own
+# monitoring is marked "shared_alerts": false: still scanned (one shared
+# scanner), shown and followable, but its jobs never reach the shared
+# email. Absent means included — every company from before Oct 2026 is.
+
+def in_shared_alerts(company: dict) -> bool:
+    return not (isinstance(company, dict) and company.get("shared_alerts") is False)
+
+
+def excluded_from_shared_alerts(companies: list[dict] | None) -> frozenset[str]:
+    """IDs of the catalogue companies outside the shared alerts."""
+    return frozenset(str(c["id"]) for c in companies or []
+                     if isinstance(c, dict) and c.get("id") and not in_shared_alerts(c))
+
+
+def shared_alert_pending(job: dict, excluded: frozenset[str] | set[str] = frozenset()) -> bool:
+    """alert_pending, within the shared alerts' companies. A job from an
+    excluded company stays untouched (pending) in the shared ledger: it is
+    simply never claimed for the shared email."""
+    return alert_pending(job) and job.get("company_id") not in excluded
+
+
 def visible_jobs(seen: list[dict]) -> list[dict]:
     """Alerts to show, newest first (records are appended oldest-first)."""
     return [j for j in reversed(seen) if isinstance(j, dict) and not j.get("dismissed")]

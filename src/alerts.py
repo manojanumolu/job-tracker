@@ -25,7 +25,7 @@ import sys
 from datetime import datetime, timezone
 
 from access import alert_recipient
-from config_store import alert_pending, load_companies, load_seen_jobs, load_settings
+from config_store import excluded_from_shared_alerts, load_companies, load_seen_jobs, load_settings, shared_alert_pending
 from repo_sync import publish, record_key
 
 logging.basicConfig(level=logging.INFO, format="[alerts] %(message)s")
@@ -39,11 +39,13 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def claim(seen: list[dict], now: str | None = None) -> set[str]:
+def claim(seen: list[dict], now: str | None = None, excluded: frozenset[str] = frozenset()) -> set[str]:
+    """``excluded``: companies outside the shared alerts (another admin's
+    monitoring, config_store.excluded_from_shared_alerts) — never claimed."""
     now = now or _now()
     keys = set()
     for j in seen:
-        if alert_pending(j):
+        if shared_alert_pending(j, excluded):
             j["notify_state"] = "claimed"
             j["claimed_at"] = now
             keys.add(record_key(j))
@@ -82,7 +84,7 @@ def run(send=None, publisher=publish) -> int:
         settings = {}
     # the address is never logged in full: Actions logs of a public repo are public
     recipient, _ = alert_recipient(settings)
-    keys = claim(seen) if recipient else set()
+    keys = claim(seen, excluded=excluded_from_shared_alerts(companies)) if recipient else set()
     if not recipient:
         log.info("No recipient email configured (the ALERT_RECIPIENT secret) — publishing data only")
 

@@ -96,11 +96,13 @@ _LOCAL_MODULES = ["scan_schedule", "identity", "locations", "job_classifier", "s
 _reload_changed_local_modules()
 
 from config_store import (
-    alert_pending,
     dismiss_jobs,
+    excluded_from_shared_alerts,
     fetch_remote_json,
     friendly_github_error,
+    in_shared_alerts,
     job_key,
+    shared_alert_pending,
     update_json,
     visible_jobs,
 )
@@ -128,10 +130,12 @@ from access import (
     admins_configured,
     alert_recipient,
     mask_email,
+    monitoring_recipient,
     owner_configured,
     owner_password_enabled,
     owner_session_valid,
     password_matches,
+    primary_session_valid,
     send_test_email,
 )
 
@@ -1984,6 +1988,26 @@ def is_owner() -> bool:
                                   firebase_auth.session_user(st.session_state))
 
 
+def is_primary() -> bool:
+    """May this session change the SHARED monitoring scope — the shared
+    dismissals and alert ledger (seen_jobs.json), the scan interval
+    (settings.json), which companies the shared alerts cover, the
+    ALERT_RECIPIENT test email? Only the primary admin (access.py); any
+    other admin's monitoring lives in their own account."""
+    return is_owner() and primary_session_valid(st.session_state)
+
+
+def primary_only(action: str) -> bool:
+    """is_primary(); otherwise explain why ``action`` can't happen."""
+    if is_primary():
+        return True
+    if is_owner():
+        toast(f"Only the primary admin can {action}: it changes the shared alerts. "
+              "Your own monitoring is in your account.", "error")
+        return False
+    return owner_only(action)
+
+
 def sign_in(password: str) -> tuple[bool, str]:
     limiter = _guards()["signin"]
     wait = limiter.locked_for()
@@ -2080,6 +2104,21 @@ def _shared_writer() -> dict:
             "failed": {}, "lock": threading.Lock()}
 
 
+def _may_write(name: str) -> bool:
+    """The server-side check under every shared write: an admin, and for
+    anything but the company catalogue the primary admin — seen_jobs.json
+    (shared dismissals, the shared alert ledger) and settings.json (the scan
+    interval) are the shared monitoring scope. Another admin's catalogue
+    changes are limited by the callers' own mutations."""
+    if not is_owner():
+        log.warning("blocked a change to %s from a session without owner access", name)
+        return False
+    if name != "data/companies.json" and not is_primary():
+        log.warning("blocked a change to %s from an admin who isn't the primary admin", name)
+        return False
+    return True
+
+
 def _save_change_soon(name: str, mutate, default, message: str) -> bool:
     """_save_change for an admin's dismissal when their own (Firestore) copy
     already changed: the owner check runs NOW, in this run; the GitHub
@@ -2087,6 +2126,8 @@ def _save_change_soon(name: str, mutate, default, message: str) -> bool:
     doesn't wait for it. The admin's view already follows their own copy."""
     if not is_owner():
         log.warning("blocked a change to %s from a session without owner access", name)
+        return False
+    if not _may_write(name):
         return False
     token = st.session_state.setdefault("_writer_token", os.urandom(16).hex())
     writer, cache = _shared_writer(), _shared_data()
@@ -2123,8 +2164,7 @@ def _save_change(name: str, mutate, default, message: str):
     """Apply one change to the latest copy of ``name`` (merge-safe).
     Every write goes through here, so the owner check is repeated here: a
     button that forgot its own check still can't change anything."""
-    if not is_owner():
-        log.warning("blocked a change to %s from a session without owner access", name)
+    if not _may_write(name):
         return None, False, "Only the owner can make changes."
     data, saved, err = update_json(BASE / name, name, mutate, default, message)
     if data is not None:
@@ -2190,18 +2230,21 @@ def _secrets_dict() -> dict:
 
 
 def _promote_admin_setting() -> None:
-    """JT_ADMIN_EMAILS works wherever it sits in the secrets (top level, or —
-    a common TOML slip — below [auth]); access.py reads the environment."""
-    if os.environ.get("JT_ADMIN_EMAILS", "").strip():
-        return
-    secrets = _secrets_dict()
-    for section in (secrets, secrets.get("auth"), secrets.get("admin")):
-        value = section.get("JT_ADMIN_EMAILS") if isinstance(section, dict) else None
-        if isinstance(value, (list, tuple)):
-            value = ",".join(str(v) for v in value)
-        if isinstance(value, str) and value.strip():
-            os.environ["JT_ADMIN_EMAILS"] = value
-            return
+    """JT_ADMIN_EMAILS (and JT_PRIMARY_ADMIN_EMAIL) work wherever they sit in
+    the secrets (top level, or — a common TOML slip — below [auth]);
+    access.py reads the environment."""
+    secrets = None
+    for key in ("JT_ADMIN_EMAILS", "JT_PRIMARY_ADMIN_EMAIL"):
+        if os.environ.get(key, "").strip():
+            continue
+        secrets = _secrets_dict() if secrets is None else secrets
+        for section in (secrets, secrets.get("auth"), secrets.get("admin")):
+            value = section.get(key) if isinstance(section, dict) else None
+            if isinstance(value, (list, tuple)):
+                value = ",".join(str(v) for v in value)
+            if isinstance(value, str) and value.strip():
+                os.environ[key] = value
+                break
 
 
 def _firebase_config():
@@ -3460,6 +3503,11 @@ CHOSEN_AVATAR = user_store.avatar_from(ME["profile"]) if ME is not None else ""
 # every protected operation). A member never gets the admin's dashboard; the
 # legacy no-sign-in mode keeps its old behaviour.
 IS_ADMIN = is_owner()
+# the primary admin owns the shared monitoring scope (access.py); any other
+# admin monitors through their own account — their follows, dismissals and
+# verified email — and never changes the primary admin's
+IS_PRIMARY = IS_ADMIN and is_primary()
+OTHER_ADMIN = IS_ADMIN and not IS_PRIMARY
 MEMBER_VIEW = bool(AUTH_GATE and ACCOUNT and not IS_ADMIN)
 ADMIN_PAGES = {"monitoring", "email"}
 PERSONAL_PAGES = {"alerts", "preferences", "onboarding"}
@@ -3539,11 +3587,11 @@ for _j in _load_synced("data/seen_jobs.json", []):
         all_records.append(_j)
 if _cold_load is not None:
     _cold_load.empty()
-# With personal data, "dismissed" means dismissed BY THIS VIEWER (an admin's
-# view also includes the shared dismissals that today's alert emails follow);
-# one person's dismissal never hides a job from anyone else.
+# With personal data, "dismissed" means dismissed BY THIS VIEWER (the primary
+# admin's view also includes the shared dismissals that the shared alert
+# emails follow); one person's dismissal never hides a job from anyone else.
 _HIDDEN: set[str] | None = set(ME["dismissed"]) if ME is not None else None
-if _HIDDEN is not None and IS_ADMIN:
+if _HIDDEN is not None and IS_PRIMARY:
     _HIDDEN |= {job_key(j) for j in all_records if j.get("dismissed")}
 
 
@@ -3633,16 +3681,17 @@ if st.session_state.pop("_clear_add_form", False):
 def change_dismissal(keys: set[str], dismiss: bool):
     """Dismiss or restore jobs for the signed-in viewer: (saved, error), or
     None when refused (the reason is already shown).
-    With personal data, the viewer's OWN list changes — members included,
-    never anyone else's — and an admin's change also goes to the shared
-    record that today's alert emails follow. Without personal data only the
-    shared record exists, and only admins may change it."""
+    With personal data, the viewer's OWN list changes — members and other
+    admins included, never anyone else's — and the primary admin's change
+    also goes to the shared record that the shared alert emails follow.
+    Without personal data only the shared record exists, and only the
+    primary admin may change it."""
     action = "dismiss jobs" if dismiss else "restore jobs"
     if USER is None:
-        if USER_PROBLEM and not is_owner():
+        if USER_PROBLEM and not is_primary():
             toast(USER_PROBLEM, "error")
             return None
-        if not owner_only(action):
+        if not primary_only(action):
             return None
     else:
         try:
@@ -3652,7 +3701,7 @@ def change_dismissal(keys: set[str], dismiss: bool):
             toast(str(e), "error")
             return None
         _personal_patched(dismissed_add=keys if dismiss else (), dismissed_remove=() if dismiss else keys)
-        if not is_owner():
+        if not is_primary():
             return True, ""
         if dismiss:
             return (True, "") if _save_change_soon("data/seen_jobs.json", dismiss_jobs(keys), [],
@@ -3747,8 +3796,10 @@ for j in reversed(all_records):
     else:
         jobs_by_company.setdefault((j.get("company") or "").strip(), []).append(j)
 # the ALERT_RECIPIENT secret, else the legacy (public) settings.json field;
-# shown in full only to the owner
+# shown in full only to the primary admin
 recipient, recipient_source = alert_recipient(settings)
+# companies another admin added for their own monitoring: outside the shared alerts
+SHARED_EXCLUDED = excluded_from_shared_alerts(companies)
 
 
 def company_jobs(c: dict) -> list[dict]:
@@ -4819,7 +4870,7 @@ def page_job_detail(j: dict):
                    ("Email alert", "Sent" if j.get("notified")
                     else "Sending — delivery not yet confirmed" if j.get("notify_state") == "claimed"
                     else "Not sent (dismissed)" if j.get("dismissed")
-                    else "Pending — goes out after the next check" if alert_pending(j)
+                    else "Pending — goes out after the next check" if shared_alert_pending(j, SHARED_EXCLUDED)
                     else "Not emailed")]
             st.html(f'<h2 class="section-title">{_ms("link")}Source</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
                     + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in src) + "</dl>")
@@ -4917,8 +4968,12 @@ def page_add_company():
             st.button("Cancel", key="btn_cancel_add", on_click=go, args=("companies",))
     if submit:
         n, u, w = name.strip(), url.strip(), site.strip()
+        mine = not is_primary()          # another admin's company: their own monitoring, not the shared alerts
         if not owner_only("add companies"):
             pass
+        elif mine and USER is None:
+            toast(USER_PROBLEM or "Your account's data isn't available, so the company can't be added "
+                  "to your monitoring right now.", "error")
         elif not n:
             toast("Company name is required", "error")
         elif not safe_url(u):
@@ -4934,15 +4989,26 @@ def page_add_company():
                    "status": "unknown", "last_job": "", "last_checked": ""}
             if w:
                 new["website"] = w
+            if mine:
+                new["shared_alerts"] = False
 
             def _add(latest: list) -> list:
                 if not any((c.get("name") or "").strip().lower() == n.lower() for c in latest):
                     latest.append(new)
                 return latest
 
-            _, saved, err = _save_change("data/companies.json", _add, [], f"chore: add {n}")
-            toast(f"{n} added — it will be checked on the next scan" if saved
-                  else f"{n} added, but not saved permanently. {err}", "success" if saved else "error")
+            data, saved, err = _save_change("data/companies.json", _add, [], f"chore: add {n}")
+            followed = True
+            if mine and data is not None and any(c.get("id") == new["id"] for c in data):
+                try:                     # ... and it is in their own monitoring at once
+                    USER.watch(new["id"], _catalogue_ids() | {new["id"]})
+                    _personal_patched(watch_add=(new["id"],))
+                except (user_store.UserStoreError, user_store.InvalidInput):
+                    personal_changed()
+                    followed = False
+            toast(f"{n} added — it will be checked on the next scan" if saved and followed
+                  else f"{n} added, but it isn't in your monitoring yet — follow it from its page." if saved
+                  else f"{n} added, but not saved permanently. {err}", "success" if saved and followed else "error")
             st.session_state.just_added = new["id"]
             st.session_state._clear_add_form = True
             go("companies")
@@ -4983,16 +5049,82 @@ def _ask_remove_company(cid) -> None:
         st.session_state.confirm_remove = cid
 
 
+def _other_admin_follows(cid: str) -> bool | None:
+    """Does an admin other than this viewer follow the company in their own
+    account? None when that can't be told (the caller then keeps it)."""
+    if _STORE is None:
+        return False                      # no per-user data: nobody follows anything
+    try:
+        return _STORE.followed_by_other_admin(cid, admin_emails(), (ACCOUNT or {}).get("uid") or "")
+    except user_store.UserStoreError:
+        return None
+
+
+def _save_company_change(mutate, message: str, done: str, name: str) -> None:
+    _, saved, err = _save_change("data/companies.json", mutate, [], message)
+    toast(done if saved else f"{done}, but not saved permanently. {err}", "success" if saved else "error")
+
+
 def _remove_company(cid, name: str) -> None:
-    """Stop tracking a company (the owner check is repeated in _save_change)."""
+    """Stop tracking a company (the owner check is repeated in _save_change)
+    — without dropping another admin's monitoring: a company another admin
+    follows stays in the catalogue (the primary admin's removal takes it out
+    of the shared alerts; another admin's removal unfollows it), and an
+    admin who isn't the primary never removes a company of the shared
+    alerts."""
+    st.session_state.confirm_remove = None
     if not owner_only("remove companies"):
-        st.session_state.confirm_remove = None
         return
-    _, saved, err = _save_change("data/companies.json", lambda latest: [x for x in latest if x.get("id") != cid],
-                                 [], f"chore: remove {name}")
-    toast(f"Removed {name}" if saved else f"Removed {name}, but not saved permanently. {err}",
-          "success" if saved else "error")
+    c = next((x for x in companies if x.get("id") == cid), None)
+    primary, shared = is_primary(), c is None or in_shared_alerts(c)
+    if not primary and shared:
+        toast(f"{name} is part of the shared alerts, which only the primary admin changes. "
+              "Unfollow it to drop it from your monitoring.", "error")
+        return
+    others = _other_admin_follows(cid)
+    if others is None:
+        toast(f"Couldn't check whether another admin monitors {name}, so nothing was changed. Try again.", "error")
+        return
+    if not primary and USER is not None:
+        try:
+            USER.unwatch(cid)
+            _personal_patched(watch_remove=(cid,))
+        except user_store.UserStoreError:
+            personal_changed()
+    if others:
+        if primary and shared:
+            _save_company_change(lambda latest: [{**x, "shared_alerts": False} if x.get("id") == cid else x
+                                                 for x in latest],
+                                 f"chore: leave {name} out of the shared alerts",
+                                 f"Removed {name} from the shared alerts — it stays tracked for another admin", name)
+        else:
+            toast(f"Removed {name} from your monitoring — it stays tracked for another admin" if not primary
+                  else f"{name} stays tracked: another admin monitors it", "success" if not primary else "error")
+        go("companies")
+        return
+    # the primary admin's mutation deletes it; anyone else's only while it is
+    # still outside the shared alerts in the latest copy
+    _save_company_change(lambda latest: [x for x in latest if not (x.get("id") == cid and
+                                                                   (primary or not in_shared_alerts(x)))],
+                         f"chore: remove {name}", f"Removed {name}", name)
     go("companies")
+
+
+def _set_shared_alerts(cid, include: bool, name: str) -> None:
+    """The primary admin's choice: is this company in the shared alerts?"""
+    if not primary_only("change the shared alerts"):
+        return
+
+    def _mutate(latest: list) -> list:
+        out = []
+        for x in latest:
+            if x.get("id") == cid:
+                x = {k: v for k, v in x.items() if k != "shared_alerts"} if include else {**x, "shared_alerts": False}
+            out.append(x)
+        return out
+    _save_company_change(_mutate, f"chore: {'add' if include else 'leave'} {name} {'to' if include else 'out of'} "
+                         "the shared alerts",
+                         f"{name} is {'now in' if include else 'no longer in'} the shared alerts", name)
 
 
 def page_company_detail(c: dict):
@@ -5023,7 +5155,9 @@ def page_company_detail(c: dict):
             follow_button(c)
         with a[2]:
             with st.container(key="danger"):
-                if not MEMBER_VIEW and st.session_state.confirm_remove != c.get("id"):
+                # (another admin can't remove a company of the shared alerts: it isn't offered)
+                if (not MEMBER_VIEW and not (OTHER_ADMIN and in_shared_alerts(c))
+                        and st.session_state.confirm_remove != c.get("id")):
                     st.button("Stop tracking", key="btn_remove_company", icon=":material/delete:",
                               on_click=_ask_remove_company, args=(c.get("id"),))
     if st.session_state.confirm_remove == c.get("id"):
@@ -5049,9 +5183,17 @@ def page_company_detail(c: dict):
             if k == "failing":
                 why = escape(c.get("status_reason") or "The last scan failed.")
                 health.append(("Problem", f'{why} <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">See the Actions log</a>'))
+            if IS_PRIMARY:
+                shared = in_shared_alerts(c)
+                health.append(("Shared alerts", "Included — its jobs go to the alert recipient" if shared
+                               else "Not included — another admin's monitoring"))
             if not MEMBER_VIEW:
                 st.html(f'<h2 class="section-title">{_ms("monitor_heart")}Portal health</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
                         + "".join(f"<dt>{a}</dt><dd>{b}</dd>" for a, b in health) + "</dl>")
+                if IS_PRIMARY:
+                    st.button("Leave out of shared alerts" if shared else "Add to shared alerts", key="btn_shared_alerts",
+                              icon=":material/notifications_off:" if shared else ":material/notifications_active:",
+                              on_click=_set_shared_alerts, args=(c.get("id"), not shared, name))
                 st.html('<div class="divider"></div>')
             cats = {"FRESHER": 0, "ENTRY_LEVEL": 0, "legacy": 0}
             for j in jobs:
@@ -5317,15 +5459,16 @@ def email_tailoring_card() -> None:
 
 def _send_test_click() -> None:
     """Send test email (a callback: one script run per click, not two).
-    Owner only, and only ever to the configured recipient — never to an
-    address typed in here, so the system mailbox can't be used to send mail
-    to anyone else. At most one test email per cooldown for the whole app,
-    so a double click (or a second tab) never sends two. It only sends one
-    email: no scan, nothing else is triggered."""
+    Owner only, and only ever to this admin's own recipient (the primary
+    admin's ALERT_RECIPIENT, another admin's verified account email) — never
+    to an address typed in here, so the system mailbox can't be used to send
+    mail to anyone else. At most one test email per cooldown for the whole
+    app, so a double click (or a second tab) never sends two. It only sends
+    one email: no scan, nothing else is triggered."""
     stamp = _ist(datetime.now(timezone.utc))
     if not owner_only("send test emails"):
         return
-    recipient, _ = alert_recipient(settings)
+    recipient = monitoring_recipient(st.session_state, settings)
     if not recipient:
         toast("No alert recipient is set — see Recipient above", "error")
         return
@@ -5334,8 +5477,8 @@ def _send_test_click() -> None:
         toast(f"A test email was just sent — wait {int(cooldown.remaining()) + 1} s before sending another", "error")
         return
     try:
-        # re-checks the owner sign-in itself and sends only to the configured recipient
-        send_test_email(st.session_state, settings)
+        # re-checks the owner sign-in itself and sends only to this admin's own recipient
+        recipient = send_test_email(st.session_state, settings)
     except OwnerRequired:
         cooldown.cancel()
         owner_only("send test emails")
@@ -5350,14 +5493,59 @@ def _send_test_click() -> None:
         toast(f"Test email sent — check {recipient}", "success")
 
 
+def _test_panel() -> None:
+    with st.container(key="test_panel"):
+        ts = st.session_state.test_status
+        status = ("Not sent this session" if ts is None else
+                  f"Sent at {ts[1]}" if ts[0] else f"Failed at {ts[1]}")
+        t1, t2 = st.columns([4, 1], vertical_alignment="center")
+        with t1:
+            st.html(f'<div><h2 class="section-title">{_ms("send")}Test delivery</h2><p class="section-sub">Send a sample alert to the recipient above to confirm emails arrive. '
+                    f'<span class="num" style="color:var({"--green" if ts and ts[0] else "--red" if ts else "--muted"});">{status}</span></p></div>')
+        with t2:
+            st.button("Send test email", key="btn_test", icon=":material/send:", use_container_width=True,
+                      on_click=_send_test_click)
+
+
+def page_email_mine():
+    """Email & Notifications for an admin who isn't the primary admin: their
+    OWN monitoring — the companies they follow, alerts to their own verified
+    email. The shared alerts' recipient, ledger and history are the primary
+    admin's and are never shown here."""
+    mine = monitoring_recipient(st.session_state, settings)
+    notif = user_store.notification_settings_from(ME["profile"]) if ME is not None else {"enabled": False}
+    on = bool(mine) and notif["enabled"] is True
+    follows = "every tracked company" if _VIEW and _VIEW["watch_all"] else _plural(len(ME["watchlist"]) if ME else 0, "followed company", "followed companies")
+    page_header("Email & Notifications", (
+        f'<span class="pill {"on" if on else "off"}"><i></i>{"Alerts on" if on else "Alerts off"}</span>'
+        + (f'<span>Sending to {escape(mine)}</span>' if mine else "")))
+    with st.container(key="mail_status"):
+        st.html(f"""<div class="mail-status"><div class="big {'on' if on else 'off'}">{_ms("notifications_active" if on else "notifications_off", "s28")}</div>
+          <div style="min-width:0;"><h2>Your monitoring</h2><p class="section-sub">New fresher and entry-level jobs from
+          {escape(follows)} are emailed to your own verified address, at most every {scan_schedule.MEMBER_ALERT_HOURS} hours.
+          Your companies, dismissals and alerts are yours: they never change the shared alerts, and the shared alerts never change them.</p></div></div>""")
+    with st.container(key="email_form"):
+        st.html(f'<div><h2 class="section-title">{_ms("alternate_email")}Recipient</h2><p class="section-sub">Where your alerts are delivered.</p></div>'
+                f'<div class="detail-chips"><span class="chip num">{_ms("mail", "s16")}<span>{escape(mine) or "No recipient set"}</span></span></div>'
+                f'<p class="note">{_ms("lock", "s16")} Your account’s verified email. To use another address, sign in with that account.</p>')
+        if ME is not None:
+            st.button("Open My alerts", key="btn_my_alerts_open", icon=":material/tune:", on_click=go, args=("alerts",))
+        elif USER_PROBLEM:
+            st.html(f'<p class="note">{_ms("info", "s16")} {escape(USER_PROBLEM)}</p>')
+    _test_panel()
+
+
 def page_email():
+    if OTHER_ADMIN:
+        page_email_mine()
+        return
     notified = [j for j in all_records if j.get("notified")]
     # when the email actually went out (older records only know when the job was found)
     sent_times = [(_parse_iso(j.get("notified_at") or ""), found[id(j)]) for j in notified]
     last_mail, last_is_sent = max(((a or b, bool(a)) for a, b in sent_times if a or b), default=(None, False))
-    pending = [j for j in all_records if alert_pending(j)]
-    # the full address is personal: only the owner sees it
-    shown = recipient if is_owner() else mask_email(recipient)
+    pending = [j for j in all_records if shared_alert_pending(j, SHARED_EXCLUDED)]
+    # the full address is personal: only the primary admin sees it
+    shown = recipient if is_primary() else mask_email(recipient)
     page_header("Email & Notifications", (
         f'<span class="pill {"on" if recipient else "off"}"><i></i>{"Alerts on" if recipient else "Alerts off"}</span>'
         + (f'<span>Sending to {escape(shown)}</span>' if recipient else '<span>Add a recipient to turn alerts on</span>')))
@@ -5398,17 +5586,7 @@ def page_email():
             note = f'{_ms("info", "s16")} No recipient is set. To turn alerts on, {how}.'
         st.html(f'<p class="note">{note}</p>')
 
-    with st.container(key="test_panel"):
-        ts = st.session_state.test_status
-        status = ("Not sent this session" if ts is None else
-                  f"Sent at {ts[1]}" if ts[0] else f"Failed at {ts[1]}")
-        t1, t2 = st.columns([4, 1], vertical_alignment="center")
-        with t1:
-            st.html(f'<div><h2 class="section-title">{_ms("send")}Test delivery</h2><p class="section-sub">Send a sample alert to the recipient above to confirm emails arrive. '
-                    f'<span class="num" style="color:var({"--green" if ts and ts[0] else "--red" if ts else "--muted"});">{status}</span></p></div>')
-        with t2:
-            st.button("Send test email", key="btn_test", icon=":material/send:", use_container_width=True,
-                      on_click=_send_test_click)
+    _test_panel()
 
     with st.container(key="set_behavior"):
         steps = [("travel_explore", "A check runs", f"Scheduled {interval_label(SCAN_HOURS).lower()} (GitHub often starts runs later). Every tracked portal is scanned."),
@@ -5613,6 +5791,8 @@ def _clear_all(keys: set[str]) -> None:
     st.session_state.confirm_clear = False
     if not owner_only("dismiss jobs"):
         return
+    if USER is None and not primary_only("dismiss jobs"):
+        return
     if USER is not None:
         try:
             USER.dismiss(keys)
@@ -5621,6 +5801,9 @@ def _clear_all(keys: set[str]) -> None:
             toast(str(e), "error")
             return
         _personal_patched(dismissed_add=keys)
+        if not is_primary():            # another admin: their own list only, never the shared one
+            toast(f"Dismissed {_plural(len(keys), 'job')} for you", "success")
+            return
     # the confirmed jobs only: a job a scan published since the page was drawn
     # was never shown to the admin, so it stays active (and gets its email)
     if USER is not None:            # their own copy already changed: the shared commit needn't hold the click
@@ -5668,8 +5851,9 @@ def _save_scan_interval() -> None:
     """Save the global scan interval (admins only). Checked here on the server
     — the role, then the value — and again in _save_change; the control is
     simply never drawn for anyone else. Only settings.json changes: no scan
-    starts, and the scanner's state (last scans, jobs) is untouched."""
-    if not owner_only("change the scan interval"):
+    starts, and the scanner's state (last scans, jobs) is untouched. The
+    interval belongs to the shared monitoring scope: the primary admin's."""
+    if not primary_only("change the scan interval"):
         return
     try:
         hours = scan_schedule.validate_interval(st.session_state.get("scan_interval_pick"))
@@ -5844,7 +6028,8 @@ def page_settings():
             '</div></div>')
     scan_details_card()
     tracker_status_card()
-    scan_schedule_card()
+    if not OTHER_ADMIN:                  # the shared scan interval is the primary admin's to set
+        scan_schedule_card()
     with st.container(key="set_data"):
         synced = bool(os.environ.get("GITHUB_TOKEN"))
         d1, d2 = st.columns([4, 1], vertical_alignment="center")
@@ -5868,7 +6053,8 @@ def page_settings():
                     st.button(f"Dismiss all {len(_all_active_jobs)} jobs", key="btn_clear_all", disabled=not _all_active_jobs,
                               use_container_width=True, on_click=_ask_clear_all)
         else:
-            unsent = sum(1 for j in _all_active_jobs if alert_pending(j))
+            # only the primary admin's Dismiss all reaches the shared alerts
+            unsent = sum(1 for j in _all_active_jobs if shared_alert_pending(j, SHARED_EXCLUDED)) if IS_PRIMARY else 0
             with st.container(key="danger_confirm"):
                 st.html(f'<p class="note" style="color:var(--text);">Dismiss all <b>{len(_all_active_jobs)}</b> active jobs?'
                         + (f" This also cancels <b>{unsent}</b> alert{'s' if unsent != 1 else ''} that haven't been emailed yet "

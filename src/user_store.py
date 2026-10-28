@@ -820,6 +820,30 @@ class UserStore:
             log.warning("listing users failed: %s", type(e).__name__)
             raise UserStoreError(UNAVAILABLE, kind=type(e).__name__) from None
 
+    def followed_by_other_admin(self, company_id: str, admins: Iterable[str], exclude_uid: str) -> bool:
+        """Does an admin other than ``exclude_uid`` follow this company? (An
+        admin = a profile whose verified email is in ``admins``.) Asked by
+        the app before a company leaves the catalogue, so one admin can't
+        silently drop another admin's monitoring. Only a yes/no comes back:
+        nothing of the other account is returned or shown. Raises
+        UserStoreError if it can't tell — callers then keep the company."""
+        admins = {a.strip().lower() for a in admins if isinstance(a, str)}
+        if not isinstance(company_id, str) or not admins:
+            return False
+        path_id = _hash_id(company_id)
+        try:
+            for uid, prof in self.backend.list("users").items():
+                if uid == exclude_uid or not valid_uid(uid) or not isinstance(prof, dict):
+                    continue
+                if prof.get("email_verified") is not True or (prof.get("email") or "").strip().lower() not in admins:
+                    continue
+                if self.backend.get(f"users/{uid}/companies/{path_id}") is not None:
+                    return True
+        except Exception as e:
+            log.warning("checking other admins' companies failed: %s", type(e).__name__)
+            raise UserStoreError(UNAVAILABLE, kind=type(e).__name__) from None
+        return False
+
     def google_account(self, google_sub: str) -> dict | None:
         if self.identity is None or not isinstance(google_sub, str) or not google_sub:
             return None
