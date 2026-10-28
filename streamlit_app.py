@@ -3772,23 +3772,40 @@ def portal_status(c: dict) -> tuple[str, str]:
 
 
 statuses = {c.get("id"): portal_status(c) for c in companies}
-n_by_status = {k: sum(1 for s in statuses.values() if s[0] == k) for k in ("healthy", "delayed", "failing", "pending", "checking")}
-if not companies:
-    overall = ("pending", "No portals yet")
-elif n_by_status["failing"] == len(companies):
-    overall = ("failing", "All portals failing")
-elif n_by_status["failing"]:
-    overall = ("failing", f"{_plural(n_by_status['failing'], 'portal')} failing")
-elif DATA_STALE:                    # never "healthy" on a copy GitHub couldn't refresh
-    overall = ("delayed", "Status may be out of date")
-elif last_scan is None:
-    overall = ("pending", "Waiting for first scan")
-elif scan_stale:
-    overall = ("delayed", "Scans delayed")
-elif SCAN_OVERDUE:
-    overall = ("delayed", "Scan overdue")
+
+
+def _health(cos: list[dict]) -> tuple[dict, tuple[str, str]]:
+    """(count per status, overall status) of these companies' portals."""
+    counts = {k: sum(1 for c in cos if statuses[c.get("id")][0] == k)
+              for k in ("healthy", "delayed", "failing", "pending", "checking")}
+    if not cos:
+        return counts, ("pending", "No portals yet")
+    if counts["failing"] == len(cos):
+        return counts, ("failing", "All portals failing")
+    if counts["failing"]:
+        return counts, ("failing", f"{_plural(counts['failing'], 'portal')} failing")
+    if DATA_STALE:                    # never "healthy" on a copy GitHub couldn't refresh
+        return counts, ("delayed", "Status may be out of date")
+    if last_scan is None:
+        return counts, ("pending", "Waiting for first scan")
+    if scan_stale:
+        return counts, ("delayed", "Scans delayed")
+    if SCAN_OVERDUE:
+        return counts, ("delayed", "Scan overdue")
+    return counts, ("healthy", "All portals healthy")
+
+
+# the tracker's catalogue as a whole (its Companies list, the primary admin's Home)
+n_by_status, overall = _health(companies)
+# ... and what THIS viewer monitors: the catalogue for the primary admin (and
+# the legacy owner); for another admin the companies they follow — every
+# tracked company only if they chose that scope. Monitoring, Settings →
+# Tracker status and the health marks show this, never another account's.
+if OWN_SCOPE:
+    MONITORED = companies if _VIEW["watch_all"] else [c for c in companies if str(c.get("id")) in ME["watchlist"]]
 else:
-    overall = ("healthy", "All portals healthy")
+    MONITORED = companies
+mon_by_status, mon_overall = _health(MONITORED)
 
 found = {id(j): _found_at(j.get("date") or "", NOW) for j in all_records}
 new_this_week = sum(1 for j in active_jobs if found[id(j)] and NOW - found[id(j)] <= timedelta(days=7))
@@ -4020,7 +4037,7 @@ if "nav_collapsed" not in st.session_state:
 with st.sidebar:
     sidebar_toggle()
     logo = _logo_data_uri()
-    st.html(f"""<div class="brand"><div class="mark {overall[0] if not MEMBER_VIEW else 'healthy'}">{f'<img src="{logo}" alt="">' if logo else ''}</div>
+    st.html(f"""<div class="brand"><div class="mark {mon_overall[0] if not MEMBER_VIEW else 'healthy'}">{f'<img src="{logo}" alt="">' if logo else ''}</div>
       <div><div class="n">Fresher Job Tracker</div><div class="s">Fresher opportunities</div></div></div>""")
     for gi, (group, items) in enumerate(nav_groups()):
         st.html(f'<div class="nav-group{" first" if gi == 0 else ""}">{group}</div>')
@@ -5223,25 +5240,35 @@ def page_company_detail(c: dict):
 
 
 def page_monitoring():
-    page_header("Monitoring", f"Every tracked portal is checked {SCHEDULE_NOTE}", scan_actions)
-    tone = {"healthy": "t-green", "failing": "t-red", "delayed": "t-amber"}.get(overall[0], "t-gray")
-    icon = {"healthy": "health_and_safety", "failing": "error", "delayed": "schedule"}.get(overall[0], "hourglass_empty")
+    """The portals THIS viewer monitors (MONITORED): the whole catalogue for
+    the primary admin, only the companies another admin follows for them."""
+    cos, counts, ov = MONITORED, mon_by_status, mon_overall
+    page_header("Monitoring", (f"The companies you follow — checked {SCHEDULE_NOTE}" if OWN_SCOPE and cos is not companies
+                               else f"Every tracked portal is checked {SCHEDULE_NOTE}"), scan_actions)
+    tone = {"healthy": "t-green", "failing": "t-red", "delayed": "t-amber"}.get(ov[0], "t-gray")
+    icon = {"healthy": "health_and_safety", "failing": "error", "delayed": "schedule"}.get(ov[0], "hourglass_empty")
     st.html('<div class="stats">'
-            + _stat(f'<span class="dot {overall[0]}"></span>Overall', escape(overall[1]),
-                    f"{_plural(len(companies), 'portal')} tracked", icon, tone, small=True)
+            + _stat(f'<span class="dot {ov[0]}"></span>Overall', escape(ov[1]),
+                    f"{_plural(len(cos), 'portal')} tracked", icon, tone, small=True)
             + _stat("Last scan", _ago(last_scan, NOW), _ist_stamp(last_scan) if last_scan else "No scan recorded",
                     "history", "t-amber" if scan_stale or SCAN_OVERDUE else "t-teal", small=True)
             + _stat("Next scheduled scan", _ist(NEXT_SCAN), NEXT_SCAN_NOTE, "schedule", "", small=True)
-            + _stat("Portals", f'{n_by_status["healthy"]}<span class="muted" style="font-size:16px;font-weight:600;"> / {len(companies)} healthy</span>',
-                    f"{n_by_status['delayed']} delayed · {n_by_status['failing']} failing · {n_by_status['pending'] + n_by_status['checking']} pending",
-                    "lan", "t-red" if n_by_status["failing"] else "t-green")
+            + _stat("Portals", f'{counts["healthy"]}<span class="muted" style="font-size:16px;font-weight:600;"> / {len(cos)} healthy</span>',
+                    f"{counts['delayed']} delayed · {counts['failing']} failing · {counts['pending'] + counts['checking']} pending",
+                    "lan", "t-red" if counts["failing"] else "t-green")
             + "</div>")
-    if not companies:
-        empty_state("monitor_heart", "Nothing to monitor", "Add a company to start scanning its career portal.")
+    if not cos:
+        if OWN_SCOPE:
+            empty_state("monitor_heart", "You aren't following any companies yet",
+                        "Monitoring shows the career portals of the companies you follow.",
+                        lambda: st.button("Choose companies", key="btn_mon_pick", type="primary", icon=":material/add:",
+                                          on_click=go, args=("companies",), kwargs={"view": "mine"}))
+        else:
+            empty_state("monitor_heart", "Nothing to monitor", "Add a company to start scanning its career portal.")
         return
     rows = []
     order = {"failing": 0, "delayed": 1, "checking": 2, "pending": 3, "healthy": 4}
-    for c in sorted(companies, key=lambda c: (order[statuses[c.get("id")][0]], (c.get("name") or "").lower())):
+    for c in sorted(cos, key=lambda c: (order[statuses[c.get("id")][0]], (c.get("name") or "").lower())):
         k, lbl = statuses[c.get("id")]
         curl = safe_url(c.get("url", ""))
         checked = _parse_iso(c.get("last_checked", ""))
@@ -5260,7 +5287,7 @@ def page_monitoring():
           <td class="num" data-l="Active jobs">{company_active(c)}</td>
           <td data-l="Scraper">{escape(_source_label(c))}</td>
           <td data-l="Notes"{' class="empty"' if note == "—" else ""}>{note}</td></tr>""")
-    if not (n_by_status["failing"] or n_by_status["delayed"]) and last_scan:
+    if not (counts["failing"] or counts["delayed"]) and last_scan:
         st.html(f'<div class="legend" style="border-style:solid;">{_ms("task_alt", "s20")}<div class="note"><b style="color:var(--text);">No monitoring issues.</b> '
                 f'Every portal was scanned successfully in the last {_STALE_H} hours.</div></div>')
     with st.container(key="mon_table"):
@@ -5920,11 +5947,12 @@ def tracker_status_card() -> None:
     """Settings → Tracker status (admins): the portals' health and the scan
     times — what the sidebar's status card used to show, kept in one place.
     The same numbers as Home's chips and metrics (nothing is fetched)."""
-    breakdown = " · ".join(f"{n_by_status[k]} {_STATUS_WORDS[k]}" for k in _STATUS_WORDS if n_by_status[k]) or "No portals yet"
+    # this viewer's own monitoring (MONITORED): a second admin's follows, else the catalogue
+    breakdown = " · ".join(f"{mon_by_status[k]} {_STATUS_WORDS[k]}" for k in _STATUS_WORDS if mon_by_status[k]) or "No portals yet"
     tiles = [
-        ("Portal health", f'<span class="pill {overall[0]}"><i></i>{escape(overall[1])}</span>',
-         f"{_plural(len(companies), 'company', 'companies')} checked by the scanner"),
-        ("Companies monitored", f'<span class="v num">{len(companies)}</span>', escape(breakdown)),
+        ("Portal health", f'<span class="pill {mon_overall[0]}"><i></i>{escape(mon_overall[1])}</span>',
+         f"{_plural(len(MONITORED), 'company', 'companies')} checked by the scanner"),
+        ("Companies monitored", f'<span class="v num">{len(MONITORED)}</span>', escape(breakdown)),
         ("Last scan", f'<span class="v num">{escape(_ago(last_scan, NOW))}</span>',
          escape(_ist_stamp(last_scan)) if last_scan else "No scan has finished yet"),
         ("Next scheduled", f'<span class="v num">{escape(_ist(NEXT_SCAN))}</span>',

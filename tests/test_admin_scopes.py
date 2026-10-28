@@ -583,3 +583,78 @@ def test_the_scope_diagnostics_show_only_the_viewers_own_state(app, google_env, 
 def test_the_scope_diagnostics_are_admins_only(app, google_env, store, two_admins):
     m = _sign_in(app, google_env, M_UID, M_MAIL, query={"diag": "scope"})
     assert not m.exception and "scope-diag" not in _html(m)
+
+
+# ---------------------------------------------------------------------------
+# Monitoring (28 Oct 2026, live): the second admin's Monitoring page drew all
+# seven catalogue portals — it rendered the global catalogue for every admin
+# ---------------------------------------------------------------------------
+
+ALL_NAMES = FIVE_NAMES + ("Accenture", "NPCI")
+
+
+def _mon_table(at):
+    return _section(_html(at), '<table class="mon">', "</table>")
+
+
+def _tile(at, label):
+    """A Settings → Tracker status tile's value (its <div class="v num"> text)."""
+    import re
+    html = _html(at)
+    i = html.index(label)
+    return re.search(r'<span class="v num">([^<]*)</span>', html[i:]).group(1)
+
+
+def _follow_five(store):
+    b = store.for_uid(B_UID)
+    for cid in FIVE:
+        b.watch(cid, CATALOGUE_IDS)
+
+
+def test_the_second_admins_monitoring_shows_only_their_five_companies(app, google_env, store, two_admins):
+    a = _sign_in(app, google_env, A_UID, A_MAIL)
+    a_before = _without_activity(_docs_of(store, A_UID))
+    b = _sign_in(app, google_env, B_UID, B_MAIL)
+    _company(b, "pwc")                                   # B follows through the app ...
+    b.button(key="btn_follow").click().run()
+    _follow_five(store)                                  # ... and the rest of the five
+    b = _sign_in(app, google_env, B_UID, B_MAIL)
+    _nav(b, "monitoring")
+    table = _mon_table(b)
+    assert all(n in table for n in FIVE_NAMES)
+    assert "Accenture" not in table and "NPCI" not in table
+    assert table.count('<td class="c">') == 5
+    assert "5 portals tracked" in _html(b) and "/ 5 healthy" in _html(b)
+    _nav(b, "settings")
+    assert _tile(b, "Companies monitored") == "5"
+    assert store.for_uid(B_UID).watchlist() == set(FIVE)
+    # A: all seven, exactly as before, and A's documents untouched
+    _nav(a, "monitoring")
+    table = _mon_table(a)
+    assert all(n in table for n in ALL_NAMES) and table.count('<td class="c">') == 7
+    assert "7 portals tracked" in _html(a)
+    _nav(a, "settings")
+    assert _tile(a, "Companies monitored") == "7"
+    assert _without_activity(_docs_of(store, A_UID)) == a_before
+    assert {c["id"] for c in _companies(a)} == set(CATALOGUE_IDS)
+
+
+def test_a_second_admin_who_follows_nothing_monitors_nothing(app, google_env, store, two_admins):
+    b = _sign_in(app, google_env, B_UID, B_MAIL)
+    _nav(b, "monitoring")
+    assert "following any companies yet" in _html(b) and '<table class="mon">' not in _html(b)
+    assert "btn_mon_pick" in _buttons(b)
+
+
+def test_every_tracked_company_is_the_second_admins_own_choice(app, google_env, store, two_admins):
+    """Scope "Every tracked company" (My alerts) means all seven — chosen, not a fallback."""
+    _follow_five(store)
+    store.for_uid(B_UID).ensure_profile(B_MAIL, "", True)
+    store.for_uid(B_UID).set_watch_all(True)
+    b = _sign_in(app, google_env, B_UID, B_MAIL)
+    _nav(b, "monitoring")
+    assert _mon_table(b).count('<td class="c">') == 7
+    store.for_uid(B_UID).set_watch_all(False)                 # back to "Only companies I follow"
+    b = _sign_in(app, google_env, B_UID, B_MAIL)
+    _nav(b, "monitoring")
+    assert _mon_table(b).count('<td class="c">') == 5
