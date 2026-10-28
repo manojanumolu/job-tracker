@@ -1538,9 +1538,10 @@
     "date": "Oct 28, 21:09",
     "first_seen": "2026-10-28T21:09:03.990517+00:00",
     "id": "Accenture_Sales_Prog_&_Incentive_Mgmt_New_Assoc",
-    "notified": false,
+    "notified": true,
     "company_id": "accenture",
-    "notify_state": "claimed",
-    "claimed_at": "2026-10-28T21:09:53.331576+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-10-28T21:09:53.331576+00:00",
+    "notified_at": "2026-10-28T21:10:05.580419+00:00"
   }
 ]
