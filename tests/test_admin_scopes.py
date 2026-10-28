@@ -369,3 +369,125 @@ def test_the_second_admins_home_follows_their_own_companies(app, google_env, sto
     a = _sign_in(app, google_env, A_UID, A_MAIL, seen=jobs)
     assert "Discover your next <em>opportunity</em>" in _html(a)              # A's dashboard as before
     assert jobs[0]["title"] in _html(a) and jobs[1]["title"] in _html(a)
+
+
+# ---------------------------------------------------------------------------
+# two authenticated admin UIDs: B's selection is B's, A's stays exactly A's
+# (28 Oct 2026: an admin who followed nothing was shown every shared listing
+# on Home — an empty follow list meant "any company" — and the Companies nav
+# showed the global catalogue to both admins, so both looked identical)
+# ---------------------------------------------------------------------------
+
+def _docs_of(store, uid):
+    """Every Firestore document of one account (its whole users/{uid} tree)."""
+    return {p: d for p, d in store.backend.docs.items() if p == f"users/{uid}" or p.startswith(f"users/{uid}/")}
+
+
+def _without_activity(docs):
+    """... minus the sign-in/activity stamps every visit refreshes."""
+    skip = {"last_login_at", "last_active_at"}
+    return {p: {k: v for k, v in d.items() if k not in skip} for p, d in docs.items() if "/sessions/" not in p}
+
+
+def test_a_second_admin_who_follows_nothing_sees_no_shared_listings(app, google_env, store, two_admins):
+    jobs = [rec("sanofi", 1), rec("pwc", 2)]
+    b = _sign_in(app, google_env, B_UID, B_MAIL, seen=jobs)
+    assert store.for_uid(B_UID).watchlist() == set() and not b.exception
+    html = _html(b)
+    assert jobs[0]["title"] not in html and jobs[1]["title"] not in html         # nothing of A's feed
+    assert "you don’t follow any yet" in html
+    a = _sign_in(app, google_env, A_UID, A_MAIL, seen=jobs)
+    assert jobs[0]["title"] in _html(a) and jobs[1]["title"] in _html(a)          # A's Home exactly as before
+
+
+def test_each_admins_companies_page_is_their_own(app, google_env, store, two_admins):
+    b = _sign_in(app, google_env, B_UID, B_MAIL)
+    _company(b, "sanofi")
+    b.button(key="btn_follow").click().run()
+    _nav(b, "companies")
+    html = _html(b)
+    assert "My companies" in html and "Following 1" in html                       # B's selection, not the catalogue
+    assert "btn_cos_all" in _buttons(b)                                           # the catalogue is one click away
+    b.button(key="btn_cos_all").click().run()
+    assert not b.exception and "career portal" in _html(b) and "Add company" in {x.label for x in b.button}
+    a = _sign_in(app, google_env, A_UID, A_MAIL)
+    _nav(a, "companies")
+    assert "Following 1" not in _html(a) and "Add company" in {x.label for x in a.button}   # A: as before
+
+
+def test_the_job_page_never_shows_the_primary_admins_alert_history_to_another_admin(app, google_env, store, two_admins):
+    """"Email alert: Sent" is the shared email's ledger — A's history, not B's."""
+    sent = rec("sanofi", 1, notified=True, notify_state="sent")
+    a = _sign_in(app, google_env, A_UID, A_MAIL, seen=[sent])
+    b = _sign_in(app, google_env, B_UID, B_MAIL, seen=[sent])
+    for at, shown in ((a, True), (b, False)):
+        at.session_state["page"], at.session_state["job_id"] = "jobs", _jid(sent)
+        at.run()
+        assert not at.exception and sent["title"] in _html(at)
+        assert ("<dt>Email alert</dt><dd>Sent</dd>" in _html(at)) is shown
+
+
+def _jid(job):
+    import hashlib
+    return hashlib.sha1(job_key(job).encode("utf-8")).hexdigest()[:12]
+
+
+def test_changing_the_second_admins_companies_never_changes_the_first(app, google_env, store, two_admins, tmp_path,
+                                                                     monkeypatch):
+    """Two UIDs side by side: A follows Sanofi, B follows and unfollows PwC
+    and adds a company. A's whole Firestore tree, the shared catalogue's
+    existing entries and A's alerts (shared and personal) are identical
+    before and after."""
+    jobs = [rec("sanofi", 1), rec("pwc", 2)]
+    a = _sign_in(app, google_env, A_UID, A_MAIL, seen=jobs)
+    _company(a, "sanofi")
+    a.button(key="btn_follow").click().run()
+    store.backend.set(f"users/{A_UID}", {"notifications": {"enabled": True, "mode": "general",
+                                                           "enabled_at": "2030-01-01T00:00:00Z"}}, merge=True)
+    a_before = _without_activity(_docs_of(store, A_UID))
+    catalogue_before = _companies(a)
+
+    b = _sign_in(app, google_env, B_UID, B_MAIL, seen=jobs)
+    _company(b, "pwc")
+    b.button(key="btn_follow").click().run()                                    # follow ...
+    _company(b, "accenture")
+    b.button(key="btn_follow").click().run()
+    _company(b, "accenture")
+    b.button(key="btn_follow").click().run()                                    # ... and unfollow
+    b.session_state["page"], b.session_state["company_view"], b.session_state["company_id"] = "companies", "add", None
+    b.run()
+    b.text_input(key="new_name").input("Bens Co")
+    b.text_input(key="new_url").input("https://careers.bens.example/jobs")
+    b.button(key="btn_add").click().run()
+    assert not b.exception
+    bens = next(c["id"] for c in _companies(b) if c["name"] == "Bens Co")
+
+    # storage: each selection under its own UID, A's tree untouched
+    assert store.for_uid(B_UID).watchlist() == {"pwc", bens}
+    assert store.for_uid(A_UID).watchlist() == {"sanofi"}
+    assert _without_activity(_docs_of(store, A_UID)) == a_before
+    assert [c for c in _companies(b) if c["id"] != bens] == catalogue_before
+
+    # alerts: the shared email (A's) and each personal email follow their own scope
+    seen = jobs + [rec(bens, 3, company="Bens Co")]
+    monkeypatch.setattr(config_store, "SEEN_FILE", tmp_path / "s.json")
+    monkeypatch.setattr(config_store, "COMPANIES_FILE", tmp_path / "c.json")
+    monkeypatch.setattr(config_store, "SETTINGS_FILE", tmp_path / "st.json")
+    (tmp_path / "c.json").write_text(json.dumps(_companies(b)))
+    (tmp_path / "st.json").write_text("{}")
+    (tmp_path / "s.json").write_text(json.dumps(seen))
+    shared_mail = SharedMailer()
+    assert alerts.run(send=shared_mail, publisher=FakeRemote()) == 0
+    assert shared_mail.sent == [[jobs[0]["title"], jobs[1]["title"]]]           # never B's company
+
+    class Ids(Identity):
+        pass
+    ids = Ids()
+    for uid, mail in ((A_UID, A_MAIL), (B_UID, B_MAIL)):
+        ids.accounts[uid] = {"uid": uid, "email": mail, "email_verified": True, "disabled": False}
+    store.backend.set(f"users/{B_UID}", {"notifications": {"enabled": True, "mode": "general",
+                                                           "enabled_at": "2030-01-01T00:00:00Z"}}, merge=True)
+    personal = PersonalMailer()
+    user_alerts.run(UserStore(store.backend, ids), seen, personal, run_id="r1")
+    assert sorted(personal.sent) == sorted([(A_MAIL, [job_key(seen[0])]),
+                                            (B_MAIL, sorted([job_key(seen[1]), job_key(seen[2])]))])

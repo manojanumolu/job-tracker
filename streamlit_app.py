@@ -175,7 +175,7 @@ if "page" not in st.session_state or (
     st.session_state.page = qp.get("page") if qp.get("page") in PAGES else "home"
     st.session_state.job_id = qp.get("job") or None
     st.session_state.company_id = qp.get("company") or None
-    st.session_state.company_view = qp.get("view") if qp.get("view") in ("add", "mine") else None
+    st.session_state.company_view = qp.get("view") if qp.get("view") in ("add", "mine", "all") else None
     st.session_state.confirm_remove = None
     if "dark_mode" in st.session_state:
         st.session_state.dark_mode = qp.get("theme") == "dark"
@@ -3509,6 +3509,10 @@ IS_ADMIN = is_owner()
 IS_PRIMARY = IS_ADMIN and is_primary()
 OTHER_ADMIN = IS_ADMIN and not IS_PRIMARY
 MEMBER_VIEW = bool(AUTH_GATE and ACCOUNT and not IS_ADMIN)
+# another admin with their own data: Home and Companies show THEIR selection
+# (the catalogue stays one click away, ?view=all); without it they see the
+# shared views, read-only for the shared scope
+OWN_SCOPE = OTHER_ADMIN and ME is not None
 ADMIN_PAGES = {"monitoring", "email"}
 PERSONAL_PAGES = {"alerts", "preferences", "onboarding"}
 
@@ -3870,7 +3874,7 @@ def nav_groups() -> list[tuple[str, list[str]]]:
 
 
 def nav_label(key: str) -> str:
-    return "My companies" if key == "companies" and MEMBER_VIEW else PAGES[key][0]
+    return "My companies" if key == "companies" and (MEMBER_VIEW or OWN_SCOPE) else PAGES[key][0]
 
 
 def _leave_fragment_if_needed() -> None:
@@ -4866,12 +4870,13 @@ def page_job_detail(j: dict):
         with st.container(key="job_side"):
             src = [("Portal", escape(_host(url)) if url else "—"),
                    ("Platform", "Workday" if "myworkdayjobs.com" in url else "Company career site"),
-                   ("Posting", f'<a class="link" href="{escape(url, quote=True)}" target="_blank" rel="noopener">Open posting {_ms("open_in_new", "s16")}</a>' if url else "No link"),
-                   ("Email alert", "Sent" if j.get("notified")
-                    else "Sending — delivery not yet confirmed" if j.get("notify_state") == "claimed"
-                    else "Not sent (dismissed)" if j.get("dismissed")
-                    else "Pending — goes out after the next check" if shared_alert_pending(j, SHARED_EXCLUDED)
-                    else "Not emailed")]
+                   ("Posting", f'<a class="link" href="{escape(url, quote=True)}" target="_blank" rel="noopener">Open posting {_ms("open_in_new", "s16")}</a>' if url else "No link")]
+            if not OTHER_ADMIN:      # the shared email's ledger: the primary admin's history, not another admin's
+                src.append(("Email alert", "Sent" if j.get("notified")
+                            else "Sending — delivery not yet confirmed" if j.get("notify_state") == "claimed"
+                            else "Not sent (dismissed)" if j.get("dismissed")
+                            else "Pending — goes out after the next check" if shared_alert_pending(j, SHARED_EXCLUDED)
+                            else "Not emailed"))
             st.html(f'<h2 class="section-title">{_ms("link")}Source</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
                     + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in src) + "</dl>")
             st.html('<div class="divider"></div>')
@@ -6252,7 +6257,7 @@ def page_my_companies():
         return
     if not MEMBER_VIEW:
         st.button("All tracked companies", key="btn_cos_all", icon=":material/arrow_back:", type="tertiary",
-                  on_click=go, args=("companies",))
+                  on_click=go, args=("companies",), kwargs={"view": "all"} if OWN_SCOPE else {})
     if following:
         with st.container(key="set_following"):
             st.html(f'<h2 class="section-title">{_ms("check_circle")}Following {len(following)}</h2>')
@@ -6452,7 +6457,8 @@ if page == "jobs" and st.session_state.job_id:
         page_jobs()
 elif page == "companies" and st.session_state.company_view == "add":
     page_add_company()
-elif page == "companies" and (MEMBER_VIEW or st.session_state.company_view == "mine") and not st.session_state.company_id:
+elif page == "companies" and (MEMBER_VIEW or st.session_state.company_view == "mine"
+                              or (OWN_SCOPE and st.session_state.company_view != "all")) and not st.session_state.company_id:
     page_my_companies()
 elif page == "companies" and st.session_state.company_id:
     comp = next((c for c in companies if str(c.get("id")) == str(st.session_state.company_id)), None)
@@ -6462,7 +6468,10 @@ elif page == "companies" and st.session_state.company_id:
         st.session_state.company_id = None
         page_companies()
 else:
-    {"home": page_member_home if MEMBER_VIEW else page_home, "jobs": page_jobs, "companies": page_companies,
+    # another admin's Home is their own scope, as a member's: the admin Home's
+    # filters read an empty follow list as "any company", so a second admin
+    # who followed nothing was shown the primary admin's whole feed
+    {"home": page_member_home if MEMBER_VIEW or OWN_SCOPE else page_home, "jobs": page_jobs, "companies": page_companies,
      "monitoring": page_monitoring, "email": page_email, "settings": page_settings, "alerts": page_alerts,
      "preferences": page_preferences, "onboarding": page_onboarding}[page]()
 st.session_state.page_before = st.session_state.page
