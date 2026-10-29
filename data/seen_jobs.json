@@ -1580,9 +1580,10 @@
     "date": "Oct 29, 12:07",
     "first_seen": "2026-10-29T12:07:08.280139+00:00",
     "id": "PwC_IN_Intern/Trainee",
-    "notified": false,
+    "notified": true,
     "company_id": "pwc",
-    "notify_state": "claimed",
-    "claimed_at": "2026-10-29T12:07:47.978658+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-10-29T12:07:47.978658+00:00",
+    "notified_at": "2026-10-29T12:07:52.472272+00:00"
   }
 ]
