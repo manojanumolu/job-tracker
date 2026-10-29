@@ -1543,5 +1543,46 @@
     "notify_state": "sent",
     "claimed_at": "2026-10-28T21:09:53.331576+00:00",
     "notified_at": "2026-10-28T21:10:05.580419+00:00"
+  },
+  {
+    "title": "IN_Intern/Trainee",
+    "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Bengaluru-Millenia/IN-Intern-Trainee_764518WD",
+    "company": "PwC",
+    "location": "Bengaluru Millenia · India",
+    "category": "FRESHER",
+    "reason": "fresher signal: 'Freshers can apply'",
+    "evidence": {
+      "experience": [
+        "0 - 1 year"
+      ],
+      "experience_lines": [
+        "0 – 1 year (Freshers can apply)",
+        "Ensure positive candidate experience and adherence to hiring timelines",
+        "Years of experience required:"
+      ],
+      "fresher_evidence": "Freshers can apply",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:764518WD",
+      "canonical_url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Bengaluru-Millenia/IN-Intern-Trainee_764518WD",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "pwc|workday:764518WD",
+    "date": "Oct 29, 12:07",
+    "first_seen": "2026-10-29T12:07:08.280139+00:00",
+    "id": "PwC_IN_Intern/Trainee",
+    "notified": false,
+    "company_id": "pwc",
+    "notify_state": "claimed",
+    "claimed_at": "2026-10-29T12:07:47.978658+00:00"
   }
 ]
