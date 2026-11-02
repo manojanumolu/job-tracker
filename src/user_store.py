@@ -14,6 +14,7 @@ Personal (here), one tree per person:
   users/{uid}/companies/{id}     watchlist: company IDs from the shared catalogue
   users/{uid}/dismissed/{id}     jobs this person dismissed (job_key inside)
   users/{uid}/deliveries/{id}    per-user email ledger: claim -> send -> finalize
+  users/{uid}/applications/{id}  Application Tracker (admins only; applications.py)
 
 Isolation is structural: a UserData object is bound to ONE uid when it is
 created (by the app, from the server-side signed-in account) and every
@@ -460,16 +461,23 @@ class UserData:
     @_guard
     def delete_personal_data(self) -> int:
         """Delete everything this person owns in the store — users/{uid} and
-        its companies, dismissed, deliveries and sessions — and nothing
+        its companies, dismissed, deliveries, sessions and applications — and nothing
         else (shared listings, catalogue and settings live in GitHub, not
         here). Returns how many documents were deleted."""
-        paths = [f"{self._root}/{sub}/{doc_id}" for sub in ("companies", "dismissed", "deliveries", "sessions")
+        paths = [f"{self._root}/{sub}/{doc_id}" for sub in ("companies", "dismissed", "deliveries", "sessions", "applications")
                  for doc_id in self._backend.list(f"{self._root}/{sub}")]
         if paths:
             self._backend.delete_many(paths)
         existed = self._backend.get(self._root) is not None
         self._backend.delete(self._root)
         return len(paths) + (1 if existed else 0)
+
+    def application_book(self, authorize):
+        """This person's Application Tracker (applications.ApplicationBook),
+        bound to this same uid. ``authorize`` is asked before every
+        operation; the app passes its admin-and-owner check."""
+        from applications import ApplicationBook
+        return ApplicationBook(self._backend, self.uid, authorize)
 
     @_guard
     def record_activity(self, now: float | None = None) -> str:
