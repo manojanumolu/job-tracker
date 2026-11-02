@@ -6,7 +6,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-01T21:04:16.559602+00:00",
+    "last_checked": "2026-11-02T00:04:38.459628+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -17,8 +17,8 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-01T21:02:57.809681+00:00",
-        "finished_at": "2026-11-01T21:07:19.274388+00:00",
+        "started_at": "2026-11-02T00:03:25.376122+00:00",
+        "finished_at": "2026-11-02T00:07:54.875191+00:00",
         "jobs_found": 37,
         "new_jobs": 0,
         "portals": 7,
@@ -26,7 +26,7 @@
       }
     },
     "source": "Avature job search",
-    "last_success": "2026-11-01T21:04:16.559602+00:00"
+    "last_success": "2026-11-02T00:04:38.459628+00:00"
   },
   {
     "id": "avalara",
@@ -35,7 +35,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-01T21:04:20.187248+00:00",
+    "last_checked": "2026-11-02T00:04:42.083078+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -46,8 +46,8 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-01T21:02:57.809681+00:00",
-        "finished_at": "2026-11-01T21:07:19.274388+00:00",
+        "started_at": "2026-11-02T00:03:25.376122+00:00",
+        "finished_at": "2026-11-02T00:07:54.875191+00:00",
         "jobs_found": 37,
         "new_jobs": 0,
         "portals": 7,
@@ -55,7 +55,7 @@
       }
     },
     "source": "Jibe/iCIMS API",
-    "last_success": "2026-11-01T21:04:20.187248+00:00"
+    "last_success": "2026-11-02T00:04:42.083078+00:00"
   },
   {
     "id": "pokerstars",
@@ -64,7 +64,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-01T21:04:22.276691+00:00",
+    "last_checked": "2026-11-02T00:04:44.373585+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -75,8 +75,8 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-01T21:02:57.809681+00:00",
-        "finished_at": "2026-11-01T21:07:19.274388+00:00",
+        "started_at": "2026-11-02T00:03:25.376122+00:00",
+        "finished_at": "2026-11-02T00:07:54.875191+00:00",
         "jobs_found": 37,
         "new_jobs": 0,
         "portals": 7,
@@ -84,7 +84,7 @@
       }
     },
     "source": "Workday API",
-    "last_success": "2026-11-01T21:04:22.276691+00:00"
+    "last_success": "2026-11-02T00:04:44.373585+00:00"
   },
   {
     "id": "sanofi",
@@ -93,7 +93,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-01T21:04:46.553385+00:00",
+    "last_checked": "2026-11-02T00:05:10.334960+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -104,8 +104,8 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-01T21:02:57.809681+00:00",
-        "finished_at": "2026-11-01T21:07:19.274388+00:00",
+        "started_at": "2026-11-02T00:03:25.376122+00:00",
+        "finished_at": "2026-11-02T00:07:54.875191+00:00",
         "jobs_found": 37,
         "new_jobs": 0,
         "portals": 7,
@@ -113,7 +113,7 @@
       }
     },
     "source": "Workday API",
-    "last_success": "2026-11-01T21:04:46.553385+00:00"
+    "last_success": "2026-11-02T00:05:10.334960+00:00"
   },
   {
     "id": "pwc",
@@ -121,8 +121,8 @@
     "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers",
     "locked": true,
     "status": "active",
-    "last_job": "Associate - CA Freshers - RDC",
-    "last_checked": "2026-11-01T21:07:10.432474+00:00",
+    "last_job": "Associate",
+    "last_checked": "2026-11-02T00:07:45.971744+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -133,8 +133,8 @@
       "pending": 0,
       "accepted": 7,
       "run": {
-        "started_at": "2026-11-01T21:02:57.809681+00:00",
-        "finished_at": "2026-11-01T21:07:19.274388+00:00",
+        "started_at": "2026-11-02T00:03:25.376122+00:00",
+        "finished_at": "2026-11-02T00:07:54.875191+00:00",
         "jobs_found": 37,
         "new_jobs": 0,
         "portals": 7,
@@ -142,7 +142,7 @@
       }
     },
     "source": "Workday API",
-    "last_success": "2026-11-01T21:07:10.432474+00:00"
+    "last_success": "2026-11-02T00:07:45.971744+00:00"
   },
   {
     "id": "accenture",
@@ -151,7 +151,7 @@
     "locked": true,
     "status": "active",
     "last_job": "Procure to Pay Operations New Associate",
-    "last_checked": "2026-11-01T21:07:14.294881+00:00",
+    "last_checked": "2026-11-02T00:07:49.556284+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -162,8 +162,8 @@
       "pending": 0,
       "accepted": 30,
       "run": {
-        "started_at": "2026-11-01T21:02:57.809681+00:00",
-        "finished_at": "2026-11-01T21:07:19.274388+00:00",
+        "started_at": "2026-11-02T00:03:25.376122+00:00",
+        "finished_at": "2026-11-02T00:07:54.875191+00:00",
         "jobs_found": 37,
         "new_jobs": 0,
         "portals": 7,
@@ -171,7 +171,7 @@
       }
     },
     "source": "Accenture job-search API",
-    "last_success": "2026-11-01T21:07:14.294881+00:00"
+    "last_success": "2026-11-02T00:07:49.556284+00:00"
   },
   {
     "id": "c1783687965",
@@ -180,7 +180,7 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-01T21:07:18.273532+00:00",
+    "last_checked": "2026-11-02T00:07:53.874471+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -191,8 +191,8 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-01T21:02:57.809681+00:00",
-        "finished_at": "2026-11-01T21:07:19.274388+00:00",
+        "started_at": "2026-11-02T00:03:25.376122+00:00",
+        "finished_at": "2026-11-02T00:07:54.875191+00:00",
         "jobs_found": 37,
         "new_jobs": 0,
         "portals": 7,
@@ -200,6 +200,6 @@
       }
     },
     "source": "Zoho Recruit career site",
-    "last_success": "2026-11-01T21:07:18.273532+00:00"
+    "last_success": "2026-11-02T00:07:53.874471+00:00"
   }
 ]
