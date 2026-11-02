@@ -91,4 +91,6 @@ def test_only_search_fields_are_restyled():
     selectors = [s.split("{")[0] for s in block.split("}") if "{" in s]
     assert selectors and all('input[aria-label^="Search"]' in s for s in selectors)
     assert not any(word in s.lower() for s in selectors for word in ("select", "button"))
-    assert sorted(set(re.findall(r'st\.text_input\("(Search[^"]*)"', SRC))) == ["Search", "Search companies"]
+    # (Nov 2026: the Application Tracker's own search box looks like every other search)
+    assert sorted(set(re.findall(r'st\.text_input\("(Search[^"]*)"', SRC))) == ["Search", "Search applications",
+                                                                             "Search companies"]

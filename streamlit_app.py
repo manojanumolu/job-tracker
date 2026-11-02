@@ -6,7 +6,8 @@ import os
 import re
 import threading
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
+from datetime import time as dtime
 from html import escape
 from pathlib import Path
 from urllib.parse import urlparse
@@ -92,7 +93,8 @@ def _stamp_fresh_local_modules() -> None:
 
 
 _LOCAL_MODULES = ["scan_schedule", "identity", "locations", "job_classifier", "sources", "scraper", "config_store", "repo_sync",
-                  "access", "email_policy", "firebase_auth", "job_filters", "user_store", "snapshot_cache", "notifier", "alerts"]
+                  "access", "email_policy", "firebase_auth", "job_filters", "user_store", "snapshot_cache", "notifier", "alerts",
+                  "applications", "application_export", "job_page"]
 _reload_changed_local_modules()
 
 from config_store import (
@@ -108,11 +110,14 @@ from config_store import (
 )
 from notifier import category_label, friendly_reason, safe_url
 from identity import ats_job_id
+import application_export
+import applications as apps
 import brand_logos
 import company_logos
 import email_policy
 import firebase_auth
 import job_filters
+import job_page
 import scan_schedule
 import snapshot_cache
 import user_store
@@ -155,6 +160,7 @@ LOGO_PATH = BASE / "assets" / "logo.png"
 PAGES = {
     "home": ("Home", ":material/home:"),
     "jobs": ("Jobs", ":material/work:"),
+    "applications": ("Application Tracker", ":material/assignment_turned_in:"),   # admins only
     "companies": ("Companies", ":material/apartment:"),
     "monitoring": ("Monitoring", ":material/monitor_heart:"),
     "email": ("Email & Notifications", ":material/mail:"),
@@ -641,13 +647,14 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 
 /* ── surfaces ── */
 .panel, [class*="st-key-filters_"], .st-key-add_form, .st-key-email_form, .st-key-test_panel, [class*="st-key-set_"],
+.st-key-at_fetch, .st-key-at_form, .st-key-at_export, .st-key-at_dupe,
 .st-key-job_main, .st-key-job_side, .st-key-co_side, .st-key-empty, .st-key-hero, .st-key-job_hero, .st-key-co_hero, .st-key-mail_status,
-:is(.st-key-danger_confirm, .st-key-mh_clear_ask, .st-key-delete_confirm), .mon tbody tr, [class*="st-key-jr_"], [class*="st-key-cr_"] {
+:is(.st-key-danger_confirm, .st-key-mh_clear_ask, .st-key-delete_confirm, .st-key-at_confirm), .mon tbody tr, [class*="st-key-jr_"], [class*="st-key-cr_"] {
   background: var(--surface) !important; border: 1px solid var(--border) !important; border-radius: var(--r-lg) !important;
   box-shadow: var(--hi), var(--shadow) !important;
 }
 .st-key-add_form, .st-key-email_form, .st-key-test_panel, [class*="st-key-set_"], .st-key-job_main, .st-key-job_side,
-.st-key-co_side, .st-key-empty, .st-key-mail_status { padding: 22px 24px !important; gap: 16px !important; }
+.st-key-at_fetch, .st-key-at_form, .st-key-at_export, .st-key-co_side, .st-key-empty, .st-key-mail_status { padding: 22px 24px !important; gap: 16px !important; }
 .st-key-job_main, .st-key-job_side, .st-key-co_side { gap: 22px !important; }
 .divider { border-top: 1px solid var(--border); margin: 0; }
 
@@ -864,11 +871,11 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 .job-why span.t { display: inline-flex; align-items: center; gap: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; max-width: 100%; }
 .job-why span.t .ms { font-size: 16px; color: var(--accent-text); }
 .list-foot { padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--muted); }
-.st-key-list_foot_h, .st-key-list_foot_j { padding: 6px 4px 0 !important; }
+.st-key-list_foot_h, :is(.st-key-list_foot_j, .st-key-list_foot_at) { padding: 6px 4px 0 !important; }
 .st-key-list_foot_h > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-list_foot_h > [data-testid="stHorizontalBlock"],
-.st-key-list_foot_j > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-list_foot_j > [data-testid="stHorizontalBlock"] { align-items: center !important; gap: 8px !important; flex-wrap: nowrap !important; }
-.st-key-list_foot_h [data-testid="stColumn"], .st-key-list_foot_j [data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
-.st-key-list_foot_h [data-testid="stColumn"]:first-child, .st-key-list_foot_j [data-testid="stColumn"]:first-child { flex: 1 1 auto !important; }
+:is(.st-key-list_foot_j, .st-key-list_foot_at) > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], :is(.st-key-list_foot_j, .st-key-list_foot_at) > [data-testid="stHorizontalBlock"] { align-items: center !important; gap: 8px !important; flex-wrap: nowrap !important; }
+.st-key-list_foot_h [data-testid="stColumn"], :is(.st-key-list_foot_j, .st-key-list_foot_at) [data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
+.st-key-list_foot_h [data-testid="stColumn"]:first-child, :is(.st-key-list_foot_j, .st-key-list_foot_at) [data-testid="stColumn"]:first-child { flex: 1 1 auto !important; }
 /* a narrow list (company page, tablet, phone): actions move under the text */
 @container (max-width: 780px) {
   [class*="st-key-jr_"] { flex-wrap: wrap !important; row-gap: 14px !important; }
@@ -936,28 +943,28 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 /* destructive: quiet until hovered, then unmistakably red */
 :is(.st-key-danger, .st-key-btn_mh_clear, .st-key-btn_delete_open) [data-testid^="stBaseButton"] { color: var(--red) !important; }
 :is(.st-key-danger, .st-key-btn_mh_clear, .st-key-btn_delete_open) [data-testid^="stBaseButton"]:hover:not(:disabled) { color: var(--red) !important; background: var(--red-soft) !important; border-color: color-mix(in srgb, var(--red) 45%, transparent) !important; }
-:is(.st-key-danger_confirm, .st-key-mh_clear_ask, .st-key-delete_confirm) { padding: 16px 18px !important; gap: 12px !important; border-color: color-mix(in srgb, var(--red) 35%, var(--border)) !important;
+:is(.st-key-danger_confirm, .st-key-mh_clear_ask, .st-key-delete_confirm, .st-key-at_confirm) { padding: 16px 18px !important; gap: 12px !important; border-color: color-mix(in srgb, var(--red) 35%, var(--border)) !important;
   background: linear-gradient(180deg, var(--red-soft), transparent 140%), var(--surface) !important; }
-:is(.st-key-danger_confirm, .st-key-mh_clear_ask, .st-key-delete_confirm) [data-testid="stBaseButton-secondary"] { color: var(--text) !important; }
-:is(.st-key-danger_confirm, .st-key-mh_clear_ask, .st-key-delete_confirm) [data-testid="stBaseButton-primary"] { background: var(--red) !important; border-color: var(--red) !important; color: #fff !important; box-shadow: 0 8px 18px -10px var(--red) !important; }
+:is(.st-key-danger_confirm, .st-key-mh_clear_ask, .st-key-delete_confirm, .st-key-at_confirm) [data-testid="stBaseButton-secondary"] { color: var(--text) !important; }
+:is(.st-key-danger_confirm, .st-key-mh_clear_ask, .st-key-delete_confirm, .st-key-at_confirm) [data-testid="stBaseButton-primary"] { background: var(--red) !important; border-color: var(--red) !important; color: #fff !important; box-shadow: 0 8px 18px -10px var(--red) !important; }
 [class*="st-key-dismiss_"] [data-testid^="stBaseButton"], [class*="st-key-restore_"] [data-testid^="stBaseButton"] { width: 38px !important; padding: 0 !important; color: var(--muted) !important; }
 [class*="st-key-dismiss_"] [data-testid^="stBaseButton"]:hover { color: var(--red) !important; border-color: color-mix(in srgb, var(--red) 40%, transparent) !important; background: var(--red-soft) !important; }
 [class*="st-key-restore_"] [data-testid^="stBaseButton"]:hover { color: var(--accent-text) !important; }
 
 /* segmented tabs (st.pills) */
-.st-key-jobs_tab_wrap [data-testid="stButtonGroup"] > div, .st-key-co_status_wrap [data-testid="stButtonGroup"] > div {
+.st-key-jobs_tab_wrap [data-testid="stButtonGroup"] > div, :is(.st-key-co_status_wrap, .st-key-at_section_wrap, .st-key-at_scope_wrap, .st-key-at_method_wrap, .st-key-at_range_wrap, .st-key-at_export) [data-testid="stButtonGroup"] > div {
   gap: 2px !important; background: color-mix(in srgb, var(--surface) 60%, var(--hover)); border: 1px solid var(--border); padding: 4px; border-radius: 12px; display: inline-flex !important; flex-wrap: wrap;
 }
-.st-key-jobs_tab_wrap button[data-variant="pills"], .st-key-co_status_wrap button[data-variant="pills"],
-.st-key-jobs_tab_wrap [data-testid^="stBaseButton-pills"], .st-key-co_status_wrap [data-testid^="stBaseButton-pills"] {
+.st-key-jobs_tab_wrap button[data-variant="pills"], :is(.st-key-co_status_wrap, .st-key-at_section_wrap, .st-key-at_scope_wrap, .st-key-at_method_wrap, .st-key-at_range_wrap, .st-key-at_export) button[data-variant="pills"],
+.st-key-jobs_tab_wrap [data-testid^="stBaseButton-pills"], :is(.st-key-co_status_wrap, .st-key-at_section_wrap, .st-key-at_scope_wrap, .st-key-at_method_wrap, .st-key-at_range_wrap, .st-key-at_export) [data-testid^="stBaseButton-pills"] {
   border: 1px solid transparent !important; border-radius: 9px !important; background: transparent !important; color: var(--muted) !important; min-height: 32px !important; padding: 0 13px !important;
 }
-.st-key-jobs_tab_wrap button[data-variant="pills"]:hover, .st-key-co_status_wrap button[data-variant="pills"]:hover { color: var(--text) !important; }
-.st-key-jobs_tab_wrap button[data-variant="pills"][aria-checked="true"], .st-key-co_status_wrap button[data-variant="pills"][aria-checked="true"],
-.st-key-jobs_tab_wrap [data-testid="stBaseButton-pillsActive"], .st-key-co_status_wrap [data-testid="stBaseButton-pillsActive"] {
+.st-key-jobs_tab_wrap button[data-variant="pills"]:hover, :is(.st-key-co_status_wrap, .st-key-at_section_wrap, .st-key-at_scope_wrap, .st-key-at_method_wrap, .st-key-at_range_wrap, .st-key-at_export) button[data-variant="pills"]:hover { color: var(--text) !important; }
+.st-key-jobs_tab_wrap button[data-variant="pills"][aria-checked="true"], :is(.st-key-co_status_wrap, .st-key-at_section_wrap, .st-key-at_scope_wrap, .st-key-at_method_wrap, .st-key-at_range_wrap, .st-key-at_export) button[data-variant="pills"][aria-checked="true"],
+.st-key-jobs_tab_wrap [data-testid="stBaseButton-pillsActive"], :is(.st-key-co_status_wrap, .st-key-at_section_wrap, .st-key-at_scope_wrap, .st-key-at_method_wrap, .st-key-at_range_wrap, .st-key-at_export) [data-testid="stBaseButton-pillsActive"] {
   background: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; box-shadow: var(--hi), var(--shadow) !important;
 }
-.st-key-jobs_tab_wrap button[data-variant="pills"] p, .st-key-co_status_wrap button[data-variant="pills"] p { color: inherit !important; font-size: 13.5px !important; }
+.st-key-jobs_tab_wrap button[data-variant="pills"] p, :is(.st-key-co_status_wrap, .st-key-at_section_wrap, .st-key-at_scope_wrap, .st-key-at_method_wrap, .st-key-at_range_wrap, .st-key-at_export) button[data-variant="pills"] p { color: inherit !important; font-size: 13.5px !important; }
 
 /* ── detail views ── */
 .st-key-job_hero, .st-key-co_hero { position: relative; overflow: hidden; padding: 26px 28px !important; gap: 20px !important;
@@ -1227,6 +1234,8 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 [class*="st-key-nav_"] p { font-size: 14px !important; font-weight: 600 !important; }
 /* the ✕ / ↺ buttons on job rows are icon-only; their label is for screen readers */
 [class*="st-key-dismiss_"] [data-testid="stMarkdownContainer"], [class*="st-key-restore_"] [data-testid="stMarkdownContainer"],
+:is([class*="st-key-ate_"], [class*="st-key-atdel_"]) [data-testid="stMarkdownContainer"],
+:is([class*="st-key-ate_"], [class*="st-key-atdel_"]) [data-testid="stMarkdownContainer"] p,
 [class*="st-key-dismiss_"] [data-testid="stMarkdownContainer"] p, [class*="st-key-restore_"] [data-testid="stMarkdownContainer"] p { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; clip-path: inset(50%) !important; white-space: nowrap !important; margin: -1px !important; padding: 0 !important; border: 0 !important; }
 
 
@@ -1245,6 +1254,89 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 /* ── footer ── */
 .app-foot { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 8px; }
 .app-foot a { color: var(--muted) !important; } .app-foot a:hover { color: var(--accent-text) !important; }
+
+/* ── Application Tracker (admins): the app's own cards, pills, rows and tabs, plus a few pieces of its own ── */
+.stats.six { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* date, time and long-text fields (first used here): the same surface, edge, hover and focus as the text fields */
+:is(.stDateInput, .stTimeInput, .stTextArea, .stMultiSelect) label p { font-size: 13px !important; line-height: 18px !important; font-weight: 600 !important; color: var(--text-2) !important; }
+:is([data-testid="stDateInputField"], [data-testid="stTimeInputTimeDisplay"], [data-testid="stTextAreaRootElement"]) {
+  background: var(--surface) !important; border: 1px solid var(--border-strong) !important; border-radius: var(--r) !important;
+  min-height: 40px; transition: border-color var(--fast), box-shadow var(--normal) var(--ease); }
+:is([data-testid="stDateInputField"], [data-testid="stTimeInputTimeDisplay"], [data-testid="stTextAreaRootElement"]) * { background-color: transparent !important; }
+:is([data-testid="stDateInputField"], [data-testid="stTimeInputTimeDisplay"], [data-testid="stTextAreaRootElement"]):hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border-strong)) !important; }
+:is([data-testid="stDateInputField"], [data-testid="stTimeInputTimeDisplay"], [data-testid="stTextAreaRootElement"]):focus-within {
+  border-color: var(--accent) !important; box-shadow: var(--ring), 0 8px 24px -14px var(--accent) !important; }
+:is([data-testid="stDateInputField"], [data-testid="stTimeInputTimeDisplay"]) [role="spinbutton"], [data-testid="stTextAreaRootElement"] textarea {
+  font-size: 14px !important; color: var(--text) !important; -webkit-text-fill-color: var(--text); }
+:is([data-testid="stDateInputField"], [data-testid="stTimeInputTimeDisplay"]) :is([data-placeholder="true"], [data-type="literal"]) {
+  color: var(--muted) !important; -webkit-text-fill-color: var(--muted); }
+[data-testid="stTextAreaRootElement"] textarea { line-height: 21px !important; padding: 10px 12px !important; }
+.set-head .ic.amber { color: var(--amber); background: var(--amber-soft); }
+.at-sec { display: flex; gap: 12px; align-items: flex-start; margin-top: 2px; }
+.at-sec .ic { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  color: var(--accent-text); background: var(--accent-soft); }
+.st-key-at_form [data-testid="stHorizontalBlock"] { gap: 12px !important; }
+.st-key-at_form [data-testid="stExpander"] [data-testid="stVerticalBlock"] { gap: 12px; }
+.at-msg { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--r); border: 1px solid transparent;
+  font-size: 13.5px; line-height: 20px; color: var(--text); }
+.at-msg b { font-weight: 600; } .at-msg p { margin: 2px 0 0; color: var(--text-2); }
+.at-msg.ok { background: var(--green-soft); border-color: color-mix(in srgb, var(--green) 28%, transparent); } .at-msg.ok > .ms { color: var(--green); }
+.at-msg.warn { background: var(--amber-soft); border-color: color-mix(in srgb, var(--amber) 28%, transparent); } .at-msg.warn > .ms { color: var(--amber); }
+.at-msg.err { background: var(--red-soft); border-color: color-mix(in srgb, var(--red) 28%, transparent); } .at-msg.err > .ms { color: var(--red); }
+.st-key-at_dupe { padding: 18px 20px !important; gap: 12px !important; border-color: color-mix(in srgb, var(--amber) 40%, var(--border)) !important;
+  background: linear-gradient(180deg, var(--amber-soft), transparent 140%), var(--surface) !important; }
+.at-dupe-kv { padding: 12px 14px !important; border-radius: var(--r); background: var(--surface); border: 1px solid var(--border); margin-top: 0 !important; }
+.job-meta .at-fu.overdue, .job-meta .at-fu.overdue .ms { color: var(--red); }
+.job-meta .at-fu.today, .job-meta .at-fu.today .ms { color: var(--amber); }
+:is([class*="st-key-ate_"], [class*="st-key-atdel_"]) [data-testid^="stBaseButton"] { width: 38px !important; padding: 0 !important; color: var(--muted) !important; }
+[class*="st-key-ate_"] [data-testid^="stBaseButton"]:hover { color: var(--accent-text) !important; }
+[class*="st-key-atdel_"] [data-testid^="stBaseButton"]:hover { color: var(--red) !important; border-color: color-mix(in srgb, var(--red) 40%, transparent) !important; background: var(--red-soft) !important; }
+:is(.st-key-at_status, .st-key-at_iv_form) { padding: 14px 16px !important; gap: 12px !important; border-radius: var(--r) !important;
+  background: var(--surface-2) !important; border: 1px solid var(--border) !important; }
+:is(.st-key-at_status, .st-key-at_iv_form) [data-testid="stHorizontalBlock"] { gap: 12px !important; }
+:is(.st-key-at_fu_actions, [class*="st-key-atrnda_"]) { flex-direction: row !important; flex-wrap: wrap !important; gap: 8px !important; }
+:is(.st-key-at_fu_actions, [class*="st-key-atrnda_"]) > * { width: auto !important; flex: 0 0 auto !important; }
+[class*="st-key-atrnd_"] { padding: 14px 16px !important; gap: 4px !important; border-radius: var(--r) !important; background: var(--surface-2) !important;
+  border: 1px solid var(--border) !important; }
+.at-iv-h { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.at-iv-h b { font-size: 15px; line-height: 22px; color: var(--text); margin-right: auto; }
+.at-iv .kv { grid-template-columns: 100px minmax(0, 1fr); gap: 6px 14px; margin-top: 10px !important; font-size: 13.5px; }
+.at-notes { white-space: pre-wrap; font-size: 14px; line-height: 21px; color: var(--text-2); margin: 8px 0 0; overflow-wrap: anywhere; }
+.step p.at-rec { font-size: 12px; line-height: 17px; }
+.at-chart { margin: 0; padding: 18px 20px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface);
+  box-shadow: var(--hi), var(--shadow); height: 100%; box-sizing: border-box; }
+.at-chart figcaption { margin-bottom: 16px; }
+.at-plot { position: relative; padding-top: 20px; }
+.at-ymax { position: absolute; top: 0; left: 0; font-size: 11.5px; line-height: 16px; color: var(--muted); }
+.at-cols { display: flex; align-items: stretch; gap: 2px; height: 168px; border-top: 1px dashed var(--border); border-bottom: 1px solid var(--border-strong); }
+.at-col { flex: 1 1 0; min-width: 0; display: flex; align-items: flex-end; justify-content: center; position: relative; }
+.at-col .bar { width: min(26px, 72%); height: calc(var(--v) * 100%); min-height: 3px; border-radius: 4px 4px 0 0; background: var(--accent);
+  transition: background var(--fast); }
+.at-col .bar.zero { min-height: 0; }
+.at-col:hover .bar { background: var(--accent-hover); }
+.at-col:hover::after { content: attr(data-tip); position: absolute; left: 50%; bottom: calc(var(--v) * 100% + 8px); transform: translateX(-50%);
+  white-space: nowrap; padding: 4px 8px; border-radius: 8px; background: var(--raised); border: 1px solid var(--border); box-shadow: var(--shadow-lg);
+  font-size: 12px; line-height: 16px; font-weight: 600; color: var(--text); z-index: 2; pointer-events: none; }
+.at-xl { display: flex; gap: 2px; margin-top: 6px; }
+.at-xl span { flex: 1 1 0; min-width: 0; text-align: center; font-size: 11px; line-height: 15px; color: var(--muted); white-space: nowrap; }
+.at-hbars { list-style: none; margin: 0 !important; padding: 0 !important; display: flex; flex-direction: column; gap: 10px; }
+.at-hbars li { display: grid; grid-template-columns: minmax(0, 38%) minmax(0, 1fr) 32px; gap: 10px; align-items: center; font-size: 13px; line-height: 18px; }
+.at-hbars .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: var(--text); }
+.at-hbars .track { height: 12px; display: flex; }
+.at-hbars .bar { display: block; height: 100%; width: calc(var(--v) * 100%); min-width: 3px; border-radius: 0 4px 4px 0; background: var(--accent);
+  transition: background var(--fast); }
+.at-hbars li:hover .bar { background: var(--accent-hover); }
+.at-hbars .v { text-align: right; color: var(--text-2); font-weight: 600; }
+.at-list { margin: 10px 0 0 !important; padding: 0 0 0 18px !important; font-size: 13.5px; line-height: 22px; color: var(--text-2); }
+.at-list b { color: var(--text); font-weight: 600; }
+.st-key-at_charts > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-at_charts > [data-testid="stHorizontalBlock"] { gap: 14px !important; align-items: stretch !important; }
+.st-key-at_range_wrap > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-at_range_wrap > [data-testid="stHorizontalBlock"] { gap: 12px !important; flex-wrap: wrap !important; }
+@media (max-width: 1023px) {
+  .stats.six { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .st-key-at_charts > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-at_charts > [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; }
+  .st-key-at_charts [data-testid="stColumn"]:nth-child(n) { flex: 1 1 100% !important; width: 100% !important; }
+}
 
 /* ── empty states ── */
 .st-key-empty { background: radial-gradient(360px 180px at 50% 0%, var(--glow-1), transparent 70%), var(--surface) !important; }
@@ -1660,7 +1752,7 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
   background: linear-gradient(180deg, var(--pill-gloss), transparent 60%), var(--btn2-grad) !important;
   box-shadow: var(--hi), var(--btn2-shadow-hover), 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent) !important; }
 /* segmented tabs and filter pills: a visible hover surface */
-.st-key-jobs_tab_wrap button[data-variant="pills"]:hover, .st-key-co_status_wrap button[data-variant="pills"]:hover {
+.st-key-jobs_tab_wrap button[data-variant="pills"]:hover, :is(.st-key-co_status_wrap, .st-key-at_section_wrap, .st-key-at_scope_wrap, .st-key-at_method_wrap, .st-key-at_range_wrap, .st-key-at_export) button[data-variant="pills"]:hover {
   background: color-mix(in srgb, var(--surface) 75%, transparent) !important; }
 /* avatar tiles: press feedback and a keyboard ring */
 [class*="st-key-av_pick_"] button:active { transform: translateY(0) scale(.97); }
@@ -3515,13 +3607,18 @@ MEMBER_VIEW = bool(AUTH_GATE and ACCOUNT and not IS_ADMIN)
 # (the catalogue stays one click away, ?view=all); without it they see the
 # shared views, read-only for the shared scope
 OWN_SCOPE = OTHER_ADMIN and ME is not None
-ADMIN_PAGES = {"monitoring", "email"}
+# the Application Tracker: admins only, each with their own applications
+# (an account behind the sign-in gate: the records are kept by Firebase UID)
+TRACKER_NAV = bool(AUTH_GATE and IS_ADMIN)
+ADMIN_PAGES = {"monitoring", "email", "applications"}
 PERSONAL_PAGES = {"alerts", "preferences", "onboarding"}
 
 # A member who opens an admin page by its address lands on Home: nothing of
 # it is drawn (the operations themselves stay admin-checked regardless).
 if MEMBER_VIEW and (st.session_state.page in ADMIN_PAGES or st.session_state.get("company_view") == "add"):
     st.session_state.page, st.session_state.company_view = "home", None
+if st.session_state.page == "applications" and not TRACKER_NAV:
+    st.session_state.page = "home"
 if st.session_state.page in PERSONAL_PAGES and USER is None:
     st.session_state.page = "home"
 # first sign-in: a short setup before anything else
@@ -3731,6 +3828,7 @@ def go(page: str, **extra):
     st.session_state.job_id = extra.get("job")
     st.session_state.company_id = extra.get("company")
     st.session_state.company_view = extra.get("view")
+    st.session_state.at_view, st.session_state.at_id = extra.get("at_view"), extra.get("at_id")   # Application Tracker
     st.session_state.confirm_remove = None
     if extra.get("job"):
         st.session_state.job_from = extra.get("origin", st.session_state.get("page_before", "jobs"))
@@ -3889,6 +3987,9 @@ def nav_groups() -> list[tuple[str, list[str]]]:
     if MEMBER_VIEW:
         return [("Discover", ["home", "jobs", "companies"]),
                 ("Your account", (["alerts"] if USER is not None else []) + ["settings"])]
+    if TRACKER_NAV:                     # right below Jobs
+        return [(group, [k for key in items for k in ((key, "applications") if key == "jobs" else (key,))])
+                for group, items in NAV_GROUPS]
     return NAV_GROUPS
 
 
@@ -3903,7 +4004,7 @@ def _leave_fragment_if_needed() -> None:
     # compared with the destination the last full run drew (set before any
     # page is drawn), so a full run itself never asks for another one
     here = (st.session_state.page, st.session_state.get("job_id"), st.session_state.get("company_id"),
-            st.session_state.get("company_view"))
+            st.session_state.get("company_view"), st.session_state.get("at_view"), st.session_state.get("at_id"))
     if st.session_state.pop("_app_rerun", False) or here != st.session_state.get("_dest"):
         st.rerun()
 
@@ -4262,7 +4363,7 @@ def account_menu() -> None:
 # changed carries this one-line script (a fresh nonce, so it runs once);
 # filters, pagination, dismissing or the account menu keep their place.
 _dest = (st.session_state.page, st.session_state.get("job_id"), st.session_state.get("company_id"),
-         st.session_state.get("company_view"))
+         st.session_state.get("company_view"), st.session_state.get("at_view"), st.session_state.get("at_id"))
 if st.session_state.get("_dest") not in (None, _dest):
     st.session_state._dest_n = st.session_state.get("_dest_n", 0) + 1
     with st.container(key="jt_scroll_top"):
@@ -4541,6 +4642,7 @@ def job_row(j: dict, idx: str, origin: str):
             st.html(apply_link(j))
             st.button("Details", key=_widget_key("crit", jkey), on_click=go, args=("jobs",),
                       kwargs={"job": _jid(j), "origin": origin})
+            at_applied_button(j, _widget_key("applied", jkey))
             if is_dismissed(j):
                 st.button("Restore", icon=":material/undo:", key=_widget_key("restore", jkey),
                           help="Restore to active jobs (it won't be emailed again)", on_click=_dismiss_click,
@@ -4836,6 +4938,8 @@ def page_job_detail(j: dict):
                 if c:
                     st.button("Company details", key="btn_job_company", icon=":material/apartment:",
                               on_click=go, args=("companies",), kwargs={"company": c.get("id")})
+            with a[3]:
+                at_applied_button(j, "btn_job_applied")
 
     with st.container(key="job_cols"):
         main, side = st.columns([3, 2])
@@ -6516,6 +6620,1227 @@ def render_scope_diag() -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# APPLICATION TRACKER — admins only; each admin sees only their own applications
+# ═══════════════════════════════════════════════════════════════════════════════
+# Every read and write goes through _book(): an ApplicationBook bound to the
+# UID of the account the sign-in gate resolved on the server (USER), whose
+# authorize hook (_tracker_allowed) re-checks — before EVERY operation — admin
+# rights against the sign-in source (is_owner) and that this session is still
+# signed in as that very UID. Nothing from the URL, a form or the browser says
+# whose records these are, so one admin can never reach another's. Members
+# never see the page (ADMIN_PAGES) or its navigation (nav_groups).
+AT_PAGE = 12
+_AT_TTL_S = 120
+_AT_SECTIONS = {"applications": "Applications", "follow_ups": "Follow-ups", "analytics": "Analytics",
+                "deleted": "Recently deleted"}
+_AT_VIEWS = {"all": "All applications", "applied": "Applied", "follow_up_due": "Follow-up due",
+             "interviews": "Interviews", "offers": "Offers", "rejected": "Rejected"}
+_AT_PROGRESS_STYLE = {"Applied": ("neutral", "send"), "Assessment": ("pending-mail", "quiz"), "Interview": ("new", "groups"),
+                      "Offer Received": ("on", "workspace_premium"), "Accepted": ("on", "verified"),
+                      "Rejected": ("off", "block"), "Withdrawn": ("neutral", "undo"), "On Hold": ("neutral", "pause_circle")}
+_AT_EMAIL_STYLE = {"No Email Received": ("neutral", "hourglass_empty"), "Acknowledgement Received": ("new", "mark_email_read"),
+                   "Assessment Email Received": ("pending-mail", "quiz"), "Interview Email Received": ("new", "event"),
+                   "Rejection Email Received": ("off", "unsubscribe"), "Offer Email Received": ("on", "celebration"),
+                   "Other Email Received": ("neutral", "mail")}
+_AT_FU_STYLE = {"overdue": ("off", "alarm", "Overdue"), "today": ("pending-mail", "today", "Due today"),
+                "upcoming": ("new", "event_upcoming", "Upcoming"), "done": ("on", "task_alt", "Done")}
+# the form's widgets, by application field
+_AT_FIELDS = {"company": "atf_company", "title": "atf_title", "location": "atf_location", "url": "atf_url",
+              "job_id": "atf_job_id", "posted_on": "atf_posted", "applied_on": "atf_applied", "source": "atf_source",
+              "source_other": "atf_source_other", "salary": "atf_salary", "progress": "atf_progress",
+              "email_status": "atf_email", "resume": "atf_resume", "follow_up": "atf_follow", "notes": "atf_notes",
+              "description": "atf_desc"}
+_AT_DATES = ("posted_on", "applied_on", "follow_up")
+_AT_IDENTITY = ("company", "title", "location", "url", "job_id")
+
+
+def _tracker_allowed() -> bool:
+    """May this session use the Application Tracker right now? Only an admin
+    (is_owner: checked again against Google / Firebase, not just remembered)
+    whose signed-in account is the very UID the personal store is bound to.
+    The hook every ApplicationBook operation asks first."""
+    if not (AUTH_GATE and USER is not None):
+        return False
+    account = st.session_state.get(ACCOUNT_KEY)
+    return isinstance(account, dict) and account.get("uid") == USER.uid and is_owner()
+
+
+def _book():
+    """This admin's own ApplicationBook, or None for anyone else."""
+    return USER.application_book(_tracker_allowed) if _tracker_allowed() else None
+
+
+def _at_docs() -> list[dict]:
+    """This admin's applications (Recently deleted included), kept in THIS
+    browser session for _AT_TTL_S so clicks don't wait for Firestore —
+    but handed out only after the same admin-and-owner check as a read."""
+    book = _book()
+    if book is None:
+        raise apps.NotAuthorized("Only admins can use the Application Tracker.")
+    cached = st.session_state.get("_at_cache")
+    if isinstance(cached, dict) and cached.get("uid") == book.uid and time.time() - cached.get("at", 0) < _AT_TTL_S:
+        return list(cached["docs"].values())
+    docs = book.load()
+    st.session_state._at_cache = {"uid": book.uid, "at": time.time(), "docs": {d["id"]: d for d in docs}}
+    return docs
+
+
+def _at_put(doc: dict) -> None:
+    """A record just written: into this session's copy (no read back)."""
+    cached = st.session_state.get("_at_cache")
+    if isinstance(cached, dict) and USER is not None and cached.get("uid") == USER.uid:
+        cached["docs"][doc["id"]] = doc
+
+
+def _at_forget(app_id: str) -> None:
+    cached = st.session_state.get("_at_cache")
+    if isinstance(cached, dict):
+        cached["docs"].pop(app_id, None)
+
+
+def _at_cached(app_id) -> dict | None:
+    cached = st.session_state.get("_at_cache")
+    if isinstance(cached, dict) and USER is not None and cached.get("uid") == USER.uid:
+        return cached["docs"].get(app_id)
+    return None
+
+
+def _at_run(op: str, *args, ok: str = "", **kwargs):
+    """One operation of this admin's book, refusals and failures shown as a
+    toast. Returns its result, or None when it didn't happen."""
+    book = _book()
+    if book is None:
+        toast("Only admins can use the Application Tracker.", "error")
+        return None
+    try:
+        result = getattr(book, op)(*args, **kwargs)
+    except (apps.NotAuthorized, apps.NotFound, apps.Conflict, user_store.InvalidInput, user_store.UserStoreError) as e:
+        st.session_state.pop("_at_cache", None)              # whatever changed, read it fresh next time
+        toast(str(e), "error")
+        return None
+    if isinstance(result, dict) and result.get("id"):
+        _at_put(result)
+    if ok:
+        toast(ok)
+        st.session_state._app_rerun = True          # the counts around a list change too: the whole page, once
+    return True if result is None else result
+
+
+def _at_go(view: str = "list", app_id: str | None = None) -> None:
+    go("applications", at_view=view, at_id=app_id)
+    for k in ("_at_confirm", "_at_iv_edit", "_at_dupes", "_at_form_error", "_at_export_open"):
+        st.session_state.pop(k, None)
+
+
+def _at_day(value: object, fmt: str = "%d %b %Y") -> str:
+    d = apps.parse_day(value)
+    return d.strftime(fmt) if d else "—"
+
+
+def _at_badge(kind: str, value: str) -> str:
+    cls, icon = (_AT_PROGRESS_STYLE if kind == "progress" else _AT_EMAIL_STYLE).get(value, ("neutral", "help"))
+    what = "Application progress" if kind == "progress" else "Email response"
+    return (f'<span class="pill {cls}" title="{what}">{_ms(icon)}<span class="sr-only">{what}: </span>'
+            f'{escape(value)}</span>')
+
+
+def _at_fu_badge(state: str, day: str = "") -> str:
+    cls, icon, label = _AT_FU_STYLE[state]
+    return f'<span class="pill {cls}">{_ms(icon)}{label}{" · " + escape(day) if day else ""}</span>'
+
+
+def _at_updated(doc: dict) -> str:
+    ts = apps._iso_seconds(doc.get("updated_at"))
+    return _ago(datetime.fromtimestamp(ts, timezone.utc), NOW) if ts else "—"
+
+
+# ── adding and editing ────────────────────────────────────────────────────────
+def _at_seed_form(values: dict) -> None:
+    """Put an application's values (or a prefill) into the form's widgets."""
+    for field, key in _AT_FIELDS.items():
+        v = values.get(field)
+        if field in _AT_DATES:
+            v = apps.parse_day(v) or (apps.today_ist() if field == "applied_on" else None)
+        elif field == "progress":
+            v = v if v in apps.PROGRESS else "Applied"
+        elif field == "email_status":
+            v = v if v in apps.EMAIL_STATUSES else apps.NO_EMAIL
+        elif field == "source":
+            v = v if v in apps.SOURCES else None
+        else:
+            v = v if isinstance(v, str) else ""
+        st.session_state[key] = v
+    for k in ("_at_dupes", "_at_form_error", "_at_fetch", "_at_fetch_pending"):
+        st.session_state.pop(k, None)
+
+
+def _at_raw() -> dict:
+    """The form's values as an application dict (dates as YYYY-MM-DD)."""
+    out = {}
+    for field, key in _AT_FIELDS.items():
+        v = st.session_state.get(key)
+        if field in _AT_DATES:
+            v = v.isoformat() if isinstance(v, date) else ""
+        elif v is None:
+            v = ""
+        out[field] = v
+    return out
+
+
+def _at_open_add(prefill: dict | None = None, job_key_: str = "") -> None:
+    """Open the Add application form, empty or filled from a tracked job."""
+    _at_go("add")
+    _at_seed_form(prefill or {})
+    st.session_state._at_job_key = job_key_
+    st.session_state.at_method = "manual" if prefill else "url"
+    st.session_state.at_url = (prefill or {}).get("url", "")
+
+
+def _at_open_edit(app_id: str) -> None:
+    doc = _at_cached(app_id)
+    if doc is None:
+        toast("That application doesn't exist.", "error")
+        return
+    _at_go("edit", app_id)
+    _at_seed_form({**doc, "follow_up": (doc.get("follow_up") or {}).get("date", "")})
+
+
+def _at_from_job(prefill: dict, jkey: str) -> None:
+    """ "I've applied" on a tracked job: the Add form, filled from the job."""
+    if not _tracker_allowed():
+        toast("Only admins can use the Application Tracker.", "error")
+        return
+    _at_open_add(prefill, jkey)
+
+
+def at_applied_button(j: dict, key: str) -> None:
+    """The "I've applied" shortcut on a job card / job page (admins only)."""
+    if not TRACKER_NAV:
+        return
+    ev = j.get("evidence") if isinstance(j.get("evidence"), dict) else {}
+    found_id = str(ev.get("job_id") or "") or ats_job_id(j.get("url", ""))
+    prefill = {"company": (j.get("company") or "").strip(), "title": (j.get("title") or "").strip(),
+               "location": (j.get("location") or "").strip(), "url": safe_url(j.get("url", "")),
+               "job_id": found_id.split(":", 1)[1] if ":" in found_id else found_id,
+               "source": "Company Careers Page"}
+    st.button("I've applied", key=key, icon=":material/assignment_turned_in:", on_click=_at_from_job,
+              args=(prefill, job_key(j)), help="Track your application to this job")
+
+
+def _at_fetch_click() -> None:
+    """Fetch Job Details: the page is read on the next run, while the form
+    shows that it is working (a callback can't draw anything)."""
+    st.session_state._at_fetch_pending = (st.session_state.get("at_url") or "").strip()
+
+
+def _at_run_fetch(url: str) -> None:
+    if not _tracker_allowed():
+        st.session_state._at_fetch = {"problem": "Only admins can use the Application Tracker.", "found": []}
+        return
+    with st.spinner("Fetching job details…"):
+        try:
+            res = job_page.fetch_job_details(url)
+        except Exception as e:                     # never a broken form: say so, keep what was typed
+            log.warning("fetch job details failed: %s", type(e).__name__)
+            res = job_page.Fetched({}, job_page.INCOMPLETE)
+    found = []
+    for field, value in res.fields.items():
+        if field not in _AT_FIELDS or not value:
+            continue
+        if field in _AT_DATES:
+            value = apps.parse_day(value)
+            if value is None or value > apps.today_ist():
+                continue
+        elif field == "description":
+            value = value[:apps.LIMITS["description"]]
+        st.session_state[_AT_FIELDS[field]] = value          # the form's widgets are drawn after this
+        if field != "url":
+            found.append(field)
+    st.session_state._at_fetch = {"problem": res.problem, "source": res.source, "found": found}
+
+
+def _at_save_click(mode: str, force: bool = False) -> None:
+    """Both ways of adding (a fetched page, or typed in) and editing end
+    here: the same checks (applications.clean_fields), the same record."""
+    raw = _at_raw()
+    st.session_state.pop("_at_form_error", None)
+    book = _book()
+    if book is None:
+        toast("Only admins can use the Application Tracker.", "error")
+        return
+    try:
+        apps.clean_fields(raw)
+    except user_store.InvalidInput as e:
+        st.session_state._at_form_error = str(e)
+        st.session_state.pop("_at_dupes", None)
+        return
+    app_id = st.session_state.get("at_id") if mode == "edit" else ""
+    job_key_ = st.session_state.get("_at_job_key", "") if mode == "add" else ""
+    before = _at_cached(app_id) if app_id else None
+    changed_identity = before is None or any((before.get(f) or "") != raw[f] for f in _AT_IDENTITY)
+    if not force and changed_identity:
+        dupes = _at_run("find_duplicates", raw, exclude_id=app_id or "", job_key=job_key_)
+        if dupes is None:
+            return
+        if dupes is not True and dupes:
+            st.session_state._at_dupes = [(d["id"], reason) for d, reason in dupes]
+            for d, _ in dupes:
+                _at_put(d)
+            return
+    doc = (_at_run("create", raw, job_key=job_key_) if mode == "add" else _at_run("update", app_id, raw))
+    if not isinstance(doc, dict):
+        return
+    for key in (*_AT_FIELDS.values(), "_at_job_key", "at_url"):
+        st.session_state.pop(key, None)
+    toast("Application saved" if mode == "add" else "Changes saved")
+    _at_go("detail", doc["id"])
+
+
+def _at_form_page(mode: str) -> None:
+    doc = _at_cached(st.session_state.get("at_id")) if mode == "edit" else None
+    if mode == "edit" and (doc is None or doc.get("deleted_at")):
+        _at_go("list")
+        st.rerun()
+    st.button("Back to the application" if mode == "edit" else "Back to Application Tracker", key="btn_back",
+              icon=":material/arrow_back:", type="tertiary", on_click=_at_go,
+              args=("detail", doc["id"]) if doc else ("list",))
+    if mode == "add":
+        page_header("Add application", "Paste the job's link to fill in what it states, or type the details in. "
+                                       "Either way you review everything before it's saved.",
+                    eyebrow="Application Tracker")
+    else:
+        page_header("Edit application", f"{escape(doc.get('company') or '')} · {escape(doc.get('title') or '')}",
+                    eyebrow="Application Tracker")
+    _at_form(mode)
+
+
+@st.fragment
+def _at_form(mode: str) -> None:
+    """The application form (a fragment: typing and choosing redraw only it)."""
+    _leave_fragment_if_needed()
+    today = apps.today_ist()
+    for field, key in _AT_FIELDS.items():    # Streamlit drops a widget's value on runs that don't draw it
+        st.session_state.setdefault(key, None if field in (*_AT_DATES, "source") else "")
+    if st.session_state.get("atf_applied") is None:
+        st.session_state.atf_applied = today
+    if st.session_state.get("atf_progress") not in apps.PROGRESS:
+        st.session_state.atf_progress = "Applied"
+    if st.session_state.get("atf_email") not in apps.EMAIL_STATUSES:
+        st.session_state.atf_email = apps.NO_EMAIL
+    if mode == "add":
+        st.session_state.setdefault("at_method", "url")
+        with st.container(key="at_method_wrap"):
+            method = st.pills("How to add it", ["url", "manual"], key="at_method", label_visibility="collapsed",
+                              format_func={"url": "Paste job URL", "manual": "Enter manually"}.get) or "url"
+        if method == "url":
+            with st.container(key="at_fetch"):
+                st.html(f'<div class="set-head"><span class="ic">{_ms("link")}</span><div><div class="eyebrow">Method A</div>'
+                        '<h2 class="section-title">Fetch details from the job posting</h2><p class="section-sub">Only public '
+                        'pages are read, and only when the site allows it. Anything it can\'t find stays empty for you to '
+                        'fill in — nothing is guessed.</p></div></div>')
+                st.session_state.setdefault("at_url", "")
+                u1, u2 = st.columns([4, 1.3], vertical_alignment="bottom")
+                with u1:
+                    st.text_input("Job URL", key="at_url", placeholder="https://careers.example.com/jobs/12345")
+                with u2:
+                    st.button("Fetch Job Details", key="btn_at_fetch", type="primary", icon=":material/travel_explore:",
+                              use_container_width=True, on_click=_at_fetch_click)
+                pending = st.session_state.pop("_at_fetch_pending", None)
+                if pending is not None:
+                    _at_run_fetch(pending)
+                res = st.session_state.get("_at_fetch")
+                if res:
+                    names = ", ".join(apps.LABELS[f].lower() for f in res.get("found", []))
+                    if res.get("problem"):
+                        st.html(f'<div class="at-msg warn" role="status">{_ms("info", "s20")}<div><b>{escape(res["problem"])}</b>'
+                                + (f'<p>Kept what was found: {escape(names)}.</p>' if names else "") + "</div></div>")
+                    else:
+                        st.html(f'<div class="at-msg ok" role="status">{_ms("task_alt", "s20")}<div><b>Details filled in '
+                                f'from the posting{" (" + escape(res.get("source")) + ")" if res.get("source") else ""}.</b>'
+                                f'<p>Found: {escape(names)}. Check them below before saving.</p></div></div>')
+    with st.container(key="at_form"):
+        def sec(icon: str, eyebrow: str, title: str, sub: str = "") -> None:
+            st.html(f'<div class="at-sec"><span class="ic">{_ms(icon)}</span><div><div class="eyebrow">{eyebrow}</div>'
+                    f'<h2 class="section-title">{title}</h2>' + (f'<p class="section-sub">{sub}</p>' if sub else "")
+                    + "</div></div>")
+        sec("work", "1 · Job details", "The job", "Fields marked * are required")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.text_input("Company name *", key="atf_company", max_chars=apps.LIMITS["company"])
+        with c2:
+            st.text_input("Job title *", key="atf_title", max_chars=apps.LIMITS["title"])
+        with c3:
+            st.text_input("Location *", key="atf_location", max_chars=apps.LIMITS["location"],
+                          placeholder="e.g. Hyderabad, India")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.text_input("Job URL", key="atf_url", max_chars=apps.LIMITS["url"], placeholder="https://…")
+        with c2:
+            st.text_input("Job ID", key="atf_job_id", max_chars=apps.LIMITS["job_id"], placeholder="Requisition ID")
+        with c3:
+            st.date_input("Job posting date", key="atf_posted", min_value=apps.EARLIEST, max_value=today,
+                          format="DD/MM/YYYY")
+        st.html('<div class="divider"></div>')
+        sec("send", "2 · Application details", "Your application")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.date_input("Date applied *", key="atf_applied", min_value=apps.EARLIEST, max_value=today,
+                          format="DD/MM/YYYY")
+        with c2:
+            source = st.selectbox("Application source", list(apps.SOURCES), key="atf_source",
+                                  placeholder="Where you applied")
+            if source == "Other":
+                st.session_state.setdefault("atf_source_other", "")
+                st.text_input("Other source", key="atf_source_other", max_chars=apps.LIMITS["source_other"],
+                              placeholder="e.g. Campus drive")
+        with c3:
+            st.text_input("Salary/package", key="atf_salary", max_chars=apps.LIMITS["salary"], placeholder="e.g. ₹6 LPA")
+        st.html('<div class="divider"></div>')
+        sec("mark_email_unread", "3 · Status and communication", "Where it stands",
+            "Two separate things: how far the application got, and the last email you received about it")
+        c1, c2 = st.columns(2)
+        with c1:
+            progress = st.selectbox("Application progress *", list(apps.PROGRESS), key="atf_progress")
+        with c2:
+            st.selectbox("Email response *", list(apps.EMAIL_STATUSES), key="atf_email")
+        if progress == "Interview":
+            st.html(f'<p class="filter-note">{_ms("info", "s16")} Interview rounds — dates, links, interviewers, '
+                    'feedback — are added on the application\'s own page once it\'s saved.</p>')
+        more = any(st.session_state.get(k) for k in ("atf_resume", "atf_follow", "atf_notes", "atf_desc"))
+        with st.expander("Resume, follow-up and notes (optional)", expanded=more or mode == "edit"):
+            sec("description", "4 · Resume", "Resume used", "The name or version only — no file is uploaded")
+            st.text_input("Resume name/version", key="atf_resume", max_chars=apps.LIMITS["resume"],
+                          placeholder="e.g. Resume_v2_Projects.pdf")
+            sec("event", "5 · Follow-up", "Reminder", "Shown in the tracker on that day — no email is sent")
+            st.date_input("Follow-up date", key="atf_follow", min_value=apps.EARLIEST, format="DD/MM/YYYY")
+            sec("edit_note", "6 · Notes", "Notes")
+            st.text_area("Notes", key="atf_notes", max_chars=apps.LIMITS["notes"], height=110,
+                         placeholder="Referral, contacts, anything worth remembering")
+            st.text_area("Job description", key="atf_desc", max_chars=apps.LIMITS["description"], height=140)
+        if st.session_state.get("_at_form_error"):
+            st.html(f'<div class="at-msg err" role="alert">{_ms("error", "s20")}<div><b>'
+                    f'{escape(st.session_state._at_form_error)}</b></div></div>')
+        dupes = st.session_state.get("_at_dupes")
+        if dupes:
+            _at_duplicate_panel(dupes, mode)
+            return
+        b1, b2, _ = st.columns([1.2, 1, 3])
+        with b1:
+            st.button("Save application" if mode == "add" else "Save changes", key="btn_at_save", type="primary",
+                      icon=":material/check:", use_container_width=True, on_click=_at_save_click, args=(mode,))
+        with b2:
+            st.button("Cancel", key="btn_at_cancel", use_container_width=True, on_click=_at_go,
+                      args=("detail", st.session_state.get("at_id")) if mode == "edit" else ("list",))
+
+
+def _at_duplicate_panel(dupes: list, mode: str) -> None:
+    """A possible duplicate: the matching record(s) to review, then back to
+    editing or save anyway. Nothing is merged, deleted or blocked."""
+    with st.container(key="at_dupe"):
+        st.html(f'<div class="set-head"><span class="ic amber">{_ms("content_copy")}</span><div>'
+                '<div class="eyebrow">Possible duplicate</div><h2 class="section-title">You may already track this '
+                'application</h2><p class="section-sub">Review the match below. If it is a different requisition, '
+                'save anyway.</p></div></div>')
+        for app_id, reason in dupes:
+            d = _at_cached(app_id)
+            if not d:
+                continue
+            rows = [("Why it matched", escape(reason)), ("Company", escape(d.get("company") or "—")),
+                    ("Job title", escape(d.get("title") or "—")), ("Location", escape(d.get("location") or "—")),
+                    ("Job ID", escape(d.get("job_id") or "—")),
+                    ("Job URL", escape(d.get("url") or "—")), ("Date applied", _at_day(d.get("applied_on"))),
+                    ("Status", _at_badge("progress", d.get("progress") or "") + " "
+                     + _at_badge("email", d.get("email_status") or ""))]
+            st.html('<dl class="kv at-dupe-kv">' + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in rows) + "</dl>")
+        b1, b2, _ = st.columns([1.2, 1.1, 2.5])
+        with b1:
+            st.button("Back to editing", key="btn_at_dupe_back", use_container_width=True,
+                      on_click=st.session_state.pop, args=("_at_dupes", None))
+        with b2:
+            st.button("Save anyway", key="btn_at_save_anyway", type="primary", use_container_width=True,
+                      on_click=_at_save_click, args=(mode, True))
+
+
+# ── the dashboard ─────────────────────────────────────────────────────────────
+def _at_delete_click(app_id: str, back_to_list: bool = False) -> None:
+    if _at_run("soft_delete", app_id, ok=f"Moved to Recently deleted — you can restore it for {apps.RETENTION_DAYS} days"):
+        if back_to_list:
+            _at_go("list")
+
+
+def _at_row(d: dict, idx: str) -> None:
+    """One application: the job card's look, with its own facts."""
+    today = apps.today_ist()
+    fu_state = apps.follow_up_state(d, today)
+    meta = [f'<span class="mi">{_ms("location_on")}<span>{escape(d.get("location") or "—")}</span></span>',
+            f'<span class="mi num">{_ms("send")}Applied {_at_day(d.get("applied_on"))}</span>']
+    if fu_state:
+        meta.append(f'<span class="mi num at-fu {fu_state}">{_ms("event")}Follow-up '
+                    f'{_at_day((d.get("follow_up") or {}).get("date"))}{" · done" if fu_state == "done" else ""}</span>')
+    meta.append(f'<span class="mi num">{_ms("update")}Updated {_at_updated(d)}</span>')
+    with st.container(key=f"jr_{idx}"):
+        st.html(f"""<div class="job">{_avatar(d.get("company") or "")}<div class="job-body">
+            <div class="job-co"><span class="co">{escape(d.get("company") or "")}</span></div>
+            <h3 class="job-title">{escape(d.get("title") or "")}</h3>
+            <div class="job-meta">{"".join(meta)}</div>
+            <div class="job-why">{_at_badge("progress", d.get("progress") or "")}{_at_badge("email", d.get("email_status") or "")}</div>
+            </div></div>""")
+        with st.container(key=f"ja_{idx}"):
+            st.button("View", key=f"atv_{d['id']}", on_click=_at_go, args=("detail", d["id"]))
+            st.button("Edit", key=f"ate_{d['id']}", icon=":material/edit:", on_click=_at_open_edit, args=(d["id"],),
+                      help="Edit this application")
+            st.button("Delete", key=f"atdel_{d['id']}", icon=":material/delete:", on_click=_at_delete_click,
+                      args=(d["id"],), help="Move to Recently deleted")
+
+
+def _at_filter_state(docs: list[dict]) -> list[dict]:
+    """The Applications list's view, search and filters, from their widgets."""
+    applied = st.session_state.get("at_applied_range") or ()
+    follow = st.session_state.get("at_fu_range") or ()
+    return apps.sort_apps(apps.filter_apps(
+        docs, st.session_state.get("at_q") or "", st.session_state.get("at_prog") or (),
+        st.session_state.get("at_mail") or (),
+        (applied[0] if len(applied) > 0 else None, applied[1] if len(applied) > 1 else None),
+        (follow[0] if len(follow) > 0 else None, follow[1] if len(follow) > 1 else None),
+        st.session_state.get("at_scope") or "all", apps.today_ist()), st.session_state.get("at_sort") or "applied_new")
+
+
+_AT_FILTER_KEYS = ("at_q", "at_prog", "at_mail", "at_applied_range", "at_fu_range", "at_sort")
+
+
+def _at_clear_filters() -> None:
+    for k in _AT_FILTER_KEYS:
+        st.session_state.pop(k, None)
+        st.session_state.pop(f"_keep_{k}", None)
+
+
+def _at_list(docs: list[dict]) -> None:
+    """Applications: views, search, filters, sorting and pages."""
+    live = apps.live(docs)
+    today = apps.today_ist()
+    if not live:
+        empty_state("assignment_add", "No applications yet",
+                    "Add the jobs you apply for — from a job link or by hand — and follow each one from application "
+                    "to offer, with reminders, interview rounds and a full history.",
+                    lambda: st.button("Add application", key="btn_at_add_empty", type="primary", icon=":material/add:",
+                                      on_click=_at_open_add))
+        return
+    counts = {v: sum(1 for d in live if apps.in_view(d, v, today)) for v in _AT_VIEWS}
+    st.session_state.setdefault("at_scope", "all")
+    with st.container(key="at_scope_wrap"):
+        st.pills("View", list(_AT_VIEWS), key="at_scope", label_visibility="collapsed",
+                 format_func=lambda v: f"{_AT_VIEWS[v]} ({counts[v]})")
+    _restore_widgets(_AT_FILTER_KEYS)
+    st.session_state.setdefault("at_sort", "applied_new")
+    active = any(st.session_state.get(k) for k in ("at_q", "at_prog", "at_mail", "at_applied_range", "at_fu_range"))
+    with st.container(key="filters_at"):
+        r1 = st.columns([2.6, 1.2, 0.8], vertical_alignment="bottom")
+        with r1[0]:
+            st.text_input("Search applications", key="at_q", placeholder="Search company or job title",
+                          label_visibility="collapsed")
+        with r1[1]:
+            st.selectbox("Sort", list(apps.SORTS), key="at_sort", format_func=apps.SORTS.get, label_visibility="collapsed")
+        with r1[2]:
+            st.button("Clear", key="btn_at_clear", on_click=_at_clear_filters, disabled=not active,
+                      icon=":material/restart_alt:", use_container_width=True, help="Clear the search and filters")
+        with st.container(key="prow_at"):
+            r2 = st.columns(4)
+        with r2[0]:
+            st.multiselect("Application progress", list(apps.PROGRESS), key="at_prog", placeholder="Any progress",
+                           wrap=True, select_all=False)
+        with r2[1]:
+            st.multiselect("Email response", list(apps.EMAIL_STATUSES), key="at_mail", placeholder="Any response",
+                           wrap=True, select_all=False)
+        with r2[2]:
+            st.date_input("Date applied", value=(), key="at_applied_range", format="DD/MM/YYYY")
+        with r2[3]:
+            st.date_input("Follow-up date", value=(), key="at_fu_range", format="DD/MM/YYYY")
+    _remember_widgets(_AT_FILTER_KEYS)
+    shown = _at_filter_state(docs)
+    st.session_state._at_filtered_ids = [d["id"] for d in shown]          # "Export the filtered view"
+    sig = (st.session_state.get("at_scope"), *(str(st.session_state.get(k)) for k in _AT_FILTER_KEYS))
+    if st.session_state.get("_at_sig") != sig:
+        st.session_state._at_sig, st.session_state.at_page = sig, 0
+    if not shown:
+        empty_state("search_off", "No applications match", "Try another view, a different search or clear the filters.",
+                    lambda: st.button("Clear filters", key="btn_at_reset", on_click=_at_clear_filters))
+        return
+    total = len(shown)
+    page = min(st.session_state.get("at_page", 0), (total - 1) // AT_PAGE)
+    start, end = page * AT_PAGE, min(total, page * AT_PAGE + AT_PAGE)
+    before = dict(_USED_LOGOS)
+    with st.container(key="joblist_at"):
+        for i, d in enumerate(shown[start:end]):
+            _at_row(d, f"at{i}")
+        with st.container(key="list_foot_at"):
+            f1, f2, f3 = st.columns([3, 1, 1], vertical_alignment="center")
+            with f1:
+                st.html(f'<span class="muted num" style="font-size:13px;">{start + 1}–{end} of {_plural(total, "application")}</span>')
+            with f2:
+                st.button("Previous", key="at_prev", icon=":material/chevron_left:", disabled=page == 0,
+                          on_click=st.session_state.__setitem__, args=("at_page", page - 1))
+            with f3:
+                st.button("Next", key="at_next", icon=":material/chevron_right:", icon_position="right",
+                          disabled=end >= total, on_click=st.session_state.__setitem__, args=("at_page", page + 1))
+    _fragment_logos(before)
+
+
+def _at_fu_click(app_id: str, action: str) -> None:
+    if action == "done":
+        _at_run("complete_follow_up", app_id, True, ok="Follow-up marked as done")
+    elif action == "reopen":
+        _at_run("complete_follow_up", app_id, False, ok="Follow-up reopened")
+    elif action == "clear":
+        _at_run("set_follow_up", app_id, None, ok="Follow-up reminder cleared")
+
+
+def _at_followups(docs: list[dict]) -> None:
+    """Manual reminders: overdue, due today, upcoming and done. Nothing is
+    ever marked done by the calendar — only by the Done button."""
+    buckets = apps.follow_up_buckets(docs, apps.today_ist())
+    if not any(buckets.values()):
+        empty_state("event_available", "No follow-up reminders",
+                    "Set a follow-up date on an application to be reminded here when it's time to check in. "
+                    "Reminders are shown in the tracker only — no email is sent.")
+        return
+    heads = {"overdue": ("Overdue", "The follow-up date has passed and the reminder is still open"),
+             "today": ("Due today", ""), "upcoming": ("Upcoming", ""), "done": ("Completed follow-ups", "")}
+    n = 0
+    for state in ("overdue", "today", "upcoming", "done"):
+        items = buckets[state]
+        if not items:
+            continue
+        title, sub = heads[state]
+        st.html(f'<div class="sec-head"><div><h2 class="section-title">{_ms(_AT_FU_STYLE[state][1])}{title} '
+                f'<span class="muted num">({len(items)})</span></h2>' + (f'<p class="section-sub">{sub}</p>' if sub else "")
+                + "</div></div>")
+        with st.container(key=f"joblist_fu_{state}"):
+            for d in items:
+                fu = d.get("follow_up") or {}
+                with st.container(key=f"jr_fu{n}"):
+                    st.html(f"""<div class="job">{_avatar(d.get("company") or "", "sm")}<div class="job-body">
+                        <div class="job-co"><span class="co">{escape(d.get("company") or "")}</span></div>
+                        <h3 class="job-title">{escape(d.get("title") or "")}</h3>
+                        <div class="job-why">{_at_fu_badge(state, _at_day(fu.get("date")))}{_at_badge("progress", d.get("progress") or "")}</div>
+                        </div></div>""")
+                    with st.container(key=f"ja_fu{n}"):
+                        st.button("Open", key=f"atfo_{d['id']}", on_click=_at_go, args=("detail", d["id"]))
+                        if state == "done":
+                            st.button("Reopen", key=f"atfr_{d['id']}", icon=":material/undo:", on_click=_at_fu_click,
+                                      args=(d["id"], "reopen"))
+                        else:
+                            st.button("Done", key=f"atfd_{d['id']}", icon=":material/check:", on_click=_at_fu_click,
+                                      args=(d["id"], "done"), help="Mark this follow-up as done")
+                        st.button("Clear", key=f"atfc_{d['id']}", icon=":material/event_busy:", on_click=_at_fu_click,
+                                  args=(d["id"], "clear"), help="Remove this reminder")
+                n += 1
+
+
+def _at_month_label(ym: str, show_year: bool) -> str:
+    d = date(int(ym[:4]), int(ym[5:7]), 1)
+    return d.strftime("%b ’%y" if show_year else "%b")
+
+
+def _at_month_chart(per_month: list[tuple[str, int]]) -> str:
+    """Applications per month: one series, so one hue and no legend; each
+    bar names its month and count on hover; a table for screen readers."""
+    shown = per_month[-24:]
+    top = max((n for _, n in shown), default=0) or 1
+    step = 1 if len(shown) <= 12 else 3
+    cols = "".join(f'<div class="at-col" data-tip="{_at_month_label(ym, True)} · {n}" title="{_at_month_label(ym, True)}: {n}">'
+                   f'<span class="bar{" zero" if not n else ""}" style="--v:{n / top:.4f}"></span></div>' for ym, n in shown)
+    labels = "".join(f'<span>{_at_month_label(ym, i == 0 or ym.endswith("-01")) if i % step == 0 else ""}</span>'
+                     for i, (ym, _) in enumerate(shown))
+    table = "".join(f"<tr><td>{_at_month_label(ym, True)}</td><td>{n}</td></tr>" for ym, n in shown)
+    note = f'<p class="section-sub">The latest 24 of {len(per_month)} months</p>' if len(per_month) > 24 else ""
+    return (f'<figure class="at-chart"><figcaption><h3 class="section-title">{_ms("bar_chart")}Applications per month</h3>'
+            f'<p class="section-sub">By the date applied · most in a month: {top}</p>{note}</figcaption>'
+            f'<div class="at-plot" aria-hidden="true"><span class="at-ymax num">{top}</span><div class="at-cols">{cols}</div>'
+            f'<div class="at-xl">{labels}</div></div>'
+            f'<table class="sr-only"><caption>Applications per month</caption><tr><th>Month</th><th>Applications</th></tr>'
+            f"{table}</table></figure>")
+
+
+def _at_company_chart(by_company: list[tuple[str, int]]) -> str:
+    top_n = by_company[:8]
+    rest = by_company[8:]
+    if rest:
+        top_n = top_n + [(f"{len(rest)} other {'company' if len(rest) == 1 else 'companies'}", sum(n for _, n in rest))]
+    top = max((n for _, n in top_n), default=0) or 1
+    rows = "".join(f'<li title="{escape(name, quote=True)}: {n}"><span class="nm">{escape(name)}</span>'
+                   f'<span class="track"><span class="bar" style="--v:{n / top:.4f}"></span></span>'
+                   f'<span class="v num">{n}</span></li>' for name, n in top_n)
+    return (f'<figure class="at-chart"><figcaption><h3 class="section-title">{_ms("apartment")}Applications by company</h3>'
+            f'<p class="section-sub">Most applications first</p></figcaption><ol class="at-hbars">{rows}</ol></figure>')
+
+
+_AT_RANGES = {"all": "All time", "30": "Last 30 days", "90": "Last 90 days", "year": "This year", "custom": "Custom"}
+
+
+def _at_analytics(docs: list[dict]) -> None:
+    today = apps.today_ist()
+    st.session_state.setdefault("at_range", "all")
+    with st.container(key="at_range_wrap"):
+        r1, r2 = st.columns([3, 2], vertical_alignment="center")
+        with r1:
+            rng = st.pills("Date range", list(_AT_RANGES), key="at_range", format_func=_AT_RANGES.get,
+                           label_visibility="collapsed") or "all"
+        with r2:
+            custom = (st.date_input("Applied between", value=(), key="at_range_custom", format="DD/MM/YYYY")
+                      if rng == "custom" else ())
+    start = end = None
+    if rng == "30":
+        start = today - timedelta(days=29)
+    elif rng == "90":
+        start = today - timedelta(days=89)
+    elif rng == "year":
+        start = date(today.year, 1, 1)
+    elif rng == "custom" and custom:
+        start, end = custom[0], (custom[1] if len(custom) > 1 else None)
+    a = apps.analytics(docs, start, end, today)
+
+    def pct(v):
+        return "—" if v is None else f"{v:g}%"
+    span = (_AT_RANGES[rng] if rng != "custom" else
+            f"{_at_day(start) if start else 'Any date'} – {_at_day(end) if end else 'today'}")
+    st.html('<div class="stats six">'
+            + _stat("Applications", a["eligible"], escape(span), "assignment")
+            + _stat("Interview conversion", pct(a["interview_rate"]),
+                    f"{a['interviewed']} of {a['eligible']} reached an interview" if a["eligible"] else "No applications in range",
+                    "groups", "t-teal")
+            + _stat("Rejection rate", pct(a["rejection_rate"]),
+                    f"{a['rejected']} of {a['eligible']} rejected" if a["eligible"] else "No applications in range",
+                    "block", "t-red")
+            + _stat("Offers", a["offers"], "Applications that received an offer", "workspace_premium", "t-green")
+            + _stat("Average response time", "—" if a["avg_response_days"] is None else f"{a['avg_response_days']:g} days",
+                    f"From {_plural(a['responded'], 'recorded response')}" if a["responded"]
+                    else "No email response recorded yet", "schedule", "t-amber")
+            + _stat(f"No response after {apps.RESPONSE_WAIT_DAYS} days", len(a["no_response"]),
+                    "Still Applied, no email recorded", "hourglass_empty", "t-gray")
+            + "</div>")
+    if not a["eligible"]:
+        empty_state("insights", "Nothing to chart yet", "There are no applications in this date range.")
+    else:
+        with st.container(key="at_charts"):
+            c1, c2 = st.columns(2)
+            with c1:
+                st.html(_at_month_chart(a["per_month"]))
+            with c2:
+                st.html(_at_company_chart(a["by_company"]))
+        if a["no_response"]:
+            items = "".join(f'<li><b>{escape(d.get("company") or "")}</b> · {escape(d.get("title") or "")}'
+                            f'<span class="muted num"> — applied {_at_day(d.get("applied_on"))}</span></li>'
+                            for d in sorted(a["no_response"], key=lambda d: d.get("applied_on") or "")[:10])
+            more = len(a["no_response"]) - 10
+            st.html(f'<div class="at-chart"><h3 class="section-title">{_ms("hourglass_empty")}No response after '
+                    f'{apps.RESPONSE_WAIT_DAYS} days</h3><ul class="at-list">{items}</ul>'
+                    + (f'<p class="section-sub">and {more} more</p>' if more > 0 else "") + "</div>")
+    st.html(f'<div class="legend">{_ms("calculate")}<div class="note"><b>How these are counted.</b> Only applications '
+            'not in Recently deleted, applied within the range, each counted once. '
+            '<b>Interview conversion</b> = applications that reached an interview (progress Interview, Offer Received '
+            'or Accepted at any time, or an interview round recorded) ÷ applications × 100. '
+            '<b>Rejection rate</b> = applications whose progress is Rejected ÷ applications × 100 — no response is '
+            'never counted as a rejection. <b>Offers</b> = applications that reached Offer Received or Accepted, or got '
+            'an offer email. <b>Average response time</b> = days from applying to the date given for the first email '
+            'response recorded as a status change. <b>No response</b> = applied at least '
+            f'{apps.RESPONSE_WAIT_DAYS} days ago, still Applied, no email recorded.</div></div>')
+
+
+def _at_restore_click(app_id: str) -> None:
+    _at_run("restore", app_id, ok="Application restored")
+
+
+def _at_purge_click(app_id: str) -> None:
+    st.session_state.pop("_at_confirm", None)
+    if _at_run("purge", app_id, ok="Application permanently deleted"):
+        _at_forget(app_id)
+
+
+def _at_deleted(docs: list[dict]) -> None:
+    gone = apps.recently_deleted(docs)
+    if not gone:
+        empty_state("delete_sweep", "Recently deleted is empty",
+                    f"Deleted applications stay here for {apps.RETENTION_DAYS} days so you can restore them, "
+                    "then they are permanently deleted.")
+        return
+    st.html(f'<p class="filter-note">{_ms("info", "s16")} Kept for {apps.RETENTION_DAYS} days after deletion, then '
+            'permanently deleted. Not included in lists, analytics or exports.</p>')
+    confirm = st.session_state.get("_at_confirm")
+    with st.container(key="joblist_del"):
+        for i, d in enumerate(gone):
+            left = apps.days_left(d)
+            ts = apps._iso_seconds(d.get("deleted_at"))
+            with st.container(key=f"jr_del{i}"):
+                st.html(f"""<div class="job">{_avatar(d.get("company") or "", "sm")}<div class="job-body">
+                    <div class="job-co"><span class="co">{escape(d.get("company") or "")}</span></div>
+                    <h3 class="job-title">{escape(d.get("title") or "")}</h3>
+                    <div class="job-meta"><span class="mi num">{_ms("delete")}Deleted {_ago(datetime.fromtimestamp(ts, timezone.utc), NOW) if ts else "—"}</span>
+                    <span class="mi num">{_ms("timer")}Permanently deleted {"today" if left == 0 else f"in {_plural(left, 'day')}"}</span></div>
+                    </div></div>""")
+                with st.container(key=f"ja_del{i}"):
+                    st.button("Restore", key=f"atr_{d['id']}", icon=":material/restore_from_trash:",
+                              on_click=_at_restore_click, args=(d["id"],))
+                    st.button("Delete permanently", key=f"atp_{d['id']}", icon=":material/delete_forever:",
+                              on_click=st.session_state.__setitem__, args=("_at_confirm", d["id"]))
+            if confirm == d["id"]:
+                with st.container(key="at_confirm"):
+                    st.html(f'<p class="note" style="color:var(--text);">Permanently delete <b>{escape(d.get("title") or "")}</b> '
+                            f'at <b>{escape(d.get("company") or "")}</b>? Its history and interview rounds go too. '
+                            'This can’t be undone.</p>')
+                    y, n_ = st.columns([1, 3])
+                    with y:
+                        st.button("Delete permanently", key="btn_at_purge_confirm", type="primary",
+                                  use_container_width=True, on_click=_at_purge_click, args=(d["id"],))
+                    with n_:
+                        st.button("Cancel", key="btn_at_purge_cancel", on_click=st.session_state.pop,
+                                  args=("_at_confirm", None))
+
+
+@st.fragment
+def _at_section() -> None:
+    """The tracker's sections (a fragment: switching redraws only this)."""
+    _leave_fragment_if_needed()
+    docs = _at_docs()
+    buckets = apps.follow_up_buckets(docs, apps.today_ist())
+    due = len(buckets["overdue"]) + len(buckets["today"])
+    n_deleted = len(apps.recently_deleted(docs))
+    st.session_state.setdefault("at_section", "applications")
+    with st.container(key="at_section_wrap"):
+        section = st.pills("Section", list(_AT_SECTIONS), key="at_section", label_visibility="collapsed",
+                           format_func=lambda k: (f"{_AT_SECTIONS[k]} ({due} due)" if k == "follow_ups" and due
+                                                  else f"{_AT_SECTIONS[k]} ({n_deleted})" if k == "deleted" and n_deleted
+                                                  else _AT_SECTIONS[k])) or "applications"
+    if section == "applications":
+        _at_list(docs)
+    elif section == "follow_ups":
+        _at_followups(docs)
+    elif section == "analytics":
+        _at_analytics(docs)
+    else:
+        _at_deleted(docs)
+
+
+# ── exports ───────────────────────────────────────────────────────────────────
+_AT_EXPORT_SCOPES = {"all": "All applications", "filtered": "Current filtered view", "selected": "Selected applications",
+                     "range": "Date range"}
+
+
+def _at_export_selection(docs: list[dict]) -> tuple[list[dict], str]:
+    """The applications the export panel asks for, and a label for it."""
+    live = apps.live(docs)
+    scope = st.session_state.get("atx_scope") or "all"
+    if scope == "filtered":
+        ids = set(st.session_state.get("_at_filtered_ids") or ())
+        return [d for d in live if d["id"] in ids], "Filtered view"
+    if scope == "selected":
+        ids = set(st.session_state.get("atx_pick") or ())
+        return [d for d in live if d["id"] in ids], "Selected applications"
+    if scope == "range":
+        rng = st.session_state.get("atx_range") or ()
+        start, end = (rng[0] if len(rng) > 0 else None), (rng[1] if len(rng) > 1 else None)
+        label = f"Applied {_at_day(start) if start else 'any date'} – {_at_day(end) if end else 'today'}"
+        return apps.filter_apps(live, applied=(start, end)), label
+    return live, "All applications"
+
+
+def _at_export_click() -> None:
+    """Build the file on the server from a fresh, authorized read of this
+    admin's own applications — never from anything the browser sent."""
+    book = _book()
+    if book is None:
+        toast("Only admins can use the Application Tracker.", "error")
+        return
+    try:
+        docs = book.load()
+    except (apps.NotAuthorized, user_store.UserStoreError) as e:
+        toast(str(e), "error")
+        return
+    st.session_state._at_cache = {"uid": book.uid, "at": time.time(), "docs": {d["id"]: d for d in docs}}
+    chosen, label = _at_export_selection(docs)
+    if not chosen:
+        toast("No applications to export with these choices.", "error")
+        return
+    fmt = st.session_state.get("atx_fmt") or "xlsx"
+    data = application_export.to_xlsx(chosen, label) if fmt == "xlsx" else application_export.to_pdf(chosen, label)
+    st.session_state._at_export = {"uid": book.uid, "data": data, "name": application_export.file_name(fmt),
+                                   "mime": application_export.XLSX_MIME if fmt == "xlsx" else application_export.PDF_MIME,
+                                   "count": len(chosen), "label": label, "sig": _at_export_sig(chosen)}
+
+
+def _at_export_sig(chosen: list[dict]) -> tuple:
+    return (st.session_state.get("atx_scope") or "all", st.session_state.get("atx_fmt") or "xlsx",
+            tuple(sorted(d["id"] for d in chosen)))
+
+
+def _at_export_panel(docs: list[dict]) -> None:
+    live = apps.live(docs)
+    with st.container(key="at_export"):
+        st.html(f'<div class="set-head"><span class="ic">{_ms("download")}</span><div><div class="eyebrow">Export</div>'
+                '<h2 class="section-title">Export applications</h2><p class="section-sub">Excel or PDF, with every '
+                'detail and interview round. Only your own applications — deleted ones are left out.</p></div></div>')
+        st.session_state.setdefault("atx_scope", "all")
+        st.session_state.setdefault("atx_fmt", "xlsx")
+        e1, e2 = st.columns([3, 1.4])
+        with e1:
+            scope = st.pills("Which applications", list(_AT_EXPORT_SCOPES), key="atx_scope",
+                             format_func=_AT_EXPORT_SCOPES.get) or "all"
+        with e2:
+            st.pills("Format", ["xlsx", "pdf"], key="atx_fmt", format_func={"xlsx": "Excel (.xlsx)", "pdf": "PDF"}.get)
+        if scope == "selected":
+            names = {d["id"]: f"{d.get('company') or ''} — {d.get('title') or ''} ({_at_day(d.get('applied_on'))})"
+                     for d in apps.sort_apps(live)}
+            st.session_state["atx_pick"] = [i for i in st.session_state.get("atx_pick") or [] if i in names]
+            st.multiselect("Applications to export", list(names), key="atx_pick", format_func=names.get,
+                           placeholder="Choose applications", wrap=True, select_all=False)
+        elif scope == "range":
+            st.date_input("Applied between", value=(), key="atx_range", format="DD/MM/YYYY")
+        elif scope == "filtered":
+            st.html('<p class="filter-note">Uses the view, search and filters currently set in the Applications list.</p>')
+        chosen, _ = _at_export_selection(docs)
+        ready = st.session_state.get("_at_export")
+        if ready and (ready.get("uid") != USER.uid or ready.get("sig") != _at_export_sig(chosen)):
+            st.session_state.pop("_at_export", None)            # the choices changed: prepare again
+            ready = None
+        b1, b2, _ = st.columns([1.3, 1.6, 2])
+        with b1:
+            st.button(f"Prepare {_plural(len(chosen), 'application')}", key="btn_at_prepare",
+                      icon=":material/description:", use_container_width=True, disabled=not chosen,
+                      on_click=_at_export_click)
+        with b2:
+            if ready and _tracker_allowed():
+                st.download_button("Download Excel" if ready["name"].endswith(".xlsx") else "Download PDF", ready["data"],
+                                   file_name=ready["name"], help=f"{ready['name']} · {_plural(ready['count'], 'application')}",
+                                   mime=ready["mime"], key="btn_at_download", type="primary",
+                                   icon=":material/download:", use_container_width=True, on_click="ignore")
+
+
+# ── one application ───────────────────────────────────────────────────────────
+def _at_seed_status(doc: dict) -> None:
+    """The status panel starts from the application's current values (again
+    whenever the record changed)."""
+    if st.session_state.get("_at_status_for") != (doc["id"], doc.get("rev")) or "ats_prog" not in st.session_state:
+        st.session_state.update({"ats_prog": doc.get("progress"), "ats_mail": doc.get("email_status"),
+                                 "ats_on": apps.today_ist(), "ats_note": "",
+                                 "atfu_date": apps.parse_day((doc.get("follow_up") or {}).get("date")),
+                                 "_at_status_for": (doc["id"], doc.get("rev"))})
+
+
+def _at_status_click(app_id: str) -> None:
+    doc = _at_cached(app_id) or {}
+    prog, mail = st.session_state.get("ats_prog"), st.session_state.get("ats_mail")
+    on = st.session_state.get("ats_on")
+    done = _at_run("set_status", app_id,
+                   progress=prog if prog != doc.get("progress") else None,
+                   email_status=mail if mail != doc.get("email_status") else None,
+                   on=on.isoformat() if isinstance(on, date) else None, note=st.session_state.get("ats_note") or "",
+                   ok="Status updated — added to the timeline")
+    if done:
+        st.session_state.pop("_at_status_for", None)
+
+
+def _at_fu_save(app_id: str) -> None:
+    day = st.session_state.get("atfu_date")
+    if not isinstance(day, date):
+        toast("Choose a follow-up date first (or use Clear to remove the reminder).", "error")
+        return
+    if _at_run("set_follow_up", app_id, day.isoformat(), ok=f"Follow-up set for {day.strftime('%d %b %Y')}"):
+        st.session_state.pop("_at_status_for", None)
+
+
+def _at_iv_open(app_id: str, interview_id: str = "new") -> None:
+    doc = _at_cached(app_id) or {}
+    iv = next((r for r in doc.get("interviews") or [] if r.get("id") == interview_id), {})
+    t = re.fullmatch(r"(\d\d):(\d\d)", iv.get("time") or "")
+    st.session_state.update({
+        "_at_iv_edit": interview_id, "ativ_round": iv.get("round") or "", "ativ_type": iv.get("type") or "Online",
+        "ativ_date": apps.parse_day(iv.get("date")), "ativ_time": dtime(int(t.group(1)), int(t.group(2))) if t else None,
+        "ativ_loc": iv.get("location") or "", "ativ_who": iv.get("interviewer") or "", "ativ_prep": iv.get("prep") or "",
+        "ativ_feedback": iv.get("feedback") or "", "ativ_outcome": iv.get("outcome") or apps.INTERVIEW_OUTCOMES[0]})
+
+
+def _at_iv_save(app_id: str) -> None:
+    edit = st.session_state.get("_at_iv_edit")
+    day = st.session_state.get("ativ_date")
+    raw = {"round": st.session_state.get("ativ_round") or "", "type": st.session_state.get("ativ_type"),
+           "date": day.isoformat() if isinstance(day, date) else "", "time": st.session_state.get("ativ_time"),
+           "location": st.session_state.get("ativ_loc") or "", "interviewer": st.session_state.get("ativ_who") or "",
+           "prep": st.session_state.get("ativ_prep") or "", "feedback": st.session_state.get("ativ_feedback") or "",
+           "outcome": st.session_state.get("ativ_outcome")}
+    if _at_run("save_interview", app_id, raw, interview_id=None if edit == "new" else edit,
+               ok="Interview round added" if edit == "new" else "Interview round saved"):
+        st.session_state.pop("_at_iv_edit", None)
+
+
+def _at_iv_form(app_id: str) -> None:
+    with st.container(key="at_iv_form"):
+        st.html(f'<h3 class="section-title">{_ms("event")}'
+                f'{"Add an interview round" if st.session_state.get("_at_iv_edit") == "new" else "Edit interview round"}</h3>')
+        c1, c2 = st.columns(2)
+        with c1:
+            st.text_input("Interview round *", key="ativ_round", max_chars=apps.LIMITS["round"],
+                          placeholder="e.g. Technical round 1")
+        with c2:
+            st.selectbox("Interview type *", list(apps.INTERVIEW_TYPES), key="ativ_type")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.date_input("Interview date *", key="ativ_date", min_value=apps.EARLIEST, format="DD/MM/YYYY")
+        with c2:
+            st.time_input("Interview time", key="ativ_time", step=900)
+        with c3:
+            st.selectbox("Outcome", list(apps.INTERVIEW_OUTCOMES), key="ativ_outcome")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.text_input("Location or meeting link", key="ativ_loc", max_chars=apps.LIMITS["iv_location"])
+        with c2:
+            st.text_input("Interviewer", key="ativ_who", max_chars=apps.LIMITS["interviewer"], placeholder="If known")
+        st.text_area("Preparation notes", key="ativ_prep", max_chars=apps.LIMITS["prep"], height=90)
+        st.text_area("Interview feedback", key="ativ_feedback", max_chars=apps.LIMITS["feedback"], height=90)
+        b1, b2, _ = st.columns([1, 1, 3])
+        with b1:
+            st.button("Save round", key="btn_at_iv_save", type="primary", use_container_width=True,
+                      on_click=_at_iv_save, args=(app_id,))
+        with b2:
+            st.button("Cancel", key="btn_at_iv_cancel", use_container_width=True, on_click=st.session_state.pop,
+                      args=("_at_iv_edit", None))
+
+
+def _at_event(e: dict) -> tuple[str, str, str]:
+    """(icon, title, detail) for one timeline event."""
+    kind, frm, to, note = e.get("kind"), e.get("from") or "", e.get("to") or "", e.get("note") or ""
+    if kind == "created":
+        extra = [f"Added at {to}" if to and to != "Applied" else "",
+                 e.get("email") if e.get("email") and e.get("email") != apps.NO_EMAIL else ""]
+        return "send", "Application submitted", " · ".join(x for x in extra if x)
+    if kind == "progress":
+        return "trending_up", to, f"Application progress: {frm} → {to}" + (f" — {note}" if note else "")
+    if kind == "email":
+        return "mail", to, f"Email response: {frm} → {to}" + (f" — {note}" if note else "")
+    if kind == "note":
+        return "edit_note", "Note", note
+    if kind == "edited":
+        return "edit", "Details edited", note
+    if kind == "follow_up":
+        return "event", f"Follow-up set for {_at_day(to)}" if to else "Follow-up reminder cleared", ""
+    if kind == "follow_up_done":
+        return "task_alt", "Follow-up done", f"Reminder for {_at_day(to)}"
+    if kind == "follow_up_reopened":
+        return "undo", "Follow-up reopened", f"Reminder for {_at_day(to)}"
+    if kind == "interview":
+        when = note[len("Scheduled for "):] if note.startswith("Scheduled for ") else ""
+        return "groups", f"Interview round added: {to}", f"Scheduled for {_at_day(when)}" if when else note
+    if kind == "interview_outcome":
+        return "fact_check", f"{note}: {to}", f"Outcome was {frm}" if frm else ""
+    if kind == "interview_removed":
+        return "event_busy", "Interview round removed", note
+    if kind == "deleted":
+        return "delete", "Moved to Recently deleted", ""
+    if kind == "restored":
+        return "restore_from_trash", "Restored", ""
+    return "history", str(kind or "Update"), note
+
+
+def _at_timeline(doc: dict) -> str:
+    steps = []
+    for e in doc.get("timeline") or []:
+        if not isinstance(e, dict):
+            continue
+        icon, title, detail = _at_event(e)
+        ts = apps._iso_seconds(e.get("at"))
+        recorded = datetime.fromtimestamp(ts, IST).strftime("%d %b, %H:%M") if ts else ""
+        when = _at_day(e.get("on"), "%d %b %Y")
+        sub = " · ".join(x for x in (when, escape(detail)) if x)
+        steps.append(f'<li class="step"><span class="node">{_ms(icon, "s20")}</span><div><b>{escape(title)}</b>'
+                     f'<p>{sub}</p>' + (f'<p class="at-rec">Recorded {recorded} IST</p>' if recorded else "")
+                     + "</div></li>")
+    return f'<ol class="timeline">{"".join(steps)}</ol>'
+
+
+def _at_detail_page(doc: dict) -> None:
+    app_id = doc["id"]
+    today = apps.today_ist()
+    _at_seed_status(doc)
+    st.button("Back to Application Tracker", key="btn_back", icon=":material/arrow_back:", type="tertiary",
+              on_click=_at_go, args=("list",))
+    url = safe_url(doc.get("url") or "")
+    with st.container(key="job_hero"):
+        chips = [_at_badge("progress", doc.get("progress") or ""), _at_badge("email", doc.get("email_status") or ""),
+                 f'<span class="chip">{_ms("location_on", "s16")}{escape(doc.get("location") or "—")}</span>',
+                 f'<span class="chip num">{_ms("send", "s16")}Applied {_at_day(doc.get("applied_on"))}</span>']
+        st.html(f"""<div class="detail-head">{_avatar(doc.get("company") or "", "lg")}<div style="min-width:0;flex:1;">
+              <div class="eyebrow">{escape(doc.get("company") or "")}</div>
+              <h1 class="detail-title">{escape(doc.get("title") or "")}</h1>
+              <div class="detail-chips">{"".join(chips)}</div></div></div>""")
+        with st.container(key="job_actions"):
+            cols = st.columns(4 if url else 3)
+            i = 0
+            if url:
+                with cols[0]:
+                    st.html(f'<a class="btn primary" href="{escape(url, quote=True)}" target="_blank" rel="noopener noreferrer">'
+                            f'Open job posting {_ms("arrow_outward", "s16")}</a>')
+                i = 1
+            with cols[i]:
+                st.button("Edit", key="btn_at_edit", icon=":material/edit:", on_click=_at_open_edit, args=(app_id,))
+            with cols[i + 1]:
+                st.button("Add interview round", key="btn_at_iv_add", icon=":material/event:", on_click=_at_iv_open,
+                          args=(app_id,))
+            with cols[i + 2]:
+                with st.container(key="danger"):
+                    st.button("Delete", key="btn_at_delete", icon=":material/delete:", on_click=_at_delete_click,
+                              args=(app_id, True), help="Move to Recently deleted")
+    with st.container(key="job_cols"):
+        main, side = st.columns([3, 2])
+    with main:
+        with st.container(key="job_main"):
+            st.html('<div class="eyebrow bar">Status and communication</div><h2 class="section-title" style="margin-top:6px;">'
+                    'Record an update</h2><p class="section-sub">Progress and email response change independently — '
+                    'each change is added to the timeline with the date it happened.</p>')
+            with st.container(key="at_status"):
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.selectbox("Application progress", list(apps.PROGRESS), key="ats_prog")
+                with c2:
+                    st.selectbox("Email response", list(apps.EMAIL_STATUSES), key="ats_mail")
+                c1, c2 = st.columns([1, 2])
+                with c1:
+                    st.date_input("Date it happened", key="ats_on", min_value=apps.EARLIEST,
+                                  max_value=today + timedelta(days=1), format="DD/MM/YYYY")
+                with c2:
+                    st.text_input("Note (optional)", key="ats_note", max_chars=apps.LIMITS["event_note"],
+                                  placeholder="e.g. HackerRank test link received")
+                changed = (st.session_state.get("ats_prog") != doc.get("progress")
+                           or st.session_state.get("ats_mail") != doc.get("email_status")
+                           or bool((st.session_state.get("ats_note") or "").strip()))
+                st.button("Save update", key="btn_at_status", type="primary", icon=":material/check:", disabled=not changed,
+                          on_click=_at_status_click, args=(app_id,))
+            fu = doc.get("follow_up") or {}
+            rows = [("Company", escape(doc.get("company") or "—")), ("Job title", escape(doc.get("title") or "—")),
+                    ("Location", escape(doc.get("location") or "—")),
+                    ("Job URL", f'<a class="link" href="{escape(url, quote=True)}" target="_blank" rel="noopener noreferrer">'
+                                f'{escape(_short_url(url, 48))} {_ms("open_in_new", "s16")}</a>' if url else "—"),
+                    ("Job ID", f'<span class="num">{escape(doc.get("job_id") or "—")}</span>'),
+                    ("Date applied", _at_day(doc.get("applied_on"))), ("Job posting date", _at_day(doc.get("posted_on"))),
+                    ("Application source", escape(application_export.source_label(doc) or "—")),
+                    ("Salary/package", escape(doc.get("salary") or "—")),
+                    ("Resume", escape(doc.get("resume") or "—")),
+                    ("Follow-up", application_export.follow_up_label(doc) or "—"),
+                    ("Last updated", _at_updated(doc))]
+            st.html('<div class="divider"></div><div class="eyebrow">Application</div>'
+                    '<h2 class="section-title" style="margin-top:4px;">Details</h2><dl class="kv">'
+                    + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in rows) + "</dl>")
+            if doc.get("notes"):
+                st.html(f'<div class="divider"></div><h2 class="section-title">{_ms("edit_note")}Notes</h2>'
+                        f'<p class="at-notes">{escape(doc["notes"])}</p>')
+            if doc.get("description"):
+                with st.expander("Job description"):
+                    st.html(f'<p class="at-notes">{escape(doc["description"])}</p>')
+            # interview rounds
+            rounds = [r for r in doc.get("interviews") or [] if isinstance(r, dict)]
+            st.html(f'<div class="divider"></div><div class="sec-head"><div><div class="eyebrow">Interviews</div>'
+                    f'<h2 class="section-title" style="margin-top:4px;">{_ms("groups")}Interview rounds '
+                    f'<span class="muted num">({len(rounds)})</span></h2></div></div>')
+            if st.session_state.get("_at_iv_edit"):
+                _at_iv_form(app_id)
+            if not rounds and not st.session_state.get("_at_iv_edit"):
+                st.html('<p class="note">No interview rounds yet. Add each round as it’s scheduled — as many as the '
+                        'process has.</p>')
+            for r in rounds:
+                with st.container(key=f"atrnd_{r['id']}"):
+                    when = " · ".join(x for x in (_at_day(r.get("date")), r.get("time") or "") if x)
+                    facts = [("Type", escape(r.get("type") or "—")),
+                             ("Where", escape(r.get("location") or "—")), ("Interviewer", escape(r.get("interviewer") or "—"))]
+                    loc = safe_url(r.get("location") or "")
+                    if loc:
+                        facts[1] = ("Where", f'<a class="link" href="{escape(loc, quote=True)}" target="_blank" '
+                                             f'rel="noopener noreferrer">{escape(_short_url(loc, 40))}</a>')
+                    st.html(f'<div class="at-iv"><div class="at-iv-h"><b>{escape(r.get("round") or "")}</b>'
+                            f'<span class="chip num">{_ms("event", "s16")}{escape(when)}</span>'
+                            f'<span class="pill {"on" if r.get("outcome") == "Cleared" else "off" if r.get("outcome") == "Not cleared" else "neutral"}">'
+                            f'{escape(r.get("outcome") or "")}</span></div>'
+                            '<dl class="kv">' + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in facts) + "</dl>"
+                            + (f'<div class="quote"><span class="muted">Preparation:</span> {escape(r["prep"])}</div>' if r.get("prep") else "")
+                            + (f'<div class="quote"><span class="muted">Feedback:</span> {escape(r["feedback"])}</div>' if r.get("feedback") else "")
+                            + "</div>")
+                    with st.container(key=f"atrnda_{r['id']}"):
+                        st.button("Edit round", key=f"atrnde_{r['id']}", icon=":material/edit:", type="tertiary",
+                                  on_click=_at_iv_open, args=(app_id, r["id"]))
+                        st.button("Remove", key=f"atrndx_{r['id']}", icon=":material/delete:", type="tertiary",
+                                  on_click=_at_run, args=("delete_interview", app_id, r["id"]),
+                                  kwargs={"ok": "Interview round removed"})
+    with side:
+        with st.container(key="job_side"):
+            state = apps.follow_up_state(doc, today)
+            st.html(f'<h2 class="section-title">{_ms("event")}Follow-up reminder</h2>'
+                    + (f'<div class="detail-chips">{_at_fu_badge(state, _at_day(fu.get("date")))}</div>' if state else
+                       '<p class="note">No reminder set. Pick a date to see this application under Follow-ups on that day.</p>'))
+            st.date_input("Follow-up date", key="atfu_date", min_value=apps.EARLIEST, format="DD/MM/YYYY")
+            with st.container(key="at_fu_actions"):
+                st.button("Save date", key="btn_atfu_save", on_click=_at_fu_save, args=(app_id,))
+                if state:
+                    st.button("Reopen" if state == "done" else "Mark as done", key="btn_atfu_done",
+                              icon=":material/undo:" if state == "done" else ":material/task_alt:",
+                              on_click=_at_fu_click, args=(app_id, "reopen" if state == "done" else "done"))
+                    st.button("Clear", key="btn_atfu_clear", icon=":material/event_busy:", on_click=_at_fu_click,
+                              args=(app_id, "clear"))
+            st.html('<div class="divider"></div>'
+                    f'<h2 class="section-title">{_ms("timeline")}Timeline</h2>'
+                    '<p class="section-sub">Every change, oldest first — earlier entries are never overwritten.</p>'
+                    + _at_timeline(doc))
+
+
+# ── the page ──────────────────────────────────────────────────────────────────
+def _at_toggle_export() -> None:
+    st.session_state._at_export_open = not st.session_state.get("_at_export_open")
+
+
+def page_applications():
+    """The Application Tracker: summary, then Applications / Follow-ups /
+    Analytics / Recently deleted; or one application, or the form."""
+    st.session_state.pop("_app_rerun", None)         # this IS the whole page: a pending redraw is done
+    if not _tracker_allowed():
+        page_header("Application Tracker", eyebrow="Discover")
+        empty_state("cloud_off", "Application Tracker unavailable",
+                    escape(USER_PROBLEM or "It needs your personal data, which isn't available right now."))
+        return
+    try:
+        docs = _at_docs()
+    except (apps.NotAuthorized, user_store.UserStoreError) as e:
+        page_header("Application Tracker", eyebrow="Discover")
+        empty_state("cloud_off", "Application Tracker unavailable", escape(str(e)))
+        return
+    view = st.session_state.get("at_view") or "list"
+    if view in ("add", "edit"):
+        _at_form_page(view)
+        return
+    if view == "detail":
+        doc = next((d for d in docs if d["id"] == st.session_state.get("at_id") and not d.get("deleted_at")), None)
+        if doc is not None:
+            _at_detail_page(doc)
+            return
+        st.session_state.at_view, st.session_state.at_id = "list", None
+    live = apps.live(docs)
+    s = apps.summary(docs)
+
+    def actions():
+        a, b = st.columns(2)
+        with a:
+            st.button("Export", key="btn_at_export", icon=":material/download:", on_click=_at_toggle_export,
+                      disabled=not live)
+        with b:
+            st.button("Add application", key="btn_at_add", type="primary", icon=":material/add:", on_click=_at_open_add)
+    page_header("Application Tracker", "Your own job applications, from applying to the offer · private to your account",
+                actions)
+    st.html('<div class="stats">'
+            + _stat("Total applications", s["total"], "Not counting Recently deleted", "assignment")
+            + _stat("Awaiting response", s["awaiting"], "Applied, no reply beyond an acknowledgement", "hourglass_top", "t-amber")
+            + _stat("Interviews", s["interviews"], "Progress at Interview", "groups", "t-teal")
+            + _stat("Offers", s["offers"], "Offer received or accepted", "workspace_premium", "t-green")
+            + "</div>")
+    if st.session_state.get("_at_export_open") and live:
+        _at_export_panel(docs)
+    _at_section()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # ROUTER
 # ═══════════════════════════════════════════════════════════════════════════════
 if st.query_params.get("diag") == "scope" and IS_ADMIN and is_owner():
@@ -6549,7 +7874,7 @@ else:
     # who followed nothing was shown the primary admin's whole feed
     {"home": page_member_home if MEMBER_VIEW or OWN_SCOPE else page_home, "jobs": page_jobs, "companies": page_companies,
      "monitoring": page_monitoring, "email": page_email, "settings": page_settings, "alerts": page_alerts,
-     "preferences": page_preferences, "onboarding": page_onboarding}[page]()
+     "preferences": page_preferences, "onboarding": page_onboarding, "applications": page_applications}[page]()
 st.session_state.page_before = st.session_state.page
 
 # mirror the view into the URL (only when it changed, so no extra reruns)

@@ -358,6 +358,32 @@ def test_clients_cannot_read_or_write_firestore_directly(emu):
     assert emu.for_uid(A).profile()["email"] == "a@example.org"           # still there
 
 
+def test_the_application_tracker_on_real_firestore(emu):
+    """Each admin's applications (applications.py) under their own UID: the
+    compare-and-set writes, the timeline and interview lists, Recently
+    deleted and its 30 days — and no client can read them directly."""
+    import applications
+    now = time.time()
+    a, b = emu.for_uid(A).application_book(lambda: True), emu.for_uid(B).application_book(lambda: True)
+    raw = {"company": "Infosys", "title": "Systems Engineer", "location": "Pune", "progress": "Applied",
+           "email_status": "No Email Received", "applied_on": applications.today_ist(now).isoformat()}
+    doc = a.create(raw, now=now)
+    doc = a.set_status(doc["id"], email_status="Acknowledgement Received", now=now)
+    doc = a.save_interview(doc["id"], {"date": "2026-11-05", "round": "Technical 1", "type": "Online"}, now=now)
+    doc = a.set_follow_up(doc["id"], "2026-11-09", now=now)
+    stored = a.get(doc["id"])
+    assert stored["rev"] == 4 and [e["kind"] for e in stored["timeline"]] == ["created", "email", "interview", "follow_up"]
+    assert stored["interviews"][0]["round"] == "Technical 1" and stored["follow_up"]["date"] == "2026-11-09"
+    assert b.load() == []
+    with pytest.raises(applications.NotFound):
+        b.get(doc["id"])
+    base = f"http://{FS_HOST}/v1/projects/{PROJECT}/databases/(default)/documents"
+    assert httpx.get(f"{base}/users/{A}/applications/{doc['id']}", timeout=10).status_code == 403
+    assert httpx.get(f"{base}/users/{A}/applications", timeout=10).status_code == 403
+    a.soft_delete(doc["id"], now=now - 31 * 86400)
+    assert a.load(now=now) == [] and not _docs(f"users/{A}/applications").get("documents")
+
+
 # --- the app on the emulator -----------------------------------------------------------
 
 from test_firebase_auth import GATED, _login, _login_page, google_env, make_id_token, no_env, ok_password_answer  # noqa: E402,F401

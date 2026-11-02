@@ -40,6 +40,7 @@ EXPECTED_PERMISSIONS = {
     ("check_jobs.yml", "publish"): {"contents": "write"},
     ("check_jobs.yml", "scheduler"): {"actions": "write"},
     ("check_jobs.yml", "personal-alerts"): {"contents": "read"},
+    ("application_retention.yml", "purge"): {"contents": "read"},
     ("logos.yml", "find"): {"contents": "read"},
     ("logos.yml", "publish"): {"contents": "write"},
     ("scan_scheduler.yml", "wait-and-dispatch"): {"contents": "read", "actions": "write"},
