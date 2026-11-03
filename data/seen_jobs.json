@@ -1658,10 +1658,11 @@
     "date": "Nov 3, 09:08",
     "first_seen": "2026-11-03T09:08:29.088063+00:00",
     "id": "Micron_Associate_Engineer,_IT_Eng_System_Mgr",
-    "notified": false,
+    "notified": true,
     "company_id": "c1793696369",
-    "notify_state": "claimed",
-    "claimed_at": "2026-11-03T09:18:21.889035+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-11-03T09:18:21.889035+00:00",
+    "notified_at": "2026-11-03T09:18:26.972012+00:00"
   },
   {
     "title": "PDE CEM Graduate Engineering Technician",
