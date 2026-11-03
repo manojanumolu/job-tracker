@@ -6,27 +6,27 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-03T11:04:19.821448+00:00",
+    "last_checked": "2026-11-03T12:04:15.891750+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
       "postings_seen": 412,
-      "candidates": 66,
+      "candidates": 65,
       "details_read": 15,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
     },
     "source": "Avature job search",
-    "last_success": "2026-11-03T11:04:19.821448+00:00",
+    "last_success": "2026-11-03T12:04:15.891750+00:00",
     "shared_alerts": false
   },
   {
@@ -36,7 +36,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-03T11:04:25.546450+00:00",
+    "last_checked": "2026-11-03T12:04:26.079572+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -47,16 +47,16 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
     },
     "source": "Jibe/iCIMS API",
-    "last_success": "2026-11-03T11:04:25.546450+00:00",
+    "last_success": "2026-11-03T12:04:26.079572+00:00",
     "shared_alerts": false
   },
   {
@@ -66,7 +66,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-03T11:04:27.915252+00:00",
+    "last_checked": "2026-11-03T12:04:28.401150+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -77,16 +77,16 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
     },
     "source": "Workday API",
-    "last_success": "2026-11-03T11:04:27.915252+00:00",
+    "last_success": "2026-11-03T12:04:28.401150+00:00",
     "shared_alerts": false
   },
   {
@@ -96,7 +96,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-03T11:04:52.110490+00:00",
+    "last_checked": "2026-11-03T12:04:57.810299+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -107,16 +107,16 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
     },
     "source": "Workday API",
-    "last_success": "2026-11-03T11:04:52.110490+00:00",
+    "last_success": "2026-11-03T12:04:57.810299+00:00",
     "shared_alerts": false
   },
   {
@@ -125,28 +125,28 @@
     "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers",
     "locked": true,
     "status": "active",
-    "last_job": "Associate - CA Freshers - RDC",
-    "last_checked": "2026-11-03T11:07:13.422477+00:00",
+    "last_job": "Associate",
+    "last_checked": "2026-11-03T12:07:19.505956+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 629,
-      "candidates": 629,
-      "details_read": 204,
+      "postings_seen": 636,
+      "candidates": 636,
+      "details_read": 205,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 7,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
     },
     "source": "Workday API",
-    "last_success": "2026-11-03T11:07:13.422477+00:00",
+    "last_success": "2026-11-03T12:07:19.505956+00:00",
     "shared_alerts": false
   },
   {
@@ -156,7 +156,7 @@
     "locked": true,
     "status": "active",
     "last_job": "Record to Report Ops New Associate",
-    "last_checked": "2026-11-03T11:07:17.172555+00:00",
+    "last_checked": "2026-11-03T12:07:23.107364+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -167,16 +167,16 @@
       "pending": 0,
       "accepted": 29,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
     },
     "source": "Accenture job-search API",
-    "last_success": "2026-11-03T11:07:17.172555+00:00"
+    "last_success": "2026-11-03T12:07:23.107364+00:00"
   },
   {
     "id": "c1783687965",
@@ -185,7 +185,7 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-03T11:07:20.813754+00:00",
+    "last_checked": "2026-11-03T12:07:27.145285+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -196,16 +196,16 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
     },
     "source": "Zoho Recruit career site",
-    "last_success": "2026-11-03T11:07:20.813754+00:00"
+    "last_success": "2026-11-03T12:07:27.145285+00:00"
   },
   {
     "id": "c1793696368",
@@ -214,10 +214,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Content Marketing Analyst",
-    "last_checked": "2026-11-03T11:07:30.789322+00:00",
+    "last_checked": "2026-11-03T12:07:35.499110+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:07:30.789322+00:00",
+    "last_success": "2026-11-03T12:07:35.499110+00:00",
     "scan": {
       "postings_seen": 94,
       "candidates": 94,
@@ -226,10 +226,10 @@
       "pending": 0,
       "accepted": 1,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -243,10 +243,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Program Management",
-    "last_checked": "2026-11-03T11:08:05.587259+00:00",
+    "last_checked": "2026-11-03T12:08:19.433181+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:08:05.587259+00:00",
+    "last_success": "2026-11-03T12:08:19.433181+00:00",
     "scan": {
       "postings_seen": 317,
       "candidates": 317,
@@ -255,10 +255,10 @@
       "pending": 0,
       "accepted": 5,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -272,10 +272,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Formal Verification Engineer - New College Graduate 2026",
-    "last_checked": "2026-11-03T11:08:48.306615+00:00",
+    "last_checked": "2026-11-03T12:08:56.372160+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:08:48.306615+00:00",
+    "last_success": "2026-11-03T12:08:56.372160+00:00",
     "scan": {
       "postings_seen": 247,
       "candidates": 246,
@@ -284,10 +284,10 @@
       "pending": 0,
       "accepted": 2,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -301,22 +301,22 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-03T11:09:03.167899+00:00",
+    "last_checked": "2026-11-03T12:09:12.631201+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:09:03.167899+00:00",
+    "last_success": "2026-11-03T12:09:12.631201+00:00",
     "scan": {
-      "postings_seen": 105,
-      "candidates": 105,
+      "postings_seen": 109,
+      "candidates": 109,
       "details_read": 23,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -330,10 +330,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-03T11:09:39.196845+00:00",
+    "last_checked": "2026-11-03T12:09:49.489247+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:09:39.196845+00:00",
+    "last_success": "2026-11-03T12:09:49.489247+00:00",
     "scan": {
       "postings_seen": 125,
       "candidates": 125,
@@ -342,10 +342,10 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -359,10 +359,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-03T11:09:47.517761+00:00",
+    "last_checked": "2026-11-03T12:09:56.348511+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:09:47.517761+00:00",
+    "last_success": "2026-11-03T12:09:56.348511+00:00",
     "scan": {
       "postings_seen": 40,
       "candidates": 40,
@@ -371,10 +371,10 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -388,22 +388,22 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-03T11:09:50.130646+00:00",
+    "last_checked": "2026-11-03T12:09:58.932671+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:09:50.130646+00:00",
+    "last_success": "2026-11-03T12:09:58.932671+00:00",
     "scan": {
-      "postings_seen": 8,
-      "candidates": 8,
+      "postings_seen": 9,
+      "candidates": 9,
       "details_read": 0,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -417,10 +417,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-03T11:09:56.310948+00:00",
+    "last_checked": "2026-11-03T12:10:05.489348+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:09:56.310948+00:00",
+    "last_success": "2026-11-03T12:10:05.489348+00:00",
     "scan": {
       "postings_seen": 24,
       "candidates": 24,
@@ -429,10 +429,10 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -446,10 +446,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-03T11:10:00.895859+00:00",
+    "last_checked": "2026-11-03T12:10:12.301247+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:10:00.895859+00:00",
+    "last_success": "2026-11-03T12:10:12.301247+00:00",
     "scan": {
       "postings_seen": 37,
       "candidates": 37,
@@ -458,10 +458,10 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -475,10 +475,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-03T11:10:06.323378+00:00",
+    "last_checked": "2026-11-03T12:10:17.388541+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:10:06.323378+00:00",
+    "last_success": "2026-11-03T12:10:17.388541+00:00",
     "scan": {
       "postings_seen": 26,
       "candidates": 26,
@@ -487,10 +487,10 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -504,22 +504,22 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-03T11:10:12.663373+00:00",
+    "last_checked": "2026-11-03T12:10:23.996873+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:10:12.663373+00:00",
+    "last_success": "2026-11-03T12:10:23.996873+00:00",
     "scan": {
-      "postings_seen": 43,
-      "candidates": 43,
-      "details_read": 7,
+      "postings_seen": 44,
+      "candidates": 44,
+      "details_read": 8,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -533,22 +533,22 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-03T11:11:47.316457+00:00",
+    "last_checked": "2026-11-03T12:12:26.640326+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:11:47.316457+00:00",
+    "last_success": "2026-11-03T12:12:26.640326+00:00",
     "scan": {
-      "postings_seen": 742,
-      "candidates": 741,
-      "details_read": 230,
+      "postings_seen": 743,
+      "candidates": 743,
+      "details_read": 232,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -562,22 +562,22 @@
     "locked": false,
     "status": "active",
     "last_job": "Program Management Analyst - Cigna Healthcare",
-    "last_checked": "2026-11-03T11:12:13.495252+00:00",
+    "last_checked": "2026-11-03T12:12:47.171492+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:12:13.495252+00:00",
+    "last_success": "2026-11-03T12:12:47.171492+00:00",
     "scan": {
-      "postings_seen": 115,
-      "candidates": 115,
-      "details_read": 43,
+      "postings_seen": 116,
+      "candidates": 116,
+      "details_read": 44,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 4,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -591,10 +591,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Project Management Apprenticeship",
-    "last_checked": "2026-11-03T11:12:29.442964+00:00",
+    "last_checked": "2026-11-03T12:13:10.353170+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:12:29.442964+00:00",
+    "last_success": "2026-11-03T12:13:10.353170+00:00",
     "scan": {
       "postings_seen": 204,
       "candidates": 204,
@@ -603,10 +603,10 @@
       "pending": 0,
       "accepted": 2,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -620,10 +620,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-03T11:12:50.125354+00:00",
+    "last_checked": "2026-11-03T12:13:32.320855+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:12:50.125354+00:00",
+    "last_success": "2026-11-03T12:13:32.320855+00:00",
     "scan": {
       "postings_seen": 232,
       "candidates": 232,
@@ -632,10 +632,10 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -648,11 +648,11 @@
     "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi",
     "locked": false,
     "status": "active",
-    "last_job": "Diploma Trainee",
-    "last_checked": "2026-11-03T11:16:17.705998+00:00",
+    "last_job": "Mechanical Design Engineer",
+    "last_checked": "2026-11-03T12:17:36.496013+00:00",
     "status_reason": "",
     "scan_note": "36 postings left for the next scan (detail-page budget)",
-    "last_success": "2026-11-03T11:16:17.705998+00:00",
+    "last_success": "2026-11-03T12:17:36.496013+00:00",
     "scan": {
       "postings_seen": 724,
       "candidates": 724,
@@ -661,10 +661,10 @@
       "pending": 36,
       "accepted": 11,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -678,22 +678,22 @@
     "locked": false,
     "status": "active",
     "last_job": "Co-op/Apprentice (Non-Tech)",
-    "last_checked": "2026-11-03T11:16:31.008452+00:00",
+    "last_checked": "2026-11-03T12:17:51.823171+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:16:31.008452+00:00",
+    "last_success": "2026-11-03T12:17:51.823171+00:00",
     "scan": {
-      "postings_seen": 100,
-      "candidates": 100,
+      "postings_seen": 101,
+      "candidates": 101,
       "details_read": 18,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 3,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -707,22 +707,22 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-03T11:16:43.403866+00:00",
+    "last_checked": "2026-11-03T12:18:04.976586+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:16:43.403866+00:00",
+    "last_success": "2026-11-03T12:18:04.976586+00:00",
     "scan": {
-      "postings_seen": 60,
-      "candidates": 60,
+      "postings_seen": 61,
+      "candidates": 61,
       "details_read": 19,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -736,10 +736,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-03T11:16:46.419392+00:00",
+    "last_checked": "2026-11-03T12:18:08.368965+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:16:46.419392+00:00",
+    "last_success": "2026-11-03T12:18:08.368965+00:00",
     "scan": {
       "postings_seen": 24,
       "candidates": 24,
@@ -748,10 +748,10 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -765,10 +765,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Associate Industrial Engineer",
-    "last_checked": "2026-11-03T11:17:02.183717+00:00",
+    "last_checked": "2026-11-03T12:18:27.732096+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:17:02.183717+00:00",
+    "last_success": "2026-11-03T12:18:27.732096+00:00",
     "scan": {
       "postings_seen": 99,
       "candidates": 99,
@@ -777,10 +777,10 @@
       "pending": 0,
       "accepted": 2,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -794,10 +794,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-03T11:17:08.405596+00:00",
+    "last_checked": "2026-11-03T12:18:34.909775+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:17:08.405596+00:00",
+    "last_success": "2026-11-03T12:18:34.909775+00:00",
     "scan": {
       "postings_seen": 39,
       "candidates": 39,
@@ -806,10 +806,10 @@
       "pending": 0,
       "accepted": 0,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
@@ -823,10 +823,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Scientist for Single Cell Sorting",
-    "last_checked": "2026-11-03T11:17:38.276149+00:00",
+    "last_checked": "2026-11-03T12:19:06.183540+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-03T11:17:38.276149+00:00",
+    "last_success": "2026-11-03T12:19:06.183540+00:00",
     "scan": {
       "postings_seen": 286,
       "candidates": 286,
@@ -835,10 +835,10 @@
       "pending": 0,
       "accepted": 8,
       "run": {
-        "started_at": "2026-11-03T11:02:57.114123+00:00",
-        "finished_at": "2026-11-03T11:17:39.278376+00:00",
+        "started_at": "2026-11-03T12:03:01.256743+00:00",
+        "finished_at": "2026-11-03T12:19:07.185224+00:00",
         "jobs_found": 74,
-        "new_jobs": 1,
+        "new_jobs": 0,
         "portals": 29,
         "portals_failed": 0
       }
