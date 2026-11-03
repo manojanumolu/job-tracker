@@ -2860,5 +2860,44 @@
     "id": "Micron_Program_Management",
     "notified": false,
     "company_id": "c1793696369"
+  },
+  {
+    "title": "Financial Planning & Analysis Specialist – Project Controlling – CCC",
+    "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Bengaluru-Karnataka-India/Financial-Planning---Analysis-Specialist---Project-Controlling---CCC-_R0103102",
+    "company": "Hitachi",
+    "location": "Bengaluru, Karnataka, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: 'Up to 4-year'",
+    "evidence": {
+      "experience": [
+        "Up to 4-year"
+      ],
+      "experience_lines": [
+        "Up to 4-year experience in Financial Planning and Analysis, with manufacturing experience background preferable.",
+        "Hands on experience in SAP FICO including CO-PA and Understanding on other modules like SD, PP, MM, PS",
+        "Experience:"
+      ],
+      "fresher_evidence": "Up to 4-year",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:R0103102",
+      "canonical_url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Bengaluru-Karnataka-India/Financial-Planning---Analysis-Specialist---Project-Controlling---CCC-_R0103102",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "hitachi|workday:R0103102",
+    "date": "Nov 3, 11:16",
+    "first_seen": "2026-11-03T11:16:17.706120+00:00",
+    "id": "Hitachi_Financial_Planning_&_Analysis_Specialist",
+    "notified": false,
+    "company_id": "c1793696383"
   }
 ]
