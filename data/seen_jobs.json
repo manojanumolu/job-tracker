@@ -2821,5 +2821,44 @@
     "id": "Thermo_Fisher_Scientific_Associate_Investigator_Grants_Analyst_(A",
     "notified": false,
     "company_id": "c1793696389"
+  },
+  {
+    "title": "Program Management",
+    "url": "https://micron.wd1.myworkdayjobs.com/External/job/Sanand---303A---ATSSDMOD-India/Program-Management_JR116632",
+    "company": "Micron",
+    "location": "MOD, India · India",
+    "category": "FRESHER",
+    "reason": "fresher signal: 'Fresh graduates'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Fresh graduates / entry-level candidates are eligible.",
+        "Experience:  Entry Level / College Fresher",
+        "This role is ideal for a recent graduate interested in developing a career in  Program Management, Operations, Quality, or Project Management ."
+      ],
+      "fresher_evidence": "Fresh graduates",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:JR116632",
+      "canonical_url": "https://micron.wd1.myworkdayjobs.com/External/job/Sanand---303A---ATSSDMOD-India/Program-Management_JR116632",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "micron|id:JR116632",
+    "date": "Nov 3, 10:07",
+    "first_seen": "2026-11-03T10:07:56.147236+00:00",
+    "id": "Micron_Program_Management",
+    "notified": false,
+    "company_id": "c1793696369"
   }
 ]
