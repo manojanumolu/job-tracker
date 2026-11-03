@@ -23,7 +23,7 @@ from test_firebase_auth import (  # noqa: F401  (fixture re-export)
     make_id_token, no_env,
 )
 from test_security_audit_2026_10_13 import _verified_password_answer, firebase_replies  # noqa: F401
-from test_streamlit_app import NEW_RECORD, REPO, _html, app  # noqa: F401
+from test_streamlit_app import CATALOGUE_FILE, NEW_RECORD, REPO, _html, app  # noqa: F401
 
 CONFIG = FirebaseConfig(API_KEY, PROJECT)
 NAME = "Asha  Verma "
@@ -326,5 +326,5 @@ def test_sign_up_page_shows_no_tracker_data(app, google_env):
     _open_sign_up(at)
     text = _text(at)
     assert "Graduate Software Engineer" not in text and "Admin" not in text
-    catalogue = [c["name"] for c in json.loads((REPO / "data" / "companies.json").read_text("utf-8"))]
+    catalogue = [c["name"] for c in json.loads((CATALOGUE_FILE).read_text("utf-8"))]
     assert not [n for n in catalogue if f">{n}<" in text]

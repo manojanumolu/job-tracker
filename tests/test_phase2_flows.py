@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from test_streamlit_app import _html, _key, _nav, _seen, app  # noqa: F401  (fixture re-export)
+from test_streamlit_app import CATALOGUE_FILE, _html, _key, _nav, _seen, app  # noqa: F401  (fixture re-export)
 
 NOW = datetime.now(timezone.utc)
 GATE = {k: True for k in ("real_job_posting", "india_location", "detail_read", "detail_is_this_job",
@@ -223,7 +223,7 @@ def test_add_company_rejects_duplicates_and_bad_urls(app):
         at.button(key="btn_add").click().run()
         assert msg in _html(at), (name, url)
     companies = json.loads((at.tmp_path / "companies.json").read_text())
-    assert len(companies) == 7
+    assert len(companies) == len(json.loads((CATALOGUE_FILE).read_text("utf-8")))   # nothing added
 
 
 def test_stop_tracking_keeps_job_history(app):

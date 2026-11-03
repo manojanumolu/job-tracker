@@ -33,7 +33,7 @@ from test_phase3_user_data import (  # noqa: F401
     A_MAIL, A_UID, B_MAIL, B_UID, AccountIdentity, _sign_in, _use_store,
 )
 from test_profile_avatar import TRIGGER, _label, _shows, _styles
-from test_streamlit_app import NEW_RECORD, OLD_RECORD, REPO, _html, _nav, app  # noqa: F401
+from test_streamlit_app import CATALOGUE_FILE, NEW_RECORD, OLD_RECORD, REPO, _html, _nav, app  # noqa: F401
 
 SRC = (REPO / "streamlit_app.py").read_text("utf-8")
 CSS = SRC[SRC.index('_CSS = """') + len('_CSS = """'):SRC.index('"""', SRC.index('_CSS = """') + 10)]
@@ -269,7 +269,7 @@ def test_an_avatar_change_never_touches_another_account(app, google_env, ustore)
 
 def test_navigation_menu_and_settings_clicks_fetch_and_read_nothing(app, google_env, ustore, admins, monkeypatch):
     calls = []
-    catalogue = json.loads((REPO / "data" / "companies.json").read_text("utf-8"))
+    catalogue = json.loads((CATALOGUE_FILE).read_text("utf-8"))
 
     def fake_fetch(paths, *a, **k):
         calls.append(list(paths))

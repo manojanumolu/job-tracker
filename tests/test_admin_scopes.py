@@ -31,7 +31,7 @@ from test_phase3_user_data import (  # noqa: F401  (fixture re-export)
     _company, _sign_in, admins, app, google_env, store,
 )
 from test_firebase_auth import _buttons, no_env  # noqa: F401  (google_env needs no_env)
-from test_streamlit_app import REPO, _companies, _html, _key, _nav, _seen
+from test_streamlit_app import CATALOGUE_FILE, _companies, _html, _key, _nav, _seen
 from test_user_alerts import Identity, Mailer as PersonalMailer, _person
 
 A_UID, B_UID, M_UID = "AdminAaaaaaaaaaaaaaaaaaaaaaa1", "AdminBbbbbbbbbbbbbbbbbbbbbbb2", "Memberccccccccccccccccccccc3"
@@ -295,7 +295,7 @@ def test_a_second_admins_dismissal_never_touches_the_shared_alerts(app, google_e
 
 
 def test_a_second_admin_adds_a_company_to_their_own_monitoring(app, google_env, store, two_admins):
-    before = json.loads((REPO / "data" / "companies.json").read_text("utf-8"))
+    before = json.loads((CATALOGUE_FILE).read_text("utf-8"))
     b = _sign_in(app, google_env, B_UID, B_MAIL)
     b.session_state["page"], b.session_state["company_view"] = "companies", "add"
     b.run()
@@ -320,7 +320,7 @@ def test_a_second_admin_adds_a_company_to_their_own_monitoring(app, google_env, 
 
 
 def test_a_second_admin_cannot_remove_or_change_the_shared_scope(app, google_env, store, two_admins):
-    before = json.loads((REPO / "data" / "companies.json").read_text("utf-8"))
+    before = json.loads((CATALOGUE_FILE).read_text("utf-8"))
     b = _sign_in(app, google_env, B_UID, B_MAIL)
     _company(b, "sanofi")
     assert "btn_remove_company" not in _buttons(b) and "btn_shared_alerts" not in _buttons(b)
@@ -541,7 +541,7 @@ def test_the_second_admin_sees_and_follows_only_their_five_companies(app, google
 
 
 def _companies_in_repo():
-    return json.loads((REPO / "data" / "companies.json").read_text("utf-8"))
+    return json.loads((CATALOGUE_FILE).read_text("utf-8"))
 
 
 def _wkey(prefix, key):
