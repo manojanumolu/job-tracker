@@ -94,7 +94,7 @@ def _stamp_fresh_local_modules() -> None:
 
 _LOCAL_MODULES = ["scan_schedule", "identity", "locations", "job_classifier", "sources", "scraper", "config_store", "repo_sync",
                   "access", "email_policy", "firebase_auth", "job_filters", "user_store", "snapshot_cache", "notifier", "alerts",
-                  "applications", "application_export", "job_page"]
+                  "applications", "application_export", "job_page", "discovery"]
 _reload_changed_local_modules()
 
 from config_store import (
@@ -115,6 +115,7 @@ import application_export
 import applications as apps
 import brand_logos
 import company_logos
+import discovery
 import email_policy
 import firebase_auth
 import job_filters
@@ -871,6 +872,12 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 .job-why { font-size: 13px; line-height: 18px; color: var(--text-2); margin-top: 10px; display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
 .job-why span.t { display: inline-flex; align-items: center; gap: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; max-width: 100%; }
 .job-why span.t .ms { font-size: 16px; color: var(--accent-text); }
+.job-beyond { font-size: 12.5px; line-height: 18px; color: var(--muted); margin-top: 8px; display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
+.job-beyond .pill { font-size: 11.5px; line-height: 16px; padding: 2px 9px 2px 8px; }
+.job-beyond .pill .ms { font-size: 14px; }
+.beyond-head { margin-top: 18px; }
+.st-key-xfilt [data-testid="stHorizontalBlock"] { gap: 8px !important; flex-wrap: wrap !important; }
+.st-key-xfilt [data-testid="stColumn"] { flex: 1 1 200px !important; width: auto !important; min-width: 0 !important; max-width: 320px; }
 .list-foot { padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--muted); }
 .st-key-list_foot_h, :is(.st-key-list_foot_j, .st-key-list_foot_at) { padding: 6px 4px 0 !important; }
 .st-key-list_foot_h > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"], .st-key-list_foot_h > [data-testid="stHorizontalBlock"],
@@ -4640,7 +4647,7 @@ def badge(cls: str, label: str) -> str:
     return f'<span class="pill {cls}">{_ms(icon)}{escape(label)}</span>'
 
 
-def job_row(j: dict, idx: str, origin: str):
+def job_row(j: dict, idx: str, origin: str, extra: str = ""):
     jkey = job_key(j)
     raw_title = (j.get("title") or "Untitled posting").strip() or "Untitled posting"
     company = (j.get("company") or "").strip()
@@ -4663,7 +4670,7 @@ def job_row(j: dict, idx: str, origin: str):
                 {f'<div class="job-co"><span class="co">{escape(company)}</span></div>' if company else ''}
                 <h3 class="job-title" title="{escape(raw_title, quote=True)}">{escape(raw_title)}</h3>
                 <div class="job-meta">{"".join(meta) or '&nbsp;'}</div>
-                <div class="job-why">{badge(pill_cls, pill_label)}<span class="t">{_ms("work_history" if pill_cls != "legacy" else "info")}{escape(job_why(j))}</span></div>
+                <div class="job-why">{badge(pill_cls, pill_label)}<span class="t">{_ms("work_history" if pill_cls != "legacy" else "info")}{escape(job_why(j))}</span></div>{extra}
               </div>
             </div>""")
         with st.container(key=f"ja_{idx}"):
@@ -4794,9 +4801,23 @@ def page_home():
                     _acts)
         return
 
-    st.html('<div class="sec-head"><div><div class="eyebrow sparked">Latest opportunities</div><h2 class="section-title">Latest jobs</h2>'
-            '<p class="section-sub">Newest fresher and entry-level roles found on the portals you track</p></div></div>')
-    _home_list()
+    prefs = primary_preferences()
+    if not discovery.has_preferences(prefs):
+        st.html('<div class="sec-head"><div><div class="eyebrow sparked">Latest opportunities</div><h2 class="section-title">Latest jobs</h2>'
+                '<p class="section-sub">Newest fresher and entry-level roles found on the portals you track</p></div></div>')
+        _home_list(active_jobs)
+    else:
+        tailored = [j for j in active_jobs if discovery.is_tailored(j, prefs)]
+        st.html('<div class="sec-head"><div><div class="eyebrow sparked">Tailored opportunities</div>'
+                '<h2 class="section-title">Tailored Opportunities</h2>'
+                f'<p class="section-sub">Matching your preferences: {escape(tailoring_summary(prefs))}</p></div></div>')
+        if tailored:
+            _home_list(tailored)
+        else:
+            empty_state("travel_explore", "No tailored matches right now",
+                        "New fresher and entry-level roles that match your preferences appear here as soon as a "
+                        "portal you track publishes them.")
+        explore_section(prefs)
     st.html(f"""<div class="how">
       <div><span class="ic">{_ms("travel_explore")}</span><div><b>Tracks career portals</b><p>Each company's job list is scanned on a schedule — no manual searching.</p></div></div>
       <div><span class="ic">{_ms("article")}</span><div><b>Reads every posting</b><p>A job is judged from its own page, never from its title alone.</p></div></div>
@@ -4805,12 +4826,12 @@ def page_home():
 
 
 @st.fragment
-def _home_list() -> None:
+def _home_list(jobs: list[dict]) -> None:
     """Home's filters and latest jobs. A fragment: changing a filter redraws
     only this part, not the sidebar, header, menu and hero."""
     _leave_fragment_if_needed()
     before = dict(_USED_LOGOS)
-    shown, active, clear = filter_jobs("h", active_jobs)
+    shown, active, clear = filter_jobs("h", jobs)
     if not shown:
         empty_state("search_off", "No jobs match these filters",
                     "Try a different search or clear the filters to see every job.",
@@ -4826,6 +4847,100 @@ def _home_list() -> None:
             with f2:
                 st.button("View all jobs", key="btn_all_jobs", icon=":material/arrow_forward:", icon_position="right",
                           on_click=go, args=("jobs",))
+    _fragment_logos(before)
+
+
+def primary_preferences() -> dict:
+    """The locations and job families this viewer's alerts are tailored to:
+    the primary admin's shared email tailoring (settings.json), otherwise
+    the viewer's own email tailoring, else their saved job preferences.
+    Read only: nothing here changes a preference."""
+    if IS_PRIMARY and discovery.has_preferences(SHARED_TAILORING):
+        return SHARED_TAILORING
+    if discovery.has_preferences(my_tailoring()):
+        return my_tailoring()
+    d = my_defaults()
+    return {"locations": d["locations"], "job_families": d["families"]} if d else {}
+
+
+EXPLORE_LIMIT = 6
+EXPLORE_DAYS = 30       # nothing re-checks an old posting, so older ones may have closed
+
+
+def explore_jobs(prefs: dict) -> list[dict]:
+    """Explore beyond your preferences: jobs the scanner already found and
+    qualified on the portals this viewer monitors (their company scope, as
+    on Home), outside their primary preferences, technical, and found in
+    the last EXPLORE_DAYS days. Newest first."""
+    d = my_defaults()
+    scope = (d["companies"] or None) if d else None     # as Home's company filter: none chosen = any company
+    since = NOW - timedelta(days=EXPLORE_DAYS)
+    pool = [j for j in active_jobs if (scope is None or job_filters.matches_view(j, companies=scope))
+            and found[id(j)] is not None and found[id(j)] >= since]
+    return discovery.beyond(pool, prefs)
+
+
+def explore_section(prefs: dict) -> None:
+    jobs = explore_jobs(prefs)
+    st.html('<div class="sec-head beyond-head"><div><div class="eyebrow sparked">Broader discovery</div>'
+            '<h2 class="section-title">Explore Beyond Your Preferences</h2>'
+            '<p class="section-sub">Discover fresher and entry-level opportunities from other locations, technical domains '
+            'and companies you may have overlooked.</p></div></div>')
+    if not jobs:
+        st.html(f'<p class="filter-note beyond-note">No other technical fresher roles were found in the last {EXPLORE_DAYS} days '
+                f'on the {_plural(len(MONITORED), "portal")} you monitor.</p>')
+        return
+    _explore_list(jobs, prefs)
+
+
+def _explore_show_all() -> None:
+    st.session_state.x_all = True
+
+
+@st.fragment
+def _explore_list(jobs: list[dict], prefs: dict) -> None:
+    """The explore list's two filters and its cards (a fragment, as Home's list)."""
+    _leave_fragment_if_needed()
+    before = dict(_USED_LOGOS)
+    cats = {c: sum(1 for j in jobs if discovery.category(j) == c) for c in discovery.CATEGORIES}
+    locs = {loc: sum(1 for j in jobs if loc in discovery.location_choices(j)) for loc in discovery.LOCATIONS}
+    cat_opts = ["all", *[c for c, n in cats.items() if n]]
+    loc_opts = ["all", *[loc for loc, n in locs.items() if n]]
+    for key, opts in (("x_cat", cat_opts), ("x_loc", loc_opts)):
+        if st.session_state.get(key) not in opts:
+            st.session_state[key] = "all"
+    with st.container(key="xfilt"):
+        a, b = st.columns(2)
+        with a:
+            cat = st.selectbox("Technical area", cat_opts, key="x_cat", label_visibility="collapsed",
+                               format_func=lambda c: f"All technical areas ({len(jobs)})" if c == "all" else f"{c} ({cats[c]})")
+        with b:
+            loc = st.selectbox("Location", loc_opts, key="x_loc", label_visibility="collapsed",
+                               format_func=lambda c: "All locations" if c == "all" else f"{c} ({locs[c]})")
+    shown = [j for j in jobs if (cat == "all" or discovery.category(j) == cat)
+             and (loc == "all" or loc in discovery.location_choices(j))]
+    limit = len(shown) if st.session_state.get("x_all") else EXPLORE_LIMIT
+    with st.container(key="joblist_x"):
+        if not shown:
+            st.html('<p class="filter-note">No jobs in this area and location yet.</p>')
+        for i, j in enumerate(shown[:limit]):
+            why = " · ".join(discovery.reasons(j, prefs))
+            extra = (f'<div class="job-beyond"><span class="pill neutral">{_ms("explore")}{escape(discovery.category(j))}</span>'
+                     + (f'<span class="t">{escape(why)}</span>' if why else "") + '</div>')
+            job_row(j, f"x{i}", "home", extra=extra)
+        with st.container(key="list_foot_x"):
+            f1, f2 = st.columns([3, 1], vertical_alignment="center")
+            with f1:
+                st.html(f'<span class="muted num" style="font-size:13px;">Showing {min(limit, len(shown))} of {_plural(len(shown), "job")} '
+                        f'· only from the {_plural(len(MONITORED), "portal")} you monitor</span>')
+            with f2:
+                if len(shown) > limit:
+                    st.button(f"Show all {len(shown)}", key="btn_x_all", icon=":material/expand_more:",
+                              on_click=_explore_show_all)
+                else:
+                    st.button("Add a company", key="btn_x_add", icon=":material/add:",
+                              help="Monitor another company's careers page", on_click=go, args=("companies",),
+                              kwargs={"view": "add"})
     _fragment_logos(before)
 
 
