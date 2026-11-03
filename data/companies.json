@@ -26,7 +26,8 @@
       }
     },
     "source": "Avature job search",
-    "last_success": "2026-11-03T06:04:24.026608+00:00"
+    "last_success": "2026-11-03T06:04:24.026608+00:00",
+    "shared_alerts": false
   },
   {
     "id": "avalara",
@@ -55,7 +56,8 @@
       }
     },
     "source": "Jibe/iCIMS API",
-    "last_success": "2026-11-03T06:04:28.300880+00:00"
+    "last_success": "2026-11-03T06:04:28.300880+00:00",
+    "shared_alerts": false
   },
   {
     "id": "pokerstars",
@@ -84,7 +86,8 @@
       }
     },
     "source": "Workday API",
-    "last_success": "2026-11-03T06:04:30.616831+00:00"
+    "last_success": "2026-11-03T06:04:30.616831+00:00",
+    "shared_alerts": false
   },
   {
     "id": "sanofi",
@@ -113,7 +116,8 @@
       }
     },
     "source": "Workday API",
-    "last_success": "2026-11-03T06:04:55.730879+00:00"
+    "last_success": "2026-11-03T06:04:55.730879+00:00",
+    "shared_alerts": false
   },
   {
     "id": "pwc",
@@ -142,7 +146,8 @@
       }
     },
     "source": "Workday API",
-    "last_success": "2026-11-03T06:07:11.257366+00:00"
+    "last_success": "2026-11-03T06:07:11.257366+00:00",
+    "shared_alerts": false
   },
   {
     "id": "accenture",
@@ -201,5 +206,203 @@
     },
     "source": "Zoho Recruit career site",
     "last_success": "2026-11-03T06:07:20.745687+00:00"
+  },
+  {
+    "id": "c1793696368",
+    "name": "Salesforce",
+    "url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696369",
+    "name": "Micron",
+    "url": "https://micron.wd1.myworkdayjobs.com/External",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696370",
+    "name": "NVIDIA",
+    "url": "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696371",
+    "name": "Wells Fargo",
+    "url": "https://wf.wd1.myworkdayjobs.com/WellsFargoJobs",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696372",
+    "name": "Novartis",
+    "url": "https://novartis.wd3.myworkdayjobs.com/Novartis_Careers",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696373",
+    "name": "Carrier",
+    "url": "https://carrier.wd5.myworkdayjobs.com/jobs",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696374",
+    "name": "Synchrony",
+    "url": "https://synchronyfinancial.wd5.myworkdayjobs.com/careers",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696375",
+    "name": "Broadridge",
+    "url": "https://broadridge.wd5.myworkdayjobs.com/Careers",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696376",
+    "name": "Invesco",
+    "url": "https://invesco.wd1.myworkdayjobs.com/IVZ",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696377",
+    "name": "Warner Bros. Discovery",
+    "url": "https://warnerbros.wd5.myworkdayjobs.com/global",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696378",
+    "name": "Bristol Myers Squibb",
+    "url": "https://bristolmyerssquibb.wd5.myworkdayjobs.com/BMS",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696379",
+    "name": "Amgen",
+    "url": "https://amgen.wd1.myworkdayjobs.com/Careers",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696380",
+    "name": "Evernorth (Cigna)",
+    "url": "https://cigna.wd5.myworkdayjobs.com/cignacareers",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696381",
+    "name": "State Street",
+    "url": "https://statestreet.wd1.myworkdayjobs.com/Global",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696382",
+    "name": "Mastercard",
+    "url": "https://mastercard.wd1.myworkdayjobs.com/CorporateCareers",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696383",
+    "name": "Hitachi",
+    "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696384",
+    "name": "Medtronic",
+    "url": "https://medtronic.wd1.myworkdayjobs.com/MedtronicCareers",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696385",
+    "name": "S&P Global",
+    "url": "https://spgi.wd5.myworkdayjobs.com/SPGI_Careers",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696386",
+    "name": "Silicon Labs",
+    "url": "https://silabs.wd1.myworkdayjobs.com/SiliconlabsCareers",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696387",
+    "name": "Analog Devices",
+    "url": "https://analogdevices.wd1.myworkdayjobs.com/External",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696388",
+    "name": "Marvell",
+    "url": "https://marvell.wd1.myworkdayjobs.com/MarvellCareers",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "c1793696389",
+    "name": "Thermo Fisher Scientific",
+    "url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
   }
 ]
