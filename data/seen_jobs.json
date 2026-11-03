@@ -2899,5 +2899,45 @@
     "id": "Hitachi_Financial_Planning_&_Analysis_Specialist",
     "notified": false,
     "company_id": "c1793696383"
+  },
+  {
+    "title": "IN_Associate_Data Science & Engineering_Data & Analytics_Advisory_Kolkata",
+    "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Kolkata-DN-57/IN-Associate-Data-Science---Engineering-Data---Analytics-Advisory-Kolkata_DB_005563-1",
+    "company": "PwC",
+    "location": "Kolkata DN 57 · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 to 2 Years'",
+    "evidence": {
+      "experience": [
+        "0 to 2 Years"
+      ],
+      "experience_lines": [
+        "Fresher / 0 to 2 Years",
+        "Hands-on experience with Generative AI, including designing, developing, and deploying GenAI applications in production environments using Python and cloud plat",
+        "Proficiency in Python, SQL, and R, combined with experience in distributed data processing frameworks and cloud-based data engineering tools.",
+        "Years of experience required:"
+      ],
+      "fresher_evidence": "0 to 2 Years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:005563-1",
+      "canonical_url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Kolkata-DN-57/IN-Associate-Data-Science---Engineering-Data---Analytics-Advisory-Kolkata_DB_005563-1",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "pwc|workday:005563-1",
+    "date": "Nov 3, 14:07",
+    "first_seen": "2026-11-03T14:07:32.907429+00:00",
+    "id": "PwC_IN_Associate_Data_Science_&_Engineering_",
+    "notified": false,
+    "company_id": "pwc"
   }
 ]
