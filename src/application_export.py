@@ -72,37 +72,6 @@ def interview_lines(doc: dict) -> list[str]:
     return out
 
 
-def _updated(doc: dict) -> str:
-    ts = apps._iso_seconds(doc.get("updated_at"))
-    return datetime.fromtimestamp(ts, apps.IST).strftime("%d %b %Y, %H:%M IST") if ts else ""
-
-
-# (header, getter, Excel width, kind)
-COLUMNS = [
-    ("Company", lambda d: d.get("company") or "", 22, "text"),
-    ("Job title", lambda d: d.get("title") or "", 32, "text"),
-    ("Location", lambda d: d.get("location") or "", 20, "text"),
-    ("Job URL", lambda d: d.get("url") or "", 36, "url"),
-    ("Job ID", lambda d: d.get("job_id") or "", 16, "text"),
-    ("Date applied", lambda d: d.get("applied_on") or "", 14, "date"),
-    ("Posting date", lambda d: d.get("posted_on") or "", 14, "date"),
-    ("Application progress", lambda d: d.get("progress") or "", 20, "text"),
-    ("Email response", lambda d: d.get("email_status") or "", 26, "text"),
-    ("Follow-up date", lambda d: (d.get("follow_up") or {}).get("date") or "", 14, "date"),
-    ("Follow-up done", lambda d: ("Yes" if (d.get("follow_up") or {}).get("done") is True else "No")
-     if (d.get("follow_up") or {}).get("date") else "", 13, "text"),
-    ("Application source", source_label, 22, "text"),
-    ("Salary/package", lambda d: d.get("salary") or "", 16, "text"),
-    ("Resume name/version", lambda d: d.get("resume") or "", 24, "text"),
-    ("Interviews", lambda d: "\n".join(interview_lines(d)), 44, "wrap"),
-    ("Notes", lambda d: d.get("notes") or "", 44, "wrap"),
-    ("Last updated", _updated, 22, "text"),
-]
-INTERVIEW_COLUMNS = [("Company", 22), ("Job title", 30), ("Round", 20), ("Date", 14), ("Time", 9), ("Type", 12),
-                     ("Location or meeting link", 30), ("Interviewer", 20), ("Outcome", 16),
-                     ("Preparation notes", 40), ("Feedback", 40)]
-
-
 def exportable(docs) -> list[dict]:
     """Live applications only, newest application first."""
     return apps.sort_apps(apps.live(docs), "applied_new")
@@ -116,9 +85,83 @@ def file_name(ext: str, now: float | None = None) -> str:
 # ---------------------------------------------------------------------------
 # Excel
 # ---------------------------------------------------------------------------
+# Three sheets, in this order:
+#   Summary       counts of exactly the exported applications (nothing else)
+#   Applications  one row each — the fields to scan first, then the rest
+#   Interviews    one row per interview round
+# Each list is a real Excel table (filter buttons, banded rows) under a
+# title, with its header row frozen and repeated on printed pages. Dates
+# are Excel dates, links are clickable, statuses are coloured. Every value
+# is kept in full: long text wraps, its row grows up to MAX_LINES lines,
+# and anything longer stays in the cell (the formula bar shows it all).
 
 _XML_BAD = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff￾￿]")
 _EXCEL_EPOCH = date(1899, 12, 30)
+HEAD_ROW = 4                 # title, subtitle, a gap, then a table's header row
+MAX_LINES = 8
+
+# tone -> (fill, text colour)
+_TONES = {"blue": ("FFE8EEFD", "FF2347B5"), "purple": ("FFF1EAFE", "FF6B32C8"), "amber": ("FFFEF3D8", "FF8A5A00"),
+          "green": ("FFE3F6EA", "FF17703A"), "teal": ("FFDDF4F1", "FF0B6B63"), "red": ("FFFDE7E7", "FFB42318"),
+          "gray": ("FFF0F1F4", "FF4B5262"), "orange": ("FFFFEDDF", "FFB2470B")}
+PROGRESS_TONE = {"Applied": "blue", "Assessment": "purple", "Interview": "amber", "Offer Received": "green",
+                 "Accepted": "teal", "Rejected": "red", "Withdrawn": "gray", "On Hold": "orange"}
+EMAIL_TONE = {"No Email Received": "gray", "Acknowledgement Received": "blue", "Assessment Email Received": "purple",
+              "Interview Email Received": "amber", "Rejection Email Received": "red", "Offer Email Received": "green",
+              "Other Email Received": "gray"}
+FOLLOW_UP_WORDS = {"overdue": "Overdue", "today": "Due today", "upcoming": "Upcoming", "done": "Done"}
+FOLLOW_UP_TONE = {"Overdue": "red", "Due today": "amber", "Upcoming": "blue", "Done": "green"}
+OUTCOME_TONE = {"Awaiting result": "amber", "Cleared": "green", "Not cleared": "red", "Rescheduled": "blue",
+                "Cancelled": "gray"}
+
+
+def _follow_up_state(doc: dict, today: date) -> str:
+    return FOLLOW_UP_WORDS.get(apps.follow_up_state(doc, today), "")
+
+
+def _rounds(doc: dict) -> list[dict]:
+    return [r for r in doc.get("interviews") or [] if isinstance(r, dict)]
+
+
+def _updated_at(doc: dict) -> datetime | None:
+    ts = apps._iso_seconds(doc.get("updated_at"))
+    return datetime.fromtimestamp(ts, apps.IST).replace(tzinfo=None) if ts else None
+
+
+# (header, width, value, kind) — kind is a cell style, or a tone map name
+COLUMNS = [
+    ("Company", 20, lambda d, t: d.get("company") or "", "strong"),
+    ("Job title", 30, lambda d, t: d.get("title") or "", "wrap"),
+    ("Status", 16, lambda d, t: d.get("progress") or "", "progress"),
+    ("Date applied", 13, lambda d, t: d.get("applied_on") or "", "date"),
+    ("Email response", 24, lambda d, t: d.get("email_status") or "", "email"),
+    ("Follow-up date", 14, lambda d, t: (d.get("follow_up") or {}).get("date") or "", "date"),
+    ("Follow-up status", 15, lambda d, t: _follow_up_state(d, t), "follow_up"),
+    ("Interviews", 11, lambda d, t: len(_rounds(d)), "int"),
+    ("Location", 18, lambda d, t: d.get("location") or "", "wrap"),
+    ("Posting date", 13, lambda d, t: d.get("posted_on") or "", "date"),
+    ("Source", 20, lambda d, t: source_label(d), "wrap"),
+    ("Salary / package", 15, lambda d, t: d.get("salary") or "", "wrap"),
+    ("Resume version", 22, lambda d, t: d.get("resume") or "", "wrap"),
+    ("Job ID", 13, lambda d, t: d.get("job_id") or "", "text"),
+    ("Job URL", 30, lambda d, t: d.get("url") or "", "url"),
+    ("Notes", 50, lambda d, t: d.get("notes") or "", "wrap"),
+    ("Last updated", 18, lambda d, t: _updated_at(d), "datetime"),
+]
+INTERVIEW_COLUMNS = [
+    ("Company", 20, lambda d, r: d.get("company") or "", "strong"),
+    ("Job title", 28, lambda d, r: d.get("title") or "", "wrap"),
+    ("Interview round", 20, lambda d, r: r.get("round") or "", "wrap"),
+    ("Date", 13, lambda d, r: r.get("date") or "", "date"),
+    ("Time", 9, lambda d, r: r.get("time") or "", "text"),
+    ("Interview type", 13, lambda d, r: r.get("type") or "", "text"),
+    ("Location or meeting link", 30, lambda d, r: r.get("location") or "", "maybe_url"),
+    ("Interviewer", 20, lambda d, r: r.get("interviewer") or "", "wrap"),
+    ("Outcome", 16, lambda d, r: r.get("outcome") or "", "outcome"),
+    ("Preparation notes", 42, lambda d, r: r.get("prep") or "", "wrap"),
+    ("Feedback", 42, lambda d, r: r.get("feedback") or "", "wrap"),
+]
+_TONE_MAPS = {"progress": PROGRESS_TONE, "email": EMAIL_TONE, "follow_up": FOLLOW_UP_TONE, "outcome": OUTCOME_TONE}
 
 
 def _x(text: object) -> str:
@@ -134,110 +177,264 @@ def _col(n: int) -> str:
     return s
 
 
-def _cell(ref: str, value: object, kind: str) -> str:
-    if kind == "date" and _day(value):
-        return f'<c r="{ref}" s="2"><v>{(_day(value) - _EXCEL_EPOCH).days}</v></c>'
-    if value in ("", None):
-        return f'<c r="{ref}" s="{4 if kind != "wrap" else 3}"/>'
-    style = {"wrap": 3, "url": 5}.get(kind, 4)
-    # an inline string is never a formula, whatever it starts with
-    return f'<c r="{ref}" t="inlineStr" s="{style}"><is><t xml:space="preserve">{_x(value)}</t></is></c>'
+# ── styles ───────────────────────────────────────────────────────────────────
+_DARK, _MUTED, _ACCENT, _LINE = "FF1F2937", "FF6B7280", "FF4636D4", "FFE3E6EE"
+_FONTS = [f'<font><sz val="11"/><color rgb="{_DARK}"/><name val="Calibri"/><family val="2"/></font>',
+          '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font>',
+          f'<font><u/><sz val="11"/><color rgb="{_ACCENT}"/><name val="Calibri"/><family val="2"/></font>',
+          f'<font><b/><sz val="18"/><color rgb="{_DARK}"/><name val="Calibri"/><family val="2"/></font>',
+          f'<font><sz val="10"/><color rgb="{_MUTED}"/><name val="Calibri"/><family val="2"/></font>',
+          f'<font><b/><sz val="12"/><color rgb="{_ACCENT}"/><name val="Calibri"/><family val="2"/></font>',
+          f'<font><b/><sz val="14"/><color rgb="{_DARK}"/><name val="Calibri"/><family val="2"/></font>',
+          f'<font><b/><sz val="11"/><color rgb="{_DARK}"/><name val="Calibri"/><family val="2"/></font>']
+_FILLS = ['<fill><patternFill patternType="none"/></fill>', '<fill><patternFill patternType="gray125"/></fill>',
+          '<fill><patternFill patternType="solid"><fgColor rgb="FF4F46E5"/><bgColor indexed="64"/></patternFill></fill>',
+          '<fill><patternFill patternType="solid"><fgColor rgb="FFF5F6FB"/><bgColor indexed="64"/></patternFill></fill>']
+_BORDER = (f'<border><left style="thin"><color rgb="{_LINE}"/></left><right style="thin"><color rgb="{_LINE}"/></right>'
+           f'<top style="thin"><color rgb="{_LINE}"/></top><bottom style="thin"><color rgb="{_LINE}"/></bottom><diagonal/></border>')
+_TOP, _TOP_WRAP = '<alignment vertical="top"/>', '<alignment vertical="top" wrapText="1"/>'
+_CENTER = '<alignment horizontal="center" vertical="top"/>'
+# name -> (numFmtId, fontId, fillId, borderId, alignment)
+_XF = {"default": (0, 0, 0, 0, ""), "head": (0, 1, 2, 1, '<alignment vertical="center" wrapText="1"/>'),
+       "text": (0, 0, 0, 1, _TOP), "strong": (0, 7, 0, 1, _TOP_WRAP), "wrap": (0, 0, 0, 1, _TOP_WRAP),
+       "date": (164, 0, 0, 1, '<alignment horizontal="left" vertical="top"/>'),
+       "datetime": (165, 0, 0, 1, '<alignment horizontal="left" vertical="top"/>'),
+       "url": (0, 2, 0, 1, _TOP), "int": (1, 0, 0, 1, _CENTER), "pct": (9, 0, 0, 1, _CENTER),
+       "title": (0, 3, 0, 0, '<alignment vertical="center"/>'), "sub": (0, 4, 0, 0, '<alignment vertical="center"/>'),
+       "section": (0, 5, 0, 0, '<alignment vertical="bottom"/>'),
+       "kpi_label": (0, 0, 3, 1, '<alignment vertical="center" indent="1"/>'),
+       "kpi_value": (1, 6, 3, 1, '<alignment horizontal="left" vertical="center" indent="1"/>'),
+       "kpi_date": (164, 6, 3, 1, '<alignment horizontal="left" vertical="center" indent="1"/>')}
+for _i, (_tone, (_fill, _ink)) in enumerate(_TONES.items()):
+    _FONTS.append(f'<font><b/><sz val="10"/><color rgb="{_ink}"/><name val="Calibri"/><family val="2"/></font>')
+    _FILLS.append(f'<fill><patternFill patternType="solid"><fgColor rgb="{_fill}"/><bgColor indexed="64"/></patternFill></fill>')
+    _XF[f"tone_{_tone}"] = (0, len(_FONTS) - 1, len(_FILLS) - 1, 1, '<alignment horizontal="center" vertical="top" wrapText="1"/>')
+S = {name: i for i, name in enumerate(_XF)}
 
 
-def _sheet(headers: list[tuple[str, int]], rows: list[list[tuple[object, str]]], links: list[tuple[str, str]]) -> str:
-    last = _col(len(headers) - 1)
-    cols = "".join(f'<col min="{i + 1}" max="{i + 1}" width="{w}" customWidth="1"/>' for i, (_, w) in enumerate(headers))
-    head = "".join(f'<c r="{_col(i)}1" t="inlineStr" s="1"><is><t>{_x(h)}</t></is></c>' for i, (h, _) in enumerate(headers))
-    body = "".join(f'<row r="{r + 2}">' + "".join(_cell(f"{_col(c)}{r + 2}", v, k) for c, (v, k) in enumerate(row))
-                   + "</row>" for r, row in enumerate(rows))
-    end = max(2, len(rows) + 1)
-    link_xml = ("<hyperlinks>" + "".join(f'<hyperlink ref="{ref}" r:id="rId{i + 1}"/>' for i, (ref, _) in enumerate(links))
-                + "</hyperlinks>") if links else ""
+def _styles() -> str:
+    xfs = "".join(f'<xf numFmtId="{n}" fontId="{f}" fillId="{fi}" borderId="{b}" xfId="0"'
+                  + (' applyNumberFormat="1"' if n else "") + (' applyFont="1"' if f else "")
+                  + (' applyFill="1"' if fi else "") + (' applyBorder="1"' if b else "")
+                  + (f' applyAlignment="1">{a}</xf>' if a else "/>") for n, f, fi, b, a in _XF.values())
     return ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
-            'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-            f'<dimension ref="A1:{last}{end}"/>'
-            '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" '
-            'state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>'
-            f'<cols>{cols}</cols><sheetData><row r="1" ht="22" customHeight="1">{head}</row>{body}</sheetData>'
-            f'<autoFilter ref="A1:{last}{end}"/>{link_xml}'
-            '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>'
-            '<pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>')
+            '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            '<numFmts count="2"><numFmt numFmtId="164" formatCode="dd mmm yyyy"/>'
+            '<numFmt numFmtId="165" formatCode="dd mmm yyyy, hh:mm"/></numFmts>'
+            f'<fonts count="{len(_FONTS)}">{"".join(_FONTS)}</fonts><fills count="{len(_FILLS)}">{"".join(_FILLS)}</fills>'
+            f'<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>{_BORDER}</borders>'
+            '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+            f'<cellXfs count="{len(_XF)}">{xfs}</cellXfs>'
+            '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
+            '<dxfs count="0"/><tableStyles count="0" defaultTableStyle="TableStyleLight1" defaultPivotStyle="PivotStyleLight16"/>'
+            '</styleSheet>')
 
 
-def _sheet_rels(links: list[tuple[str, str]]) -> str:
-    return ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-            + "".join(f'<Relationship Id="rId{i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/'
-                      f'relationships/hyperlink" Target={quoteattr(_XML_BAD.sub("", url))} TargetMode="External"/>'
-                      for i, (_, url) in enumerate(links))
-            + "</Relationships>")
+# ── cells, rows and sheets ───────────────────────────────────────────────────
+
+def _cell(ref: str, value: object, style: str, sst: dict[str, int]) -> str:
+    s = S[style]
+    if isinstance(value, datetime):
+        serial = (value.date() - _EXCEL_EPOCH).days + (value.hour * 3600 + value.minute * 60 + value.second) / 86400
+        return f'<c r="{ref}" s="{s}"><v>{serial:.6f}</v></c>'
+    if style in ("date", "kpi_date"):
+        day = value if isinstance(value, date) else _day(value)
+        if day:
+            return f'<c r="{ref}" s="{s}"><v>{(day - _EXCEL_EPOCH).days}</v></c>'
+    if isinstance(value, bool) or value is None or value == "":
+        return f'<c r="{ref}" s="{s}"/>'
+    if isinstance(value, (int, float)):
+        return f'<c r="{ref}" s="{s}"><v>{value}</v></c>'
+    # a shared string is never a formula, whatever it starts with
+    text = _XML_BAD.sub("", str(value))[:32767]
+    return f'<c r="{ref}" t="s" s="{s}"><v>{sst.setdefault(text, len(sst))}</v></c>'
 
 
-_STYLES = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-           '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-           '<numFmts count="1"><numFmt numFmtId="164" formatCode="dd mmm yyyy"/></numFmts>'
-           '<fonts count="3"><font><sz val="11"/><name val="Calibri"/><family val="2"/></font>'
-           '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font>'
-           '<font><u/><sz val="11"/><color rgb="FF4636D4"/><name val="Calibri"/><family val="2"/></font></fonts>'
-           '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
-           '<fill><patternFill patternType="solid"><fgColor rgb="FF5B4CF5"/><bgColor indexed="64"/></patternFill></fill></fills>'
-           '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>'
-           '<border><left/><right/><top/><bottom style="thin"><color rgb="FFE5E7F0"/></bottom><diagonal/></border></borders>'
-           '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-           '<cellXfs count="6">'
-           '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
-           '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1">'
-           '<alignment vertical="center" wrapText="1"/></xf>'
-           '<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" '
-           'applyAlignment="1"><alignment horizontal="left" vertical="top"/></xf>'
-           '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1">'
-           '<alignment vertical="top" wrapText="1"/></xf>'
-           '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1">'
-           '<alignment vertical="top"/></xf>'
-           '<xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1">'
-           '<alignment vertical="top"/></xf>'
-           '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
-           '</styleSheet>')
+def _lines(text: object, width: float) -> int:
+    per = max(1, int(width * 1.15))
+    return sum(max(1, -(-len(seg) // per)) for seg in str(text).split("\n")) if text not in ("", None) else 1
+
+
+class _Sheet:
+    """One worksheet: rows of (value, style) cells from column A, column
+    widths, links, at most one table and the print setup."""
+
+    def __init__(self, widths: list[float]):
+        self.widths, self.rows, self.links, self.merges, self.table = widths, [], [], [], None
+
+    def add(self, cells=(), height: float | None = None) -> int:
+        self.rows.append((list(cells), height))
+        return len(self.rows)
+
+    def gap(self, height: float = 10) -> None:
+        self.add((), height)
+
+    def heading(self, title: str, subtitle: str) -> None:
+        self.add([(title, "title")], 30)
+        self.add([(subtitle, "sub")], 18)
+        self.gap(8)
+
+    def records(self, name: str, columns: list[tuple], rows: list[list[tuple]]) -> None:
+        """A table: the header row, then the rows (each row's height fits its
+        longest wrapped text, up to MAX_LINES lines)."""
+        top = self.add([(h, "head") for h, *_ in columns], 30)
+        for cells in rows:
+            lines = max([_lines(v, w) for (v, kind), (_, w, *_) in zip(cells, columns) if kind in ("wrap", "strong")]
+                        or [1])
+            r = self.add(cells, min(lines, MAX_LINES) * 15 + 6 if lines > 1 else 21)
+            for c, (v, kind) in enumerate(cells):
+                if kind == "url" and v:
+                    self.links.append((f"{_col(c)}{r}", v))
+        if not rows:
+            self.add([("", "text")] * len(columns), 21)              # a table holds at least one row
+        self.table = (name, top, len(self.rows), [h for h, *_ in columns])
+
+    def xml(self, sst: dict[str, int], freeze_row: int = 0, freeze_col: int = 0) -> str:
+        width = max([len(self.widths)] + [len(c) for c, _ in self.rows])
+        cols = "".join(f'<col min="{i + 1}" max="{i + 1}" width="{w}" customWidth="1"/>' for i, w in enumerate(self.widths))
+        body = []
+        for r, (cells, height) in enumerate(self.rows, 1):
+            ht = f' ht="{height}" customHeight="1"' if height else ""
+            body.append(f'<row r="{r}"{ht}>' + "".join(_cell(f"{_col(c)}{r}", v, k, sst) for c, (v, k) in enumerate(cells))
+                        + "</row>")
+        pane = ""
+        if freeze_row or freeze_col:
+            where = "bottomRight" if freeze_row and freeze_col else "bottomLeft" if freeze_row else "topRight"
+            cell = f"{_col(freeze_col)}{freeze_row + 1}"
+            split = (f' xSplit="{freeze_col}"' if freeze_col else "") + (f' ySplit="{freeze_row}"' if freeze_row else "")
+            pane = (f'<pane{split} topLeftCell="{cell}" activePane="{where}" state="frozen"/>'
+                    f'<selection pane="{where}" activeCell="{cell}" sqref="{cell}"/>')
+        merges = (f'<mergeCells count="{len(self.merges)}">' + "".join(f'<mergeCell ref="{m}"/>' for m in self.merges)
+                  + "</mergeCells>") if self.merges else ""
+        links = ("<hyperlinks>" + "".join(f'<hyperlink ref="{ref}" r:id="rId{i + 1}"/>' for i, (ref, _) in enumerate(self.links))
+                 + "</hyperlinks>") if self.links else ""
+        table = f'<tableParts count="1"><tablePart r:id="rId{len(self.links) + 1}"/></tableParts>' if self.table else ""
+        return ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+                'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+                '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>'
+                f'<dimension ref="A1:{_col(width - 1)}{max(1, len(self.rows))}"/>'
+                f'<sheetViews><sheetView workbookViewId="0" showGridLines="0">{pane}</sheetView></sheetViews>'
+                f'<sheetFormatPr defaultRowHeight="15"/><cols>{cols}</cols><sheetData>{"".join(body)}</sheetData>'
+                f'{merges}{links}'
+                '<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>'
+                '<pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/>'
+                f'{table}</worksheet>')
+
+    def rels(self) -> str | None:
+        if not (self.links or self.table):
+            return None
+        items = [f'<Relationship Id="rId{i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+                 f'relationships/hyperlink" Target={quoteattr(_XML_BAD.sub("", url))} TargetMode="External"/>'
+                 for i, (_, url) in enumerate(self.links)]
+        return ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + "".join(items)
+                + (f'<Relationship Id="rId{len(self.links) + 1}" Type="http://schemas.openxmlformats.org/officeDocument/'
+                   f'2006/relationships/table" Target="../tables/{{TABLE}}"/>' if self.table else "")
+                + "</Relationships>")
+
+    def table_xml(self, table_id: int) -> str:
+        name, top, bottom, headers = self.table
+        ref = f"A{top}:{_col(len(headers) - 1)}{bottom}"
+        cols = "".join(f'<tableColumn id="{i + 1}" name={quoteattr(_XML_BAD.sub("", h))}/>' for i, h in enumerate(headers))
+        return ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                f'<table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" id="{table_id}" '
+                f'name="{name}" displayName="{name}" ref="{ref}" totalsRowShown="0">'
+                f'<autoFilter ref="{ref}"/><tableColumns count="{len(headers)}">{cols}</tableColumns>'
+                '<tableStyleInfo name="TableStyleLight1" showFirstColumn="0" showLastColumn="0" showRowStripes="1" '
+                'showColumnStripes="0"/></table>')
+
+
+def _kind(kind: str, value: object) -> str:
+    """A column's kind -> the cell style for this value."""
+    if kind in _TONE_MAPS:
+        return f"tone_{_TONE_MAPS[kind].get(value, 'gray')}" if value else "text"
+    if kind == "maybe_url":
+        return "url" if isinstance(value, str) and re.match(r"^https?://", value.strip(), re.I) else "wrap"
+    return kind
+
+
+def _summary_sheet(items: list[dict], scope: str, stamp: datetime, today: date) -> _Sheet:
+    total = len(items)
+    rounds = [r for d in items for r in _rounds(d)]
+    states = [apps.follow_up_state(d, today) for d in items]
+    applied = [x for x in (_day(d.get("applied_on")) for d in items) if x]
+    sh = _Sheet([34, 34, 18, 16])
+    sh.heading("Application Tracker — Summary",
+               f"{_plural(total, 'application')} exported · {scope or 'All applications'} · "
+               f"{stamp.strftime('%d %b %Y, %H:%M')} IST")
+    sh.add([("Overview", "section")], 22)
+    for label, value in (("Total applications", total),
+                         ("Applications with interviews", sum(1 for d in items if _rounds(d))),
+                         ("Interview rounds", len(rounds)),
+                         ("Offers received", sum(1 for d in items if d.get("progress") in apps.OFFER_REACHED)),
+                         ("Rejected applications", sum(1 for d in items if d.get("progress") == "Rejected")),
+                         ("Upcoming follow-ups", sum(1 for s in states if s in ("today", "upcoming"))),
+                         ("Overdue follow-ups", sum(1 for s in states if s == "overdue"))):
+        sh.add([(label, "kpi_label"), (value, "kpi_value")], 24)
+    for title, head, values, field, tones in (
+            ("Applications by status", "Status", apps.PROGRESS, "progress", PROGRESS_TONE),
+            ("Email responses", "Email response", apps.EMAIL_STATUSES, "email_status", EMAIL_TONE)):
+        counts = {v: 0 for v in values}
+        for d in items:
+            counts[d.get(field) or ""] = counts.get(d.get(field) or "", 0) + 1
+        sh.gap(14)
+        sh.add([(title, "section")], 22)
+        sh.add([(head, "head"), ("Applications", "head"), ("Share", "head")], 22)
+        for v, n in counts.items():
+            if v or n:
+                sh.add([(v or "Not set", f"tone_{tones.get(v, 'gray')}"), (n, "int"), (n / total if total else 0, "pct")], 20)
+    sh.gap(14)
+    sh.add([("Application dates", "section")], 22)
+    for label, value, style in (("First application", min(applied) if applied else "", "kpi_date"),
+                                ("Latest application", max(applied) if applied else "", "kpi_date"),
+                                ("Applied in the last 7 days", sum(1 for x in applied if 0 <= (today - x).days < 7), "kpi_value"),
+                                ("Applied in the last 30 days", sum(1 for x in applied if 0 <= (today - x).days < 30), "kpi_value")):
+        sh.add([(label, "kpi_label"), (value, style)], 24)
+    sh.gap(14)
+    sh.add([("Open follow-ups", "section")], 22)
+    buckets = apps.follow_up_buckets(items, today)
+    open_ = buckets["overdue"] + buckets["today"] + buckets["upcoming"]
+    if not open_:
+        sh.add([("No open follow-ups", "text")], 20)
+    else:
+        sh.add([("Company", "head"), ("Job title", "head"), ("Follow-up date", "head"), ("Status", "head")], 22)
+        for d in open_:
+            state = _follow_up_state(d, today)
+            sh.add([(d.get("company") or "", "strong"), (d.get("title") or "", "wrap"),
+                    (d["follow_up"]["date"], "date"), (state, f"tone_{FOLLOW_UP_TONE[state]}")],
+                   max(21, min(_lines(d.get("title"), 34), MAX_LINES) * 15 + 6))
+    return sh
+
+
+def _plural(n: int, word: str) -> str:
+    return f"{n} {word}{'' if n == 1 else 's'}"
 
 
 def to_xlsx(docs, scope: str = "", now: float | None = None) -> bytes:
-    """A workbook: "Applications" (one row each) and "Interviews" (one row
-    per interview round). Dates are real Excel dates; the header row is
-    frozen and filterable; job links are clickable."""
+    """A workbook: "Summary", "Applications" (one row each) and "Interviews"
+    (one row per interview round) — exactly the applications passed in."""
     items = exportable(docs)
-    rows, links = [], []
-    for r, d in enumerate(items):
-        row = []
-        for c, (_, get, _, kind) in enumerate(COLUMNS):
-            value = get(d)
-            row.append((value, kind))
-            if kind == "url" and value:
-                links.append((f"{_col(c)}{r + 2}", value))
-        rows.append(row)
-    iv_rows = []
-    for d in items:
-        for iv in d.get("interviews") or []:
-            if isinstance(iv, dict):
-                iv_rows.append([(d.get("company") or "", "text"), (d.get("title") or "", "text"),
-                                (iv.get("round") or "", "text"), (iv.get("date") or "", "date"),
-                                (iv.get("time") or "", "text"), (iv.get("type") or "", "text"),
-                                (iv.get("location") or "", "text"), (iv.get("interviewer") or "", "text"),
-                                (iv.get("outcome") or "", "text"), (iv.get("prep") or "", "wrap"),
-                                (iv.get("feedback") or "", "wrap")])
-    stamp = apps._now_iso(now)
+    ts = time.time() if now is None else now
+    stamp = datetime.fromtimestamp(ts, apps.IST)
+    today = apps.today_ist(ts)
+    subtitle = (f"{scope or 'All applications'} · exported {stamp.strftime('%d %b %Y, %H:%M')} IST")
+
+    summary = _summary_sheet(items, scope, stamp, today)
+    app_sheet = _Sheet([w for _, w, *_ in COLUMNS])
+    app_sheet.heading("Applications", f"{_plural(len(items), 'application')} · {subtitle}")
+    app_sheet.records("ApplicationsTable", COLUMNS, [[(v := get(d, today), _kind(kind, v)) for _, _, get, kind in COLUMNS]
+                                                for d in items])
+    pairs = [(d, r) for d in items for r in _rounds(d)]
+    iv_sheet = _Sheet([w for _, w, *_ in INTERVIEW_COLUMNS])
+    iv_sheet.heading("Interviews", f"{_plural(len(pairs), 'interview round')} · {subtitle}")
+    iv_sheet.records("InterviewsTable", INTERVIEW_COLUMNS,
+                     [[(v := get(d, r), _kind(kind, v)) for _, _, get, kind in INTERVIEW_COLUMNS] for d, r in pairs])
+
+    sheets = [("Summary", summary, (0, 0)), ("Applications", app_sheet, (HEAD_ROW, 2)), ("Interviews", iv_sheet, (HEAD_ROW, 2))]
     title = "Application Tracker export" + (f" — {scope}" if scope else "")
+    ct = "application/vnd.openxmlformats-officedocument.spreadsheetml"
     files = {
-        "[Content_Types].xml": '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
-        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
-        '<Default Extension="xml" ContentType="application/xml"/>'
-        '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
-        '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
-        '<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
-        '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
-        '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'
-        '</Types>',
         "_rels/.rels": '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
         '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
@@ -248,27 +445,52 @@ def to_xlsx(docs, scope: str = "", now: float | None = None) -> bytes:
         'xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" '
         'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
         f'<dc:title>{_x(title)}</dc:title><dc:creator>Fresher Job Tracker</dc:creator>'
-        f'<dcterms:created xsi:type="dcterms:W3CDTF">{stamp}</dcterms:created></cp:coreProperties>',
+        f'<dcterms:created xsi:type="dcterms:W3CDTF">{apps._now_iso(now)}</dcterms:created></cp:coreProperties>',
         "xl/workbook.xml": '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
         'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-        '<sheets><sheet name="Applications" sheetId="1" r:id="rId1"/><sheet name="Interviews" sheetId="2" r:id="rId2"/></sheets>'
-        '<definedNames>'
-        f'<definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">Applications!$A$1:${_col(len(COLUMNS) - 1)}${max(2, len(rows) + 1)}</definedName>'
-        f'<definedName name="_xlnm._FilterDatabase" localSheetId="1" hidden="1">Interviews!$A$1:${_col(len(INTERVIEW_COLUMNS) - 1)}${max(2, len(iv_rows) + 1)}</definedName>'
-        '</definedNames></workbook>',
+        '<bookViews><workbookView activeTab="0"/></bookViews><sheets>'
+        + "".join(f'<sheet name="{n}" sheetId="{i + 1}" r:id="rId{i + 1}"/>' for i, (n, _, _) in enumerate(sheets))
+        + '</sheets><definedNames>'
+        + "".join(f'<definedName name="_xlnm.Print_Titles" localSheetId="{i}">{n}!${HEAD_ROW}:${HEAD_ROW}</definedName>'
+                  for i, (n, sh, _) in enumerate(sheets) if sh.table)
+        + '</definedNames></workbook>',
         "xl/_rels/workbook.xml.rels": '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
-        '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>'
-        '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
-        '</Relationships>',
-        "xl/styles.xml": _STYLES,
-        "xl/worksheets/sheet1.xml": _sheet([(h, w) for h, _, w, _ in COLUMNS], rows, links),
-        "xl/worksheets/sheet2.xml": _sheet(INTERVIEW_COLUMNS, iv_rows, []),
+        + "".join(f'<Relationship Id="rId{i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+                  f'relationships/worksheet" Target="worksheets/sheet{i + 1}.xml"/>' for i in range(len(sheets)))
+        + f'<Relationship Id="rId{len(sheets) + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+          'relationships/styles" Target="styles.xml"/>'
+        + f'<Relationship Id="rId{len(sheets) + 2}" Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+          'relationships/sharedStrings" Target="sharedStrings.xml"/></Relationships>',
+        "xl/styles.xml": _styles(),
     }
-    if links:
-        files["xl/worksheets/_rels/sheet1.xml.rels"] = _sheet_rels(links)
+    overrides = ['<Override PartName="/xl/workbook.xml" ContentType="' + ct + '.sheet.main+xml"/>',
+                 '<Override PartName="/xl/styles.xml" ContentType="' + ct + '.styles+xml"/>',
+                 '<Override PartName="/xl/sharedStrings.xml" ContentType="' + ct + '.sharedStrings+xml"/>',
+                 '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>']
+    n_tables, sst = 0, {}
+    for i, (_, sh, (fr, fc)) in enumerate(sheets, 1):
+        files[f"xl/worksheets/sheet{i}.xml"] = sh.xml(sst, fr, fc)
+        overrides.append(f'<Override PartName="/xl/worksheets/sheet{i}.xml" ContentType="{ct}.worksheet+xml"/>')
+        rels = sh.rels()
+        if sh.table:
+            n_tables += 1
+            files[f"xl/tables/table{n_tables}.xml"] = sh.table_xml(n_tables)
+            overrides.append(f'<Override PartName="/xl/tables/table{n_tables}.xml" ContentType="{ct}.table+xml"/>')
+            rels = rels.replace("{TABLE}", f"table{n_tables}.xml")
+        if rels:
+            files[f"xl/worksheets/_rels/sheet{i}.xml.rels"] = rels
+    used = sum(files[f"xl/worksheets/sheet{i}.xml"].count(' t="s" ') for i in range(1, len(sheets) + 1))
+    files["xl/sharedStrings.xml"] = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                                     '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+                                     f'count="{used}" uniqueCount="{len(sst)}">'
+                                     + "".join(f'<si><t xml:space="preserve">{escape(t)}</t></si>' for t in sst)
+                                     + "</sst>")
+    files = {"[Content_Types].xml": '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+             '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+             '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+             '<Default Extension="xml" ContentType="application/xml"/>' + "".join(overrides) + '</Types>', **files}
     buf = BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for name, text in files.items():

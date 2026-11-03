@@ -3759,6 +3759,19 @@ def for_me(jobs: list[dict]) -> list[dict]:
 
 active_jobs: list[dict] = _all_active_jobs
 dismissed_jobs: list[dict] = [j for j in reversed(all_records) if is_dismissed(j)]  # newest-first
+if IS_PRIMARY:
+    # the primary admin's job lists cover their own monitoring: never the
+    # jobs of a company another admin monitors on their own (see MONITORED)
+    _others = [c for c in companies if not in_shared_alerts(c)]
+    if _others:
+        _o_ids = {str(c.get("id")) for c in _others}
+        _o_names = {(c.get("name") or "").strip() for c in _others}
+
+        def _mine(j: dict) -> bool:
+            cid = j.get("company_id")
+            return str(cid) not in _o_ids if cid else (j.get("company") or "").strip() not in _o_names
+        active_jobs = [j for j in active_jobs if _mine(j)]
+        dismissed_jobs = [j for j in dismissed_jobs if _mine(j)]
 
 NOW = datetime.now(timezone.utc)
 # cron asks for every 3 h, but GitHub starts scheduled runs late: measured
@@ -3894,14 +3907,20 @@ def _health(cos: list[dict]) -> tuple[dict, tuple[str, str]]:
     return counts, ("healthy", "All portals healthy")
 
 
-# the tracker's catalogue as a whole (its Companies list, the primary admin's Home)
+# the tracker's catalogue as a whole (the Companies list with ?view=all)
 n_by_status, overall = _health(companies)
-# ... and what THIS viewer monitors: the catalogue for the primary admin (and
-# the legacy owner); for another admin the companies they follow — every
-# tracked company only if they chose that scope. Monitoring, Settings →
-# Tracker status and the health marks show this, never another account's.
+# ... and what THIS viewer monitors: the shared alerts' companies for the
+# primary admin (and the legacy owner); for another admin the companies they
+# follow — every tracked company only if they chose that scope. Companies,
+# Home, Monitoring, Settings → Tracker status and the health marks show
+# this, never another account's.
 if OWN_SCOPE:
     MONITORED = companies if _VIEW["watch_all"] else [c for c in companies if str(c.get("id")) in ME["watchlist"]]
+elif IS_PRIMARY:
+    # the shared alerts' companies: one left out of them ("shared_alerts":
+    # false) is another admin's own monitoring — still in the catalogue and
+    # scanned for them, but never part of the primary admin's list or counts
+    MONITORED = [c for c in companies if in_shared_alerts(c)]
 else:
     MONITORED = companies
 mon_by_status, mon_overall = _health(MONITORED)
@@ -4331,7 +4350,12 @@ def account_menu() -> None:
                 'inset 0 0 0 1px rgba(15,23,42,.10), 0 0 0 2px var(--surface), 0 0 0 3.5px var(--av-ring), var(--av-drop); }</style>')
     else:
         st.html(f'<style>{trigger} {{ content: "{_me_initial()}"; }}</style>')
-    with st.container(key="acct_bar"):
+    # in a placeholder, so Sign out can take the bar off the page at once:
+    # Streamlit removes what an earlier run drew only when the next run
+    # FINISHES, and until the login page's run did, the open menu stayed on
+    # top of the sign-in form (seconds, on Community Cloud)
+    bar = st.empty()
+    with bar.container(key="acct_bar"):
         nav_controls()
         # a new key after an item is chosen: the next page draws the menu closed
         # (no extra round trip — the popover's own state isn't tracked)
@@ -4351,6 +4375,7 @@ def account_menu() -> None:
             st.html('<div class="acct-sep"></div>')
             if st.button("Sign out", key="btn_account_sign_out", icon=":material/logout:", type="tertiary",
                          use_container_width=True):
+                bar.empty()              # the menu, its button and the name badge leave the page now
                 if not account_sign_out():
                     st.rerun()
                 st.stop()
@@ -4406,7 +4431,7 @@ def page_header(title: str, sub_html: str = "", actions=None, eyebrow: str | Non
 
 def status_line() -> str:
     """The live system state as three chips: health · last scan · next slot."""
-    return (f'<span class="chip live {overall[0]}"><span class="dot {overall[0]}"></span>{escape(overall[1])}</span>'
+    return (f'<span class="chip live {mon_overall[0]}"><span class="dot {mon_overall[0]}"></span>{escape(mon_overall[1])}</span>'
             f'<span class="chip num">{_ms("history", "s16")}Last scan {_ago(last_scan, NOW)}</span>'
             f'<span class="chip num">{_ms("schedule", "s16")}Next scheduled {_ist(NEXT_SCAN)}</span>')
 
@@ -4742,13 +4767,13 @@ def page_home():
         with st.container(key="hero_actions"):
             scan_actions()
 
-    healthy_note = " · ".join(f"{n_by_status[k]} {k}" for k in ("healthy", "delayed", "failing", "pending") if n_by_status[k]) or "—"
+    healthy_note = " · ".join(f"{mon_by_status[k]} {k}" for k in ("healthy", "delayed", "failing", "pending") if mon_by_status[k]) or "—"
     st.html('<div class="stats">'
             + _stat("Active jobs", len(active_jobs),
                     _plural(len(dismissed_jobs), 'dismissed job') if dismissed_jobs else 'Fresher &amp; entry-level', "work")
             + _stat("New this week", new_this_week, "Found in the last 7 days", "trending_up", "t-teal")
-            + _stat("Companies monitored", len(companies), healthy_note, "apartment",
-                    "t-red" if n_by_status["failing"] else "t-green")
+            + _stat("Companies monitored", len(MONITORED), healthy_note, "apartment",
+                    "t-red" if mon_by_status["failing"] else "t-green")
             + _stat("Last scan", _ago(last_scan, NOW), f"Next scheduled {_ist(NEXT_SCAN)}", "update",
                     "t-amber" if scan_stale or SCAN_OVERDUE else "", small=True)
             + "</div>")
@@ -4763,7 +4788,7 @@ def page_home():
             with b:
                 st.button("Open monitoring", key="btn_home_mon", on_click=go, args=("monitoring",))
         empty_state("travel_explore", "No alerts yet",
-                    f"The tracker checks {_plural(len(companies), 'company', 'companies')} on a schedule of {interval_label(SCAN_HOURS).lower()} "
+                    f"The tracker checks {_plural(len(MONITORED), 'company', 'companies')} on a schedule of {interval_label(SCAN_HOURS).lower()} "
                     "(GitHub often starts it later). New fresher and "
                     "entry-level roles in India appear here — and in your inbox — as soon as a portal publishes them.",
                     _acts)
@@ -4805,7 +4830,8 @@ def _home_list() -> None:
 
 
 def page_jobs():
-    page_header("Jobs", f"{_plural(len(all_records), 'job')} found by the tracker · {len(active_jobs)} active · "
+    found_n = len(active_jobs) + len(dismissed_jobs) if IS_PRIMARY else len(all_records)    # (in their monitoring)
+    page_header("Jobs", f"{_plural(found_n, 'job')} found by the tracker · {len(active_jobs)} active · "
                         f"{len(dismissed_jobs)} dismissed")
     st.session_state.setdefault("jobs_tab", "active")
     _jobs_list()
@@ -5023,8 +5049,13 @@ def page_companies():
     def _acts():
         st.button("Add company", key="btn_open_add", type="primary", icon=":material/add:",
                   on_click=go, args=("companies",), kwargs={"view": "add"})
-    page_header("Companies", f"{_plural(len(companies), 'career portal')} monitored · checks {SCHEDULE_NOTE}", _acts)
-    if not companies:
+    # the primary admin's list is their monitoring (MONITORED): a company
+    # another admin monitors on their own isn't shown or counted here
+    # (?view=all still lists the whole catalogue)
+    cos = MONITORED if IS_PRIMARY and st.session_state.get("company_view") != "all" else companies
+    by_status = mon_by_status if cos is MONITORED else n_by_status
+    page_header("Companies", f"{_plural(len(cos), 'career portal')} monitored · checks {SCHEDULE_NOTE}", _acts)
+    if not cos:
         empty_state("apartment", "No companies yet", "Add a company's career page and the tracker will start checking it on the next scan.")
         return
     with st.container(key="co_toolbar"):
@@ -5035,11 +5066,11 @@ def page_companies():
         with f2:
             with st.container(key="co_status_wrap"):
                 opts = ["all", "healthy", "delayed", "failing", "pending"]
-                sel = st.pills("Status", [o for o in opts if o == "all" or n_by_status[o]], key="co_status",
+                sel = st.pills("Status", [o for o in opts if o == "all" or by_status[o]], key="co_status",
                                label_visibility="collapsed", default="all",
-                               format_func=lambda o: f"All ({len(companies)})" if o == "all" else f"{o.title()} ({n_by_status[o]})")
+                               format_func=lambda o: f"All ({len(cos)})" if o == "all" else f"{o.title()} ({by_status[o]})")
     sel = sel or "all"
-    rows = [c for c in companies
+    rows = [c for c in cos
             if (not q or q in f"{c.get('name', '')} {c.get('url', '')}".lower())
             and (sel == "all" or statuses[c.get("id")][0] == sel)]
     if not rows:
@@ -6615,6 +6646,7 @@ def render_scope_diag() -> None:
             ("Followed companies", f"{len(follows)}: {', '.join(follows)}" if follows else "0"),
             ("Home shows", "this account's own feed" if MEMBER_VIEW or OWN_SCOPE else "the admin dashboard"),
             ("Companies page shows", "My companies (this account's selection)" if MEMBER_VIEW or OWN_SCOPE
+             else f"the shared alerts' companies ({len(MONITORED)})" if IS_PRIMARY and len(MONITORED) < len(companies)
              else "the tracker's catalogue"),
             ("Tracker catalogue", _plural(len(companies), "company", "companies"))]
     page_header("Monitoring diagnostics", "This account only · read-only")

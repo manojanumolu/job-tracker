@@ -192,7 +192,13 @@ def _stamp(tmp_path, ago: timedelta, status="active"):
         c["status"] = status
         c["last_checked"] = (now - ago - timedelta(seconds=10 * i)).isoformat()
     (tmp_path / "data" / "companies.json").write_text(json.dumps(companies))
-    return len(companies)
+    return len(_own(companies))
+
+
+def _own(companies):
+    """The companies the primary admin (the owner here) monitors: the shared
+    alerts' (another admin's own companies aren't on their Home, Nov 2026)."""
+    return [c for c in companies if c.get("shared_alerts") is not False]
 
 
 def _overall(html):
@@ -225,10 +231,10 @@ def test_portal_counts_follow_each_portals_own_result(app, tmp_path):
     companies = json.loads((REPO / "data" / "companies.json").read_text("utf-8"))
     for c in companies:
         c["status"], c["last_checked"] = "active", (now - timedelta(minutes=20)).isoformat()
-    companies[0]["status"] = "failing"
+    _own(companies)[0]["status"] = "failing"
     (tmp_path / "data" / "companies.json").write_text(json.dumps(companies))
     html = _html(app([]))
-    assert f"{len(companies) - 1} healthy · 1 failing" in html
+    assert f"{len(_own(companies)) - 1} healthy · 1 failing" in html
     assert _overall(html)[0] == "failing"
 
 
@@ -355,7 +361,7 @@ def test_monitoring_shows_when_a_failing_portal_last_succeeded(app, tmp_path):
     for c in companies:
         c["status"], c["last_checked"] = "active", (now - timedelta(minutes=20)).isoformat()
         c["last_success"] = c["last_checked"]
-    companies[0].update(status="failing", status_reason="listing page timed out",
+    _own(companies)[0].update(status="failing", status_reason="listing page timed out",
                         last_success=(now - timedelta(days=2, minutes=5)).isoformat())
     (tmp_path / "data" / "companies.json").write_text(json.dumps(companies))
     html = _html(app([], page="monitoring"))

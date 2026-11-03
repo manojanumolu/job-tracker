@@ -646,16 +646,27 @@ def _export_docs():
     return a.load(now=NOW)
 
 
-def _xlsx_rows(data: bytes, sheet: int = 1) -> list[list[str]]:
-    ns = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+_SHEETS = {"Summary": 1, "Applications": 2, "Interviews": 3}
+_NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+
+
+def _xlsx_cells(data: bytes, sheet: str = "Applications") -> list[list[str]]:
+    """Every row of a sheet as text (shared strings resolved)."""
     with zipfile.ZipFile(io.BytesIO(data)) as z:
         for name in z.namelist():                                  # every part is well-formed XML
             ET.fromstring(z.read(name))
-        root = ET.fromstring(z.read(f"xl/worksheets/sheet{sheet}.xml"))
+        sst = ["".join(si.itertext()) for si in ET.fromstring(z.read("xl/sharedStrings.xml"))]
+        root = ET.fromstring(z.read(f"xl/worksheets/sheet{_SHEETS[sheet]}.xml"))
     rows = []
-    for row in root.find("m:sheetData", ns):
-        rows.append(["".join(c.itertext()) for c in row])
+    for row in root.find("m:sheetData", _NS):
+        rows.append([sst[int(c.find("m:v", _NS).text)] if c.get("t") == "s" else "".join(c.itertext()) for c in row])
     return rows
+
+
+def _xlsx_rows(data: bytes, sheet: str = "Applications") -> list[list[str]]:
+    """A list sheet's table: its header row, then one row per record."""
+    rows = _xlsx_cells(data, sheet)
+    return rows[next(i for i, r in enumerate(rows) if r and r[0] == "Company"):]
 
 
 def test_the_excel_export():
@@ -663,20 +674,23 @@ def test_the_excel_export():
     data = X.to_xlsx(docs, "All applications", now=NOW)
     with zipfile.ZipFile(io.BytesIO(data)) as z:
         names = set(z.namelist())
-        sheet = z.read("xl/worksheets/sheet1.xml").decode()
-        rels = z.read("xl/worksheets/_rels/sheet1.xml.rels").decode()
-    assert {"[Content_Types].xml", "xl/workbook.xml", "xl/styles.xml", "xl/worksheets/sheet2.xml"} <= names
+        sheet = z.read("xl/worksheets/sheet2.xml").decode()
+        rels = z.read("xl/worksheets/_rels/sheet2.xml.rels").decode()
+        strings = z.read("xl/sharedStrings.xml").decode()
+        workbook = z.read("xl/workbook.xml").decode()
+    assert {"[Content_Types].xml", "xl/workbook.xml", "xl/styles.xml", "xl/worksheets/sheet3.xml",
+            "xl/tables/table1.xml", "xl/tables/table2.xml"} <= names
+    assert re.findall(r'<sheet name="(\w+)"', workbook) == ["Summary", "Applications", "Interviews"]
     rows = _xlsx_rows(data)
-    assert rows[0][:9] == ["Company", "Job title", "Location", "Job URL", "Job ID", "Date applied", "Posting date",
-                           "Application progress", "Email response"]
+    assert rows[0][:5] == ["Company", "Job title", "Status", "Date applied", "Email response"]
     assert len(rows) == 2 and rows[1][0] == "Alpha & Co"                         # no deleted, no other admin
-    assert "Deleted Corp" not in sheet and "Bravo Secret" not in sheet
-    assert '=HYPERLINK' in sheet and "<f>" not in sheet                           # a title is text, never a formula
-    assert "\x07" not in sheet and "Campus drive" in sheet and "₹6 LPA" in sheet and "Resume_v2.pdf" in sheet
+    assert "Deleted Corp" not in strings and "Bravo Secret" not in strings
+    assert '=HYPERLINK' in strings and "<f>" not in sheet                         # a title is text, never a formula
+    assert "" not in strings and "Campus drive" in strings and "₹6 LPA" in strings and "Resume_v2.pdf" in strings
     applied = (A.parse_day(docs[0]["applied_on"]) - date(1899, 12, 30)).days
-    assert f'<c r="F2" s="2"><v>{applied}</v></c>' in sheet                       # a real Excel date
-    assert "https://alpha.example/job/1" in rels and 'state="frozen"' in sheet and "<autoFilter" in sheet
-    ivs = _xlsx_rows(data, 2)
+    assert re.search(rf'<c r="D5" s="{X.S["date"]}"><v>{applied}</v></c>', sheet)  # a real Excel date
+    assert "https://alpha.example/job/1" in rels and 'state="frozen"' in sheet and "<tablePart " in sheet
+    ivs = _xlsx_rows(data, "Interviews")
     assert ivs[1][:3] == ["Alpha & Co", '=HYPERLINK("x")', "Technical 1"] and len(ivs) == 2
 
 
