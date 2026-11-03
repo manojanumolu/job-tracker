@@ -243,11 +243,29 @@ def excluded_from_shared_alerts(companies: list[dict] | None) -> frozenset[str]:
                      if isinstance(c, dict) and c.get("id") and not in_shared_alerts(c))
 
 
-def shared_alert_pending(job: dict, excluded: frozenset[str] | set[str] = frozenset()) -> bool:
-    """alert_pending, within the shared alerts' companies. A job from an
-    excluded company stays untouched (pending) in the shared ledger: it is
-    simply never claimed for the shared email."""
-    return alert_pending(job) and job.get("company_id") not in excluded
+SHARED_TAILORING_KEY = "shared_alert_tailoring"
+
+
+def shared_tailoring(settings: dict | None) -> dict | None:
+    """The primary admin's email tailoring for the shared email, from
+    settings.json: {"locations": [...], "job_families": [...]} in the same
+    vocabulary as a person's own tailoring (job_filters). None = every
+    qualifying job, exactly as before this setting existed."""
+    t = settings.get(SHARED_TAILORING_KEY) if isinstance(settings, dict) else None
+    return t if isinstance(t, dict) else None
+
+
+def shared_alert_pending(job: dict, excluded: frozenset[str] | set[str] = frozenset(),
+                         tailoring: dict | None = None) -> bool:
+    """alert_pending, within the shared alerts' companies and the shared
+    email's tailoring. A job outside them stays untouched (pending) in the
+    shared ledger: it is simply never claimed for the shared email."""
+    if not (alert_pending(job) and job.get("company_id") not in excluded):
+        return False
+    if not tailoring:
+        return True
+    from job_filters import matches_tailoring          # job_filters imports this module
+    return matches_tailoring(job, tailoring)
 
 
 def visible_jobs(seen: list[dict]) -> list[dict]:

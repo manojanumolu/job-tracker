@@ -54,8 +54,16 @@ LOCATIONS = {
 # job family -> words in a job title
 JOB_FAMILIES = {
     "Software engineering": r"software|developer|programmer|sde|full[ -]?stack|front[ -]?end|back[ -]?end|web|mobile|"
-                            r"android|ios|java|python|devops|cloud|application|apptech|salesforce|sap",
-    "Data & analytics": r"data|analytics?|analyst|machine learning|ml|ai|artificial intelligence|business intelligence|"
+                            r"android|ios|java|python|devops|cloud|application|apptech|salesforce|sap|"
+                            # the usual fresher titles for engineering roles that name no technology
+                            # ("Graduate Engineer Trainee", "Engineer I", "Packaged App Development Associate")
+                            r"(?:graduate )?engineer(?:ing)? trainee|trainee engineer|graduate engineer|"
+                            r"associate engineer|engineer i|systems? engineer|member of technical staff|"
+                            r"app development|technology analyst",
+    # "analyst" only with a data/technical qualifier: "Data Analyst" is here (data), "Content
+    # Marketing Analyst" or "Operations Finance Analyst" is not
+    "Data & analytics": r"data|analytics?|(?:business|systems?|quantitative|quant|mis|reporting|insights?) analyst|"
+                        r"machine learning|ml|ai|artificial intelligence|business intelligence|"
                         r"bi|statistics?|statistician",
     # A title can belong to several families: "DevOps Engineer" stays in
     # Software engineering (as before) and is also Cloud & DevOps.
