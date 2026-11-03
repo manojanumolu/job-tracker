@@ -463,3 +463,72 @@ def test_alerts_carry_the_logo_when_one_is_found(tmp_path, monkeypatch):
     monkeypatch.setattr(notifier, "_send", lambda to, s, h, t, images=None: sent.append(images))
     notifier.send_alerts([JOB, {**JOB, "company": "Sanofi"}], "me@example.com")
     assert len(sent) == 1 and len(sent[0]) == 1 and list(sent[0].values())[0][1] == "png"
+
+
+# ── Nov 2026: more companies get their own logo ─────────────────────────────
+
+def ico_frames(*frames):
+    """An .ico of several PNG pictures (as nvidia.com serves: 9 sizes, 25 KB)."""
+    head = struct.pack("<HHH", 0, 1, len(frames))
+    off, dirs, blobs = 6 + 16 * len(frames), b"", b""
+    for blob in frames:
+        w, h = L._png_size(blob)
+        dirs += struct.pack("<BBBBHHII", w % 256, h % 256, 0, 0, 1, 32, len(blob), off + len(blobs))
+        blobs += blob
+    return head + dirs + blobs
+
+
+def noisy_png(n):
+    """An n x n PNG that doesn't compress (its size is about 4 * n * n bytes)."""
+    import os
+    return L._png(n, n, [os.urandom(4 * n) for _ in range(n)])
+
+
+def test_a_known_official_site_is_used_when_the_name_does_not_spell_it():
+    bms = {"name": "Bristol Myers Squibb", "url": "https://bristolmyerssquibb.wd5.myworkdayjobs.com/BMS"}
+    assert L.candidate_sites(bms)[0] == ("https://www.bms.com/", "website")
+    own = {**bms, "website": "https://www.example-bms.org/"}             # the company's own field wins
+    assert L.candidate_sites(own)[0][0] == "https://www.example-bms.org/"
+    assert all(L.registrable(L._host(u)) in {d.split("//www.")[1].strip("/") for d in L.OFFICIAL_SITES.values()}
+               for u in L.OFFICIAL_SITES.values())
+
+
+def test_an_error_page_is_reported_as_such_not_as_too_large():
+    """A 200 KB "404 Not Found" page used to end in "too large", before its status was read."""
+    site = acme_site(**{"https://www.acme.com/icons/a.png": (404, b"x" * 300_000, "text/html"),
+                        "https://www.acme.com/favicon.ico": (200, ico_bmp(64, 64), "image/x-icon")})
+    result = L.discover(ACME, site.fetcher())
+    assert result["status"] == "ok" and result["web"]["kind"] == "favicon"
+    with pytest.raises(L.LogoError, match="HTTP 404"):
+        site.fetcher().get("https://www.acme.com/icons/a.png", 1000)
+
+
+def test_a_many_sized_icon_gives_its_largest_picture_that_fits():
+    big, small = noisy_png(80), noisy_png(40)              # ~26 KB (over the budget) and ~6 KB
+    assert len(big) > L.MAX_ICON_BYTES >= len(small)
+    mime, data, dims = L.sniff(ico_frames(small, big))
+    assert mime == "image/png" and data == small and dims == (40, 40)
+    assert L.accept(ico_frames(big, small))["w"] == 40
+    mime, data, _ = L.sniff(ico_frames(big))                # nothing fits: the largest (then refused as too large)
+    assert data == big
+    with pytest.raises(L.LogoError, match="too large"):
+        L.accept(ico_frames(big))
+
+
+def test_a_better_finder_looks_again_at_earlier_misses_only():
+    now = time.time()
+    miss, _ = L.update([ACME], {}, acme_site(**{"https://www.acme.com/": (403, b"", "text/html")}).fetcher(), now=now)
+    assert miss["logos"]["acme"]["finder"] == L.FINDER
+    old = {"logos": {"acme": {k: v for k, v in miss["logos"]["acme"].items() if k != "finder"}}}   # made by finder 1
+    assert [c["id"] for c in L.pending([ACME], old["logos"], now=now + 60)] == ["acme"]
+    assert L.pending([ACME], miss["logos"], now=now + 60) == []                 # this finder's miss waits
+    found, _ = L.update([ACME], {}, acme_site().fetcher(), now=now)
+    legacy_ok = {"acme": {k: v for k, v in found["logos"]["acme"].items() if k != "finder"}}
+    assert L.pending([ACME], legacy_ok, now=now + 60) == []                     # a found logo is never fetched again
+
+
+def test_a_company_newly_given_an_official_site_is_looked_at_again():
+    co = {"id": "c7", "name": "Analog Devices", "url": "https://analogdevices.wd1.myworkdayjobs.com/External"}
+    before = {"c7": {"status": "none", "reason": "x", "finder": L.FINDER, "checked_at": L._now_iso(),
+                     "hint": __import__("hashlib").sha256(json.dumps([co["name"], co["url"], None]).encode()).hexdigest()[:16]}}
+    assert [c["id"] for c in L.pending([co], before)] == ["c7"]                # its hint now names analog.com

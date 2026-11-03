@@ -12,7 +12,8 @@ logo og:image) and keeps a small copy in logos.json:
    | {"status": "none", "reason": "...", "hint": "...", "checked_at": "..."}}}
 
 Where it looks, in order (at most three sites per company):
-  1. the company's "website" field, when one is set;
+  1. the company's "website" field, when one is set, else its official
+     site from OFFICIAL_SITES (bms.com for Bristol Myers Squibb);
   2. the careers site's own domain when it carries the company's name
      (careers.npci.org.in -> npci.org.in), never the careers sub-site;
   3. <name>.com (metlife.com), accepted only if the page names the company;
@@ -70,6 +71,7 @@ MIN_PX = 32
 NEGATIVE_TTL_DAYS = 14
 FILE_BUDGET = 900 * 1024                # GitHub's contents API refuses files over 1 MB
 DEFAULT_LIMIT = 8                       # companies looked up per run
+FINDER = 2                              # raised when finding improves: earlier misses are looked at again
 
 # applicant-tracking systems and job boards: their pages and icons are not
 # the employer's
@@ -82,6 +84,19 @@ ATS_DOMAINS = {
     "indeed.com", "naukri.com", "glassdoor.com", "instahyre.com", "wellfound.com", "hirist.com", "jobs.lever.co",
     "teamtailor.com", "personio.de", "personio.com", "jazzhr.com", "applytojob.com", "csod.com", "brassring.com",
     "kenexa.com", "skillate.com", "mynexthire.com", "turbohire.co", "superset.com",
+}
+# The official website of a tracked company whose name doesn't spell it
+# (<name>.com is someone else's site or no site at all), checked by hand
+# (Nov 2026). Used like the "website" field; that field, when set, wins.
+OFFICIAL_SITES = {
+    "bristolmyerssquibb": "https://www.bms.com/",
+    "warnerbrosdiscovery": "https://www.wbd.com/",
+    "evernorthcigna": "https://www.evernorth.com/",
+    "sandpglobal": "https://www.spglobal.com/",
+    "siliconlabs": "https://www.silabs.com/",
+    "analogdevices": "https://www.analog.com/",
+    "thermofisherscientific": "https://www.thermofisher.com/",
+    "invesco": "https://www.invesco.com/",
 }
 _MULTI_SUFFIXES = {"co.uk", "org.uk", "ac.uk", "gov.uk", "co.in", "org.in", "net.in", "gov.in", "ac.in", "firm.in",
                    "gen.in", "ind.in", "com.au", "net.au", "org.au", "co.jp", "com.br", "com.sg", "com.cn",
@@ -161,6 +176,8 @@ def candidate_sites(company: dict) -> list[tuple[str, str]]:
             out.append((url or f"https://www.{domain}/", trust))
 
     web = company.get("website")
+    if not (isinstance(web, str) and web.strip()):
+        web = OFFICIAL_SITES.get(slug)
     if isinstance(web, str) and web.strip():
         w = web.strip()
         w = w if re.match(r"^https?://", w, re.I) else "https://" + w
@@ -246,6 +263,8 @@ class Fetcher:
                     if r.status_code in (301, 302, 303, 307, 308) and r.headers.get("location"):
                         url = urljoin(url, r.headers["location"])
                         continue
+                    if r.status_code != 200:     # an error page isn't read (a big 404 page isn't "too large")
+                        return r.status_code, b"", url, r.headers.get("content-type", "")
                     body = b""
                     for chunk in r.iter_bytes():
                         body += chunk
@@ -484,23 +503,28 @@ def sniff(data: bytes) -> tuple[str, bytes, tuple | None]:
         return "image/webp", data, _webp_size(data)
     if data[:4] == b"\x00\x00\x01\x00" and len(data) >= 6:
         count = struct.unpack("<H", data[4:6])[0]
-        best = None
+        frames = []
         for k in range(min(count, 32)):
             e = data[6 + 16 * k:22 + 16 * k]
             if len(e) < 16:
                 break
             w, h = e[0] or 256, e[1] or 256
             size, off = struct.unpack("<II", e[8:16])
-            if best is None or w > best[0]:
-                best = (w, h, data[off:off + size])
-        if best is None:
+            frames.append((w, h, data[off:off + size]))
+        if not frames:
             raise LogoError("empty icon")
-        w, h, blob = best
-        if blob.startswith(b"\x89PNG\r\n\x1a\n"):
-            return "image/png", blob, _png_size(blob) or (w, h)
-        png = _ico_bitmap_to_png(blob)
-        if png:
-            return "image/png", png, (w, h)
+        # the largest picture that fits the size budget (an .ico often holds
+        # 9 sizes in 25 KB; its 48 px one is plenty), else the largest
+        out = []
+        for w, h, blob in sorted(frames, key=lambda f: -f[0]):
+            if blob.startswith(b"\x89PNG\r\n\x1a\n"):
+                out.append(("image/png", blob, _png_size(blob) or (w, h)))
+            elif (png := _ico_bitmap_to_png(blob)):
+                out.append(("image/png", png, (w, h)))
+        fits = [o for o in out if len(o[1]) <= MAX_ICON_BYTES and min(o[2]) >= MIN_PX]
+        if fits or out:
+            return (fits or out)[0]
+        w, h, _ = max(frames, key=lambda f: f[0])
         return "image/x-icon", data, (w, h)
     head = data[:2048].decode("utf-8", "ignore").lower()
     if "<svg" in head and "<html" not in head:
@@ -595,13 +619,18 @@ def _discover_site(url: str, trust: str, slug: str, fetcher: Fetcher) -> dict:
 
 
 def _hint(company: dict) -> str:
-    raw = json.dumps([company.get("name"), company.get("url"), company.get("website")], sort_keys=True)
+    """Changes when where to look changes — also when OFFICIAL_SITES gains
+    the company (so it is looked at again on the next run)."""
+    official = OFFICIAL_SITES.get(name_slug(company.get("name")))
+    parts = [company.get("name"), company.get("url"), company.get("website")] + ([official] if official else [])
+    raw = json.dumps(parts, sort_keys=True)
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
 
 def pending(companies: list[dict], logos: dict, now: float | None = None) -> list[dict]:
     """Companies that need a look: never looked up, their name/URL/website
-    changed, or a miss older than NEGATIVE_TTL_DAYS. A found logo whose
+    changed, or a miss older than NEGATIVE_TTL_DAYS or made by an older
+    finder (FINDER). A found logo whose
     company is unchanged is never fetched again."""
     out = []
     for c in companies:
@@ -610,7 +639,8 @@ def pending(companies: list[dict], logos: dict, now: float | None = None) -> lis
         e = logos.get(c["id"])
         if not isinstance(e, dict) or e.get("hint") != _hint(c):
             out.append(c)
-        elif e.get("status") != "ok" and _age_days(e.get("checked_at"), now) >= NEGATIVE_TTL_DAYS:
+        elif e.get("status") != "ok" and (_age_days(e.get("checked_at"), now) >= NEGATIVE_TTL_DAYS
+                                          or e.get("finder", 1) < FINDER):
             out.append(c)
     return out
 
@@ -629,7 +659,7 @@ def update(companies: list[dict], doc: dict, fetcher: Fetcher, now: float | None
     for c in pending(companies, logos, now)[:max(0, limit)]:
         old = logos.get(c["id"])
         result = discover(c, fetcher, domain_cache)
-        stamp = {"hint": _hint(c), "checked_at": _now_iso(now)}
+        stamp = {"hint": _hint(c), "checked_at": _now_iso(now), "finder": FINDER}
         if result["status"] == "ok":
             entry = {**result, **stamp}
             if _size(logos) + len(json.dumps(entry)) > FILE_BUDGET:
