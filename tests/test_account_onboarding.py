@@ -3,6 +3,7 @@ companies and the member/admin split. Firestore is user_store.MemoryBackend;
 Google and Firebase are never contacted and no email is sent."""
 import json
 import re
+from html import escape
 
 import pytest
 
@@ -13,7 +14,7 @@ from test_firebase_auth import _buttons, _login_page, admins, google_env, no_env
 from test_phase3_user_data import (  # noqa: F401
     A_MAIL, A_UID, B_MAIL, B_UID, METLIFE_JOB, PWC_JOB, AccountIdentity, _profiles, _sign_in, _use_store,
 )
-from test_streamlit_app import REPO, _html, _nav, app  # noqa: F401
+from test_streamlit_app import CATALOGUE_FILE, REPO, _html, _nav, app  # noqa: F401
 
 JOBS = (PWC_JOB, METLIFE_JOB)          # Software · Pune · entry level / Data · Hyderabad · fresher
 PWC_TITLE, METLIFE_TITLE = PWC_JOB["title"], METLIFE_JOB["title"]
@@ -194,7 +195,7 @@ def test_admin_keeps_every_capability(app, google_env, store, admins):
 
 def test_following_writes_only_to_the_persons_own_list(app, google_env, store):
     _ready(store, A_UID, A_MAIL)
-    before = (REPO / "data" / "companies.json").read_bytes()
+    before = (CATALOGUE_FILE).read_bytes()
     at = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS, page="companies")
     assert "You aren&#x27;t following any companies yet." in _html(at)
     at.button(key="btn_co_pick").click().run()
@@ -205,7 +206,7 @@ def test_following_writes_only_to_the_persons_own_list(app, google_env, store):
     following = [b.key for b in at.button if (b.key or "").startswith("fu_")]
     assert len(following) == 1
     tmp_catalogue = json.loads((at.tmp_path / "companies.json").read_text("utf-8"))
-    assert len(tmp_catalogue) == 7 and (REPO / "data" / "companies.json").read_bytes() == before
+    assert len(tmp_catalogue) == len(json.loads(before)) and (CATALOGUE_FILE).read_bytes() == before
     assert tmp_catalogue == json.loads(before)                       # the shared catalogue is untouched
     assert [p for p in store.backend.docs if "companies" in p] == [
         p for p in store.backend.docs if p.startswith(f"users/{A_UID}/companies/")]
@@ -213,13 +214,13 @@ def test_following_writes_only_to_the_persons_own_list(app, google_env, store):
     assert store.for_uid(A_UID).watchlist() == set()
 
 
-def test_admin_still_sees_all_seven_tracked_companies(app, google_env, store, admins):
+def test_admin_still_sees_every_tracked_company(app, google_env, store, admins):
     admins(A_MAIL)
     _ready(store, A_UID, A_MAIL)
     at = _sign_in(app, google_env, A_UID, A_MAIL, seen=JOBS, page="companies")
     html = _html(at)
-    for c in json.loads((REPO / "data" / "companies.json").read_text("utf-8")):
-        assert (c.get("name") or "") in html
+    for c in json.loads((CATALOGUE_FILE).read_text("utf-8")):
+        assert escape(c.get("name") or "") in html          # "S&P Global" is "S&amp;P Global" in the page
     assert "You aren&#x27;t following any companies yet." not in html
 
 
@@ -468,7 +469,7 @@ def test_page_clicks_do_not_refetch_github_data(app, google_env, store, monkeypa
     background only when older than 5 minutes)."""
     import config_store
     calls = []
-    catalogue = json.loads((REPO / "data" / "companies.json").read_text("utf-8"))
+    catalogue = json.loads((CATALOGUE_FILE).read_text("utf-8"))
 
     def fake_fetch(paths, *a, **k):
         calls.append(list(paths))

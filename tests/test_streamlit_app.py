@@ -12,6 +12,9 @@ import pytest
 st_testing = pytest.importorskip("streamlit.testing.v1")
 
 REPO = Path(__file__).resolve().parent.parent
+# the catalogue these tests are written against (the seven companies of Oct 2026),
+# frozen: data/companies.json is production data and changes when companies are added
+CATALOGUE_FILE = REPO / "tests" / "fixtures" / "companies.json"
 APP_FILES = ["streamlit_app.py", "config_store.py", "notifier.py", "job_classifier.py", "scraper.py",
              "sources.py", "identity.py", "locations.py", "repo_sync.py", "access.py", "firebase_auth.py",
              "user_store.py", "job_filters.py", "snapshot_cache.py", "applications.py", "application_export.py",
@@ -61,7 +64,7 @@ def app(tmp_path, monkeypatch):
     shutil.copytree(REPO / "assets", tmp_path / "assets")
     data = tmp_path / "data"
     data.mkdir()
-    shutil.copy(REPO / "data" / "companies.json", data / "companies.json")
+    shutil.copy(CATALOGUE_FILE, data / "companies.json")
     (data / "settings.json").write_text("{}")                     # public: never holds an address
 
     import streamlit as st
@@ -383,7 +386,7 @@ def test_add_and_remove_company(app):
 
 
 def test_add_company_validation(app):
-    first = json.loads((REPO / "data" / "companies.json").read_text("utf-8"))[0]
+    first = json.loads((CATALOGUE_FILE).read_text("utf-8"))[0]
     at = app([], page="companies")
     at.button(key="btn_open_add").click().run()
     at.text_input(key="new_name").set_value(first["name"].upper()).run()
@@ -398,7 +401,7 @@ def test_add_company_validation(app):
     at.text_input(key="new_website").set_value("brand.example").run()
     at.button(key="btn_add").click().run()
     assert "website must be a full URL" in _html(at)
-    assert len(_companies(at)) == len(json.loads((REPO / "data" / "companies.json").read_text("utf-8")))
+    assert len(_companies(at)) == len(json.loads((CATALOGUE_FILE).read_text("utf-8")))
 
 
 def test_company_search(app):
@@ -466,7 +469,7 @@ def test_run_check_without_token_is_friendly(app):
 
 def test_metrics_are_computed_from_real_data(app):
     at = app([OLD_RECORD, NEW_RECORD])
-    n = len(json.loads((REPO / "data" / "companies.json").read_text("utf-8")))
+    n = len(json.loads((CATALOGUE_FILE).read_text("utf-8")))
     html = _html(at)
     assert "Companies monitored" in html and f'<div class="v">{n}</div>' in html
     assert "Verified" not in html                          # no verification concept exists
@@ -537,7 +540,7 @@ def test_stale_local_copy_is_refreshed_from_github_and_merged_on_dismiss(app, mo
 
     remote_jobs = [OLD_RECORD, NEW_RECORD]
     repo = FakeRepo({"data/seen_jobs.json": remote_jobs,
-                     "data/companies.json": json.loads((REPO / "data" / "companies.json").read_text("utf-8")),
+                     "data/companies.json": json.loads((CATALOGUE_FILE).read_text("utf-8")),
                      "data/settings.json": {"recipient_email": "me@example.com"}})
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
     monkeypatch.setattr(config_store, "_get_repo", lambda token: repo)

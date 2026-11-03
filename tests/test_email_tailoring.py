@@ -27,7 +27,7 @@ from test_firebase_auth import _buttons, admins, google_env, no_env  # noqa: F40
 from test_phase3_user_data import (  # noqa: F401
     A_MAIL, A_UID, B_MAIL, B_UID, AccountIdentity, _sign_in, _use_store,
 )
-from test_streamlit_app import REPO, _html, _nav, app  # noqa: F401
+from test_streamlit_app import CATALOGUE_FILE, REPO, _html, _nav, app  # noqa: F401
 from test_user_alerts import LATER, A, B, Identity, Mailer, _person, job
 
 
@@ -421,7 +421,7 @@ def test_o_menu_items(app, google_env, ustore):
 def test_p_navigation_and_menu_clicks_fetch_nothing(app, google_env, ustore, admins, monkeypatch):
     import config_store
     calls = []
-    catalogue = json.loads((REPO / "data" / "companies.json").read_text("utf-8"))
+    catalogue = json.loads((CATALOGUE_FILE).read_text("utf-8"))
 
     def fake_fetch(paths, *a, **k):
         calls.append(list(paths))
