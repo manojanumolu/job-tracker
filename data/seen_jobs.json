@@ -1585,5 +1585,1240 @@
     "notify_state": "sent",
     "claimed_at": "2026-10-29T12:07:47.978658+00:00",
     "notified_at": "2026-10-29T12:07:52.472272+00:00"
+  },
+  {
+    "title": "Content Marketing Analyst",
+    "url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Bangalore/Content-Writing-Analyst_JR356687",
+    "company": "Salesforce",
+    "location": "India - Bangalore · India - Hyderabad · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'new graduates'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Our Futureforce University Recruiting program is dedicated to attracting, retaining and cultivating talent. Our interns and new graduates work on real projects ",
+        "To get the best candidate experience, please consider applying for a maximum of 3 roles within 12 months to ensure you are not duplicating efforts.",
+        "Experience/Skills Required:",
+        "Experience/Skills Desired:"
+      ],
+      "fresher_evidence": "new graduates",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:JR356687",
+      "canonical_url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Bangalore/Content-Writing-Analyst_JR356687",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "salesforce|id:JR356687",
+    "date": "Nov 3, 09:07",
+    "first_seen": "2026-11-03T09:07:53.251241+00:00",
+    "id": "Salesforce_Content_Marketing_Analyst",
+    "notified": false,
+    "company_id": "c1793696368"
+  },
+  {
+    "title": "Associate Engineer, IT Eng System Mgr",
+    "url": "https://micron.wd1.myworkdayjobs.com/External/job/Hyderabad---Phoenix-Aquila-India/Associate-Engineer--IT-Eng-System-Mgr_JR112672",
+    "company": "Micron",
+    "location": "Hyderabad - Phoenix Aquila, India · India",
+    "category": "FRESHER",
+    "reason": "fresher signal: 'fresh graduates'",
+    "evidence": {
+      "experience": [
+        "0 years"
+      ],
+      "experience_lines": [],
+      "fresher_evidence": "fresh graduates",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:JR112672",
+      "canonical_url": "https://micron.wd1.myworkdayjobs.com/External/job/Hyderabad---Phoenix-Aquila-India/Associate-Engineer--IT-Eng-System-Mgr_JR112672",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "micron|id:JR112672",
+    "date": "Nov 3, 09:08",
+    "first_seen": "2026-11-03T09:08:29.088063+00:00",
+    "id": "Micron_Associate_Engineer,_IT_Eng_System_Mgr",
+    "notified": false,
+    "company_id": "c1793696369",
+    "notify_state": "claimed",
+    "claimed_at": "2026-11-03T09:18:21.889035+00:00"
+  },
+  {
+    "title": "PDE CEM Graduate Engineering Technician",
+    "url": "https://micron.wd1.myworkdayjobs.com/External/job/Sanand---303A---ATSSDMOD-India/PDE-CEM-Graduate-Engineering-Technician_JR105741",
+    "company": "Micron",
+    "location": "MOD, India · India",
+    "category": "FRESHER",
+    "reason": "fresher signal: 'Fresh graduates'",
+    "evidence": {
+      "experience": [
+        "0-3 years"
+      ],
+      "experience_lines": [
+        "Fresh graduates with relevant internship experience are welcome to apply",
+        "Qualification  s     & Experience:",
+        "Experience:",
+        "0–3 years of experience in an administrative, engineering support, or office coordination role"
+      ],
+      "fresher_evidence": "Fresh graduates",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:JR105741",
+      "canonical_url": "https://micron.wd1.myworkdayjobs.com/External/job/Sanand---303A---ATSSDMOD-India/PDE-CEM-Graduate-Engineering-Technician_JR105741",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "micron|id:JR105741",
+    "date": "Nov 3, 09:08",
+    "first_seen": "2026-11-03T09:08:29.088063+00:00",
+    "id": "Micron_PDE_CEM_Graduate_Engineering_Technician",
+    "notified": false,
+    "company_id": "c1793696369"
+  },
+  {
+    "title": "Technician Apprentice",
+    "url": "https://micron.wd1.myworkdayjobs.com/External/job/Sanand---303A---ATSSDMOD-India/Technician-Apprentice_JR107694",
+    "company": "Micron",
+    "location": "MOD, India · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'Apprentice'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Apprenticeship Tenure:  12 months (1 year)",
+        "Tenure:  12 months Apprenticeship",
+        "As India’s first Semiconductor ATMP facility, Micron Semiconductor India invites Diploma graduates from the 2026 batch for the opportunity to join our 12-Months",
+        "Education:  Diploma Candidates Graduated in  2026"
+      ],
+      "fresher_evidence": "Apprentice",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:JR107694",
+      "canonical_url": "https://micron.wd1.myworkdayjobs.com/External/job/Sanand---303A---ATSSDMOD-India/Technician-Apprentice_JR107694",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "micron|id:JR107694",
+    "date": "Nov 3, 09:08",
+    "first_seen": "2026-11-03T09:08:29.088063+00:00",
+    "id": "Micron_Technician_Apprentice",
+    "notified": false,
+    "company_id": "c1793696369"
+  },
+  {
+    "title": "Engineer, GQ OPS -REL Process",
+    "url": "https://micron.wd1.myworkdayjobs.com/External/job/Sanand---303A---ATSSDMOD-India/Engineer--GQ-OPS--REL-Process_JR105601",
+    "company": "Micron",
+    "location": "MOD, India · India",
+    "category": "FRESHER",
+    "reason": "fresher signal: 'Fresh graduates'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Fresh graduates are welcome.",
+        "Bachelors Degree or equivalent experience",
+        "Experience"
+      ],
+      "fresher_evidence": "Fresh graduates",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:JR105601",
+      "canonical_url": "https://micron.wd1.myworkdayjobs.com/External/job/Sanand---303A---ATSSDMOD-India/Engineer--GQ-OPS--REL-Process_JR105601",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "micron|id:JR105601",
+    "date": "Nov 3, 09:08",
+    "first_seen": "2026-11-03T09:08:29.088063+00:00",
+    "id": "Micron_Engineer,_GQ_OPS_-REL_Process",
+    "notified": false,
+    "company_id": "c1793696369"
+  },
+  {
+    "title": "Formal Verification Engineer - New College Graduate 2026",
+    "url": "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite/job/India-Gurugram/Formal-Verification-Engineer---New-College-Graduate-2026_JR2028897",
+    "company": "NVIDIA",
+    "location": "India, Gurugram · India, Bengaluru · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'Graduate'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Hands-on experience with HDLs such as Verilog / System Verilog"
+      ],
+      "fresher_evidence": "Graduate",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:JR2028897",
+      "canonical_url": "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite/job/India-Gurugram/Formal-Verification-Engineer---New-College-Graduate-2026_JR2028897",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "nvidia|id:JR2028897",
+    "date": "Nov 3, 09:09",
+    "first_seen": "2026-11-03T09:09:05.742827+00:00",
+    "id": "NVIDIA_Formal_Verification_Engineer_-_New_Colle",
+    "notified": false,
+    "company_id": "c1793696370"
+  },
+  {
+    "title": "ASIC Verification Engineer",
+    "url": "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite/job/India-Hyderabad/ASIC-Verification-Engineer_JR2020484",
+    "company": "NVIDIA",
+    "location": "India, Hyderabad · India, Bengaluru · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-2 years'",
+    "evidence": {
+      "experience": [
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "BS or MS in Computer Science or Electronics Engineering or equivalent experience with 0-2 years of experience",
+        "Previous experience handling Silicon Bringup and in enabling Emulation/FPGA related test frameworks."
+      ],
+      "fresher_evidence": "0-2 years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:JR2020484",
+      "canonical_url": "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite/job/India-Hyderabad/ASIC-Verification-Engineer_JR2020484",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "nvidia|id:JR2020484",
+    "date": "Nov 3, 09:09",
+    "first_seen": "2026-11-03T09:09:05.742827+00:00",
+    "id": "NVIDIA_ASIC_Verification_Engineer",
+    "notified": false,
+    "company_id": "c1793696370"
+  },
+  {
+    "title": "Program Management Analyst - Cigna Healthcare",
+    "url": "https://cigna.wd5.myworkdayjobs.com/cignacareers/job/Bengaluru-India/Program-Management-Analyst---Cigna-Healthcare_26012136",
+    "company": "Evernorth (Cigna)",
+    "location": "Bengaluru, India · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'This is an entry level'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Experience of Microsoft applications – word, outlook, excel and Jira would be an advantage but not essential"
+      ],
+      "fresher_evidence": "This is an entry level",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:26012136",
+      "canonical_url": "https://cigna.wd5.myworkdayjobs.com/cignacareers/job/Bengaluru-India/Program-Management-Analyst---Cigna-Healthcare_26012136",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "evernorth (cigna)|workday:26012136",
+    "date": "Nov 3, 09:12",
+    "first_seen": "2026-11-03T09:12:14.932710+00:00",
+    "id": "Evernorth_(Cigna)_Program_Management_Analyst_-_Cigna_Healt",
+    "notified": false,
+    "company_id": "c1793696380"
+  },
+  {
+    "title": "Enrollment/ Billing Associate Representative",
+    "url": "https://cigna.wd5.myworkdayjobs.com/cignacareers/job/Bengaluru-India/Enrollment--Billing-Associate-Representative_26010627",
+    "company": "Evernorth (Cigna)",
+    "location": "Bengaluru, India · India",
+    "category": "FRESHER",
+    "reason": "fresher signal: 'Freshers OR'",
+    "evidence": {
+      "experience": [
+        "0 - 1 years"
+      ],
+      "experience_lines": [
+        "Freshers OR 0 - 1 years of experience",
+        "Accounts Receivable experience  a plus"
+      ],
+      "fresher_evidence": "Freshers OR",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:26010627",
+      "canonical_url": "https://cigna.wd5.myworkdayjobs.com/cignacareers/job/Bengaluru-India/Enrollment--Billing-Associate-Representative_26010627",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "evernorth (cigna)|workday:26010627",
+    "date": "Nov 3, 09:12",
+    "first_seen": "2026-11-03T09:12:14.932710+00:00",
+    "id": "Evernorth_(Cigna)_Enrollment/_Billing_Associate_Representa",
+    "notified": false,
+    "company_id": "c1793696380"
+  },
+  {
+    "title": "Back Office Operations Analyst – Band 1",
+    "url": "https://cigna.wd5.myworkdayjobs.com/cignacareers/job/Bengaluru-India/Back-Office-Operations-Analyst---Band-1_26007839",
+    "company": "Evernorth (Cigna)",
+    "location": "Bengaluru, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-1+ years'",
+    "evidence": {
+      "experience": [
+        "0-1+ years"
+      ],
+      "experience_lines": [
+        "0–1+ years of experience in an operations environment internship or entry‑level experience welcomed."
+      ],
+      "fresher_evidence": "0-1+ years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:26007839",
+      "canonical_url": "https://cigna.wd5.myworkdayjobs.com/cignacareers/job/Bengaluru-India/Back-Office-Operations-Analyst---Band-1_26007839",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "evernorth (cigna)|workday:26007839",
+    "date": "Nov 3, 09:12",
+    "first_seen": "2026-11-03T09:12:14.932710+00:00",
+    "id": "Evernorth_(Cigna)_Back_Office_Operations_Analyst_–_Band_1",
+    "notified": false,
+    "company_id": "c1793696380"
+  },
+  {
+    "title": "Administrative Assistant Representative",
+    "url": "https://cigna.wd5.myworkdayjobs.com/cignacareers/job/Bengaluru-India/Administrative-Assistant-Representative_26007842",
+    "company": "Evernorth (Cigna)",
+    "location": "Bengaluru, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-1+ years'",
+    "evidence": {
+      "experience": [
+        "0-1+ years"
+      ],
+      "experience_lines": [
+        "0–1+ years of experience in an operations environment (claims, admin, eligibility, onboarding, customer service support, or similar) — internship or entry‑level"
+      ],
+      "fresher_evidence": "0-1+ years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:26007842",
+      "canonical_url": "https://cigna.wd5.myworkdayjobs.com/cignacareers/job/Bengaluru-India/Administrative-Assistant-Representative_26007842",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "evernorth (cigna)|workday:26007842",
+    "date": "Nov 3, 09:12",
+    "first_seen": "2026-11-03T09:12:14.932710+00:00",
+    "id": "Evernorth_(Cigna)_Administrative_Assistant_Representative",
+    "notified": false,
+    "company_id": "c1793696380"
+  },
+  {
+    "title": "Project Management Apprenticeship",
+    "url": "https://statestreet.wd1.myworkdayjobs.com/Global/job/Hyderabad-India/Project-Management-Apprenticeship_R-797303",
+    "company": "State Street",
+    "location": "Hyderabad, India · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'Apprenticeship'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "The apprentice will work alongside Project and Program Managers to gain hands-on experience in project delivery, reporting, resource coordination, financial tra",
+        "B.Tech / MBA graduate"
+      ],
+      "fresher_evidence": "Apprenticeship",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "",
+      "canonical_url": "https://statestreet.wd1.myworkdayjobs.com/Global/job/Hyderabad-India/Project-Management-Apprenticeship_R-797303",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "state street|url:https://statestreet.wd1.myworkdayjobs.com/Global/job/Hyderabad-India/Project-Management-Apprenticeship_R-797303",
+    "date": "Nov 3, 09:12",
+    "first_seen": "2026-11-03T09:12:30.395107+00:00",
+    "id": "State_Street_Project_Management_Apprenticeship",
+    "notified": false,
+    "company_id": "c1793696381"
+  },
+  {
+    "title": "Operations Early Career Entry Program",
+    "url": "https://statestreet.wd1.myworkdayjobs.com/Global/job/Bangalore-India/Operations-Early-Career-Entry-Program_R-799807",
+    "company": "State Street",
+    "location": "Bangalore, India · Hyderabad, India · Chennai +3 more",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'Early Career'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Our  Operations Early Career Entry Program is  designed to develop graduates both technically and professionally towards becoming our future leaders. You’ll lea",
+        "A buddy who can offer you their experience, knowledge and guidance throughout your internship.",
+        "Final Year Students Enrolled in full time education at undergraduates in the penultimate year of degree in one of the following areas: Finance, Accounting, or E",
+        "Inclusion, Diversity and Social Responsibility.  We truly believe our employees’ diverse backgrounds, experiences and perspectives are a powerful contributor to"
+      ],
+      "fresher_evidence": "Early Career",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "",
+      "canonical_url": "https://statestreet.wd1.myworkdayjobs.com/Global/job/Bangalore-India/Operations-Early-Career-Entry-Program_R-799807",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "state street|url:https://statestreet.wd1.myworkdayjobs.com/Global/job/Bangalore-India/Operations-Early-Career-Entry-Program_R-799807",
+    "date": "Nov 3, 09:12",
+    "first_seen": "2026-11-03T09:12:30.395107+00:00",
+    "id": "State_Street_Operations_Early_Career_Entry_Program",
+    "notified": false,
+    "company_id": "c1793696381"
+  },
+  {
+    "title": "R&D Simulation Model Engineer - IDC",
+    "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Chennai-Tamil-Nadu-India/R-D-Simulation-Model-Engineer---IDC_R0140763",
+    "company": "Hitachi",
+    "location": "Chennai, Tamil Nadu, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-3+ years'",
+    "evidence": {
+      "experience": [
+        "0-3+ years"
+      ],
+      "experience_lines": [
+        "Required ME Power Systems / ME Power Electronics with 0-3+ years of experience in modelling IBR’s for power quality and power conversion applications.",
+        "You should have experience in simulation tools such as EMTDC / PSCAD, PSS/E, EMPTV-RV and Dig Silent Power factory. Required Good knowledge of FORTRAN, Python, ",
+        "Understanding application of Power Electronics in HV/EHV system. Experience in performing power system studies like load flow, short circuit, transient stabilit"
+      ],
+      "fresher_evidence": "0-3+ years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:R0140763",
+      "canonical_url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Chennai-Tamil-Nadu-India/R-D-Simulation-Model-Engineer---IDC_R0140763",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "hitachi|workday:R0140763",
+    "date": "Nov 3, 09:16",
+    "first_seen": "2026-11-03T09:16:30.913026+00:00",
+    "id": "Hitachi_R&D_Simulation_Model_Engineer_-_IDC",
+    "notified": false,
+    "company_id": "c1793696383"
+  },
+  {
+    "title": "Finance Specialist",
+    "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Bengaluru-Karnataka-India/Finance-Specialist_R0079837",
+    "company": "Hitachi",
+    "location": "Bengaluru, Karnataka, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 to 1 year'",
+    "evidence": {
+      "experience": [
+        "0 to 1 year"
+      ],
+      "experience_lines": [
+        "Looking for a chartered accountant with 0 to 1 year experience in Financial reporting domain of listed and unlisted entities in India. The ideal candidate shoul"
+      ],
+      "fresher_evidence": "0 to 1 year",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:R0079837",
+      "canonical_url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Bengaluru-Karnataka-India/Finance-Specialist_R0079837",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "hitachi|workday:R0079837",
+    "date": "Nov 3, 09:16",
+    "first_seen": "2026-11-03T09:16:30.913026+00:00",
+    "id": "Hitachi_Finance_Specialist",
+    "notified": false,
+    "company_id": "c1793696383"
+  },
+  {
+    "title": "Factory/ Plant Controller - CP&O",
+    "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Bengaluru-Karnataka-India/Factory--Plant-Controller---CP-O_R0126304",
+    "company": "Hitachi",
+    "location": "Bengaluru, Karnataka, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: 'Up to 4 years'",
+    "evidence": {
+      "experience": [
+        "Up to 4 years"
+      ],
+      "experience_lines": [
+        "Up to 4 years of experience in Financial Planning and Analysis.",
+        "Hands‑on experience in SAP FICO, including CO‑PA.",
+        "Manufacturing industry experience preferred."
+      ],
+      "fresher_evidence": "Up to 4 years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:R0126304",
+      "canonical_url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Bengaluru-Karnataka-India/Factory--Plant-Controller---CP-O_R0126304",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "hitachi|workday:R0126304",
+    "date": "Nov 3, 09:16",
+    "first_seen": "2026-11-03T09:16:30.913026+00:00",
+    "id": "Hitachi_Factory/_Plant_Controller_-_CP&O",
+    "notified": false,
+    "company_id": "c1793696383"
+  },
+  {
+    "title": "Electrical Design Engineer",
+    "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Maneja-Gujarat-India/Electrical-Design-Engineer_R0123385",
+    "company": "Hitachi",
+    "location": "Maneja, Gujarat, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 to 1 year'",
+    "evidence": {
+      "experience": [
+        "0 to 1 year"
+      ],
+      "experience_lines": [
+        "0 to 1 year of experience working in Electrical design for Distribution/Dry Transformers manufacturing Industry.",
+        "Experience in Simulation or software development would be advantageous.",
+        "Experience on Microsoft office and tools."
+      ],
+      "fresher_evidence": "0 to 1 year",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:R0123385",
+      "canonical_url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Maneja-Gujarat-India/Electrical-Design-Engineer_R0123385",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "hitachi|workday:R0123385",
+    "date": "Nov 3, 09:16",
+    "first_seen": "2026-11-03T09:16:30.913026+00:00",
+    "id": "Hitachi_Electrical_Design_Engineer",
+    "notified": false,
+    "company_id": "c1793696383"
+  },
+  {
+    "title": "Mechanical Design Engineer",
+    "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Maneja-Gujarat-India/Mechanical-Design-Engineer_R0144088",
+    "company": "Hitachi",
+    "location": "Maneja, Gujarat, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-2 years'",
+    "evidence": {
+      "experience": [
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "0–2 years Experienced working in Mechanical Design for Distribution Dry transformer manufacturing Industry. Candidates with higher experience also to be conside",
+        "Experience in winding design / Tank & externals is an advantage",
+        "Experience in Simulation or software development would be advantageous.",
+        "Experience on Microsoft office and tools."
+      ],
+      "fresher_evidence": "0-2 years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:R0144088",
+      "canonical_url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Maneja-Gujarat-India/Mechanical-Design-Engineer_R0144088",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "hitachi|workday:R0144088",
+    "date": "Nov 3, 09:16",
+    "first_seen": "2026-11-03T09:16:30.913026+00:00",
+    "id": "Hitachi_Mechanical_Design_Engineer",
+    "notified": false,
+    "company_id": "c1793696383"
+  },
+  {
+    "title": "Project Controlling Analyst - CCC",
+    "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Bengaluru-Karnataka-India/Project-Controlling-Analyst---CCC_R0097334",
+    "company": "Hitachi",
+    "location": "Bengaluru, Karnataka, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: 'Up to 4-year'",
+    "evidence": {
+      "experience": [
+        "Up to 4-year"
+      ],
+      "experience_lines": [
+        "Up to 4-year experience in Financial Planning and Analysis, with manufacturing experience background preferable.",
+        "Hands on experience in SAP FICO including CO-PA and Understanding on other modules like SD, PP, MM, PS",
+        "Experience:"
+      ],
+      "fresher_evidence": "Up to 4-year",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:R0097334",
+      "canonical_url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Bengaluru-Karnataka-India/Project-Controlling-Analyst---CCC_R0097334",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "hitachi|workday:R0097334",
+    "date": "Nov 3, 09:16",
+    "first_seen": "2026-11-03T09:16:30.913026+00:00",
+    "id": "Hitachi_Project_Controlling_Analyst_-_CCC",
+    "notified": false,
+    "company_id": "c1793696383"
+  },
+  {
+    "title": "Diploma Trainee",
+    "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Savli-Gujarat-India/Diploma-Trainee_R0109078",
+    "company": "Hitachi",
+    "location": "Savli, Gujarat, India · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'Trainee'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [],
+      "fresher_evidence": "Trainee",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:R0109078",
+      "canonical_url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Savli-Gujarat-India/Diploma-Trainee_R0109078",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "hitachi|workday:R0109078",
+    "date": "Nov 3, 09:16",
+    "first_seen": "2026-11-03T09:16:30.913026+00:00",
+    "id": "Hitachi_Diploma_Trainee",
+    "notified": false,
+    "company_id": "c1793696383"
+  },
+  {
+    "title": "Management Trainee",
+    "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Bengaluru-Karnataka-India/Management-Trainee_R0087362",
+    "company": "Hitachi",
+    "location": "Bengaluru, Karnataka, India · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'Trainee'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [],
+      "fresher_evidence": "Trainee",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:R0087362",
+      "canonical_url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Bengaluru-Karnataka-India/Management-Trainee_R0087362",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "hitachi|workday:R0087362",
+    "date": "Nov 3, 09:16",
+    "first_seen": "2026-11-03T09:16:30.913026+00:00",
+    "id": "Hitachi_Management_Trainee",
+    "notified": false,
+    "company_id": "c1793696383"
+  },
+  {
+    "title": "General Finance Management Analyst- Controlling Capability Center",
+    "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Bengaluru-Karnataka-India/General-Finance-Management-Analyst--Controlling-Capability-Center_R0098238",
+    "company": "Hitachi",
+    "location": "Bengaluru, Karnataka, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: 'Up to 4 years'",
+    "evidence": {
+      "experience": [
+        "Up to 4 years"
+      ],
+      "experience_lines": [
+        "Up to 4 years’ experience in Financial Planning and Analysis, with manufacturing experience background preferable.",
+        "Hands-on experience in SAP FICO including CO-PA and understanding on other modules"
+      ],
+      "fresher_evidence": "Up to 4 years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:R0098238",
+      "canonical_url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Bengaluru-Karnataka-India/General-Finance-Management-Analyst--Controlling-Capability-Center_R0098238",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "hitachi|workday:R0098238",
+    "date": "Nov 3, 09:16",
+    "first_seen": "2026-11-03T09:16:30.913026+00:00",
+    "id": "Hitachi_General_Finance_Management_Analyst-_Cont",
+    "notified": false,
+    "company_id": "c1793696383"
+  },
+  {
+    "title": "Co-op/Apprentice (Non-Tech)",
+    "url": "https://medtronic.wd1.myworkdayjobs.com/MedtronicCareers/job/Gurgaon-Haryana-India/Co-op-Apprentice--Non-Tech-_R66780-1",
+    "company": "Medtronic",
+    "location": "Gurgaon, Haryana, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 years'",
+    "evidence": {
+      "experience": [
+        "0 years"
+      ],
+      "experience_lines": [
+        "0 years of experience required.",
+        "Autonomy:  Entry-level position typically requiring little to no prior experience.",
+        "Required Knowledge and Experience:  Requires no or little job knowledge of systems and procedures."
+      ],
+      "fresher_evidence": "0 years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:R66780-1",
+      "canonical_url": "https://medtronic.wd1.myworkdayjobs.com/MedtronicCareers/job/Gurgaon-Haryana-India/Co-op-Apprentice--Non-Tech-_R66780-1",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "medtronic|workday:R66780-1",
+    "date": "Nov 3, 09:16",
+    "first_seen": "2026-11-03T09:16:45.774939+00:00",
+    "id": "Medtronic_Co-op/Apprentice_(Non-Tech)",
+    "notified": false,
+    "company_id": "c1793696384"
+  },
+  {
+    "title": "CA Industrial Trainee",
+    "url": "https://medtronic.wd1.myworkdayjobs.com/MedtronicCareers/job/Gurgaon-Haryana-India/Co-op-Apprentice--Non-Tech-_R80647-1",
+    "company": "Medtronic",
+    "location": "Gurgaon, Haryana, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 years'",
+    "evidence": {
+      "experience": [
+        "0 years"
+      ],
+      "experience_lines": [
+        "0 years of experience required.",
+        "Autonomy:  Entry-level position typically requiring little to no prior experience.",
+        "Required Knowledge and Experience:  Requires no or little job knowledge of systems and procedures."
+      ],
+      "fresher_evidence": "0 years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:R80647-1",
+      "canonical_url": "https://medtronic.wd1.myworkdayjobs.com/MedtronicCareers/job/Gurgaon-Haryana-India/Co-op-Apprentice--Non-Tech-_R80647-1",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "medtronic|workday:R80647-1",
+    "date": "Nov 3, 09:16",
+    "first_seen": "2026-11-03T09:16:45.774939+00:00",
+    "id": "Medtronic_CA_Industrial_Trainee",
+    "notified": false,
+    "company_id": "c1793696384"
+  },
+  {
+    "title": "Associate Industrial Engineer",
+    "url": "https://analogdevices.wd1.myworkdayjobs.com/External/job/India-Gandhinagar/Associate-Industrial-Engineer_R264340",
+    "company": "Analog Devices",
+    "location": "India, Gandhinagar · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'early-career role'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Come join Analog Devices (ADI) – a place where Innovation meets Impact. For more than 55 years, Analog Devices has been inventing new breakthrough technologies ",
+        "Internship, co-op, or academic project experience in manufacturing, operations research, data analytics, or process optimization.",
+        "Work Experience",
+        "0–2 years of Industrial Engineering or analytical experience."
+      ],
+      "fresher_evidence": "early-career role",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:R264340",
+      "canonical_url": "https://analogdevices.wd1.myworkdayjobs.com/External/job/India-Gandhinagar/Associate-Industrial-Engineer_R264340",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "analog devices|workday:R264340",
+    "date": "Nov 3, 09:17",
+    "first_seen": "2026-11-03T09:17:08.922447+00:00",
+    "id": "Analog_Devices_Associate_Industrial_Engineer",
+    "notified": false,
+    "company_id": "c1793696387"
+  },
+  {
+    "title": "Associate Analyst, Supply Chain Planning",
+    "url": "https://analogdevices.wd1.myworkdayjobs.com/External/job/India-Gandhinagar/Associate-Analyst--Supply-Chain-Planning_R264285",
+    "company": "Analog Devices",
+    "location": "India, Gandhinagar · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 - 3years'",
+    "evidence": {
+      "experience": [
+        "0 - 3years"
+      ],
+      "experience_lines": [
+        "0 - 3years of relevant experience",
+        "Come join Analog Devices (ADI) – a place where Innovation meets Impact. For more than 55 years, Analog Devices has been inventing new breakthrough technologies ",
+        "Hands on Python is added advantage and experience in driving improvements using machine learning",
+        "Job Req Type: Graduate Job"
+      ],
+      "fresher_evidence": "0 - 3years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:R264285",
+      "canonical_url": "https://analogdevices.wd1.myworkdayjobs.com/External/job/India-Gandhinagar/Associate-Analyst--Supply-Chain-Planning_R264285",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "analog devices|workday:R264285",
+    "date": "Nov 3, 09:17",
+    "first_seen": "2026-11-03T09:17:08.922447+00:00",
+    "id": "Analog_Devices_Associate_Analyst,_Supply_Chain_Planning",
+    "notified": false,
+    "company_id": "c1793696387"
+  },
+  {
+    "title": "Scientist for Single Cell Sorting",
+    "url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Bangalore-India/Scientist-for-Single-Cell-Sorting_R-01372949-1",
+    "company": "Thermo Fisher Scientific",
+    "location": "Bangalore, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-4 year'",
+    "evidence": {
+      "experience": [
+        "0-4 year"
+      ],
+      "experience_lines": [
+        "Applicants should have Masters with 0-4 year's experience or a PhD in a life sciences field (submitted within the last one year) with a strong focus on immunolo",
+        "Education & Experience levels:",
+        "Nature of experience:",
+        "Thorough in immunology and flowcytometry workflows. Experience in cell sorting is required"
+      ],
+      "fresher_evidence": "0-4 year",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "",
+      "canonical_url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Bangalore-India/Scientist-for-Single-Cell-Sorting_R-01372949-1",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "thermo fisher scientific|url:https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Bangalore-India/Scientist-for-Single-Cell-Sorting_R-01372949-1",
+    "date": "Nov 3, 09:17",
+    "first_seen": "2026-11-03T09:17:56.841150+00:00",
+    "id": "Thermo_Fisher_Scientific_Scientist_for_Single_Cell_Sorting",
+    "notified": false,
+    "company_id": "c1793696389"
+  },
+  {
+    "title": "Safety Reporting Specialist",
+    "url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Hyderabad-India/Safety-Reporting-Specialist_R-01372494",
+    "company": "Thermo Fisher Scientific",
+    "location": "Hyderabad, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 to 2 years'",
+    "evidence": {
+      "experience": [
+        "0 to 2 years"
+      ],
+      "experience_lines": [
+        "Previous experience that provides the knowledge, skills, and abilities to perform the job (comparable to 0 to 2 years’).",
+        "Education and Experience Requirements:",
+        "and/or directly related experience, will be considered sufficient for an individual to meet the"
+      ],
+      "fresher_evidence": "0 to 2 years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "",
+      "canonical_url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Hyderabad-India/Safety-Reporting-Specialist_R-01372494",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "thermo fisher scientific|url:https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Hyderabad-India/Safety-Reporting-Specialist_R-01372494",
+    "date": "Nov 3, 09:17",
+    "first_seen": "2026-11-03T09:17:56.841150+00:00",
+    "id": "Thermo_Fisher_Scientific_Safety_Reporting_Specialist",
+    "notified": false,
+    "company_id": "c1793696389"
+  },
+  {
+    "title": "Scientist I, Protein Biology",
+    "url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Bangalore-India/Scientist-I--Protein-Biology_R-01372950-1",
+    "company": "Thermo Fisher Scientific",
+    "location": "Bangalore, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-4 years'",
+    "evidence": {
+      "experience": [
+        "0-4 years"
+      ],
+      "experience_lines": [
+        "Applicants should have Masters with 0-4 years confirmed experience or a PhD in a life sciences field (submitted within the last one year) with a strong focus on",
+        "Education & Experience levels:",
+        "Nature of experience:",
+        "Experience in working with different expression systems, inclusion bodies and re-folding"
+      ],
+      "fresher_evidence": "0-4 years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "",
+      "canonical_url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Bangalore-India/Scientist-I--Protein-Biology_R-01372950-1",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "thermo fisher scientific|url:https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Bangalore-India/Scientist-I--Protein-Biology_R-01372950-1",
+    "date": "Nov 3, 09:17",
+    "first_seen": "2026-11-03T09:17:56.841150+00:00",
+    "id": "Thermo_Fisher_Scientific_Scientist_I,_Protein_Biology",
+    "notified": false,
+    "company_id": "c1793696389"
+  },
+  {
+    "title": "Scientist I, Molecular Biology",
+    "url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Bangalore-India/Scientist-I--Molecular-Biology_R-01372981",
+    "company": "Thermo Fisher Scientific",
+    "location": "Bangalore, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-3 years'",
+    "evidence": {
+      "experience": [
+        "0-3 years"
+      ],
+      "experience_lines": [
+        "Applicants should have Master’s with 0-3 years confirmed experience or a fresh PhD (submitted within last one year) in a life sciences field with a strong focus",
+        "Education & Experience levels:",
+        "Nature of experience:",
+        "Experience in molecular biology, which could include nucleic acid extraction, PCR, and cloning. Familiarity with In-vitro transcription (IVT), mRNA delivery, LN"
+      ],
+      "fresher_evidence": "0-3 years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "",
+      "canonical_url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Bangalore-India/Scientist-I--Molecular-Biology_R-01372981",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "thermo fisher scientific|url:https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Bangalore-India/Scientist-I--Molecular-Biology_R-01372981",
+    "date": "Nov 3, 09:17",
+    "first_seen": "2026-11-03T09:17:56.841150+00:00",
+    "id": "Thermo_Fisher_Scientific_Scientist_I,_Molecular_Biology",
+    "notified": false,
+    "company_id": "c1793696389"
+  },
+  {
+    "title": "Operations Finance Analyst",
+    "url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Bangalore-India/Operations-Finance-Analyst_R-01364214",
+    "company": "Thermo Fisher Scientific",
+    "location": "Bangalore, India · India",
+    "category": "FRESHER",
+    "reason": "fresher signal: 'no prior experience required'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Bachelor's Degree required, no prior experience required",
+        "Experience with account reconciliations and journal entry preparation",
+        "Experience with financial reporting tools and systems (Hyperion, BlackLine) preferred"
+      ],
+      "fresher_evidence": "no prior experience required",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "",
+      "canonical_url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Bangalore-India/Operations-Finance-Analyst_R-01364214",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "thermo fisher scientific|url:https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Bangalore-India/Operations-Finance-Analyst_R-01364214",
+    "date": "Nov 3, 09:17",
+    "first_seen": "2026-11-03T09:17:56.841150+00:00",
+    "id": "Thermo_Fisher_Scientific_Operations_Finance_Analyst",
+    "notified": false,
+    "company_id": "c1793696389"
+  },
+  {
+    "title": "Associate Investigator Grants Analyst (AIGA)",
+    "url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Remote-India/Associate-Investigator-Grants-Analyst--AIGA-_R-01369366",
+    "company": "Thermo Fisher Scientific",
+    "location": "Remote, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 to 2 years'",
+    "evidence": {
+      "experience": [
+        "0 to 2 years"
+      ],
+      "experience_lines": [
+        "Previous experience that provides the knowledge, skills, and abilities to perform the job (comparable to 0 to 2 years’).",
+        "Education & Experience Requirements:",
+        "In some cases an equivalency, consisting of a combination of appropriate education, training and/or directly related experience, will be considered sufficient f",
+        "Basic experience with automated systems and computerized applications, such as, Microsoft Outlook, Excel, Word, etc"
+      ],
+      "fresher_evidence": "0 to 2 years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "",
+      "canonical_url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Remote-India/Associate-Investigator-Grants-Analyst--AIGA-_R-01369366",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "thermo fisher scientific|url:https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Remote-India/Associate-Investigator-Grants-Analyst--AIGA-_R-01369366",
+    "date": "Nov 3, 09:17",
+    "first_seen": "2026-11-03T09:17:56.841150+00:00",
+    "id": "Thermo_Fisher_Scientific_Associate_Investigator_Grants_Analyst_(A",
+    "notified": false,
+    "company_id": "c1793696389"
   }
 ]
