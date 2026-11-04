@@ -294,14 +294,17 @@ class FirebaseIdentity:
 
     def account(self, uid: str) -> dict | None:
         """The Firebase account with this UID: {"uid", "email",
-        "email_verified", "disabled"}, or None if it no longer exists."""
+        "email_verified", "disabled", "tokens_valid_after"}, or None if it no
+        longer exists. tokens_valid_after is in seconds (0 = never revoked):
+        Firebase moves it when a password changes or tokens are revoked."""
         from firebase_admin import auth
         try:
             user = auth.get_user(uid, app=self.app)
         except auth.UserNotFoundError:
             return None
         return {"uid": user.uid, "email": (user.email or "").strip().lower(),
-                "email_verified": bool(user.email_verified), "disabled": bool(user.disabled)}
+                "email_verified": bool(user.email_verified), "disabled": bool(user.disabled),
+                "tokens_valid_after": (user.tokens_valid_after_timestamp or 0) / 1000}
 
     def delete_account(self, uid: str) -> None:
         """Delete the Firebase Authentication account with this UID (Admin
@@ -330,6 +333,17 @@ def _guard(method):
             log.warning("user store %s failed: %s", method.__name__, type(e).__name__)
             raise UserStoreError(UNAVAILABLE, kind=type(e).__name__) from None
     return wrapper
+
+
+def session_revoked(created_at: float | None, account: dict | None) -> bool:
+    """Did Firebase revoke this account's sign-ins (a password change, say)
+    after the session began? A session whose start is unknown counts as
+    revoked once there has been a revocation. No revocation: False."""
+    try:
+        valid_after = float((account or {}).get("tokens_valid_after") or 0)
+    except (TypeError, ValueError):
+        return True
+    return valid_after > 0 and (created_at is None or created_at < valid_after)
 
 
 def clean_display_name(value: object) -> str:
@@ -780,9 +794,10 @@ class UserStore:
     def resolve_session(self, cookie: object, idle_limit_s: float, now: float | None = None) -> dict | None:
         """The live email sign-in session named by a jt_session cookie, or
         None (malformed, unknown, ended, idle for ``idle_limit_s`` or past
-        SESSION_MAX_S). The UID in the cookie is only an address: the
-        session is accepted only if the token's hash is stored under that
-        very UID. Raises UserStoreError if the store can't be read."""
+        SESSION_MAX_S, or begun before Firebase last revoked the account's
+        sign-ins). The UID in the cookie is only an address: the session is
+        accepted only if the token's hash is stored under that very UID.
+        Raises UserStoreError if the store or Firebase can't be read."""
         m = SESSION_TOKEN_RE.match(cookie) if isinstance(cookie, str) else None
         if not m or not valid_uid(m.group(1)):
             return None
@@ -798,8 +813,14 @@ class UserStore:
         expires, last = _iso_seconds(doc.get("expires_at")), _iso_seconds(doc.get("last_active_at"))
         if expires is None or last is None or now >= expires or now - last >= idle_limit_s:
             return None
-        return {"uid": uid, "key": token_hash, "email": doc.get("email") or "", "name": doc.get("name") or "",
-                "email_verified": doc.get("email_verified") is True, "last_active": last}
+        created = _iso_seconds(doc.get("created_at"))
+        session = {"uid": uid, "key": token_hash, "email": doc.get("email") or "", "name": doc.get("name") or "",
+                   "email_verified": doc.get("email_verified") is True, "last_active": last, "created_at": created}
+        if self.identity is not None:            # (production always has one; a failed lookup raises: not restored)
+            session["account"] = self.account(uid)
+            if session_revoked(created, session["account"]):
+                return None
+        return session
 
     def end_session(self, uid: str, token_hash: str) -> None:
         """End a session that resolve_session found but the account no longer

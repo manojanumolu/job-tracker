@@ -274,7 +274,10 @@ def test_the_published_logos_file_is_valid():
         raw = base64.b64decode(e["web"]["data"])
         assert len(raw) <= L.MAX_ICON_BYTES and L.sniff(raw)[0] == e["web"]["mime"]
         assert not L.is_ats(L._host(e["page"])) and not L.is_ats(L._host(e["web"]["src"]))
-        assert L.name_slug(companies[cid]["name"]) in L._norm(e["domain"])   # the company's own domain
+        slug = L.name_slug(companies[cid]["name"])                           # the company's own domain:
+        official = L.OFFICIAL_SITES.get(slug)                                # its name, or its listed site
+        assert slug in L._norm(e["domain"]) or (official and L._norm(L._host(official).removeprefix("www."))
+                                                == L._norm(e["domain"].removeprefix("www.")))
         assert L.email_image(e) is not None
 
 

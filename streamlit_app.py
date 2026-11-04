@@ -2433,7 +2433,9 @@ def _firebase_account_state(uid: str) -> str:
     "ok", "disabled", "deleted" — or "unknown" when per-user data isn't set
     up or Firebase couldn't be asked (never treated as a problem by itself).
     Re-checked every few minutes, so disabling someone takes effect within
-    minutes even for a session that is already open."""
+    minutes even for a session that is already open. Also "revoked": this
+    email sign-in began before Firebase last revoked the account's sign-ins
+    (a password change, say)."""
     store = _user_store()[0]
     if store is None or not user_store.valid_uid(uid):
         return "unknown"
@@ -2445,6 +2447,10 @@ def _firebase_account_state(uid: str) -> str:
     except user_store.UserStoreError:
         return "unknown"
     state = "deleted" if acct is None else "disabled" if acct.get("disabled") else "ok"
+    fb = st.session_state.get(firebase_auth.SESSION_KEY)
+    if (state == "ok" and isinstance(fb, dict) and fb.get("provider") == "password" and fb.get("uid") == uid
+            and fb.get("signed_in_at") is not None and user_store.session_revoked(fb["signed_in_at"], acct)):
+        state = "revoked"                         # an email sign-in only: a Google one isn't affected
     st.session_state._acct_state = {"uid": uid, "state": state, "at": time.time()}
     return state
 
@@ -2565,6 +2571,26 @@ def _link_google_to_firebase(google: dict, config) -> None:
     print("[auth] google sign-in ok; firebase linked", flush=True)
 
 
+REVOKED_NOTICE = "Your password changed, so you were signed out. Sign in again to continue."
+
+
+def _end_revoked_sign_in(uid: str) -> None:
+    """An open email sign-in whose password changed elsewhere: end it on the
+    server, sign this browser out and show the login page."""
+    store, key = _user_store()[0], st.session_state.get("_session_key")
+    if store is not None and key:
+        try:
+            store.end_session(uid, key)
+        except user_store.UserStoreError:
+            pass                                  # it is refused on restore anyway: it began before the revocation
+    auth_event("email sign-in ended: Firebase revoked the account's sign-ins")
+    google = account_sign_out()
+    st.session_state._login_notice = REVOKED_NOTICE
+    if not google:
+        st.rerun()
+    st.stop()
+
+
 def resolve_account(google: dict | None, config) -> dict | None:
     """The signed-in account for this run (also stored, without secrets,
     under ACCOUNT_KEY for the server-side admin check), or None."""
@@ -2612,6 +2638,8 @@ def resolve_account(google: dict | None, config) -> dict | None:
             st.session_state.pop(ACCOUNT_KEY, None)
             st.session_state.pop(firebase_auth.SESSION_KEY, None)
             return _blocked_account()
+        if state == "revoked":
+            _end_revoked_sign_in(account["uid"])
         if state == "deleted":
             # the Firebase account behind this sign-in no longer exists: no
             # personal data is read or written for it (approved policy: deletion
@@ -2722,7 +2750,7 @@ def _restore_email_session() -> dict | None:
     st.session_state._restore_tried = raw
     try:
         sess = store.resolve_session(raw, idle_limit_s=INACTIVITY_LIMIT_S)
-        acct = store.account(sess["uid"]) if sess else None
+        acct = sess["account"] if sess and "account" in sess else store.account(sess["uid"]) if sess else None
     except user_store.UserStoreError:
         auth_event("email session not restored: per-user data unavailable")
         return None                                   # can't be validated: not restored
@@ -2738,7 +2766,7 @@ def _restore_email_session() -> dict | None:
         return None
     st.session_state[firebase_auth.SESSION_KEY] = {
         "uid": sess["uid"], "email": sess["email"], "email_verified": True, "provider": "password",
-        "name": sess["name"], "expires_at": time.time() + INACTIVITY_LIMIT_S}
+        "name": sess["name"], "expires_at": time.time() + INACTIVITY_LIMIT_S, "signed_in_at": sess["created_at"]}
     st.session_state._session_key = sess["key"]
     st.session_state._last_active = sess["last_active"]          # the server's record, not "now"
     auth_event("email sign-in restored from this browser's session")
@@ -2804,7 +2832,8 @@ def firebase_sign_in(email: str, password: str) -> tuple[bool, str]:
     if problem:
         return False, problem
     limiter.succeeded(email)
-    st.session_state[firebase_auth.SESSION_KEY] = {**user.as_session(), "expires_at": time.time() + ACCOUNT_SESSION_S}
+    st.session_state[firebase_auth.SESSION_KEY] = {**user.as_session(), "expires_at": time.time() + ACCOUNT_SESSION_S,
+                                                   "signed_in_at": time.time()}
     st.session_state.pop("_signed_out", None)
     st.session_state._last_active = time.time()
     st.session_state._start_session = True             # made once the gate has bound this account's data
