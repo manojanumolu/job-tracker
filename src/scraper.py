@@ -56,12 +56,21 @@ COMPANY_SOURCES: dict[str, list[dict]] = {
     "metlife": [{"type": "avature", "search": "https://www.metlifecareers.com/en_US/ml/SearchJobs"}],
     # NPCI (added from the app as "npcl")
     "c1783687965": [{"type": "zoho", "page": "https://careers.npci.org.in/jobs/Careers"}],
+    # Hyderabad employers added Nov 2026 (each verified with a real scan)
+    "amazon": [{"type": "amazon", "country_code": "IND"}],
+    "microsoft": [{"type": "eightfold", "host": "https://apply.careers.microsoft.com", "domain": "microsoft.com", "location": "Hyderabad"}],
+    "qualcomm": [{"type": "eightfold", "host": "https://careers.qualcomm.com", "domain": "qualcomm.com", "location": "Hyderabad"}],
+    "google": [{"type": "google", "location": "Hyderabad, India", "level": "EARLY"}],
+    "deloitte": [{"type": "successfactors", "host": "https://southasiacareers.deloitte.com", "location": "Hyderabad"}],
+    "infosys": [{"type": "infosys", "location": "Hyderabad"}],
 }
 # kept for callers that only need "which companies use an API"
 COMPANY_API = {cid: {"type": cfgs[0]["type"], **cfgs[0]} for cid, cfgs in COMPANY_SOURCES.items()}
 
 _SOURCE_LABELS = {"workday": "Workday API", "accenture": "Accenture job-search API", "jibe": "Jibe/iCIMS API",
-                  "avature": "Avature job search", "zoho": "Zoho Recruit career site"}
+                  "avature": "Avature job search", "zoho": "Zoho Recruit career site", "amazon": "Amazon jobs API",
+                  "eightfold": "Eightfold API", "successfactors": "SuccessFactors career site", "infosys": "Infosys jobs API",
+                  "google": "Google Careers site"}
 
 
 def sources_for(company: dict) -> list[dict]:
