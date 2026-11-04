@@ -60,13 +60,21 @@ def _card_names(html):
 # 1. sign out
 # ---------------------------------------------------------------------------
 
-def test_sign_out_empties_the_account_bar_before_anything_else():
-    """The menu leaves the page in the click's own run, before the session
-    is ended — not when the login page's run finishes."""
+def test_sign_out_happens_before_the_page_is_drawn():
+    """Sign out is the button's callback, so the run the click starts never
+    draws the menu. It was done in the page's body: the menu was redrawn, then
+    st.rerun() discarded the unsent message removing it, and the open menu
+    (name and email) stayed on the next account's pages until a reload."""
     menu = SRC[SRC.index("def account_menu()"):SRC.index("# A new destination opens at its top.")]
-    assert "bar = st.empty()" in menu and 'with bar.container(key="acct_bar"):' in menu
-    branch = menu[menu.index('key="btn_account_sign_out"'):]
-    assert branch.index("bar.empty()") < branch.index("account_sign_out()")
+    assert 'key="btn_account_sign_out"' in menu and "on_click=_menu_sign_out" in menu
+    assert 'if st.button("Sign out"' not in menu and "account_sign_out()" not in menu and "bar.empty()" not in menu
+
+
+def test_the_signed_in_bar_and_menu_never_show_next_to_the_sign_in_form():
+    """What the signed-in page drew stays until the login page's run finishes."""
+    rule = ('body:has(.st-key-login_card) :is(.st-key-acct_bar, [data-testid="stPopoverBody"]'
+            ':has(.st-key-btn_account_sign_out)) { display: none !important; }')
+    assert rule in SRC
 
 
 @pytest.mark.parametrize("who", ["primary", "second", "member"])
