@@ -331,10 +331,44 @@ def test_the_exclusion_is_that_one_vacancy_not_a_phd_filter():
     seen, tailoring = _saved(), {"locations": ["Hyderabad"], "job_families": ["Software engineering"]}
     other_phd = _job("Google", f"{GOOGLE_RESULTS}222222222222222222-research-engineer-phd", "Software Engineer, PhD, Systems")
     other = _job("Google", f"{GOOGLE_RESULTS}111111111111111111-software-engineer-early-career", "Software Engineer, Early Career, 2026")
-    qualcomm = _job("Qualcomm", "https://careers.qualcomm.com/careers/job/446719784235", "2027 Campus Hire_Associate Engineer_SW")
+    qualcomm = _job("Qualcomm", "https://careers.qualcomm.com/careers/job/446719784236", "2027 Campus Hire Software Engineer")
     for job, cid in ((other_phd, "google"), (other, "google"), (qualcomm, "qualcomm")):
         new = scraper.merge_new_jobs(seen, [job], company_id=cid)
         assert len(new) == 1 and config_store.shared_alert_pending(new[0], frozenset(), tailoring)
     assert classify_job("Software Engineer, PhD, Early Career, 2026", "Build distributed systems.", url=GOOGLE_RESULTS + "1", posting_evidence=True).accepted
     for name in ("job_classifier.py", "job_filters.py", "alerts.py"):
         assert "107018346561446598" not in (REPO / "src" / name).read_text("utf-8")
+
+
+def test_the_excluded_qualcomm_vacancy_is_known_and_can_never_be_emailed():
+    seen = _saved()
+    url = "https://careers.qualcomm.com/careers/job/446719784235"
+    record = next(j for j in seen if j["url"] == url)
+    assert record["company_id"] == "qualcomm" and record["dismissed"]
+    assert not config_store.alert_pending(record) and not job_filters.passes_global_gate(record) and record not in config_store.visible_jobs(seen)
+    assert scraper.merge_new_jobs(seen, [_job("Qualcomm", url, "2027 Campus Hire_Associate Engineer_SW", record["location"])], company_id="qualcomm") == []
+
+
+def test_only_that_qualcomm_vacancy_is_excluded():
+    """Other Qualcomm jobs, other 2027 campus hires among them, are judged as before."""
+    seen, tailoring = _saved(), {"locations": ["Hyderabad"], "job_families": ["Software engineering"]}
+    qualcomm = [c for c in json.loads((REPO / "data" / "companies.json").read_text("utf-8")) if c["id"] == "qualcomm"]
+    assert in_shared_alerts(qualcomm[0]) and monitoring_state(qualcomm[0]) == "" and scraper.sources_for(qualcomm[0])
+    for n, title in ((1, "2027 Campus Hire Software Engineer"), (2, "2027 Campus Hire_Associate Engineer_Android"), (3, "Graduate Software Engineer")):
+        new = scraper.merge_new_jobs(seen, [_job("Qualcomm", f"https://careers.qualcomm.com/careers/job/90000{n}", title)], company_id="qualcomm")
+        assert len(new) == 1 and config_store.shared_alert_pending(new[0], frozenset(), tailoring), title
+    assert sum(j.get("company") == "Qualcomm" for j in seen) == 1      # one record, not a company-wide rule
+
+
+# ── a known limitation, to be addressed separately ────────────────
+
+def test_known_limitation_a_job_found_for_the_first_time_can_be_an_old_vacancy():
+    """"New" means new to the tracker, not newly published: there is no
+    publication-date rule (some sources, Google's among them, publish no date),
+    so an old vacancy on a newly added company is still emailed once, and the
+    email calls it new. Known and accepted for now; this pins today's behaviour
+    so that changing it is a decision."""
+    seen = _saved()
+    old = {**_job("Qualcomm", "https://careers.qualcomm.com/careers/job/900009", "Graduate Software Engineer"), "posted_on": "2019-01-01"}
+    new = scraper.merge_new_jobs(seen, [old], company_id="qualcomm")
+    assert len(new) == 1 and config_store.shared_alert_pending(new[0], frozenset(), {"locations": ["Hyderabad"]})
