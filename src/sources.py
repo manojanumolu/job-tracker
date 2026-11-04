@@ -580,6 +580,20 @@ def amazon_listings(client: httpx.Client, cfg: dict) -> SourceResult:
 # ---------------------------------------------------------------------------
 EIGHTFOLD_MAX_PAGES = 100
 EIGHTFOLD_PAUSE_S = 0.3
+EIGHTFOLD_RETRY_WAITS_S = (20, 60)     # after "try again later" (HTTP 429), which a new session can get
+
+
+def _eightfold_search(client: httpx.Client, url: str, params: dict):
+    """One search page, waiting and asking again if the site says slow down.
+    If it keeps saying so the scan fails: never read as "no jobs"."""
+    for wait in EIGHTFOLD_RETRY_WAITS_S:
+        try:
+            return _get_json(client, "GET", url, params=params)
+        except SourceError as e:
+            if "HTTP 429" not in str(e):
+                raise
+            time.sleep(wait)
+    return _get_json(client, "GET", url, params=params)
 
 
 def eightfold_detail(client: httpx.Client, cfg: dict, position_id: str, location: str) -> Detail:
@@ -599,7 +613,7 @@ def eightfold_listings(client: httpx.Client, cfg: dict) -> SourceResult:
     host = cfg["host"].rstrip("/")
     listings, seen, known = [], 0, set()
     for _ in range(EIGHTFOLD_MAX_PAGES):
-        payload = _get_json(client, "GET", f"{host}/api/pcsx/search", params={
+        payload = _eightfold_search(client, f"{host}/api/pcsx/search", {
             "domain": cfg["domain"], "query": "", "location": cfg.get("location", "India"), "start": seen})
         data = payload.get("data") if isinstance(payload, dict) else None
         positions = data.get("positions") if isinstance(data, dict) else None
@@ -794,7 +808,7 @@ def eightfold_v2_listings(client: httpx.Client, cfg: dict) -> SourceResult:
     host = cfg["host"].rstrip("/")
     listings, seen, known = [], 0, set()
     for _ in range(EIGHTFOLD_MAX_PAGES):
-        data = _get_json(client, "GET", f"{host}/api/apply/v2/jobs", params={
+        data = _eightfold_search(client, f"{host}/api/apply/v2/jobs", {
             "domain": cfg["domain"], "location": cfg.get("location", "India"), "num": 10, "start": seen})
         positions = data.get("positions") if isinstance(data, dict) else None
         if not isinstance(positions, list):

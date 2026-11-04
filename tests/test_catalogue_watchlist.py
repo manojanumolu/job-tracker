@@ -278,3 +278,24 @@ def test_deloitte_links_are_not_html_encoded():
            '</td><td class="colLocation"><span class="jobLocation"> Hyderabad, IN </span></td></tr>')
     res = sources.successfactors_listings(_client(lambda r: httpx.Response(200, text=f"of <b>1</b> {row}")), {"host": "https://x.example", "location": "India"})
     assert res.listings[0].url == "https://x.example/job/Hyderabad-T&T-Consultant/1/" and res.listings[0].title == "T&T | Consultant"
+
+
+# ── "try again later" ─────────────────────────────────────────────
+
+def test_a_rate_limited_search_waits_and_asks_again(monkeypatch):
+    waits, answers = [], [httpx.Response(429), httpx.Response(200, json={"data": {"count": 0, "positions": []}})]
+    monkeypatch.setattr(sources.time, "sleep", waits.append)
+    res = sources.eightfold_listings(_client(lambda r: answers.pop(0)), {"host": "https://x.example", "domain": "x"})
+    assert res.listings == [] and waits == [20]
+
+
+def test_a_lasting_rate_limit_is_a_failure_never_zero_jobs(monkeypatch):
+    calls = []
+    monkeypatch.setattr(sources.time, "sleep", lambda s: None)
+
+    def handler(request):
+        calls.append(1)
+        return httpx.Response(429)
+    with pytest.raises(sources.SourceError):
+        sources.eightfold_listings(_client(handler), {"host": "https://x.example", "domain": "x"})
+    assert len(calls) == 3                                     # a few polite tries, not a hammering
