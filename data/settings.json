@@ -1,5 +1,5 @@
 {
-  "scan_interval_hours": 1,
+  "scan_interval_hours": 3,
   "shared_alert_tailoring": {
     "locations": [
       "Hyderabad"
