@@ -2939,5 +2939,83 @@
     "id": "PwC_IN_Associate_Data_Science_&_Engineering_",
     "notified": false,
     "company_id": "pwc"
+  },
+  {
+    "title": "Associate Technical Support Engineer (French Speaking)",
+    "url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Hyderabad/Associate-Technical-Support-Engineer_JR356515",
+    "company": "Salesforce",
+    "location": "India - Hyderabad · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'new graduates'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Our Futureforce University Recruiting program is dedicated to attracting, retaining and cultivating talent. Our interns and new graduates work on real projects ",
+        "To get the best candidate experience, please consider applying for a maximum of 3 roles within 12 months to ensure you are not duplicating efforts.",
+        "Candidates with a French language certification or prior experience handling customer queries in French over calls are preferred",
+        "Upto 12-24 months of experience in Voice support or IT/Product Support operations or a customer handling role"
+      ],
+      "fresher_evidence": "new graduates",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:JR356515",
+      "canonical_url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Hyderabad/Associate-Technical-Support-Engineer_JR356515",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "salesforce|id:JR356515",
+    "date": "Nov 4, 12:07",
+    "first_seen": "2026-11-04T12:07:38.520501+00:00",
+    "id": "Salesforce_Associate_Technical_Support_Engineer_(Fr",
+    "notified": false,
+    "company_id": "c1793696368"
+  },
+  {
+    "title": "Apprentice",
+    "url": "https://statestreet.wd1.myworkdayjobs.com/Global/job/Bangalore-India/Apprentice_R-799731",
+    "company": "State Street",
+    "location": "Bangalore, India · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'Apprentice'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        " Bachelor’s degree in business, Finance, or equivalent work experience• Good understanding of asset classes Equity, Fixed Income and Trade Life Cycle.",
+        "Inclusion, Diversity and Social Responsibility.  We truly believe our employees’ diverse backgrounds, experiences and perspective are a powerful contributor to "
+      ],
+      "fresher_evidence": "Apprentice",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "",
+      "canonical_url": "https://statestreet.wd1.myworkdayjobs.com/Global/job/Bangalore-India/Apprentice_R-799731",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "state street|url:https://statestreet.wd1.myworkdayjobs.com/Global/job/Bangalore-India/Apprentice_R-799731",
+    "date": "Nov 4, 12:13",
+    "first_seen": "2026-11-04T12:13:14.843834+00:00",
+    "id": "State_Street_Apprentice",
+    "notified": false,
+    "company_id": "c1793696381"
   }
 ]
