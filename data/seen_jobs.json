@@ -3047,5 +3047,886 @@
     "id": "State_Street_Apprentice",
     "notified": false,
     "company_id": "c1793696381"
+  },
+  {
+    "title": "She Builds 1:1 Resume & Interview Coaching, India",
+    "url": "https://www.amazon.jobs/en/jobs/10557386/she-builds-1-1-resume-interview-coaching-india",
+    "company": "Amazon",
+    "location": "Bengaluru, Karnataka, IND · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'recent graduate'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "When you join Amazon Web Services as a student or recent graduate, you’ll have the chance for your voice to be heard and amplified. That’s because our teams are",
+        "Diverse Experiences",
+        "Amazon values diverse experiences. Even if you do not meet all of the preferred qualifications and skills listed in the job description, we encourage candidates",
+        "Experience working in a fast paced, quickly changing or international environment"
+      ],
+      "fresher_evidence": "recent graduate",
+      "detail_read": true,
+      "detail_match": "amazon.jobs record",
+      "job_id": "id:10557386",
+      "canonical_url": "https://amazon.jobs/en/jobs/10557386/she-builds-1-1-resume-interview-coaching-india",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "amazon|url:https://amazon.jobs/en/jobs/10557386/she-builds-1-1-resume-interview-coaching-india",
+    "date": "Nov 4, 21:21",
+    "first_seen": "2026-11-04T21:21:13.310579+00:00",
+    "id": "Amazon_She_Builds_1:1_Resume_&_Interview_Coachi",
+    "notified": false,
+    "company_id": "amazon"
+  },
+  {
+    "title": "Transportation Specialist, Quick Commerce, AmazonNowCO, RoW APEX",
+    "url": "https://www.amazon.jobs/en/jobs/10531029/transportation-specialist-quick-commerce-amazonnowco-row-apex",
+    "company": "Amazon",
+    "location": "Hyderabad, Telangana, IND · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-2 years'",
+    "evidence": {
+      "experience": [
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "Experience in e-commerce, quick commerce, or last-mile logistics.",
+        "Experience with Excel",
+        "Experience with SQL",
+        "0–2 years of experience in operations, logistics, supply chain, or customer service"
+      ],
+      "fresher_evidence": "0-2 years",
+      "detail_read": true,
+      "detail_match": "amazon.jobs record",
+      "job_id": "id:10531029",
+      "canonical_url": "https://amazon.jobs/en/jobs/10531029/transportation-specialist-quick-commerce-amazonnowco-row-apex",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "amazon|url:https://amazon.jobs/en/jobs/10531029/transportation-specialist-quick-commerce-amazonnowco-row-apex",
+    "date": "Nov 4, 21:21",
+    "first_seen": "2026-11-04T21:21:13.310579+00:00",
+    "id": "Amazon_Transportation_Specialist,_Quick_Commerc",
+    "notified": false,
+    "company_id": "amazon"
+  },
+  {
+    "title": "Financial Analyst Intern",
+    "url": "https://www.amazon.jobs/en/jobs/10498382/financial-analyst-intern",
+    "company": "Amazon",
+    "location": "Bengaluru, Karnataka, IND · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'as a trainee'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Available to intern with us for 12-18 months."
+      ],
+      "fresher_evidence": "as a trainee",
+      "detail_read": true,
+      "detail_match": "amazon.jobs record",
+      "job_id": "id:10498382",
+      "canonical_url": "https://amazon.jobs/en/jobs/10498382/financial-analyst-intern",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "amazon|url:https://amazon.jobs/en/jobs/10498382/financial-analyst-intern",
+    "date": "Nov 4, 21:21",
+    "first_seen": "2026-11-04T21:21:13.310579+00:00",
+    "id": "Amazon_Financial_Analyst_Intern",
+    "notified": false,
+    "company_id": "amazon"
+  },
+  {
+    "title": "AHS Specialist - English & German, Account Health Support",
+    "url": "https://www.amazon.jobs/en/jobs/10571485/ahs-specialist-english-german-account-health-support",
+    "company": "Amazon",
+    "location": "Hyderabad, Telangana, IND · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: '2026 pass out'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Min. Education - Undergraduate Campus Language Degree from Renowned University (2026 pass out or completed) can apply"
+      ],
+      "fresher_evidence": "2026 pass out",
+      "detail_read": true,
+      "detail_match": "amazon.jobs record",
+      "job_id": "id:10571485",
+      "canonical_url": "https://amazon.jobs/en/jobs/10571485/ahs-specialist-english-german-account-health-support",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "amazon|url:https://amazon.jobs/en/jobs/10571485/ahs-specialist-english-german-account-health-support",
+    "date": "Nov 4, 21:21",
+    "first_seen": "2026-11-04T21:21:13.310579+00:00",
+    "id": "Amazon_AHS_Specialist_-_English_&_German,_Accou",
+    "notified": false,
+    "company_id": "amazon"
+  },
+  {
+    "title": "SAP/EWM consultant",
+    "url": "https://career.infosys.com/jobdesc?jobReferenceCode=INFSYS-EXTERNAL-255211",
+    "company": "Infosys",
+    "location": "Chennai · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 to 2 years.'",
+    "evidence": {
+      "experience": [
+        "0 to 2 years"
+      ],
+      "experience_lines": [
+        "Required experience: 0 to 2 years."
+      ],
+      "fresher_evidence": "0 to 2 years.",
+      "detail_read": true,
+      "detail_match": "infosys record",
+      "job_id": "id:INFSYS-EXTERNAL-255211",
+      "canonical_url": "https://career.infosys.com/jobdesc?jobReferenceCode=INFSYS-EXTERNAL-255211",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "infosys|url:https://career.infosys.com/jobdesc?jobReferenceCode=INFSYS-EXTERNAL-255211",
+    "date": "Nov 4, 21:21",
+    "first_seen": "2026-11-04T21:21:55.947550+00:00",
+    "id": "Infosys_SAP/EWM_consultant",
+    "notified": false,
+    "company_id": "infosys"
+  },
+  {
+    "title": "CA Fresher",
+    "url": "https://career.infosys.com/jobdesc?jobReferenceCode=INFSYS-EXTERNAL-251995",
+    "company": "Infosys",
+    "location": "Bangalore · India",
+    "category": "FRESHER",
+    "reason": "fresher signal: 'Fresher'",
+    "evidence": {
+      "experience": [
+        "0 to 5 years"
+      ],
+      "experience_lines": [
+        "Required experience: 0 to 5 years."
+      ],
+      "fresher_evidence": "Fresher",
+      "detail_read": true,
+      "detail_match": "infosys record",
+      "job_id": "id:INFSYS-EXTERNAL-251995",
+      "canonical_url": "https://career.infosys.com/jobdesc?jobReferenceCode=INFSYS-EXTERNAL-251995",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "infosys|url:https://career.infosys.com/jobdesc?jobReferenceCode=INFSYS-EXTERNAL-251995",
+    "date": "Nov 4, 21:21",
+    "first_seen": "2026-11-04T21:21:55.947550+00:00",
+    "id": "Infosys_CA_Fresher",
+    "notified": false,
+    "company_id": "infosys"
+  },
+  {
+    "title": "Analyst | PMO | Ahmedabad | Organizational Transformation",
+    "url": "https://southasiacareers.deloitte.com/job/Ahmedabad-Analyst-PMO-Ahmedabad-Organizational-Transformation/61050744/",
+    "company": "Deloitte",
+    "location": "Ahmedabad, IN · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-3 years'",
+    "evidence": {
+      "experience": [
+        "0-3 years"
+      ],
+      "experience_lines": [
+        "0-3 years of experience in PMO / programme support roles",
+        "Experience supporting large-scale transformation or technology programmes",
+        "Strong experience in reporting and governance management",
+        "Experience working in client-facing environments"
+      ],
+      "fresher_evidence": "0-3 years",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Ahmedabad-Analyst-PMO-Ahmedabad-Organizational-Transformation/61050744",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Ahmedabad-Analyst-PMO-Ahmedabad-Organizational-Transformation/61050744",
+    "date": "Nov 4, 21:23",
+    "first_seen": "2026-11-04T21:23:41.990592+00:00",
+    "id": "Deloitte_Analyst_|_PMO_|_Ahmedabad_|_Organization",
+    "notified": false,
+    "company_id": "deloitte"
+  },
+  {
+    "title": "Executive | Financial Crime | Gurugram | Forensic & Financial Crime",
+    "url": "https://southasiacareers.deloitte.com/job/Delhi-Executive-Financial-Crime-Gurugram-Forensic-&-Financial-Crime/58331544/",
+    "company": "Deloitte",
+    "location": "Delhi, IN · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-3 years'",
+    "evidence": {
+      "experience": [
+        "0-3 years"
+      ],
+      "experience_lines": [
+        "      The candidate should have between 0-3 years of work experience and could have worked in sectors such as media, consulting, financial services, policy thin",
+        "      Ideal candidates should possess a post graduate degree with a specialization in Finance. Candidates with post graduate degrees in other disciplines includ"
+      ],
+      "fresher_evidence": "0-3 years",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Delhi-Executive-Financial-Crime-Gurugram-Forensic-&-Financial-Crime/58331544",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Delhi-Executive-Financial-Crime-Gurugram-Forensic-&-Financial-Crime/58331544",
+    "date": "Nov 4, 21:23",
+    "first_seen": "2026-11-04T21:23:41.990592+00:00",
+    "id": "Deloitte_Executive_|_Financial_Crime_|_Gurugram_|",
+    "notified": false,
+    "company_id": "deloitte"
+  },
+  {
+    "title": "Executive | GST & Pre GST Advisory | Mumbai | Indirect Tax",
+    "url": "https://southasiacareers.deloitte.com/job/Mumbai-Executive-GST-&-Pre-GST-Advisory-Mumbai-Indirect-Tax/57077644/",
+    "company": "Deloitte",
+    "location": "Mumbai, IN · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-2 years'",
+    "evidence": {
+      "experience": [
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "Graduates/Semi-Qualified C.A/C.S/MBA(Finance) with 0-2 years of Experience in Indirect Taxation",
+        "As an Executive in our Indirect Tax team, you’ll build and nurture positive working relationships with teams and clients with the intention to exceed client exp",
+        "Working experience in some accounting software like Tally/SAP/Oracle (preferable)"
+      ],
+      "fresher_evidence": "0-2 years",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Mumbai-Executive-GST-&-Pre-GST-Advisory-Mumbai-Indirect-Tax/57077644",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Mumbai-Executive-GST-&-Pre-GST-Advisory-Mumbai-Indirect-Tax/57077644",
+    "date": "Nov 4, 21:23",
+    "first_seen": "2026-11-04T21:23:41.990592+00:00",
+    "id": "Deloitte_Executive_|_GST_&_Pre_GST_Advisory_|_Mum",
+    "notified": false,
+    "company_id": "deloitte"
+  },
+  {
+    "title": "Consultant | Anaplan | Bengaluru | Finance Transformation | Business Finance",
+    "url": "https://southasiacareers.deloitte.com/job/Bengaluru-Consultant-Anaplan-Bengaluru-Finance-Transformation-Business-Finance/60524644/",
+    "company": "Deloitte",
+    "location": "Bengaluru, IN · India",
+    "category": "FRESHER",
+    "reason": "fresher signal: 'Freshers with'",
+    "evidence": {
+      "experience": [
+        "0-3+ years"
+      ],
+      "experience_lines": [
+        "0-3+ years of relevant experience  in Anaplan implementation, Finance, FP&A, Accounting, Costing, Management Accounting, Supply Chain Planning, Business Plannin",
+        "Participate in or lead project delivery activities depending on experience, ensuring timely and quality execution of Anaplan implementations.",
+        "Graduate/Postgraduate qualification, preferably  CA, CMA, MBA/PGDM (Finance, Operations or Supply Chain), B.Com, M.Com or equivalent .",
+        "For experienced candidates, hands-on Anaplan model development, solution design, implementation and/or project delivery experience will be valued."
+      ],
+      "fresher_evidence": "Freshers with",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Bengaluru-Consultant-Anaplan-Bengaluru-Finance-Transformation-Business-Finance/60524644",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Bengaluru-Consultant-Anaplan-Bengaluru-Finance-Transformation-Business-Finance/60524644",
+    "date": "Nov 4, 21:23",
+    "first_seen": "2026-11-04T21:23:41.990592+00:00",
+    "id": "Deloitte_Consultant_|_Anaplan_|_Bengaluru_|_Finan",
+    "notified": false,
+    "company_id": "deloitte"
+  },
+  {
+    "title": "Consultant | FT: Strategy & Ops | Bengaluru | Finance Transformation | Finance Strategy",
+    "url": "https://southasiacareers.deloitte.com/job/Bengaluru-Consultant-FT-Strategy-&-Ops-Bengaluru-Finance-Transformation-Finance-Strategy/60510544/",
+    "company": "Deloitte",
+    "location": "Bengaluru, IN · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-2 years'",
+    "evidence": {
+      "experience": [
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "o   0-2 years of relevant experience across consulting and/or industry roles, post qualification would be preferred",
+        "o   Excellent academic credentials for both undergraduate and graduate coursework",
+        "      Experience"
+      ],
+      "fresher_evidence": "0-2 years",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Bengaluru-Consultant-FT-Strategy-&-Ops-Bengaluru-Finance-Transformation-Finance-Strategy/60510544",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Bengaluru-Consultant-FT-Strategy-&-Ops-Bengaluru-Finance-Transformation-Finance-Strategy/60510544",
+    "date": "Nov 4, 21:23",
+    "first_seen": "2026-11-04T21:23:41.990592+00:00",
+    "id": "Deloitte_Consultant_|_FT:_Strategy_&_Ops_|_Bengal",
+    "notified": false,
+    "company_id": "deloitte"
+  },
+  {
+    "title": "T&T | Cyber: CST | Analyst | Third Party Risk Management | Coimbatore",
+    "url": "https://southasiacareers.deloitte.com/job/Coimbatore-T&T-Cyber-CST-Analyst-Third-Party-Risk-Management-Coimbatore/60979644/",
+    "company": "Deloitte",
+    "location": "Coimbatore, IN · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-1 year'",
+    "evidence": {
+      "experience": [
+        "0-1 year"
+      ],
+      "experience_lines": [
+        "Relevant experience of 0-1 year in IT Audits, Cloud security",
+        "Cyber TPRM experience ranging from 1 year to 7yrs is mandatory.",
+        "Experience with ISO22301 implementation and audits",
+        "Work experience in Infrastructure / Application Security"
+      ],
+      "fresher_evidence": "0-1 year",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Coimbatore-T&T-Cyber-CST-Analyst-Third-Party-Risk-Management-Coimbatore/60979644",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Coimbatore-T&T-Cyber-CST-Analyst-Third-Party-Risk-Management-Coimbatore/60979644",
+    "date": "Nov 4, 21:23",
+    "first_seen": "2026-11-04T21:23:41.990592+00:00",
+    "id": "Deloitte_T&T_|_Cyber:_CST_|_Analyst_|_Third_Party",
+    "notified": false,
+    "company_id": "deloitte"
+  },
+  {
+    "title": "T&T | Cyber: D&R | Analyst | Incident Response & Handling | Delhi",
+    "url": "https://southasiacareers.deloitte.com/job/Delhi-T&T-Cyber-D&R-Analyst-Incident-Response-&-Handling-Delhi/60941544/",
+    "company": "Deloitte",
+    "location": "Delhi, IN · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 to 2 years'",
+    "evidence": {
+      "experience": [
+        "0 to 2 years"
+      ],
+      "experience_lines": [
+        "Overall experience of 0 to 2 years in cybersecurity, including relevant internships, academic projects, lab work, SOC exposure, incident response, digital foren"
+      ],
+      "fresher_evidence": "0 to 2 years",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Delhi-T&T-Cyber-D&R-Analyst-Incident-Response-&-Handling-Delhi/60941544",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Delhi-T&T-Cyber-D&R-Analyst-Incident-Response-&-Handling-Delhi/60941544",
+    "date": "Nov 4, 21:23",
+    "first_seen": "2026-11-04T21:23:41.990592+00:00",
+    "id": "Deloitte_T&T_|_Cyber:_D&R_|_Analyst_|_Incident_Re",
+    "notified": false,
+    "company_id": "deloitte"
+  },
+  {
+    "title": "2027 Campus Hire_Engineer_SW",
+    "url": "https://careers.qualcomm.com/careers/job/446719783573",
+    "company": "Qualcomm",
+    "location": "Hyderabad, Telangāna, India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'Campus'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [],
+      "fresher_evidence": "Campus",
+      "detail_read": true,
+      "detail_match": "eightfold position",
+      "job_id": "id:3094022",
+      "canonical_url": "https://careers.qualcomm.com/careers/job/446719783573",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "qualcomm|url:https://careers.qualcomm.com/careers/job/446719783573",
+    "date": "Nov 4, 21:24",
+    "first_seen": "2026-11-04T21:24:45.533493+00:00",
+    "id": "Qualcomm_2027_Campus_Hire_Engineer_SW",
+    "notified": false,
+    "company_id": "qualcomm"
+  },
+  {
+    "title": "2027 Campus Hire_ Engineer_ HW",
+    "url": "https://careers.qualcomm.com/careers/job/446719783487",
+    "company": "Qualcomm",
+    "location": "Bangalore, India · Hyderabad, Telangāna, India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'Campus'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Verilog or VHDL, C/C++, Tcl/Perl/shell-scripting. RTL design experience and/or strong OO programming knowledge"
+      ],
+      "fresher_evidence": "Campus",
+      "detail_read": true,
+      "detail_match": "eightfold position",
+      "job_id": "id:3094020",
+      "canonical_url": "https://careers.qualcomm.com/careers/job/446719783487",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "qualcomm|url:https://careers.qualcomm.com/careers/job/446719783487",
+    "date": "Nov 4, 21:24",
+    "first_seen": "2026-11-04T21:24:45.533493+00:00",
+    "id": "Qualcomm_2027_Campus_Hire__Engineer__HW",
+    "notified": false,
+    "company_id": "qualcomm"
+  },
+  {
+    "title": "2027 Campus Hire_ System Engineer",
+    "url": "https://careers.qualcomm.com/careers/job/446721334828",
+    "company": "Qualcomm",
+    "location": "Bangalore, India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'Campus'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "As a leading technology innovator, Qualcomm pushes the boundaries of what's possible to enable next-generation experiences and drives digital transformation to ",
+        "    1+ year of experience working in a large matrixed organization."
+      ],
+      "fresher_evidence": "Campus",
+      "detail_read": true,
+      "detail_match": "eightfold position",
+      "job_id": "id:3097329",
+      "canonical_url": "https://careers.qualcomm.com/careers/job/446721334828",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "qualcomm|url:https://careers.qualcomm.com/careers/job/446721334828",
+    "date": "Nov 4, 21:24",
+    "first_seen": "2026-11-04T21:24:45.533493+00:00",
+    "id": "Qualcomm_2027_Campus_Hire__System_Engineer",
+    "notified": false,
+    "company_id": "qualcomm"
+  },
+  {
+    "title": "Engineer - RF SW - M.Tech - Communication background - 2025/26",
+    "url": "https://careers.qualcomm.com/careers/job/446721218767",
+    "company": "Qualcomm",
+    "location": "Hyderabad, Telangāna, India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-1 yrs'",
+    "evidence": {
+      "experience": [
+        "0-1 yrs"
+      ],
+      "experience_lines": [
+        "Qualcomm is looking for Modem-RF Wireless SW engineers at levels with 0-1 yrs of experience, with knowledge of RF and Digital Communications. The candidate will",
+        "As a leading technology innovator, Qualcomm pushes the boundaries of what's possible to enable next-generation experiences and drives digital transformation to ",
+        "Modem/Communications device driver development experience is an added advantage."
+      ],
+      "fresher_evidence": "0-1 yrs",
+      "detail_read": true,
+      "detail_match": "eightfold position",
+      "job_id": "id:3096909",
+      "canonical_url": "https://careers.qualcomm.com/careers/job/446721218767",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "qualcomm|url:https://careers.qualcomm.com/careers/job/446721218767",
+    "date": "Nov 4, 21:24",
+    "first_seen": "2026-11-04T21:24:45.533493+00:00",
+    "id": "Qualcomm_Engineer_-_RF_SW_-_M.Tech_-_Communicatio",
+    "notified": false,
+    "company_id": "qualcomm"
+  },
+  {
+    "title": "2027 Campus Hire_ Associate Engineer_ HW",
+    "url": "https://careers.qualcomm.com/careers/job/446719783557",
+    "company": "Qualcomm",
+    "location": "Bangalore, India · Chennai, Tamil Nādu, India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'Campus'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Verilog or VHDL, C/C++, Tcl/Perl/shell-scripting. RTL design experience and/or strong OO programming knowledge"
+      ],
+      "fresher_evidence": "Campus",
+      "detail_read": true,
+      "detail_match": "eightfold position",
+      "job_id": "id:3094021",
+      "canonical_url": "https://careers.qualcomm.com/careers/job/446719783557",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "qualcomm|url:https://careers.qualcomm.com/careers/job/446719783557",
+    "date": "Nov 4, 21:24",
+    "first_seen": "2026-11-04T21:24:45.533493+00:00",
+    "id": "Qualcomm_2027_Campus_Hire__Associate_Engineer__HW",
+    "notified": false,
+    "company_id": "qualcomm"
+  },
+  {
+    "title": "Business Operations Analyst, Processor",
+    "url": "https://careers.qualcomm.com/careers/job/446720810529",
+    "company": "Qualcomm",
+    "location": "Bangalore, India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 -1 year'",
+    "evidence": {
+      "experience": [
+        "0 -1 year"
+      ],
+      "experience_lines": [
+        "          0 -1 year of experience in PC OEM’s, Semi-Conductor Channel Partner & or Business Ops",
+        "Key skills / experience required:",
+        "          Master’s degree in business management, Operations, Analytics, or related experience"
+      ],
+      "fresher_evidence": "0 -1 year",
+      "detail_read": true,
+      "detail_match": "eightfold position",
+      "job_id": "id:3095814",
+      "canonical_url": "https://careers.qualcomm.com/careers/job/446720810529",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "qualcomm|url:https://careers.qualcomm.com/careers/job/446720810529",
+    "date": "Nov 4, 21:24",
+    "first_seen": "2026-11-04T21:24:45.533493+00:00",
+    "id": "Qualcomm_Business_Operations_Analyst,_Processor",
+    "notified": false,
+    "company_id": "qualcomm"
+  },
+  {
+    "title": "Software Engineer",
+    "url": "https://cisco.wd5.myworkdayjobs.com/Cisco_Careers/job/Bangalore-India/Software-Engineer_2023748",
+    "company": "Cisco",
+    "location": "Bangalore, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 year'",
+    "evidence": {
+      "experience": [
+        "0 year"
+      ],
+      "experience_lines": [
+        "Bachelor's in Computer Science (or equivalent) with 5 years or Master's with 3 years or PhD with 0 year of related experience.",
+        "Experience programming with Go, C/C++, Java and/or Python",
+        "Experience with microservices software architecture and large-scale distributed systems",
+        "Experience with data structures, algorithms, and software design"
+      ],
+      "fresher_evidence": "0 year",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:2023748",
+      "canonical_url": "https://cisco.wd5.myworkdayjobs.com/Cisco_Careers/job/Bangalore-India/Software-Engineer_2023748",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "cisco|workday:2023748",
+    "date": "Nov 4, 21:25",
+    "first_seen": "2026-11-04T21:25:41.136512+00:00",
+    "id": "Cisco_Software_Engineer",
+    "notified": false,
+    "company_id": "cisco"
+  },
+  {
+    "title": "Solutions Engineer - Strategic Partners",
+    "url": "https://cisco.wd5.myworkdayjobs.com/Cisco_Careers/job/Mumbai-India/Solutions-Engineer---Strategic-Partners_2025515",
+    "company": "Cisco",
+    "location": "Mumbai, India · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 years'",
+    "evidence": {
+      "experience": [
+        "0 years"
+      ],
+      "experience_lines": [
+        "PhD + 0 years of related experience",
+        "Bachelors + 5 years of related",
+        "experience, or",
+        "Masters + 3 years of related"
+      ],
+      "fresher_evidence": "0 years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:2025515",
+      "canonical_url": "https://cisco.wd5.myworkdayjobs.com/Cisco_Careers/job/Mumbai-India/Solutions-Engineer---Strategic-Partners_2025515",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "cisco|workday:2025515",
+    "date": "Nov 4, 21:25",
+    "first_seen": "2026-11-04T21:25:41.136512+00:00",
+    "id": "Cisco_Solutions_Engineer_-_Strategic_Partners",
+    "notified": false,
+    "company_id": "cisco"
+  },
+  {
+    "title": "Intern- On Platform Storefront Merchandising",
+    "url": "https://jiostar.wd102.myworkdayjobs.com/JioStar/job/Bengaluru/Intern_JR12520",
+    "company": "JioHotstar (JioStar)",
+    "location": "Bengaluru · India",
+    "category": "FRESHER",
+    "reason": "fresher signal: 'No prior experience required'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "No prior experience required. Internships or projects in content, digital marketing or e-commerce are a plus"
+      ],
+      "fresher_evidence": "No prior experience required",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:JR12520",
+      "canonical_url": "https://jiostar.wd102.myworkdayjobs.com/JioStar/job/Bengaluru/Intern_JR12520",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "jiohotstar (jiostar)|id:JR12520",
+    "date": "Nov 4, 21:25",
+    "first_seen": "2026-11-04T21:25:54.581600+00:00",
+    "id": "JioHotstar_(JioStar)_Intern-_On_Platform_Storefront_Merchandi",
+    "notified": false,
+    "company_id": "jiohotstar"
+  },
+  {
+    "title": "Support Engineer 1",
+    "url": "https://careers.oracle.com/en/sites/jobsearch/job/345517",
+    "company": "Oracle",
+    "location": "BENGALURU, KARNATAKA, India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: 'minimum of 0-2 year'",
+    "evidence": {
+      "experience": [
+        "minimum of 0-2 year"
+      ],
+      "experience_lines": [
+        "A minimum of 0-2 year experience and a bachelor's degree including:",
+        "0-2 year experience in application support, client/customer support, incident management, problem management and change management."
+      ],
+      "fresher_evidence": "minimum of 0-2 year",
+      "detail_read": true,
+      "detail_match": "oracle requisition",
+      "job_id": "id:345517",
+      "canonical_url": "https://careers.oracle.com/en/sites/jobsearch/job/345517",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "oracle|url:https://careers.oracle.com/en/sites/jobsearch/job/345517",
+    "date": "Nov 4, 21:26",
+    "first_seen": "2026-11-04T21:26:25.142874+00:00",
+    "id": "Oracle_Support_Engineer_1",
+    "notified": false,
+    "company_id": "oracle"
   }
 ]
