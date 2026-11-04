@@ -436,7 +436,7 @@ def test_statuses_come_from_scraper_data(app):
     ]))
     _nav(at, "monitoring")
     html = _html(at)
-    for label in ("Healthy", "Broken", "Failing", "Needs configuration", "Pending", "Delayed"):
+    for label in ("Active monitoring", "Monitoring blocked", "Pending", "Delayed"):
         assert f"<i></i>{label}</span>" in html
     assert "3 portals failing" in html and "Not scanned yet" in html
     # the scraper's own reason is shown, not a generic "failed"

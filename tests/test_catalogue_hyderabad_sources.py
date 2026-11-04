@@ -71,9 +71,9 @@ def test_amazon_reads_every_page_and_carries_the_full_description():
     assert first.detail.ok and "A degree" in first.detail.description
 
 
-def test_amazon_no_postings_or_a_changed_answer_is_a_failure_not_a_quiet_zero():
+def test_amazon_a_missing_count_or_a_changed_answer_is_a_failure_not_a_quiet_zero():
     with pytest.raises(sources.SourceError):
-        sources.amazon_listings(_client(lambda r: httpx.Response(200, json={"hits": 0, "jobs": []})), {})
+        sources.amazon_listings(_client(lambda r: httpx.Response(200, json={"jobs": []})), {})
     with pytest.raises(sources.SourceError):
         sources.amazon_listings(_client(lambda r: httpx.Response(200, json={"unexpected": 1})), {})
 
@@ -168,7 +168,7 @@ def test_google_reads_jobs_not_filter_headings_and_stops_when_nothing_is_new():
         if "jobs/results/1234567" in str(request.url):
             return httpx.Response(200, text=f"<p>Minimum qualifications:</p><p>{LONG}</p><script>tracking()</script>")
         pages.append(request.url.params["page"])
-        assert request.url.params["target_level"] == "EARLY"
+        assert "target_level" not in request.url.params
         return httpx.Response(200, text=GOOGLE_PAGE)
     res = sources.google_listings(_client(handler), {})
     assert pages == ["1", "2"] and [x.title for x in res.listings] == ["Software Engineer, Example"]

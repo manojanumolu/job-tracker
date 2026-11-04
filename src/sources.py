@@ -328,6 +328,8 @@ def jibe_listings(client: httpx.Client, cfg: dict) -> SourceResult:
             raise SourceError("job API changed shape (no 'jobs' list)")
         total = data.get("totalCount", total)
         if page == 1 and not jobs:
+            if total == 0:                    # the source itself says it has none: healthy
+                return SourceResult([], seen=0)
             raise SourceError("job API returned no postings", "failing")
         for j in jobs:
             d = j.get("data") if isinstance(j, dict) else None
@@ -462,6 +464,8 @@ def avature_listings(client: httpx.Client, cfg: dict) -> SourceResult:
         if page == 0:
             m = _AVATURE_COUNT_RE.search(r.text)
             total = int(m.group(1).replace(",", "")) if m else None
+            if not articles and total == 0:   # the page itself says it has none: healthy
+                return SourceResult([], seen=0)
             if not articles:
                 raise SourceError("job search page has no results — layout may have changed", "failing")
         for a in articles:
@@ -546,9 +550,11 @@ def amazon_listings(client: httpx.Client, cfg: dict) -> SourceResult:
         jobs = data.get("jobs") if isinstance(data, dict) else None
         if not isinstance(jobs, list):
             raise SourceError("job API changed shape (no 'jobs' list)")
-        if page == 0 and not jobs:
-            raise SourceError("job API returned no postings", "failing")
         hits = data.get("hits", hits)
+        if page == 0 and not jobs:
+            if hits == 0:                     # the source itself says it has none: healthy
+                return SourceResult([], seen=0)
+            raise SourceError("job API returned no postings", "failing")
         for j in jobs:
             if not isinstance(j, dict):
                 continue
@@ -572,7 +578,8 @@ def amazon_listings(client: httpx.Client, cfg: dict) -> SourceResult:
 # Eightfold career sites (the public search and position-detail JSON the
 # site's own pages use) — Microsoft, Qualcomm
 # ---------------------------------------------------------------------------
-EIGHTFOLD_MAX_PAGES = 60
+EIGHTFOLD_MAX_PAGES = 100
+EIGHTFOLD_PAUSE_S = 0.3
 
 
 def eightfold_detail(client: httpx.Client, cfg: dict, position_id: str, location: str) -> Detail:
@@ -615,6 +622,7 @@ def eightfold_listings(client: httpx.Client, cfg: dict) -> SourceResult:
                 fetch_detail=lambda pid=pid, location=location: eightfold_detail(client, cfg, pid, location)))
         if isinstance(data.get("count"), int) and seen >= data["count"]:
             break
+        time.sleep(EIGHTFOLD_PAUSE_S)
     return SourceResult(listings, seen=seen)
 
 
@@ -622,7 +630,8 @@ def eightfold_listings(client: httpx.Client, cfg: dict) -> SourceResult:
 # SAP SuccessFactors career sites (server-rendered search + job page) — Deloitte
 # ---------------------------------------------------------------------------
 SF_PAGE = 25
-SF_MAX_PAGES = 40
+SF_MAX_PAGES = 120
+_SF_NO_RESULTS = "There are currently no"
 _SF_ROW_RE = re.compile(r'<tr class="data-row.*?</tr>', re.S)
 _SF_LINK_RE = re.compile(r'<a\s[^>]*href="(/job/[^"]+)"[^>]*>(.*?)</a>', re.S)
 _SF_LOCATION_RE = re.compile(r'class="jobLocation[^"]*">\s*(?:<span class="jobLocation">)?\s*([^<]+?)\s*<', re.S)
@@ -656,6 +665,8 @@ def successfactors_listings(client: httpx.Client, cfg: dict) -> SourceResult:
             raise SourceError(f"HTTP {r.status_code} from career site")
         rows = _SF_ROW_RE.findall(r.text)
         if page == 0 and not rows:
+            if _SF_NO_RESULTS in r.text:      # the page itself says it has none: healthy
+                return SourceResult([], seen=0)
             raise SourceError("job search page has no results — layout may have changed")
         m = _SF_TOTAL_RE.search(r.text)
         total = int(m.group(1).replace(",", "")) if m else total
@@ -669,7 +680,7 @@ def successfactors_listings(client: httpx.Client, cfg: dict) -> SourceResult:
             location = f"{location} | India" if location.endswith(", IN") else location
             if not title or not is_india(location):
                 continue
-            url = f"{host}{link.group(1)}"
+            url = f"{host}{html_lib.unescape(link.group(1))}"   # the page's href is HTML-encoded ("T&amp;T")
             listings.append(Listing(title=title, url=url, location=location, posting_evidence=True,
                                     fetch_detail=lambda url=url, location=location: successfactors_detail(client, url, location)))
         if not rows or (total is not None and (page + 1) * SF_PAGE >= total):
@@ -713,7 +724,8 @@ def infosys_listings(client: httpx.Client, cfg: dict) -> SourceResult:
 
 
 # ---------------------------------------------------------------------------
-# Google Careers (server-rendered results, Google's own early-career filter)
+# Google Careers (server-rendered results; every level is discovered, the
+# scanner's own filters decide afterwards)
 # ---------------------------------------------------------------------------
 GOOGLE_RESULTS = "https://www.google.com/about/careers/applications/jobs/results/"
 GOOGLE_MAX_PAGES = 10
@@ -741,7 +753,7 @@ def google_listings(client: httpx.Client, cfg: dict) -> SourceResult:
     listings, known = [], set()
     for page in range(1, GOOGLE_MAX_PAGES + 1):
         try:
-            r = client.get(GOOGLE_RESULTS, params={"location": place, "target_level": cfg.get("level", "EARLY"), "page": page})
+            r = client.get(GOOGLE_RESULTS, params={"location": place, "page": page})
         except httpx.HTTPError as e:
             raise SourceError(f"network error reading career site: {type(e).__name__}", "failing") from e
         if r.status_code in (429, 500, 502, 503, 504):
@@ -762,6 +774,222 @@ def google_listings(client: httpx.Client, cfg: dict) -> SourceResult:
         if not fresh:
             break
     return SourceResult(listings, seen=len(listings))
+
+
+# ---------------------------------------------------------------------------
+# Eightfold's older public API, for sites without the PCSX one — Netflix
+# ---------------------------------------------------------------------------
+def eightfold_v2_detail(client: httpx.Client, cfg: dict, position_id: str, location: str) -> Detail:
+    try:
+        data = _get_json(client, "GET", f"{cfg['host'].rstrip('/')}/api/apply/v2/jobs/{position_id}", params={"domain": cfg["domain"]})
+    except SourceError as e:
+        return Detail.unreadable(str(e))
+    description = html_to_text(str((data or {}).get("job_description") or "")) if isinstance(data, dict) else ""
+    if len(description) < _MIN_DESCRIPTION_CHARS:
+        return Detail.unreadable("empty job description")
+    return Detail(ok=True, description=description, location=location, posting_evidence=True, matched="eightfold position")
+
+
+def eightfold_v2_listings(client: httpx.Client, cfg: dict) -> SourceResult:
+    host = cfg["host"].rstrip("/")
+    listings, seen, known = [], 0, set()
+    for _ in range(EIGHTFOLD_MAX_PAGES):
+        data = _get_json(client, "GET", f"{host}/api/apply/v2/jobs", params={
+            "domain": cfg["domain"], "location": cfg.get("location", "India"), "num": 10, "start": seen})
+        positions = data.get("positions") if isinstance(data, dict) else None
+        if not isinstance(positions, list):
+            raise SourceError("job API changed shape (no 'positions' list)")
+        if not positions:
+            break
+        seen += len(positions)
+        for p in positions:
+            pid, title = str(p.get("id") or ""), str(p.get("name") or "").strip()
+            if not pid or not title or pid in known:
+                continue
+            known.add(pid)
+            location = " | ".join(str(x) for x in (p.get("locations") or [p.get("location") or ""]))
+            if not is_india(location):
+                continue
+            listings.append(Listing(
+                title=title, url=str(p.get("canonicalPositionUrl") or f"{host}/careers/job/{pid}"), location=location,
+                job_id=str(p.get("display_job_id") or pid), posting_evidence=True,
+                fetch_detail=lambda pid=pid, location=location: eightfold_v2_detail(client, cfg, pid, location)))
+        if isinstance(data.get("count"), int) and seen >= data["count"]:
+            break
+        time.sleep(EIGHTFOLD_PAUSE_S)
+    return SourceResult(listings, seen=seen)
+
+
+# ---------------------------------------------------------------------------
+# Oracle Recruiting Cloud (the REST API behind its career sites) — Oracle
+# ---------------------------------------------------------------------------
+ORACLE_PAGE = 50
+ORACLE_MAX_PAGES = 40
+_ORACLE_TEXT = ("ExternalDescriptionStr", "ExternalResponsibilitiesStr", "ExternalQualificationsStr", "CorporateDescriptionStr")
+
+
+def oracle_detail(client: httpx.Client, cfg: dict, job_id: str, location: str) -> Detail:
+    try:
+        data = _get_json(client, "GET", f"{cfg['api'].rstrip('/')}/recruitingCEJobRequisitionDetails",
+                         params={"onlyData": "true", "finder": f'ById;Id="{job_id}",siteNumber={cfg["site"]}'})
+    except SourceError as e:
+        return Detail.unreadable(str(e))
+    items = data.get("items") if isinstance(data, dict) else None
+    record = items[0] if isinstance(items, list) and items and isinstance(items[0], dict) else {}
+    description = "\n".join(html_to_text(str(record.get(k) or "")) for k in _ORACLE_TEXT).strip()
+    if len(description) < _MIN_DESCRIPTION_CHARS:
+        return Detail.unreadable("empty job description")
+    return Detail(ok=True, description=description, location=location, posting_evidence=True, matched="oracle requisition")
+
+
+def oracle_listings(client: httpx.Client, cfg: dict) -> SourceResult:
+    listings, seen, total = [], 0, None
+    for page in range(ORACLE_MAX_PAGES):
+        data = _get_json(client, "GET", f"{cfg['api'].rstrip('/')}/recruitingCEJobRequisitions", params={
+            "onlyData": "true", "expand": "requisitionList.secondaryLocations",
+            "finder": (f"findReqs;siteNumber={cfg['site']},limit={ORACLE_PAGE},offset={page * ORACLE_PAGE},"
+                       f"selectedLocationsFacet={cfg['location_facet']},sortBy=POSTING_DATES_DESC")})
+        items = data.get("items") if isinstance(data, dict) else None
+        record = items[0] if isinstance(items, list) and items and isinstance(items[0], dict) else None
+        rows = record.get("requisitionList") if record else None
+        if not isinstance(rows, list):
+            raise SourceError("job API changed shape (no 'requisitionList')")
+        total = record.get("TotalJobsCount", total)
+        for r in rows:
+            job_id, title = str(r.get("Id") or ""), str(r.get("Title") or "").strip()
+            if not job_id or not title:
+                continue
+            seen += 1
+            places = [str(r.get("PrimaryLocation") or "")] + [str(x.get("Name") or "") for x in r.get("secondaryLocations") or [] if isinstance(x, dict)]
+            location = " | ".join(p for p in places if p)
+            if not is_india(location):
+                continue
+            listings.append(Listing(
+                title=title, url=f"{cfg['job_page'].rstrip('/')}/{job_id}", location=location, job_id=job_id, posting_evidence=True,
+                fetch_detail=lambda job_id=job_id, location=location: oracle_detail(client, cfg, job_id, location)))
+        if not rows or (isinstance(total, int) and seen >= total):
+            break
+    return SourceResult(listings, seen=seen)
+
+
+# ---------------------------------------------------------------------------
+# IBM careers (the search API behind careers.ibm.com; a record carries the
+# job's text)
+# ---------------------------------------------------------------------------
+IBM_API = "https://www-api.ibm.com/search/api/v2"
+IBM_PAGE = 100
+IBM_MAX_PAGES = 40
+
+
+def ibm_listings(client: httpx.Client, cfg: dict) -> SourceResult:
+    listings, seen, total = [], 0, None
+    for page in range(IBM_MAX_PAGES):
+        data = _get_json(client, "POST", IBM_API, json={
+            "appId": "careers", "scopes": ["careers2"], "query": {"bool": {"must": []}},
+            "post_filter": {"term": {"field_keyword_05": cfg.get("country", "India")}},
+            "size": IBM_PAGE, "from": page * IBM_PAGE, "sort": [{"dcdate": "desc"}, {"_score": "desc"}],
+            "lang": "zz", "localeSelector": {}, "p": 1, "sm": {"query": "", "lang": "zz"},
+            "_source": ["title", "url", "body", "description", "field_keyword_19"]})
+        hits = data.get("hits") if isinstance(data, dict) else None
+        rows = hits.get("hits") if isinstance(hits, dict) else None
+        if not isinstance(rows, list):
+            raise SourceError("job API changed shape (no 'hits' list)")
+        count = hits.get("total")
+        total = count.get("value") if isinstance(count, dict) else count
+        for r in rows:
+            src = r.get("_source") if isinstance(r, dict) else None
+            if not isinstance(src, dict):
+                continue
+            seen += 1
+            title, url = str(src.get("title") or "").strip(), str(src.get("url") or "")
+            if not title or not url.startswith("https://"):
+                continue
+            place = str(src.get("field_keyword_19") or "")
+            location = f"{place} | India" if place.endswith(", IN") else place
+            description = html_to_text(str(src.get("body") or src.get("description") or ""))
+            detail = (Detail(ok=True, description=description, location=location, posting_evidence=True, matched="ibm record")
+                      if len(description) >= _MIN_DESCRIPTION_CHARS else Detail.unreadable("empty job description"))
+            listings.append(Listing(title=title, url=url, location=location, posting_evidence=True, detail=detail))
+        if not rows or (isinstance(total, int) and seen >= total):
+            break
+    return SourceResult(listings, seen=seen)
+
+
+# ---------------------------------------------------------------------------
+# A company's own XML job feed (<source><job>...) — ADP, ServiceNow
+# ---------------------------------------------------------------------------
+_FEED_JOB_RE = re.compile(r"<job>(.*?)</job>", re.S)
+
+
+def _feed_field(job: str, name: str) -> str:
+    m = re.search(rf"<{name}>(.*?)</{name}>", job, re.S)
+    if not m:
+        return ""
+    value = m.group(1).strip()
+    cdata = re.fullmatch(r"<!\[CDATA\[(.*)\]\]>", value, re.S)
+    return cdata.group(1).strip() if cdata else html_lib.unescape(value)
+
+
+def job_feed_listings(client: httpx.Client, cfg: dict) -> SourceResult:
+    try:
+        r = client.get(cfg["url"])
+    except httpx.TimeoutException as e:
+        raise SourceError("timeout reading the job feed", "failing") from e
+    except httpx.HTTPError as e:
+        raise SourceError(f"network error reading the job feed: {type(e).__name__}", "failing") from e
+    if r.status_code in (429, 500, 502, 503, 504):
+        raise SourceError(f"HTTP {r.status_code} from the job feed", "failing")
+    if r.status_code >= 400:
+        raise SourceError(f"HTTP {r.status_code} from the job feed")
+    text = r.text
+    # a page of something else, or a feed cut off part-way, is never "no jobs"
+    if "<source>" not in text[:1000] or not text.rstrip().endswith("</source>"):
+        raise SourceError("the job feed is incomplete or not a job feed")
+    jobs = _FEED_JOB_RE.findall(text)
+    listings = []
+    for job in jobs:
+        title, url = _feed_field(job, "title"), _feed_field(job, "url")
+        location = ", ".join(p for p in (_feed_field(job, k) for k in ("city", "state", "country")) if p)
+        if not title or not url.startswith("https://") or not is_india(location):
+            continue
+        description = html_to_text(_feed_field(job, "description"))
+        detail = (Detail(ok=True, description=description, location=location, posting_evidence=True, matched="company job feed")
+                  if len(description) >= _MIN_DESCRIPTION_CHARS else Detail.unreadable("empty job description"))
+        listings.append(Listing(title=title, url=url, location=location, job_id=_feed_field(job, "referencenumber"),
+                                posting_evidence=True, detail=detail))
+    return SourceResult(listings, seen=len(jobs))
+
+
+# ---------------------------------------------------------------------------
+# Swiggy (its own career site's job list; each entry links the public job page)
+# ---------------------------------------------------------------------------
+SWIGGY_JOBS = "https://careers.swiggy.in/api/jobs.json"
+
+
+def swiggy_detail(client: httpx.Client, url: str, location: str) -> Detail:
+    try:
+        data = _get_json(client, "GET", url)
+    except SourceError as e:
+        return Detail.unreadable(str(e))
+    description = html_to_text(str(data.get("content") or "")) if isinstance(data, dict) else ""
+    if len(description) < _MIN_DESCRIPTION_CHARS:
+        return Detail.unreadable("job description not found on the job page")
+    return Detail(ok=True, description=description, location=location, posting_evidence=True, matched="public job page")
+
+
+def swiggy_listings(client: httpx.Client, cfg: dict) -> SourceResult:
+    data = _get_json(client, "GET", cfg.get("url", SWIGGY_JOBS))
+    jobs = data.get("jobs") if isinstance(data, dict) else None
+    if not isinstance(jobs, list) or not isinstance(data.get("total"), int):
+        raise SourceError("job list changed shape (no 'jobs' list and total)")
+    listings = []
+    for j in jobs:
+        title, url, location = str(j.get("t") or "").strip(), str(j.get("u") or ""), str(j.get("l") or "")
+        if not title or not url.startswith("https://") or not is_india(location):
+            continue
+        listings.append(Listing(title=title, url=url, location=location, posting_evidence=True,
+                                fetch_detail=lambda url=url, location=location: swiggy_detail(client, url, location)))
+    return SourceResult(listings, seen=len(jobs))
 
 
 # ---------------------------------------------------------------------------
@@ -790,4 +1018,14 @@ def read_source(client: httpx.Client, cfg: dict) -> SourceResult:
         return infosys_listings(client, cfg)
     if kind == "google":
         return google_listings(client, cfg)
+    if kind == "eightfold_v2":
+        return eightfold_v2_listings(client, cfg)
+    if kind == "oracle":
+        return oracle_listings(client, cfg)
+    if kind == "ibm":
+        return ibm_listings(client, cfg)
+    if kind == "job_feed":
+        return job_feed_listings(client, cfg)
+    if kind == "swiggy":
+        return swiggy_listings(client, cfg)
     raise SourceError(f"unknown source type {kind!r}", "needs_config")

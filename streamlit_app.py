@@ -104,6 +104,7 @@ from config_store import (
     friendly_github_error,
     in_shared_alerts,
     job_key,
+    monitoring_state,
     shared_alert_pending,
     shared_tailoring,
     update_json,
@@ -3923,11 +3924,16 @@ NEXT_SCAN_NOTE = "Overdue — GitHub may start it later" if SCAN_DUE else "GitHu
 
 
 # scraper status -> label; all of them use the red "failing" style/counts
-_UNHEALTHY = {"failing": "Failing", "broken": "Broken", "needs_config": "Needs configuration"}
+# (the scan keeps trying the source, and the status recovers by itself)
+_UNHEALTHY = {"failing": "Monitoring blocked", "broken": "Monitoring blocked", "needs_config": "Monitoring blocked"}
+_NO_SOURCE_LABELS = {"blocked": "Monitoring blocked", "pending": "Pending source"}
 
 
 def portal_status(c: dict) -> tuple[str, str]:
-    """(css key, label) from the scraper's own status + last_checked."""
+    """(css key, label) from the scraper's own status + last_checked. Having
+    no suitable jobs today is never a status."""
+    if monitoring_state(c):                  # no usable source yet: not scanned, so not a failure either
+        return "pending", _NO_SOURCE_LABELS[monitoring_state(c)]
     checked = _parse_iso(c.get("last_checked", ""))
     if (_check_trigger and time.time() - _check_trigger < 1200 and c.get("status") not in _UNHEALTHY
             and (checked is None or checked.timestamp() < _check_trigger)):
@@ -3938,7 +3944,7 @@ def portal_status(c: dict) -> tuple[str, str]:
         return "pending", "Pending"
     if NOW - checked > timedelta(hours=_STALE_H):
         return "delayed", "Delayed"
-    return "healthy", "Healthy"
+    return "healthy", "Active monitoring"
 
 
 statuses = {c.get("id"): portal_status(c) for c in companies}
@@ -5583,7 +5589,7 @@ def page_monitoring():
         since = f" · last succeeded {_ago(ok_at, NOW)}" if ok_at else ""
         note = {"failing": f'{reason or "Last scan failed"}{since} — <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">see log</a>',
                 "delayed": f"No scan for over {_STALE_H} hours",
-                "pending": "Not scanned yet — added since the last run",
+                "pending": reason if monitoring_state(c) and reason else "Not scanned yet — added since the last run",
                 "checking": "Check requested"}.get(k, escape(c.get("scan_note") or "") or "—")
         rows.append(f"""<tr>
           <td class="c"><div class="mon-co">{_avatar(c.get('name') or '', "sm")}<div style="min-width:0;">{escape((c.get('name') or '').strip() or 'Unnamed')}
@@ -5600,11 +5606,10 @@ def page_monitoring():
         st.html('<table class="mon"><thead><tr><th>Company</th><th>Status</th><th>Last checked</th><th>Active jobs</th>'
                 '<th>Scraper</th><th>Notes</th></tr></thead><tbody>' + "".join(rows) + "</tbody></table>")
     email_tailoring_card()
-    st.html(f'<div class="legend">{_ms("info", "s20")}<p class="note">Statuses come from the scraper: <b>Healthy</b> = scanned successfully in the last {_STALE_H} hours · '
-            f'<b>Delayed</b> = no successful scan for {_STALE_H}+ hours · <b>Failing</b> = the last scan partly failed '
-            f'(errors, rate limits or unreadable job pages) · <b>Broken</b> = the job list could not be read (blocked, HTTP error, '
-            f'site changed) · <b>Needs configuration</b> = the URL shows no job postings · '
-            f'<b>Pending</b> = not scanned yet. Full run logs: <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">GitHub Actions</a>.</p></div>')
+    st.html(f'<div class="legend">{_ms("info", "s20")}<p class="note">Statuses come from the scraper: <b>Active monitoring</b> = scanned successfully in the last {_STALE_H} hours, whatever jobs it has today · '
+            f'<b>Delayed</b> = no successful scan for {_STALE_H}+ hours · <b>Monitoring blocked</b> = the source could not be read '
+            f'(rate limits, errors, a block or a changed site); the scan keeps trying and it recovers by itself · '
+            f'<b>Pending source</b> = no reliable source yet · <b>Pending</b> = not scanned yet. Full run logs: <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">GitHub Actions</a>.</p></div>')
 
 
 def _save_my_alerts(prefs: dict) -> None:
