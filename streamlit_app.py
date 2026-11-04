@@ -1455,6 +1455,10 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 
 /* ── account menu, top right ── */
 .st-key-acct_bar { flex-direction: row !important; justify-content: flex-end; margin-bottom: -8px; position: relative; z-index: 6; }
+/* Streamlit removes what the signed-in page drew only when the login page's
+   run FINISHES (seconds, on Community Cloud): until then, neither the bar nor
+   the open menu shows next to the sign-in form */
+body:has(.st-key-login_card) :is(.st-key-acct_bar, [data-testid="stPopoverBody"]:has(.st-key-btn_account_sign_out)) { display: none !important; }
 .st-key-acct_bar > div { width: auto !important; flex: 0 0 auto !important; }
 /* the menu button (laptops and desktops) opens / closes the left navigation:
    at the left of the top bar, an icon; its label stays for screen readers */
@@ -1736,6 +1740,9 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 .jt-skel .row i { height: 112px; } .jt-skel .line { height: 92px; }
 .jt-skel p { margin: 0; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
 .jt-skel p .ms { animation: jt-spin 1.2s linear infinite; color: var(--accent-text); }
+/* the sign-in check's way out: faded in after the moment a normal check takes */
+.st-key-probe_way_out { margin-top: 14px; animation: jt-fade .25s ease-out 8s both; }
+.probe-slow { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
 @media (max-width: 767px) { .jt-skel .row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (prefers-reduced-motion: reduce) {
   /* the bar appears (still after the pause) but stays still: a full, soft line */
@@ -2683,7 +2690,15 @@ def _browser_session_token() -> str | None:
     with st.container(key="jt_auth_probe"):
         import session_probe              # assets/session_probe: reads jt_session in the browser (see the module)
         value = session_probe.probe(key="jt_session_probe", default=None)
+    if value is None and st.session_state.get("_probe_skipped"):
+        return ""                         # the person went on to sign in; a late report still counts (it is checked as usual)
     return value if value is None or isinstance(value, str) else ""
+
+
+def _probe_continue() -> None:
+    """The way out of "Checking your sign-in…" when the browser never reports
+    (its frame didn't load): on to the login page. Grants nothing."""
+    st.session_state._probe_skipped = True
 
 
 def _known_session_token() -> str:
@@ -3370,6 +3385,13 @@ if AUTH_GATE:
         # reload): not the login page yet — the report runs the app again
         st.html(f'<div class="jt-skel" role="status" aria-live="polite"><p>{_ms("progress_activity", "s16")}'
                 'Checking your sign-in…</p></div>')
+        # the report may never come (the frame can fail to load), and nothing
+        # would run the app again: revealed after a moment by CSS alone, so it
+        # needs neither the frame nor a timer
+        with st.container(key="probe_way_out"):
+            st.html('<p class="probe-slow">This is taking longer than usual. Continue to the sign-in page, '
+                    'or refresh the page to try again.</p>')
+            st.button("Continue to sign in", key="btn_probe_continue", on_click=_probe_continue)
         st.stop()
     if ACCOUNT is None:
         render_login_page()
@@ -4342,6 +4364,17 @@ def _menu_go(page: str, **extra) -> None:
     st.session_state._acct_menu_n = st.session_state.get("_acct_menu_n", 0) + 1
 
 
+def _menu_sign_out() -> None:
+    """Sign out, as the button's callback: it runs before the page is drawn,
+    so the run the click starts never draws this account's menu again. Done
+    in the page's body, the menu was redrawn first and st.rerun() then threw
+    away the not-yet-sent message removing it: the open menu, with the name
+    and email, stayed on the login page and the next account's pages until
+    the browser reloaded (found 4 Nov 2026). For a Google sign-in this also
+    sends the browser to Streamlit's sign-out, which then reloads the page."""
+    account_sign_out()
+
+
 def account_menu() -> None:
     """Who is signed in, and their own destinations: an initial avatar, the
     FIRST name and — for admins only — an ADMIN badge (the full name and
@@ -4357,12 +4390,7 @@ def account_menu() -> None:
                 'inset 0 0 0 1px rgba(15,23,42,.10), 0 0 0 2px var(--surface), 0 0 0 3.5px var(--av-ring), var(--av-drop); }</style>')
     else:
         st.html(f'<style>{trigger} {{ content: "{_me_initial()}"; }}</style>')
-    # in a placeholder, so Sign out can take the bar off the page at once:
-    # Streamlit removes what an earlier run drew only when the next run
-    # FINISHES, and until the login page's run did, the open menu stayed on
-    # top of the sign-in form (seconds, on Community Cloud)
-    bar = st.empty()
-    with bar.container(key="acct_bar"):
+    with st.container(key="acct_bar"):
         nav_controls()
         # a new key after an item is chosen: the next page draws the menu closed
         # (no extra round trip — the popover's own state isn't tracked)
@@ -4380,12 +4408,8 @@ def account_menu() -> None:
                 st.button(text, key=f"acct_{dest}", icon=icon, type="tertiary", use_container_width=True,
                           on_click=_menu_go, args=(dest,), kwargs=kw)
             st.html('<div class="acct-sep"></div>')
-            if st.button("Sign out", key="btn_account_sign_out", icon=":material/logout:", type="tertiary",
-                         use_container_width=True):
-                bar.empty()              # the menu, its button and the name badge leave the page now
-                if not account_sign_out():
-                    st.rerun()
-                st.stop()
+            st.button("Sign out", key="btn_account_sign_out", icon=":material/logout:", type="tertiary",
+                      use_container_width=True, on_click=_menu_sign_out)
             if can_delete_account():
                 st.html('<div class="acct-sep"></div>')
                 st.button("Delete account", key="btn_account_delete", icon=":material/delete_forever:", type="tertiary",

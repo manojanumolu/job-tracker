@@ -141,3 +141,65 @@ def test_without_a_session_the_login_page_follows_the_probes_report(app, google_
     at.session_state["jt_session_probe"] = ""                # the browser holds no jt_session
     at.run()
     assert not at.exception and _login_page(at)
+
+
+# ---------------------------------------------------------------------------
+# the browser never reports (the probe's frame failed to load): 4 Nov 2026
+# ---------------------------------------------------------------------------
+
+def _way_out(at):
+    return [b for b in at.button if b.key == "btn_probe_continue"]
+
+
+def test_waiting_for_the_probe_always_offers_a_way_out(app, google_env, store, jar, browser):
+    """Nothing runs the app again if the report never comes: the wait must
+    carry its own exit, or the gate is an endless spinner."""
+    at = app([], secrets=GATED, owner=False)
+    assert not at.exception, at.exception
+    assert "Checking your sign-in" in _html(at)
+    assert not _login_page(at)
+    assert _way_out(at)
+
+
+def test_the_way_out_leads_to_the_login_page_and_grants_nothing(app, google_env, store, jar, browser):
+    u = _ready(store, A_UID, A_MAIL)
+    u.start_session(A_MAIL, "", True)                      # a real session exists, but the browser never said so
+    at = app([], secrets=GATED, owner=False)
+    _way_out(at)[0].click().run()
+    assert not at.exception, at.exception
+    assert _login_page(at), _html(at)[-300:]
+    assert "Checking your sign-in" not in _html(at)
+    assert ACCOUNT_KEY not in at.session_state
+    assert not _way_out(at)
+    at.run()                                               # and it stays that way on the next run
+    assert not at.exception and _login_page(at) and ACCOUNT_KEY not in at.session_state
+
+
+def test_a_report_after_the_way_out_still_restores_the_session(app, google_env, store, jar, browser):
+    u = _ready(store, A_UID, A_MAIL)
+    cookie, _ = u.start_session(A_MAIL, "", True)
+    at = app([], secrets=GATED, owner=False)
+    _way_out(at)[0].click().run()
+    at.session_state["jt_session_probe"] = cookie          # the slow frame reports at last
+    at.run()
+    assert not at.exception, at.exception
+    assert not _login_page(at), _html(at)[-300:]
+    assert at.session_state[ACCOUNT_KEY]["uid"] == A_UID
+
+
+def test_a_made_up_report_after_the_way_out_is_refused(app, google_env, store, jar, browser):
+    _ready(store, A_UID, A_MAIL)
+    at = app([], secrets=GATED, owner=False)
+    _way_out(at)[0].click().run()
+    at.session_state["jt_session_probe"] = f"{A_UID}.not-the-real-token"   # the UID alone proves nothing
+    at.run()
+    assert not at.exception, at.exception
+    assert _login_page(at) and ACCOUNT_KEY not in at.session_state
+
+
+def test_the_way_out_is_revealed_by_css_alone_after_a_delay():
+    """No timer or frame is needed for it to appear, and a normal check (about
+    a second) never shows it. It is a CSS rule: a browser without it still
+    gets a usable button, never a hidden one."""
+    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    assert ".st-key-probe_way_out { margin-top: 14px; animation: jt-fade .25s ease-out 8s both; }" in src
