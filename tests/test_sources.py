@@ -338,8 +338,8 @@ def test_every_configured_company_has_a_real_source():
     import json as _json
     from pathlib import Path
     companies = _json.loads((Path(__file__).parent.parent / "data" / "companies.json").read_text(encoding="utf-8"))
-    for c in companies:
-        assert scraper.sources_for(c), f"{c['name']} has no verified job source"
+    for c in companies:                   # or says it has none yet, and why (it is then not scanned)
+        assert scraper.sources_for(c) or (c.get("monitoring") in ("blocked", "pending") and c.get("status_reason")),             f"{c['name']} has no verified job source"
 
 
 def test_workday_url_is_detected_for_user_added_companies():

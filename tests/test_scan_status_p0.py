@@ -188,17 +188,23 @@ def test_a_failed_scrape_publishes_nothing():
 def _stamp(tmp_path, ago: timedelta, status="active"):
     now = datetime.now(timezone.utc)
     companies = json.loads((REPO / "data" / "companies.json").read_text("utf-8"))
-    for i, c in enumerate(companies):
+    for i, c in enumerate(_scanned(companies)):
         c["status"] = status
         c["last_checked"] = (now - ago - timedelta(seconds=10 * i)).isoformat()
     (tmp_path / "data" / "companies.json").write_text(json.dumps(companies))
     return len(_own(companies))
 
 
+def _scanned(companies):
+    """Companies without a usable source yet aren't scanned, so never healthy."""
+    return [c for c in companies if not c.get("monitoring")]
+
+
 def _own(companies):
-    """The companies the primary admin (the owner here) monitors: the shared
-    alerts' (another admin's own companies aren't on their Home, Nov 2026)."""
-    return [c for c in companies if c.get("shared_alerts") is not False]
+    """The companies the primary admin (the owner here) monitors and the scan
+    reads: the shared alerts' (another admin's own companies aren't on their
+    Home, Nov 2026)."""
+    return [c for c in _scanned(companies) if c.get("shared_alerts") is not False]
 
 
 def _overall(html):
@@ -229,7 +235,7 @@ def test_a_recent_scan_is_healthy(app, tmp_path):
 def test_portal_counts_follow_each_portals_own_result(app, tmp_path):
     now = datetime.now(timezone.utc)
     companies = json.loads((REPO / "data" / "companies.json").read_text("utf-8"))
-    for c in companies:
+    for c in _scanned(companies):
         c["status"], c["last_checked"] = "active", (now - timedelta(minutes=20)).isoformat()
     _own(companies)[0]["status"] = "failing"
     (tmp_path / "data" / "companies.json").write_text(json.dumps(companies))

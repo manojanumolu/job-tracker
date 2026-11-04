@@ -10,6 +10,7 @@ from urllib.parse import urldefrag, urljoin, urlparse
 
 import httpx
 
+from config_store import monitoring_state
 from identity import ats_job_id, canonical_url, job_uid, same_page
 from job_classifier import (
     Category, Classification, classify_job, evidence_is_applicant_directed, evidence_quote, experience_conflict,
@@ -56,12 +57,31 @@ COMPANY_SOURCES: dict[str, list[dict]] = {
     "metlife": [{"type": "avature", "search": "https://www.metlifecareers.com/en_US/ml/SearchJobs"}],
     # NPCI (added from the app as "npcl")
     "c1783687965": [{"type": "zoho", "page": "https://careers.npci.org.in/jobs/Careers"}],
+    # Employers added Nov 2026, each from its official source, checked live.
+    # They are monitored whatever they are hiring for today.
+    "amazon": [{"type": "amazon", "country_code": "IND"}],
+    "microsoft": [{"type": "eightfold", "host": "https://apply.careers.microsoft.com", "domain": "microsoft.com", "location": "India"}],
+    "qualcomm": [{"type": "eightfold", "host": "https://careers.qualcomm.com", "domain": "qualcomm.com", "location": "India"}],
+    "google": [{"type": "google", "location": "Hyderabad, India"}],
+    "deloitte": [{"type": "successfactors", "host": "https://southasiacareers.deloitte.com", "location": "India"}],
+    "infosys": [{"type": "infosys", "location": "Hyderabad"}],
+    "amd": [{"type": "jibe", "host": "https://careers.amd.com"}],
+    "netflix": [{"type": "eightfold_v2", "host": "https://explore.jobs.netflix.net", "domain": "netflix.com", "location": "India"}],
+    "oracle": [{"type": "oracle", "api": "https://eeho.fa.us2.oraclecloud.com/hcmRestApi/resources/latest", "site": "CX_45001",
+                "location_facet": "300000000106947", "job_page": "https://careers.oracle.com/en/sites/jobsearch/job"}],
+    "ibm": [{"type": "ibm", "country": "India"}],
+    "adp": [{"type": "job_feed", "url": "https://jobs.adp.com/en/jobs/xml/"}],
+    "servicenow": [{"type": "job_feed", "url": "https://careers.servicenow.com/jobs/xml/"}],
+    "swiggy": [{"type": "swiggy"}],
 }
 # kept for callers that only need "which companies use an API"
 COMPANY_API = {cid: {"type": cfgs[0]["type"], **cfgs[0]} for cid, cfgs in COMPANY_SOURCES.items()}
 
 _SOURCE_LABELS = {"workday": "Workday API", "accenture": "Accenture job-search API", "jibe": "Jibe/iCIMS API",
-                  "avature": "Avature job search", "zoho": "Zoho Recruit career site"}
+                  "avature": "Avature job search", "zoho": "Zoho Recruit career site", "amazon": "Amazon jobs API",
+                  "eightfold": "Eightfold API", "successfactors": "SuccessFactors career site", "infosys": "Infosys jobs API",
+                  "google": "Google Careers site", "eightfold_v2": "Eightfold API", "oracle": "Oracle Recruiting API",
+                  "ibm": "IBM careers API", "job_feed": "Official job feed", "swiggy": "Swiggy careers site"}
 
 
 def sources_for(company: dict) -> list[dict]:
@@ -74,6 +94,8 @@ def sources_for(company: dict) -> list[dict]:
 
 
 def source_label(company: dict) -> str:
+    if monitoring_state(company):
+        return "Not scanned: no usable source yet"
     srcs = sources_for(company)
     if not srcs:
         return "Playwright (headless browser)"
@@ -819,8 +841,9 @@ def run_all() -> list[dict]:
     new_jobs: list[dict] = []
     started_at = _now_iso()
     jobs_found = portals_failed = 0
+    scanned = [c for c in companies if not monitoring_state(c)]   # the others have no usable source yet: left as they are
 
-    for company in companies:
+    for company in scanned:
         scan = scan_company(company)
         jobs_found += len(scan.jobs)
         portals_failed += scan.status != "active"
@@ -846,8 +869,8 @@ def run_all() -> list[dict]:
     # done, so it always describes a completed scan. Read by the admin's
     # Settings → Scan details (scan_schedule.latest_run).
     run = {"started_at": started_at, "finished_at": _now_iso(), "jobs_found": jobs_found,
-           "new_jobs": len(new_jobs), "portals": len(companies), "portals_failed": portals_failed}
-    for company in companies:
+           "new_jobs": len(new_jobs), "portals": len(scanned), "portals_failed": portals_failed}
+    for company in scanned:
         company["scan"]["run"] = dict(run)
 
     # commit=False: alerts.py publishes the data (merge-safe) before and

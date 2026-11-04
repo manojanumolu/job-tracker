@@ -233,6 +233,18 @@ def alert_pending(job: dict) -> bool:
 # scanner), shown and followable, but its jobs never reach the shared
 # email. Absent means included — every company from before Oct 2026 is.
 
+# A company kept in the catalogue that has no usable job source yet: it stays
+# listed and isn't scanned. Whether a company has suitable jobs today is never
+# a monitoring state. (A configured source that stops working isn't one either:
+# the scan keeps trying it and its status recovers by itself.)
+MONITORING_BLOCKED, MONITORING_PENDING = "blocked", "pending"
+
+
+def monitoring_state(company: dict) -> str:
+    value = company.get("monitoring") if isinstance(company, dict) else ""
+    return value if value in (MONITORING_BLOCKED, MONITORING_PENDING) else ""
+
+
 def in_shared_alerts(company: dict) -> bool:
     return not (isinstance(company, dict) and company.get("shared_alerts") is False)
 

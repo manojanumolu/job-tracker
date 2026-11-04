@@ -27,7 +27,7 @@ def test_gap_within_real_github_cadence_is_not_delayed(app):
                          "last_checked": (NOW - timedelta(hours=8, minutes=30)).isoformat()}])
     _nav(at, "monitoring")
     html = _html(at)
-    assert "<i></i>Healthy</span>" in html and "Delayed</span>" not in html
+    assert "<i></i>Active monitoring</span>" in html and "Delayed</span>" not in html
     assert "Scans delayed" not in html
 
 
