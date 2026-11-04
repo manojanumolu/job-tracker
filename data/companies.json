@@ -844,5 +844,59 @@
       }
     },
     "source": "Workday API"
+  },
+  {
+    "id": "amazon",
+    "name": "Amazon",
+    "url": "https://www.amazon.jobs/en/search?loc_query=Hyderabad&country=IND",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "microsoft",
+    "name": "Microsoft",
+    "url": "https://apply.careers.microsoft.com/careers?domain=microsoft.com&location=Hyderabad",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "google",
+    "name": "Google",
+    "url": "https://www.google.com/about/careers/applications/jobs/results/?location=Hyderabad%2C%20India&target_level=EARLY",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "infosys",
+    "name": "Infosys",
+    "url": "https://career.infosys.com/joblist",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "deloitte",
+    "name": "Deloitte",
+    "url": "https://southasiacareers.deloitte.com/search/?locationsearch=Hyderabad",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "qualcomm",
+    "name": "Qualcomm",
+    "url": "https://careers.qualcomm.com/careers?domain=qualcomm.com&location=Hyderabad",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
   }
 ]
