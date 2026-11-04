@@ -898,5 +898,122 @@
     "status": "unknown",
     "last_job": "",
     "last_checked": ""
+  },
+  {
+    "id": "cisco",
+    "name": "Cisco",
+    "url": "https://cisco.wd5.myworkdayjobs.com/Cisco_Careers",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "jiohotstar",
+    "name": "JioHotstar (JioStar)",
+    "url": "https://jiostar.wd102.myworkdayjobs.com/JioStar",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "amd",
+    "name": "AMD",
+    "url": "https://careers.amd.com/careers-home/jobs",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "netflix",
+    "name": "Netflix",
+    "url": "https://explore.jobs.netflix.net/careers?location=India",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "oracle",
+    "name": "Oracle",
+    "url": "https://careers.oracle.com/en/sites/jobsearch/jobs",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "ibm",
+    "name": "IBM",
+    "url": "https://www.ibm.com/careers/search",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "adp",
+    "name": "ADP",
+    "url": "https://jobs.adp.com/en/jobs/",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "servicenow",
+    "name": "ServiceNow",
+    "url": "https://careers.servicenow.com/jobs/",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "swiggy",
+    "name": "Swiggy",
+    "url": "https://careers.swiggy.in/explore-jobs",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": ""
+  },
+  {
+    "id": "uber",
+    "name": "Uber",
+    "url": "https://jobs.uber.com/en/jobs/",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": "",
+    "monitoring": "pending",
+    "monitoring_checked": "2026-11-04",
+    "status_reason": "No reliable source yet: the jobs page has no readable job links. Its job sitemap is still to be checked."
+  },
+  {
+    "id": "tcs",
+    "name": "TCS",
+    "url": "https://www.tcs.com/careers",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": "",
+    "monitoring": "blocked",
+    "monitoring_checked": "2026-11-04",
+    "status_reason": "The careers site answers Access Denied to the scanner, and no official job feed has been found."
+  },
+  {
+    "id": "zepto",
+    "name": "Zepto",
+    "url": "https://www.zepto.com/careers",
+    "locked": false,
+    "status": "unknown",
+    "last_job": "",
+    "last_checked": "",
+    "monitoring": "blocked",
+    "monitoring_checked": "2026-11-04",
+    "status_reason": "The careers site answers with a bot challenge, and no official job feed has been found."
   }
 ]
