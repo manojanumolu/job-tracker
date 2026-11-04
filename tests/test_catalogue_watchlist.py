@@ -299,3 +299,42 @@ def test_a_lasting_rate_limit_is_a_failure_never_zero_jobs(monkeypatch):
     with pytest.raises(sources.SourceError):
         sources.eightfold_listings(_client(handler), {"host": "https://x.example", "domain": "x"})
     assert len(calls) == 3                                     # a few polite tries, not a hammering
+
+
+# ── one vacancy excluded by the owner, by data alone ──────────────
+
+GOOGLE_RESULTS = "https://www.google.com/about/careers/applications/jobs/results/"
+GATE = {"real_job_posting": True, "india_location": True, "detail_read": True, "detail_is_this_job": True, "no_conflicting_experience": True,
+        "not_programme_story_talent_recruiter": True, "evidence_not_staff_context": True, "fresher_or_entry_evidence": True}
+
+
+def _job(company, url, title, location="Hyderabad, Telangana, India"):
+    return {"title": title, "url": url, "company": company, "location": location, "category": "ENTRY_LEVEL", "reason": "r", "evidence": {"checks": dict(GATE)}}
+
+
+def _saved():
+    return json.loads((REPO / "data" / "seen_jobs.json").read_text("utf-8"))
+
+
+def test_the_excluded_vacancy_is_known_and_can_never_be_emailed():
+    seen = _saved()
+    record = next(j for j in seen if "107018346561446598" in j["url"])
+    assert record["dismissed"] and not config_store.alert_pending(record) and not job_filters.passes_global_gate(record)
+    assert record not in config_store.visible_jobs(seen)
+    title = "Software Engineer, PhD, Early Career, 2026"
+    for posting in ("107018346561446598", "108281679147082438"):      # and the same vacancy under its second ID
+        assert scraper.merge_new_jobs(seen, [_job("Google", f"{GOOGLE_RESULTS}{posting}-software-engineer-phd-early-career-2026", title)], company_id="google") == []
+
+
+def test_the_exclusion_is_that_one_vacancy_not_a_phd_filter():
+    from job_classifier import classify_job
+    seen, tailoring = _saved(), {"locations": ["Hyderabad"], "job_families": ["Software engineering"]}
+    other_phd = _job("Google", f"{GOOGLE_RESULTS}222222222222222222-research-engineer-phd", "Software Engineer, PhD, Systems")
+    other = _job("Google", f"{GOOGLE_RESULTS}111111111111111111-software-engineer-early-career", "Software Engineer, Early Career, 2026")
+    qualcomm = _job("Qualcomm", "https://careers.qualcomm.com/careers/job/446719784235", "2027 Campus Hire_Associate Engineer_SW")
+    for job, cid in ((other_phd, "google"), (other, "google"), (qualcomm, "qualcomm")):
+        new = scraper.merge_new_jobs(seen, [job], company_id=cid)
+        assert len(new) == 1 and config_store.shared_alert_pending(new[0], frozenset(), tailoring)
+    assert classify_job("Software Engineer, PhD, Early Career, 2026", "Build distributed systems.", url=GOOGLE_RESULTS + "1", posting_evidence=True).accepted
+    for name in ("job_classifier.py", "job_filters.py", "alerts.py"):
+        assert "107018346561446598" not in (REPO / "src" / name).read_text("utf-8")
