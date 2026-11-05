@@ -360,6 +360,102 @@
       "hint": "eefd62f471be8b43",
       "checked_at": "2026-11-04T18:20:13+00:00",
       "finder": 2
+    },
+    "amazon": {
+      "status": "ok",
+      "domain": "amazon.jobs",
+      "page": "https://www.amazon.jobs/en/",
+      "web": {
+        "mime": "image/png",
+        "data": "iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAERklEQVR42s1az2sTQRRe2O1fkGPTngriQai9eVHoj5MXC0nvCrb3Cv0DRHu2tBV6Ki1Icmi19aKgSYWeWlPqpZgoqAcTsCANqRX0kHG+3R072c7M7sw2u3nwyJLsZt733vvee7O7liUQQshtqqtUD0n6UqG6QnXCChN60jWqe6R3ZZfqkKXw+inpfWlSvRU0fpjq7zj/WqvVyOLSEslPTblqOw5x+vpcHZuYcL/D75VK5bJAXGHG23FyfWl5mQxfv+4aavvqCNTmPnH+1vZ27HRiAHKmHmeGOwLDZUB4zeXzpNVqxQExCgBFE+P7Bwa0jJVFZJym1+mpMfWeAsBPnSsajQbJDg5qG9xhPOUHn27ghqF8sXSvmJubi2W8SBFNQ/lj6XpfSVDqWUZQVBsovJvl0k2mptVJC8Da2poSAKIj44wIBM8d0zTSApCjtVxkBBQGqsgIcCqyJwJgkdZ8mQHTMzPqa6mBqqoli96lAmACT/M5DkWaqKRcLitLKjp1YgCMRkoK1haQnoHoGQCIBB+ZnD8b8V1bpKkBQGldX193xwLjxpYGAMwwoqamGubsXokAUqRf0ZzsiN/xwBDBRADIqonKu+DB2Pi48vxEALiDHPW8KB2CFaVUKnU0toODA2VkEkkh2SDHjAA4GC4SAEi1CoG0dggZUY1UndhW7NK6DgATpoq02ZCRmAdgS3jSVQD8LGOSAmH7iK5H4P70tNqDIVUk9U6c90fp4HbQ4fa2MnmxtRWpI9fr9e4BeDw/HzoOiHZVIH/Yjow54xFdIzUOsDLKg8BxMHXCRgrdrWVkAJgyow5nQY/bGveOhkdGutfI+DtwjsGNrCjX6N6h0AKALhvFeFmaoNHBw7LzMC/p3qnTHuaCZJbNRHZgxEAlUqUi9tQmtxmNxml4MhtxnEaHxRCoKqumG/pYGxpMmu5OjBrI9gZspEDPQEmsVqvKsRznqeYn8mPf02Oqv+oRADTpgt+ep/v44vg9Ibv3CClYnhZ9xXGzGgLgpOqdXL5DyFk9eeOxPgzdmaQg7hJy9ISQ/dlzMAAXmkLf3xCymfGA7M1KQ5eoABAAnDUicgChAgiGPEkgf1ue57E+ogDBMVSLxAjn65v/QbQLfmp93fQWuWypv+1MF2QA1mJptf9Aenv9WOkN/CkjEU+qHQrmaEGYl5HzHQYiutS7bf7/4W0Agnxa9b4TZ8BnAHgWuhjjRcHqjEiRW/TlVQ/Uh4ceMKRBhy54KYEoFgPX88duAWl05j+uVzximoyem9SIjcx5FIqBMhc0JvB7W1Qa2SccICrhau6NsieVFW2SbWQuGlxQGFwQAIWCZ2a9pxR8xaBpTLzNzIVItAsSo4u+0XBCs2rc7kjwlQOEg8R51eDko8cVlu8Ahnw+9DlRW/UIH7+C4anqDdn7EkNU35HelVdUB6O8tYId+orPjTRfAGn6NiyS4AsevvwDJtQO+S2GHKMAAAAASUVORK5CYII=",
+        "w": 48,
+        "h": 48,
+        "src": "https://static.amazon.jobs/assets/favicon-933ee4605ae64f3181e0fcd88f9205be7b5f8a15643c342e53a9f03bb673732c.ico",
+        "kind": "icon"
+      },
+      "email": "web",
+      "hint": "edf7b7cecfc4b7b0",
+      "checked_at": "2026-11-05T09:48:52+00:00",
+      "finder": 2
+    },
+    "microsoft": {
+      "status": "ok",
+      "domain": "microsoft.com",
+      "page": "https://www.microsoft.com/en-us",
+      "web": {
+        "mime": "image/jpeg",
+        "data": "/9j/4AAQSkZJRgABAQEASABIAAD/2wCEAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx4BBQUFBwYHDggIDh4UERQeHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHv/AABEIADkAOQMBEQACEQEDEQH/xACQAAEBAQEBAQAAAAAAAAAAAAAABwYDBAUQAAEBBQQKAQUAAAAAAAAAAAAFAQIDBAcGFjd1FSFVVpGTscHT4xESEzFCUQEBAQEAAwEBAAAAAAAAAAAAAAcIBQYJAgMRAAECAQQRBQADAAAAAAAAAAABAgMEB1JyBQYSFhcxMjRUgpGSobKz0dMRISI1sUFCcf/aAAwDAQACEQMRAD8A85LzRAAABWbEYB2gzN3rLnIyn6CPWT9YSScDPG1E5nGMJyTwAAAAGZO6mngAACs2IwDtBmbvWXORlP0Eesn6wkk4GeNqJzOMYTkngAAAAMyd1NPAAAFZsRgHaDM3esucjKfoI9ZP1hJJwM8bUTmcYwnJPAAAAAarQlF97lrlPeA0Dg8lFF28w7NhmgU2bkQaEovvctcp7wDB5KKLt5gwzQKbNyINCUX3uWuU94Bg8lFF28wYZoFNm5EN3ZVKsO/TdSkElYn5hFizjHpiYfdayI5EZ9pv0s+YbNWpz9W/luv+cXZywsnsRY+JAl6qyGvoqr7KuNETEi/ynpiPwfZ6+2IkWD6KqfH2RUxfL+3+nyro0726rcPUTy5tU0p+xfGfd7krocW9xdGne3Vbh6hc2qaU/YvjF7krocW9xdGne3Vbh6hc2qaU/YvjF7krocW9xdGne3Vbh6hc2qaU/YvjF7krocW9yFmwzMwAABZ6U4NrOZ9oBFJ4cwiVWdQtk1WRru5EOJlwuIAAAAI8ehxiIAAAs9KcG1nM+0Aik8OYRKrOoWyarI13ciHEy4XEAAAAEePQ4xEAAAWelODazmfaARSeHMIlVnULZNVka7uRDiZcLiAAAACPHocYiAAALPSnBtZzPtAIpPDmESqzqFsmqyNd3IhxMuFxAAAAB//Z",
+        "w": 57,
+        "h": 57,
+        "src": "https://www.microsoft.com/apple-touch-icon.png",
+        "kind": "apple-touch-icon"
+      },
+      "email": "web",
+      "hint": "b516225e23f4b7df",
+      "checked_at": "2026-11-05T09:48:59+00:00",
+      "finder": 2
+    },
+    "google": {
+      "status": "none",
+      "reason": "google.com: robots.txt",
+      "hint": "4f69bb5e02d8edef",
+      "checked_at": "2026-11-05T09:49:00+00:00",
+      "finder": 2
+    },
+    "infosys": {
+      "status": "none",
+      "reason": "infosys.com: HTTP 403",
+      "hint": "086d3b86912e1836",
+      "checked_at": "2026-11-05T09:49:01+00:00",
+      "finder": 2
+    },
+    "deloitte": {
+      "status": "ok",
+      "domain": "deloitte.com",
+      "page": "https://www.deloitte.com/us/en.html",
+      "web": {
+        "mime": "image/jpeg",
+        "data": "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",
+        "w": 144,
+        "h": 144,
+        "src": "https://www.deloitte.com/content/dam/assets-shared/icons/us/apple-icon-144x144.png",
+        "kind": "apple-touch-icon"
+      },
+      "email": "web",
+      "hint": "062a14f80face24d",
+      "checked_at": "2026-11-05T09:49:04+00:00",
+      "finder": 2
+    },
+    "qualcomm": {
+      "status": "ok",
+      "domain": "qualcomm.com",
+      "page": "https://www.qualcomm.com/",
+      "web": {
+        "mime": "image/png",
+        "data": "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAACC0lEQVR42r1Xv0tCURQWkZCI6E9wiOaKJgdpCHEQiQIJB2lykBBHiQiRCKeGiJAQh/6CxoaIaAoJeWOISIhIRIiIRIRQ58AZHofz3rvvvavCN+j9zne+++vcYyCg+NnY7ywAdgE1QAswBvwRxvQbju0hN6DrA2KLgFPAlymhE5Bbxli/yXcAPReJOfqo4TV5UWGWBsFpdYq6kndoLCLERGis48sEEONC8JTOQUghPkTcqaATdwpeon0zB/0CUh62MEWx/Ews2wWVBdd5H4c4L+hVrMhhwJCRnzRc40emiTnCEjEtuI1pMBATdNMSsc5IXY3FrMu06xLJYKQbjQZqTNuQSBNGKmg0UGDaE4nE9ymj0cAB15+3gYyKgZGv+u2utA8lUouRGoriq4BtwqYFp8G0myontadoYGS3dfA9KDzp11a1m5+DhIKBOxbzzMYTgm7SquX6ZMQXnIGDgaSQYM00+yYbG1i2bDBQEsSOFZ7fAYup0tiJoFeyEwsLZRORdTBxzvgfgJyg0xYfIiYWFd5xxCX2CzY3wak/RM2o6r09tOkDK3jdzN0RbcOrg4Gs2+KRtVgJ84z6tP92vB/PVRUCtwBvPtpyPE/rfssoLu8R4N2DgbbOf0hB6m6qgAea3YjOBbbi94CrWXRVbo3yN+V23gZ4J/xt24rPwMAKJTWbyM17FS6YgTMr7j9+9sgghZrkLwAAAABJRU5ErkJggg==",
+        "w": 32,
+        "h": 32,
+        "src": "https://www.qualcomm.com/etc.clientlibs/qcomm-martech/clientlibs/clientlib-react/resources/favicon/qualcomm/favicon.ico",
+        "kind": "icon"
+      },
+      "email": "web",
+      "hint": "d6a9a166b97834b0",
+      "checked_at": "2026-11-05T09:49:08+00:00",
+      "finder": 2
+    },
+    "cisco": {
+      "status": "none",
+      "reason": "cisco.com: no usable icon",
+      "hint": "a2bb8c9493a44499",
+      "checked_at": "2026-11-05T09:49:12+00:00",
+      "finder": 2
+    },
+    "jiohotstar": {
+      "status": "none",
+      "reason": "jiohotstarjiostar.com: blocked address",
+      "hint": "b78b14ca3db66520",
+      "checked_at": "2026-11-05T09:49:12+00:00",
+      "finder": 2
     }
   }
 }
