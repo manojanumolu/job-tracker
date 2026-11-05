@@ -3928,5 +3928,84 @@
     "id": "Oracle_Support_Engineer_1",
     "notified": false,
     "company_id": "oracle"
+  },
+  {
+    "title": "Technology Early Career Entry Program",
+    "url": "https://statestreet.wd1.myworkdayjobs.com/Global/job/Bangalore-India/Technology-Early-Career-Entry-Program_R-800791",
+    "company": "State Street",
+    "location": "Bangalore, India · Hyderabad, India · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'Early Career'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Our program is designed to develop graduates both technically and professionally towards becoming our future leaders and technology experts. You’ll learn from s",
+        "Inclusion, Diversity and Social Responsibility.    We truly believe our employees’ diverse backgrounds, experiences and perspectives are a powerful contributor "
+      ],
+      "fresher_evidence": "Early Career",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "",
+      "canonical_url": "https://statestreet.wd1.myworkdayjobs.com/Global/job/Bangalore-India/Technology-Early-Career-Entry-Program_R-800791",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "state street|url:https://statestreet.wd1.myworkdayjobs.com/Global/job/Bangalore-India/Technology-Early-Career-Entry-Program_R-800791",
+    "date": "Nov 5, 09:12",
+    "first_seen": "2026-11-05T09:12:20.661849+00:00",
+    "id": "State_Street_Technology_Early_Career_Entry_Program",
+    "notified": false,
+    "company_id": "c1793696381"
+  },
+  {
+    "title": "Associate Engineer - RF SW",
+    "url": "https://careers.qualcomm.com/careers/job/446720761539",
+    "company": "Qualcomm",
+    "location": "Hyderabad, Telangāna, India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-1 yrs'",
+    "evidence": {
+      "experience": [
+        "0-1 yrs"
+      ],
+      "experience_lines": [
+        "Qualcomm is looking for Modem-RF Wireless SW engineers at levels with 0-1 yrs of experience, with knowledge of RF and Digital Communications. The candidate will",
+        "As a leading technology innovator, Qualcomm pushes the boundaries of what's possible to enable next-generation experiences and drives digital transformation to ",
+        "Modem/Communications device driver development experience is an added advantage."
+      ],
+      "fresher_evidence": "0-1 yrs",
+      "detail_read": true,
+      "detail_match": "eightfold position",
+      "job_id": "id:3095630",
+      "canonical_url": "https://careers.qualcomm.com/careers/job/446720761539",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "qualcomm|url:https://careers.qualcomm.com/careers/job/446720761539",
+    "date": "Nov 5, 09:21",
+    "first_seen": "2026-11-05T09:21:25.461368+00:00",
+    "id": "Qualcomm_Associate_Engineer_-_RF_SW",
+    "notified": false,
+    "company_id": "qualcomm",
+    "notify_state": "claimed",
+    "claimed_at": "2026-11-05T09:24:10.518574+00:00"
   }
 ]
