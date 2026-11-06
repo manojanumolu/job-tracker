@@ -4189,10 +4189,11 @@
     "date": "Nov 6, 15:07",
     "first_seen": "2026-11-06T15:07:45.106727+00:00",
     "id": "Salesforce_Software_Engineering_AMTS",
-    "notified": false,
+    "notified": true,
     "company_id": "c1793696368",
-    "notify_state": "claimed",
-    "claimed_at": "2026-11-06T15:27:20.316947+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-11-06T15:27:20.316947+00:00",
+    "notified_at": "2026-11-06T15:27:25.102665+00:00"
   },
   {
     "title": "Product Accessibility Engineer",
@@ -4273,10 +4274,11 @@
     "date": "Nov 6, 15:07",
     "first_seen": "2026-11-06T15:07:45.106727+00:00",
     "id": "Salesforce_System_Analyst",
-    "notified": false,
+    "notified": true,
     "company_id": "c1793696368",
-    "notify_state": "claimed",
-    "claimed_at": "2026-11-06T15:27:20.316947+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-11-06T15:27:20.316947+00:00",
+    "notified_at": "2026-11-06T15:27:25.102665+00:00"
   },
   {
     "title": "Apprentice - Accounting/Finance",
