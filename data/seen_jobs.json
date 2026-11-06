@@ -4043,5 +4043,112 @@
     "id": "State_Street_ISG_Operations_Apprentice",
     "notified": false,
     "company_id": "c1793696381"
+  },
+  {
+    "title": "Intern | Financial Accounts | Bengaluru | Finance & Accounts",
+    "url": "https://southasiacareers.deloitte.com/job/Bengaluru-Intern-Financial-Accounts-Bengaluru-Finance-&-Accounts/61353044/",
+    "company": "Deloitte",
+    "location": "Bengaluru, IN · India",
+    "category": "FRESHER",
+    "reason": "fresher signal: 'Fresher or'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Fresher or candidate with prior finance/accounting internship exposure."
+      ],
+      "fresher_evidence": "Fresher or",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Bengaluru-Intern-Financial-Accounts-Bengaluru-Finance-&-Accounts/61353044",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Bengaluru-Intern-Financial-Accounts-Bengaluru-Finance-&-Accounts/61353044",
+    "date": "Nov 6, 12:21",
+    "first_seen": "2026-11-06T12:21:45.536622+00:00",
+    "id": "Deloitte_Intern_|_Financial_Accounts_|_Bengaluru_",
+    "notified": false,
+    "company_id": "deloitte"
+  },
+  {
+    "title": "Management Trainee | M&A Regulatory | Delhi | Mergers & Acquisitions (Tax)",
+    "url": "https://southasiacareers.deloitte.com/job/Delhi-Management-Trainee-M&A-Regulatory-Delhi-Mergers-&-Acquisitions-%28Tax%29/61351544/",
+    "company": "Deloitte",
+    "location": "Delhi, IN · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'Trainee'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [],
+      "fresher_evidence": "Trainee",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Delhi-Management-Trainee-M&A-Regulatory-Delhi-Mergers-&-Acquisitions-%28Tax%29/61351544",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Delhi-Management-Trainee-M&A-Regulatory-Delhi-Mergers-&-Acquisitions-%28Tax%29/61351544",
+    "date": "Nov 6, 12:21",
+    "first_seen": "2026-11-06T12:21:45.536622+00:00",
+    "id": "Deloitte_Management_Trainee_|_M&A_Regulatory_|_De",
+    "notified": false,
+    "company_id": "deloitte"
+  },
+  {
+    "title": "Procurement Operations Specialist",
+    "url": "https://careers.ibm.com/careers/JobDetail?jobId=140613",
+    "company": "IBM",
+    "location": "Bangalore, IN · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-4years'",
+    "evidence": {
+      "experience": [
+        "0-4years"
+      ],
+      "experience_lines": [],
+      "fresher_evidence": "0-4years",
+      "detail_read": true,
+      "detail_match": "ibm record",
+      "job_id": "",
+      "canonical_url": "https://careers.ibm.com/careers/JobDetail?jobId=140613",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "ibm|url:https://careers.ibm.com/careers/JobDetail?jobId=140613",
+    "date": "Nov 6, 12:25",
+    "first_seen": "2026-11-06T12:25:12.980021+00:00",
+    "id": "IBM_Procurement_Operations_Specialist",
+    "notified": false,
+    "company_id": "ibm"
   }
 ]
