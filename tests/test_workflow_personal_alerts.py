@@ -33,7 +33,11 @@ STEP_MARK = "\n      # Personal alerts (per-user"
 # data/): the diff is paths only — "python src/scraper.py", "src/alerts.py",
 # "src/user_alerts.py", "src/scan_handoff.py" and the artifact's
 # data/companies.json, data/seen_jobs.json; no command, step or permission changed.
-GLOBAL_SCAN_STEPS_SHA256 = "4cd02d92fa0500123fb4a98f94dcf6f09d81a92a6710b826056c35459e7c7a51"
+# Re-pinned 2026-11-06: one added line, the scrape job's checkout gains
+# "ref: ${{ github.ref }}" (scan the branch tip, not the commit the run was
+# queued on, so a queued run never re-scans a window); no command, step or
+# permission changed.
+GLOBAL_SCAN_STEPS_SHA256 = "f50948caa548abe7f375696997b5848604f8164c6fefdbb944cdcfd29822735d"
 
 
 def _wf() -> str:
