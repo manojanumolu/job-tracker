@@ -4,6 +4,7 @@ import random
 import re
 import time
 import logging
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from urllib.parse import urldefrag, urljoin, urlparse
@@ -181,6 +182,7 @@ class Scan:
     rejected: int = 0
     unknown: int = 0
     notes: list[str] = field(default_factory=list)
+    reasons: Counter = field(default_factory=Counter)   # why postings were not accepted, by kind (_reason_kind)
 
     def fail(self, status: str, message: str) -> None:
         log.warning("%s: %s (%s)", self.name, message, status)
@@ -220,8 +222,27 @@ class Scan:
         return f"{_plural(self.pending, 'posting')} left for the next scan (detail-page budget)" if self.pending else ""
 
     def summary(self) -> dict:
+        """Counts for Monitoring. "rejections": the most common reasons a
+        posting was not accepted (Nov 2026: so a company that never yields a
+        job — Microsoft, S&P Global — can be judged from the data, without
+        the run log)."""
         return {"postings_seen": self.seen, "candidates": self.candidates, "details_read": self.details_ok,
-                "details_unreadable": self.details_failed, "pending": self.pending, "accepted": len(self.jobs)}
+                "details_unreadable": self.details_failed, "pending": self.pending, "accepted": len(self.jobs),
+                "rejected": self.rejected, "unknown": self.unknown,
+                "rejections": dict(self.reasons.most_common(_TOP_REASONS))}
+
+
+_TOP_REASONS = 6
+_QUOTED_RE = re.compile(r"'[^']*'|\"[^\"]*\"")
+
+
+def _reason_kind(reason: str) -> str:
+    """"seniority in title: 'Senior'" -> "seniority in title"; "not in India
+    (posting location: X)" -> "not in India": the kind, never the job's own
+    text (titles and quotes are left out)."""
+    text = _QUOTED_RE.sub("", reason or "")
+    text = re.split(r"[:(]| — | after ", text, maxsplit=1)[0]
+    return re.sub(r"\s+", " ", text).strip()[:60] or "other"
 
 
 # ---------------------------------------------------------------------------
@@ -315,6 +336,7 @@ def _evaluate(scan: Scan, listing: Listing, budget: list[int]) -> None:
     pre = classify_job(listing.title, listing.card_text, url=listing.url, posting_evidence=True)
     if pre.category in _HARD_REJECT:
         scan.rejected += 1
+        scan.reasons[_reason_kind(pre.reason)] += 1
         _log_decision(scan.name, listing.title, pre)
         return
     detail = listing.detail
@@ -333,7 +355,9 @@ def _evaluate(scan: Scan, listing: Listing, budget: list[int]) -> None:
     _log_decision(scan.name, listing.title, result)
     if job:
         scan.jobs.append(job)
-    elif result.category == Category.UNKNOWN:
+        return
+    scan.reasons[_reason_kind(result.reason)] += 1
+    if result.category == Category.UNKNOWN:
         scan.unknown += 1
     else:
         scan.rejected += 1
@@ -796,7 +820,7 @@ def _posting_key(url: str) -> str:
 
 
 def merge_new_jobs(seen: list[dict], found: list[dict], now: datetime | None = None,
-                   company_id: str | None = None) -> list[dict]:
+                   company_id: str | None = None, stats: Counter | None = None) -> list[dict]:
     """New records for ``found`` jobs that aren't already known. Identity is
     the ATS job ID / canonical URL, so two different jobs with the same title
     both get through; the same title *and* location under a new ID is treated
@@ -815,6 +839,8 @@ def merge_new_jobs(seen: list[dict], found: list[dict], now: datetime | None = N
             continue
         if rp and rp in reposts:
             log.info("  %s: %s — repost of a job already alerted (same title and location)", job["company"], job["title"])
+            if stats is not None:          # measured (Nov 2026) before any change to how reposts are judged
+                stats["reposts_suppressed"] += 1
             continue
         record = dict(job)
         record.update({
@@ -843,6 +869,7 @@ def run_all() -> list[dict]:
     new_jobs: list[dict] = []
     started_at = _now_iso()
     jobs_found = portals_failed = 0
+    merge_stats: Counter = Counter()
     scanned = [c for c in companies if not monitoring_state(c)]   # the others have no usable source yet: left as they are
 
     for company in scanned:
@@ -859,7 +886,7 @@ def run_all() -> list[dict]:
         company["source"] = source_label(company)
         # reflect what this scrape actually sees
         company["last_job"] = scan.jobs[0]["title"] if scan.jobs else ""
-        new_jobs += merge_new_jobs(seen + new_jobs, scan.jobs, company_id=company.get("id"))
+        new_jobs += merge_new_jobs(seen + new_jobs, scan.jobs, company_id=company.get("id"), stats=merge_stats)
         time.sleep(1)
 
     # This scan as a whole, recorded on every company it checked (inside the
@@ -871,7 +898,8 @@ def run_all() -> list[dict]:
     # done, so it always describes a completed scan. Read by the admin's
     # Settings → Scan details (scan_schedule.latest_run).
     run = {"started_at": started_at, "finished_at": _now_iso(), "jobs_found": jobs_found,
-           "new_jobs": len(new_jobs), "portals": len(scanned), "portals_failed": portals_failed}
+           "new_jobs": len(new_jobs), "portals": len(scanned), "portals_failed": portals_failed,
+           "reposts_suppressed": merge_stats["reposts_suppressed"]}
     for company in scanned:
         company["scan"]["run"] = dict(run)
 
