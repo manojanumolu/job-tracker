@@ -1279,41 +1279,5 @@
       }
     },
     "source": "Swiggy careers site"
-  },
-  {
-    "id": "uber",
-    "name": "Uber",
-    "url": "https://jobs.uber.com/en/jobs/",
-    "locked": false,
-    "status": "unknown",
-    "last_job": "",
-    "last_checked": "",
-    "monitoring": "pending",
-    "monitoring_checked": "2026-11-04",
-    "status_reason": "No reliable source yet: the jobs page has no readable job links. Its job sitemap is still to be checked."
-  },
-  {
-    "id": "tcs",
-    "name": "TCS",
-    "url": "https://www.tcs.com/careers",
-    "locked": false,
-    "status": "unknown",
-    "last_job": "",
-    "last_checked": "",
-    "monitoring": "blocked",
-    "monitoring_checked": "2026-11-04",
-    "status_reason": "The careers site answers Access Denied to the scanner, and no official job feed has been found."
-  },
-  {
-    "id": "zepto",
-    "name": "Zepto",
-    "url": "https://www.zepto.com/careers",
-    "locked": false,
-    "status": "unknown",
-    "last_job": "",
-    "last_checked": "",
-    "monitoring": "blocked",
-    "monitoring_checked": "2026-11-04",
-    "status_reason": "The careers site answers with a bot challenge, and no official job feed has been found."
   }
 ]
