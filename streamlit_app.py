@@ -105,6 +105,7 @@ from config_store import (
     in_shared_alerts,
     job_key,
     monitoring_state,
+    shared_alert_cutoff,
     shared_alert_pending,
     shared_tailoring,
     update_json,
@@ -4015,6 +4016,7 @@ recipient, recipient_source = alert_recipient(settings)
 SHARED_EXCLUDED = excluded_from_shared_alerts(companies)
 # the primary admin's tailoring of the shared email (settings.json; None = every qualifying job)
 SHARED_TAILORING = shared_tailoring(settings)
+SHARED_CUTOFF = shared_alert_cutoff(settings)      # backlog older than this is never claimed (config_store)
 
 
 def company_jobs(c: dict) -> list[dict]:
@@ -5209,7 +5211,7 @@ def page_job_detail(j: dict):
                 src.append(("Email alert", "Sent" if j.get("notified")
                             else "Sending — delivery not yet confirmed" if j.get("notify_state") == "claimed"
                             else "Not sent (dismissed)" if j.get("dismissed")
-                            else "Pending — goes out after the next check" if shared_alert_pending(j, SHARED_EXCLUDED, SHARED_TAILORING)
+                            else "Pending — goes out after the next check" if shared_alert_pending(j, SHARED_EXCLUDED, SHARED_TAILORING, SHARED_CUTOFF)
                             else "Not emailed"))
             st.html(f'<h2 class="section-title">{_ms("link")}Source</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
                     + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in src) + "</dl>")
@@ -5896,7 +5898,7 @@ def page_email():
     # when the email actually went out (older records only know when the job was found)
     sent_times = [(_parse_iso(j.get("notified_at") or ""), found[id(j)]) for j in notified]
     last_mail, last_is_sent = max(((a or b, bool(a)) for a, b in sent_times if a or b), default=(None, False))
-    pending = [j for j in all_records if shared_alert_pending(j, SHARED_EXCLUDED, SHARED_TAILORING)]
+    pending = [j for j in all_records if shared_alert_pending(j, SHARED_EXCLUDED, SHARED_TAILORING, SHARED_CUTOFF)]
     # the full address is personal: only the primary admin sees it
     shown = recipient if is_primary() else mask_email(recipient)
     page_header("Email & Notifications", (
@@ -6408,7 +6410,7 @@ def page_settings():
                               use_container_width=True, on_click=_ask_clear_all)
         else:
             # only the primary admin's Dismiss all reaches the shared alerts
-            unsent = sum(1 for j in _all_active_jobs if shared_alert_pending(j, SHARED_EXCLUDED, SHARED_TAILORING)) if IS_PRIMARY else 0
+            unsent = sum(1 for j in _all_active_jobs if shared_alert_pending(j, SHARED_EXCLUDED, SHARED_TAILORING, SHARED_CUTOFF)) if IS_PRIMARY else 0
             with st.container(key="danger_confirm"):
                 st.html(f'<p class="note" style="color:var(--text);">Dismiss all <b>{len(_all_active_jobs)}</b> active jobs?'
                         + (f" This also cancels <b>{unsent}</b> alert{'s' if unsent != 1 else ''} that haven't been emailed yet "

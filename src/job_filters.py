@@ -59,7 +59,14 @@ JOB_FAMILIES = {
                             # ("Graduate Engineer Trainee", "Engineer I", "Packaged App Development Associate")
                             r"(?:graduate )?engineer(?:ing)? trainee|trainee engineer|graduate engineer|"
                             r"associate engineer|engineer i|systems? engineer|member of technical staff|"
-                            r"app development|technology analyst",
+                            r"app development|technology analyst|"
+                            # Nov 2026: "SW" next to an engineer/developer word ("2027 Campus Hire_Engineer_SW",
+                            # "Engineer - RF SW", "SW Developer")
+                            # and technology graduate programmes ("Technology Early Career Entry Program").
+                            # Hardware / VLSI / embedded titles stay out on purpose: they are shown under
+                            # the Explore section of the app, not emailed.
+                            r"(?:engineer|engineering|developer)[^\n]*?(?<![a-z0-9])sw|sw(?![a-z0-9])[^\n]*?(?:engineer|engineering|developer)|"
+                            r"technology (?:early careers?|graduates?|programmes?|programs?|associates?|trainees?)",
     # "analyst" only with a data/technical qualifier: "Data Analyst" is here (data), "Content
     # Marketing Analyst" or "Operations Finance Analyst" is not
     "Data & analytics": r"data|analytics?|(?:business|systems?|quantitative|quant|mis|reporting|insights?) analyst|"
