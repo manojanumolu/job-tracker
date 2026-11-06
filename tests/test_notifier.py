@@ -58,7 +58,7 @@ def _visible_text(html):
 
 def test_single_job_email():
     subject, html, text = build_alert_email([_job()])
-    assert subject == "🎯 New fresher job: Graduate Software Engineer at Sanofi"
+    assert subject == "🎯 Fresher job found: Graduate Software Engineer at Sanofi"   # no posting date: never "new"
     checker = _parse(html)
     assert checker.links == [_job()["url"]]
     body = _visible_text(html)
@@ -78,7 +78,7 @@ def test_multiple_jobs_have_separate_sections_and_buttons():
              category="FRESHER", reason="experience starts at 0: '0-1 years'"),
     ]
     subject, html, text = build_alert_email(jobs)
-    assert subject == "🎯 3 new fresher jobs — Sanofi, PwC, Avalara"
+    assert subject == "🎯 3 fresher jobs found — Sanofi, PwC, Avalara"
     checker = _parse(html)
     assert checker.links == [j["url"] for j in jobs]
     for i in (1, 2, 3):
@@ -90,14 +90,14 @@ def test_multiple_jobs_have_separate_sections_and_buttons():
 
 def test_subject_lists_at_most_three_companies():
     jobs = [_job(company=f"Co{i}", url=f"https://x.example/{i}") for i in range(5)]
-    assert build_alert_email(jobs)[0] == "🎯 5 new fresher jobs — Co0, Co1, Co2 and more"
+    assert build_alert_email(jobs)[0] == "🎯 5 fresher jobs found — Co0, Co1, Co2 and more"
 
 
 def test_missing_optional_fields():
     minimal = {"title": "Graduate Trainee", "url": "https://example.com/j/1"}
     subject, html, text = build_alert_email([minimal])
     _parse(html)
-    assert subject == "🎯 New fresher job: Graduate Trainee"
+    assert subject == "🎯 Fresher job found: Graduate Trainee"
     assert "Location: See posting" in text
     assert "Fresher / entry level" in html and "Fresher / entry level" in text
     assert "Entry-level / graduate role" in text  # generic reason
@@ -228,7 +228,7 @@ def test_mime_message_has_plain_and_html_parts(monkeypatch):
     assert "View job: https://" in parts["text/plain"].get_payload(decode=True).decode("utf-8")
     assert "View job" in parts["text/html"].get_payload(decode=True).decode("utf-8")
     from email.header import decode_header, make_header
-    assert str(make_header(decode_header(msg["Subject"]))).startswith("🎯 2 new fresher jobs")
+    assert str(make_header(decode_header(msg["Subject"]))).startswith("🎯 2 fresher jobs found")
 
 
 def test_send_alerts_skips_empty(monkeypatch):
@@ -241,3 +241,28 @@ def test_test_email_renders():
     subject, html, text = build_test_email()
     _parse(html)
     assert "working correctly" in text and "working correctly" in html
+
+
+# ── newly posted vs first found (Nov 2026) ──────────────────────────────────
+
+def test_new_is_said_only_for_a_vacancy_the_site_dates_as_recent():
+    """Finding a job for the first time doesn't make it new: only the site's
+    own posting date can, and an older vacancy is labelled as one."""
+    fresh = _job(posted_at="2026-11-04", first_seen="2026-11-06T09:00:00+00:00")
+    older = _job(title="Associate Developer", url="https://x.example/2",
+                 posted_at="2026-08-01", first_seen="2026-11-06T09:00:00+00:00")
+    undated = _job(title="Trainee Analyst", url="https://x.example/3", first_seen="2026-11-06T09:00:00+00:00")
+    assert notifier.freshness(fresh) == "new" and notifier.freshness(older) == "older"
+    assert notifier.freshness(undated) == "unknown"
+    subject, html, text = build_alert_email([fresh])
+    assert subject.startswith("🎯 New fresher job: ") and "4 Nov 2026 — newly posted" in text
+    subject, html, text = build_alert_email([fresh, older])
+    assert subject.startswith("🎯 2 fresher jobs found")            # not all of them are new
+    assert "1 Aug 2026 — an older vacancy, first found now" in text and "an older vacancy" in html
+    subject, html, text = build_alert_email([undated])
+    assert subject.startswith("🎯 Fresher job found: ") and "Posted:   Not stated by the site" in text
+
+
+def test_an_unreadable_posting_date_is_never_a_date():
+    assert notifier.freshness(_job(posted_at="Posted 30+ Days Ago")) == "unknown"
+    assert notifier.freshness(_job(posted_at="")) == "unknown"

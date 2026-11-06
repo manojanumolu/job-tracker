@@ -7,7 +7,7 @@ import smtplib
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from html import escape
 from urllib.parse import urlparse
@@ -144,19 +144,62 @@ def friendly_reason(job: dict) -> str:
     return "Entry-level / graduate role"
 
 
+# Nov 2026: a job the tracker finds for the first time is not necessarily
+# newly PUBLISHED — a company added today brings its open vacancies with it.
+# "New" is said only when the site's own posting date (posted_at, stored by
+# the scraper when the source states one) is within NEWLY_POSTED_DAYS of the
+# day it was found; otherwise the email says when the vacancy was posted, or
+# that the site doesn't say. A repost of a job already alerted (same title
+# and location under a new ID) is never emailed at all (scraper.merge_new_jobs).
+NEWLY_POSTED_DAYS = 7
+
+
+def _date(value) -> date | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return date.fromisoformat(value[:10])
+    except ValueError:
+        return None
+
+
+def freshness(job: dict) -> str:
+    """"new" (posted within NEWLY_POSTED_DAYS of being found), "older"
+    (posted earlier, found now) or "unknown" (the site gives no date)."""
+    posted, found = _date(job.get("posted_at")), _date(job.get("first_seen"))
+    if posted is None:
+        return "unknown"
+    if found is None or (found - posted).days <= NEWLY_POSTED_DAYS:
+        return "new"
+    return "older"
+
+
+def _posted_label(job: dict) -> str:
+    posted = _date(job.get("posted_at"))
+    if posted is None:
+        return "Not stated by the site"
+    day = f"{posted.day} {posted:%b %Y}"
+    return f"{day} — newly posted" if freshness(job) == "new" else f"{day} — an older vacancy, first found now"
+
+
+def _all_new(jobs: list[dict]) -> bool:
+    return bool(jobs) and all(freshness(j) == "new" for j in jobs)
+
+
 def _subject(jobs: list[dict]) -> str:
+    new = _all_new(jobs)
     if len(jobs) == 1:
         j = jobs[0]
         company = _clip(j.get("company") or "", 40)
         title = _clip(j.get("title") or "New posting", 70)
-        return f"🎯 New fresher job: {title}" + (f" at {company}" if company else "")
+        return (f"🎯 New fresher job: {title}" if new else f"🎯 Fresher job found: {title}") + (f" at {company}" if company else "")
     companies = []
     for j in jobs:
         c = (j.get("company") or "").strip()
         if c and c not in companies:
             companies.append(c)
     who = ", ".join(companies[:3]) + (" and more" if len(companies) > 3 else "")
-    return f"🎯 {len(jobs)} new fresher jobs" + (f" — {who}" if who else "")
+    return (f"🎯 {len(jobs)} new fresher jobs" if new else f"🎯 {len(jobs)} fresher jobs found") + (f" — {who}" if who else "")
 
 
 def _field_row(label: str, value: str) -> str:
@@ -271,6 +314,7 @@ def _job_card(job: dict, index: int, total: int, logos: dict | None = None, trac
                f'JOB {index} OF {total}</p>' if total > 1 else "")
     rows = _field_row("Location", location or "See posting")
     rows += _field_row("Eligibility", friendly_reason(job))
+    rows += _field_row("Posted", _posted_label(job))
     if found:
         rows += _field_row("Found", found)
     # "bulletproof" button: a bgcolor'd table cell works in Outlook as well
@@ -321,6 +365,7 @@ def _job_text(job: dict, index: int, total: int) -> str:
         lines.append(f"Company:  {_clip(job['company'], 80)}")
     lines.append(f"Location: {_clip(job.get('location') or '', 120) or 'See posting'}")
     lines.append(f"Why:      {friendly_reason(job)}")
+    lines.append(f"Posted:   {_posted_label(job)}")
     found = _found_label(job)
     if found:
         lines.append(f"Found:    {found}")
@@ -421,7 +466,9 @@ def build_alert_email(jobs: list[dict], logos: dict | None = None,
     {company name (lower): (cid, bytes, subtype)} from email_logos(); the
     caller attaches those images. Without it every company shows initials."""
     total = len(jobs)
-    heading = "New fresher job" if total == 1 else f"{total} new fresher jobs"
+    new = _all_new(jobs)
+    heading = (("New fresher job" if new else "Fresher job found") if total == 1
+               else (f"{total} new fresher jobs" if new else f"{total} fresher jobs found"))
     preheader = "; ".join(
         f"{_clip(j.get('title') or '', 60)}" + (f" at {j['company']}" if j.get("company") else "")
         for j in jobs[:3]
@@ -445,7 +492,7 @@ def build_alert_email(jobs: list[dict], logos: dict | None = None,
         f'font:700 11px/1.4 {FONT};letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;">{n} {escape(label)}</span>'
         for label, (n, fg, bg) in kinds.items())
     lead = _lead_card(f"""
-                  <p style="margin:0;font:700 11px/1.4 {FONT};color:{ACCENT};letter-spacing:.1em;text-transform:uppercase;">New job alert</p>
+                  <p style="margin:0;font:700 11px/1.4 {FONT};color:{ACCENT};letter-spacing:.1em;text-transform:uppercase;">Job alert</p>
                   <h1 class="jt-h1" style="margin:6px 0 8px;font:800 26px/1.25 {FONT};color:{TEXT};letter-spacing:-.01em;">{escape(heading)}</h1>
                   <p style="margin:0 0 14px;font:400 14px/1.6 {FONT};color:{MUTED};">{escape(source)}Fresher and entry-level roles in India, each checked against its own posting before it reached you.</p>
                   <div style="font-size:0;line-height:0;">{chips}</div>""")

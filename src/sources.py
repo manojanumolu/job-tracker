@@ -18,6 +18,7 @@ import logging
 import re
 import time
 from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta, timezone
 from typing import Callable
 from urllib.parse import urlparse
 
@@ -47,6 +48,45 @@ def html_to_text(html: str) -> str:
     return "\n".join(line.strip() for line in text.splitlines() if line.strip())
 
 
+_MONTH_DATE_FORMATS = ("%B %d, %Y", "%b %d, %Y", "%d %B %Y", "%d %b %Y")
+
+
+def posting_date(value, now: datetime | None = None) -> str:
+    """The posting date a source states, as YYYY-MM-DD — or "" when it
+    states none we can read with certainty. Accepted: an ISO date/time
+    ("2026-11-03", "2026-11-03T10:00:00Z"), a month-name date ("November 4,
+    2026"), or epoch seconds/milliseconds. Relative text ("Posted 30+ Days
+    Ago") and anything in the future or before 2000 is not a date: never a
+    guess."""
+    now = now or datetime.now(timezone.utc)
+    d = None
+    if isinstance(value, bool):
+        return ""
+    if isinstance(value, (int, float)) and value > 0:
+        secs = value / 1000 if value > 1e11 else value
+        try:
+            d = datetime.fromtimestamp(secs, timezone.utc).date()
+        except (OverflowError, OSError, ValueError):
+            return ""
+    elif isinstance(value, str) and value.strip():
+        text = value.strip()
+        if re.match(r"^\d{4}-\d{2}-\d{2}", text):
+            try:
+                d = date.fromisoformat(text[:10])
+            except ValueError:
+                return ""
+        else:
+            for fmt in _MONTH_DATE_FORMATS:
+                try:
+                    d = datetime.strptime(text, fmt).date()
+                    break
+                except ValueError:
+                    continue
+    if d is None or d.year < 2000 or d > (now + timedelta(days=1)).date():
+        return ""
+    return d.isoformat()
+
+
 @dataclass
 class Detail:
     """What a job's own page/record says. ``ok`` is False when nothing
@@ -58,6 +98,7 @@ class Detail:
     posting_evidence: bool = False  # a real JobPosting (ATS record / schema.org)
     reason: str = ""               # why it is not ok
     matched: str = ""              # how the detail was tied to this listing
+    posted_at: str = ""            # the posting date the source states (YYYY-MM-DD), "" when it gives none
 
     @classmethod
     def unreadable(cls, reason: str) -> "Detail":
@@ -196,7 +237,9 @@ def workday_detail(client: httpx.Client, url: str, title: str) -> Detail:
     if isinstance(country, dict):
         country = country.get("descriptor")
     location = " | ".join(str(x) for x in locations + [country] if x)
-    return Detail(ok=True, description=description, location=location, posting_evidence=True, matched="Workday record for the listing's path" + (" + same title" if got else ""))
+    return Detail(ok=True, description=description, location=location, posting_evidence=True,
+                  matched="Workday record for the listing's path" + (" + same title" if got else ""),
+                  posted_at=posting_date(info.get("startDate")))
 
 
 def workday_listings(client: httpx.Client, api: str) -> SourceResult:
@@ -344,7 +387,8 @@ def jibe_listings(client: httpx.Client, cfg: dict) -> SourceResult:
             if not title or not slug:
                 continue
             description = "\n".join(html_to_text(str(d.get(k) or "")) for k in ("description", "responsibilities", "qualifications"))
-            detail = (Detail(ok=True, description=description.strip(), location=location, posting_evidence=True, matched="ATS record of this listing")
+            detail = (Detail(ok=True, description=description.strip(), location=location, posting_evidence=True,
+                             matched="ATS record of this listing", posted_at=posting_date(d.get("posted_date")))
                       if len(description.strip()) >= _MIN_DESCRIPTION_CHARS else Detail.unreadable("empty job description"))
             listings.append(Listing(title=title, url=f"{host}/careers-home/jobs/{slug}?lang=en-us",
                                     location=location, job_id=str(d.get("req_id") or ""),
@@ -425,7 +469,8 @@ def avature_detail(client: httpx.Client, url: str, title: str, job_id: str) -> D
     # JobPosting title after a rename: "Actuarial Analyst" vs "Actuarial
     # Specialist - Noida, India - 20761")
     match = "JobPosting title/ID"
-    if _pick_posting(jsonld_postings(r.text), title, job_id) is None:
+    posting = _pick_posting(jsonld_postings(r.text), title, job_id)
+    if posting is None:
         match = "page title names the same job ID/title"
         m = re.search(r"<title>(.*?)</title>", r.text, re.S | re.IGNORECASE)
         page_title = html_lib.unescape(m.group(1)) if m else ""
@@ -445,7 +490,8 @@ def avature_detail(client: httpx.Client, url: str, title: str, job_id: str) -> D
     description = "\n".join(parts)
     if len(description) < _MIN_DESCRIPTION_CHARS:
         return Detail.unreadable("posting has no description")
-    return Detail(ok=True, description=description, location=location, posting_evidence=True, matched=match)
+    return Detail(ok=True, description=description, location=location, posting_evidence=True, matched=match,
+                  posted_at=posting_date((posting or {}).get("datePosted")))
 
 
 def avature_listings(client: httpx.Client, cfg: dict) -> SourceResult:
@@ -565,7 +611,8 @@ def amazon_listings(client: httpx.Client, cfg: dict) -> SourceResult:
             location = f"{j.get('normalized_location') or j.get('location') or ''} | India"
             description = "\n".join(html_to_text(str(j.get(k) or "")) for k in
                                     ("description", "basic_qualifications", "preferred_qualifications")).strip()
-            detail = (Detail(ok=True, description=description, location=location, posting_evidence=True, matched="amazon.jobs record")
+            detail = (Detail(ok=True, description=description, location=location, posting_evidence=True,
+                             matched="amazon.jobs record", posted_at=posting_date(j.get("posted_date")))
                       if len(description) >= _MIN_DESCRIPTION_CHARS else Detail.unreadable("empty job description"))
             listings.append(Listing(title=title, url=f"https://www.amazon.jobs{path}", location=location,
                                     job_id=str(j.get("id_icims") or ""), posting_evidence=True, detail=detail))

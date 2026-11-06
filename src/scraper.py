@@ -303,6 +303,8 @@ def decide(company: str, listing: Listing, detail: Detail | None) -> tuple[Class
     shown = " | ".join(india_segments(location)) or location
     job = _job(title, listing.url, company, result, shown if is_india(detail.location) else location)
     job["evidence"] = _evidence(listing, detail, result, checks)
+    if detail.posted_at:                   # only what the source states — never a guess (sources.posting_date)
+        job["posted_at"] = detail.posted_at
     return result, job
 
 
