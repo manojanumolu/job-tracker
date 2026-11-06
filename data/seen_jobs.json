@@ -4150,5 +4150,170 @@
     "id": "IBM_Procurement_Operations_Specialist",
     "notified": false,
     "company_id": "ibm"
+  },
+  {
+    "title": "Software Engineering AMTS",
+    "url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Hyderabad/Software-Engineering-AMTS_JR356580",
+    "company": "Salesforce",
+    "location": "India - Hyderabad · India - Bangalore · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'new graduates'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Our Futureforce University Recruiting program is dedicated to attracting, retaining and cultivating talent. Our interns and new graduates work on real projects ",
+        "To get the best candidate experience, please consider applying for a maximum of 3 roles within 12 months to ensure you are not duplicating efforts.",
+        "B.E/ B.Tech graduating in 2027 in Computer Science, Electrical, Electronics, or equivalent fields with specialization in computer science. ​",
+        "Work closely with a team of engineers, product managers, user experience experts and performance engineers to build new features our customers will love, adopt "
+      ],
+      "fresher_evidence": "new graduates",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:JR356580",
+      "canonical_url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Hyderabad/Software-Engineering-AMTS_JR356580",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "posted_at": "2026-11-06",
+    "uid": "salesforce|id:JR356580",
+    "date": "Nov 6, 15:07",
+    "first_seen": "2026-11-06T15:07:45.106727+00:00",
+    "id": "Salesforce_Software_Engineering_AMTS",
+    "notified": false,
+    "company_id": "c1793696368",
+    "notify_state": "claimed",
+    "claimed_at": "2026-11-06T15:27:20.316947+00:00"
+  },
+  {
+    "title": "Product Accessibility Engineer",
+    "url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Bangalore/Product-Accessibility-Engineer_JR367595",
+    "company": "Salesforce",
+    "location": "India - Bangalore · India - Hyderabad · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'new graduates'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Our Futureforce University Recruiting program is dedicated to attracting, retaining and cultivating talent. Our interns and new graduates work on real projects ",
+        "To get the best candidate experience, please consider applying for a maximum of 3 roles within 12 months to ensure you are not duplicating efforts.",
+        "User Experience",
+        "AI Development (Bonus): If you have experience in AI, you may have the opportunity to contribute to projects involving AI-powered accessibility features."
+      ],
+      "fresher_evidence": "new graduates",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:JR367595",
+      "canonical_url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Bangalore/Product-Accessibility-Engineer_JR367595",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "posted_at": "2026-11-06",
+    "uid": "salesforce|id:JR367595",
+    "date": "Nov 6, 15:07",
+    "first_seen": "2026-11-06T15:07:45.106727+00:00",
+    "id": "Salesforce_Product_Accessibility_Engineer",
+    "notified": false,
+    "company_id": "c1793696368"
+  },
+  {
+    "title": "System Analyst",
+    "url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Hyderabad/System-Analyst_JR367594",
+    "company": "Salesforce",
+    "location": "India - Hyderabad · India - Bangalore · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-3 years'",
+    "evidence": {
+      "experience": [
+        "0-3 years"
+      ],
+      "experience_lines": [
+        "0-3 years of hands-on platform or systems support, administration, or implementation experience in an enterprise IT environment.",
+        "To get the best candidate experience, please consider applying for a maximum of 3 roles within 12 months to ensure you are not duplicating efforts.",
+        "Our Futureforce University Recruiting program is dedicated to attracting, retaining and cultivating talent. Our interns and new graduates work on real projects ",
+        "Bachelor's degree in computer science, business, or equivalent experience."
+      ],
+      "fresher_evidence": "0-3 years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:JR367594",
+      "canonical_url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Hyderabad/System-Analyst_JR367594",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "posted_at": "2026-11-06",
+    "uid": "salesforce|id:JR367594",
+    "date": "Nov 6, 15:07",
+    "first_seen": "2026-11-06T15:07:45.106727+00:00",
+    "id": "Salesforce_System_Analyst",
+    "notified": false,
+    "company_id": "c1793696368",
+    "notify_state": "claimed",
+    "claimed_at": "2026-11-06T15:27:20.316947+00:00"
+  },
+  {
+    "title": "Apprentice - Accounting/Finance",
+    "url": "https://statestreet.wd1.myworkdayjobs.com/Global/job/Bangalore-India/Apprentice---Accounting-Finance_R-798960",
+    "company": "State Street",
+    "location": "Bangalore, India · Hyderabad, India · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'Apprentice'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Prior coursework or experience with programming and BI tools is a plus"
+      ],
+      "fresher_evidence": "Apprentice",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "",
+      "canonical_url": "https://statestreet.wd1.myworkdayjobs.com/Global/job/Bangalore-India/Apprentice---Accounting-Finance_R-798960",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "posted_at": "2026-11-06",
+    "uid": "state street|url:https://statestreet.wd1.myworkdayjobs.com/Global/job/Bangalore-India/Apprentice---Accounting-Finance_R-798960",
+    "date": "Nov 6, 15:13",
+    "first_seen": "2026-11-06T15:13:36.904780+00:00",
+    "id": "State_Street_Apprentice_-_Accounting/Finance",
+    "notified": false,
+    "company_id": "c1793696381"
   }
 ]
