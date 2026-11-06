@@ -212,7 +212,11 @@ def is_real_job(title: str, href: str = "", *, posting_evidence: bool = False) -
 
 _SENIOR_TITLE_RE = re.compile(
     r"\b(?:"
-    r"senior|sr\b\.?|staff|principal|lead(?!\s+generation)|leader|manager|director|head(?!\s+office)"
+    # "staff" except in "Member of Technical Staff" (Nov 2026): MTS / AMTS is a common
+    # graduate title (Oracle, Salesforce, Adobe), judged on its posting like any other;
+    # the senior MTS levels stay senior (Senior / Lead / Principal / Consulting MTS, SMTS ...)
+    r"senior|sr\b\.?|(?<!technical\s)staff|principal|lead(?!\s+generation)|leader|manager|director|head(?!\s+office)"
+    r"|consulting(?=\s+member\s+of\s+technical\s+staff)|[slpc]mts"
     r"|vice[\s-]+president|vp|svp|avp|evp|chief|c[etfo]o|president"
     r"|architect|distinguished|partner|supervisor"
     r")\b",
