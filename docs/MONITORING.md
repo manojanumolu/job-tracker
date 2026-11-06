@@ -22,6 +22,19 @@ None of them was ever scanned or had a saved job, so no history went with
 them. A person's stored watchlist is left as it is. The app counts and uses
 only follows of companies still listed.
 
+**ADP's feed-size check.** ADP's XML feed can be well-formed but empty or
+partial. On 6 Nov 2026 it listed 1,482, then 0, then 1,493, then 788
+postings. Each ADP scan is therefore compared with the feed's last good size,
+kept in its `scan.feed` record:
+- A reading below 75 % of that size, or an empty feed, is a failed scan
+  ("feed size anomaly ..."). Nothing is read from it, the last good size and
+  `last_success` are kept, and the next scan retries.
+- The first scan with no recorded size needs at least 1,000 postings.
+- A smaller, non-empty size that holds within 10 % for 3 scans in a row is
+  accepted as the new normal.
+
+ServiceNow's feed has no such check.
+
 A temporary failure is not a reason to remove a company. HTTP 429 or 5xx
 answers, timeouts and malformed answers mark the company "Monitoring blocked"
 (never "0 jobs"), keep its last successful scan time, and are retried on

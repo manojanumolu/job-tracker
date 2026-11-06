@@ -71,7 +71,11 @@ COMPANY_SOURCES: dict[str, list[dict]] = {
     "oracle": [{"type": "oracle", "api": "https://eeho.fa.us2.oraclecloud.com/hcmRestApi/resources/latest", "site": "CX_45001",
                 "location_facet": "300000000106947", "job_page": "https://careers.oracle.com/en/sites/jobsearch/job"}],
     "ibm": [{"type": "ibm", "country": "India"}],
-    "adp": [{"type": "job_feed", "url": "https://jobs.adp.com/en/jobs/xml/"}],
+    # ADP's feed is sometimes well-formed but empty or partial (6 Nov 2026: 1,482 -> 0 -> 1,493 -> 788
+    # postings, all three readings counted as healthy scans), so it is checked against its own
+    # last good size (_feed_size_check). ServiceNow's feed has no such history and is read as before.
+    "adp": [{"type": "job_feed", "url": "https://jobs.adp.com/en/jobs/xml/",
+             "size_guard": {"min_ratio": 0.75, "first_scan_min": 1000, "settle_scans": 3}}],
     "servicenow": [{"type": "job_feed", "url": "https://careers.servicenow.com/jobs/xml/"}],
     "swiggy": [{"type": "swiggy"}],
 }
@@ -183,6 +187,7 @@ class Scan:
     unknown: int = 0
     notes: list[str] = field(default_factory=list)
     reasons: Counter = field(default_factory=Counter)   # why postings were not accepted, by kind (_reason_kind)
+    feed: dict = field(default_factory=dict)            # a size-guarded feed's baseline / suspect record (_feed_size_check)
 
     def fail(self, status: str, message: str) -> None:
         log.warning("%s: %s (%s)", self.name, message, status)
@@ -229,7 +234,8 @@ class Scan:
         return {"postings_seen": self.seen, "candidates": self.candidates, "details_read": self.details_ok,
                 "details_unreadable": self.details_failed, "pending": self.pending, "accepted": len(self.jobs),
                 "rejected": self.rejected, "unknown": self.unknown,
-                "rejections": dict(self.reasons.most_common(_TOP_REASONS))}
+                "rejections": dict(self.reasons.most_common(_TOP_REASONS)),
+                **({"feed": self.feed} if self.feed else {})}
 
 
 _TOP_REASONS = 6
@@ -367,9 +373,62 @@ def _evaluate(scan: Scan, listing: Listing, budget: list[int]) -> None:
 # HTTP sources (Workday, Accenture, Jibe, Avature, Zoho)
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Feed-size guard (only for a source configured with "size_guard": ADP)
+# ---------------------------------------------------------------------------
+# A feed can be well-formed XML and still be empty or cut short at the
+# source: ADP's went 1,482 -> 0 -> 1,493 -> 788 postings on 6 Nov 2026, and
+# every reading was a "healthy" scan, so its vacancies silently went unseen.
+# The guard compares each reading with the last GOOD size of the same feed,
+# kept in the company's own scan record (the only part of companies.json a
+# scan publishes; repo_sync.SCAN_FIELDS):
+#   * at least min_ratio of the last good size -> good; it becomes the new
+#     baseline (so a slow genuine change is followed);
+#   * smaller (or empty) -> a failed scan with the reason: nothing is read
+#     from it, the baseline and last_success are kept, the next scan retries;
+#   * no baseline yet -> good if at least first_scan_min postings, so a first
+#     scan is judged on its own and never rejected by default;
+#   * the same smaller, non-empty size settle_scans times in a row (within
+#     10%) -> taken as the feed's new normal: a real, lasting change is not
+#     treated as a failure for ever. An empty feed never becomes "normal".
+_SETTLE_TOLERANCE = 0.10
+
+
+def _feed_size_check(postings: int, guard: dict, previous: dict | None) -> tuple[bool, str, dict]:
+    """(accept, reason or note, the scan's new "feed" record). ``previous``
+    is the company's last "feed" record ({"baseline": {...}, "suspect": {...}})."""
+    previous = previous if isinstance(previous, dict) else {}
+    base = previous.get("baseline") if isinstance(previous.get("baseline"), dict) else None
+    base_n = base.get("postings") if base and isinstance(base.get("postings"), int) and base["postings"] > 0 else None
+    now = _now_iso()
+    good = {"baseline": {"postings": postings, "at": now}}
+    if base_n is not None and postings >= guard["min_ratio"] * base_n:
+        return True, "", good
+    if base_n is None and postings >= guard["first_scan_min"]:
+        return True, "", good
+    expected = (f"{base_n:,} at the last good scan" if base_n is not None
+                else f"at least {guard['first_scan_min']:,} expected (no good scan recorded yet)")
+    if postings == 0:
+        reason = f"feed size anomaly: the job feed listed no postings ({expected})"
+    else:
+        reason = f"feed size anomaly: the job feed listed {postings:,} postings ({expected})"
+    sus = previous.get("suspect") if isinstance(previous.get("suspect"), dict) else None
+    same = (postings > 0 and sus and isinstance(sus.get("postings"), int) and sus["postings"] > 0
+            and abs(postings - sus["postings"]) <= _SETTLE_TOLERANCE * sus["postings"])
+    streak = (int(sus.get("streak", 0)) + 1) if same else 1
+    if postings > 0 and streak >= guard["settle_scans"]:
+        return True, (f"feed size changed to {postings:,} postings and held for {streak} scans: "
+                      f"accepted as the feed's new normal"), good
+    record = {"suspect": {"postings": postings, "streak": streak, "at": now}}
+    if base:
+        record["baseline"] = base                     # the last good size, kept untouched
+    return False, reason + " — not read as no jobs; retried next scan", record
+
+
 def _scan_sources(company: dict, sources: list[dict]) -> Scan:
     scan = Scan(company["name"])
     budget = [MAX_API_DETAIL_FETCHES]
+    previous_feed = (company.get("scan") or {}).get("feed") if isinstance(company.get("scan"), dict) else None
     with httpx.Client(headers=HEADERS, timeout=25, follow_redirects=True) as client:
         listings: list[Listing] = []
         for cfg in sources:
@@ -377,10 +436,23 @@ def _scan_sources(company: dict, sources: list[dict]) -> Scan:
                 result = read_source(client, cfg)
             except SourceError as e:
                 scan.fail(e.status, str(e))
+                if isinstance(cfg.get("size_guard"), dict) and isinstance(previous_feed, dict):
+                    scan.feed = dict(previous_feed)       # an unreadable feed keeps the last good size too
                 continue
             except Exception as e:
                 scan.fail("failing", f"{type(e).__name__}: {e}")
+                if isinstance(cfg.get("size_guard"), dict) and isinstance(previous_feed, dict):
+                    scan.feed = dict(previous_feed)
                 continue
+            if isinstance(cfg.get("size_guard"), dict):
+                accept, why, scan.feed = _feed_size_check(result.seen, cfg["size_guard"], previous_feed)
+                if not accept:
+                    scan.seen += result.seen               # what the feed said, for the record
+                    scan.fail("failing", why)
+                    continue
+                if why:
+                    scan.notes.append(why)
+                    log.info("%s: %s", scan.name, why)
             scan.sources_ok += 1
             scan.seen += result.seen
             if result.note:
