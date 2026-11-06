@@ -515,13 +515,6 @@
       "hint": "0bf58c91e0a16e50",
       "checked_at": "2026-11-06T09:49:21+00:00",
       "finder": 2
-    },
-    "uber": {
-      "status": "none",
-      "reason": "uber.com: HTTP 406",
-      "hint": "a6e45343f1e1f242",
-      "checked_at": "2026-11-06T09:49:22+00:00",
-      "finder": 2
     }
   }
 }

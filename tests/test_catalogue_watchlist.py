@@ -52,6 +52,8 @@ def test_manual_only_companies_left_the_catalogue():
     assert not ({"uber", "tcs", "zepto"} & set(cat))
     seen = json.loads((REPO / "data" / "seen_jobs.json").read_text("utf-8"))
     assert not [j for j in seen if j.get("company_id") in {"uber", "tcs", "zepto"}]
+    logos = json.loads((REPO / "data" / "logos.json").read_text("utf-8"))["logos"]
+    assert not ({"uber", "tcs", "zepto"} & set(logos))          # as the logo job drops removed companies
 
 
 def test_every_listed_company_is_monitored_automatically():
