@@ -1,0 +1,31 @@
+# Dependency update pull requests (Nov 2026 audit). Nothing merges by
+# itself: each update is a pull request that runs the Tests workflow
+# (read-only, no secrets) and waits for review.
+#   * github-actions: the actions are pinned to full commit SHAs; this keeps
+#     those pins moving (the Node 20 deprecation warning in every run).
+#   * pip: requirements*.txt are hash-locked pip-compile output of the .in
+#     files; Dependabot updates the .in pins and regenerates the hashes.
+# Security alerts themselves are a repository setting (Settings -> Code
+# security -> Dependabot alerts), not this file.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: pip
+    directory: "/requirements"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3

@@ -48,6 +48,11 @@ jobs:
       - name: Checkout schedule inputs
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          # the branch, not the commit the run was queued on: a run that
+          # waited in the check-jobs queue behind a scan must see that scan's
+          # companies.json, or it plans a second scan of the same window
+          # (seen 2026-11-05 18:28 UTC, run 1224)
+          ref: ${{ github.ref }}
           persist-credentials: false
           sparse-checkout: |
             src/scan_schedule.py
@@ -71,7 +76,7 @@ jobs:
     needs: plan
     if: ${{ needs.plan.outputs.scan == 'true' }}
     runs-on: ubuntu-latest
-    # a scan takes ~5 min; a hung browser or site must not hold the check-jobs
+    # a scan takes ~20-26 min (Nov 2026, 44 portals); a hung browser or site must not hold the check-jobs
     # group (and so every later scan) for GitHub's 6 h default. A timed-out
     # scan publishes and emails nothing; the next window scans again.
     timeout-minutes: 90
@@ -82,6 +87,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          ref: ${{ github.ref }}       # the latest data, as the plan job saw it
           persist-credentials: false
 
       - name: Set up Python
