@@ -166,12 +166,11 @@ def _date(value) -> date | None:
 def freshness(job: dict) -> str:
     """"new" (posted within NEWLY_POSTED_DAYS of being found), "older"
     (posted earlier, found now) or "unknown" (the site gives no date)."""
-    posted, found = _date(job.get("posted_at")), _date(job.get("first_seen"))
+    posted = _date(job.get("posted_at"))
     if posted is None:
         return "unknown"
-    if found is None or (found - posted).days <= NEWLY_POSTED_DAYS:
-        return "new"
-    return "older"
+    found = _date(job.get("first_seen")) or datetime.now(timezone.utc).date()   # undated record: judged as of today
+    return "new" if (found - posted).days <= NEWLY_POSTED_DAYS else "older"
 
 
 def _posted_label(job: dict) -> str:

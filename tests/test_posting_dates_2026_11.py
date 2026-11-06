@@ -59,3 +59,9 @@ def test_an_alert_says_new_only_for_a_recent_posting():
     assert notifier.freshness({"posted_at": "2026-11-05", "first_seen": found}) == "new"
     assert notifier.freshness({"posted_at": "2026-09-01", "first_seen": found}) == "older"
     assert notifier.freshness({"first_seen": found}) == "unknown"
+
+
+def test_a_record_without_first_seen_is_judged_as_of_today():
+    assert notifier.freshness({"posted_at": "2020-01-01"}) == "older"
+    today = datetime.now(timezone.utc).date().isoformat()
+    assert notifier.freshness({"posted_at": today}) == "new"
