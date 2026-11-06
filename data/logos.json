@@ -456,6 +456,72 @@
       "hint": "b78b14ca3db66520",
       "checked_at": "2026-11-05T09:49:12+00:00",
       "finder": 2
+    },
+    "amd": {
+      "status": "none",
+      "reason": "amd.com: ReadTimeout",
+      "hint": "76b5e901afee3d2c",
+      "checked_at": "2026-11-06T09:49:08+00:00",
+      "finder": 2
+    },
+    "netflix": {
+      "status": "none",
+      "reason": "netflix.net: robots.txt; netflix.com: robots.txt",
+      "hint": "b5ad65b9d1c5ede8",
+      "checked_at": "2026-11-06T09:49:09+00:00",
+      "finder": 2
+    },
+    "oracle": {
+      "status": "none",
+      "reason": "oracle.com: HTTP 403",
+      "hint": "325d9dda3227f5e9",
+      "checked_at": "2026-11-06T09:49:11+00:00",
+      "finder": 2
+    },
+    "ibm": {
+      "status": "ok",
+      "domain": "ibm.com",
+      "page": "https://www.ibm.com/us-en",
+      "web": {
+        "mime": "image/png",
+        "data": "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",
+        "w": 120,
+        "h": 120,
+        "src": "https://www.ibm.com/content/dam/adobe-cms/default-images/apple-touch-icon-120x120.png",
+        "kind": "apple-touch-icon"
+      },
+      "email": "web",
+      "hint": "75c20ed259f6d482",
+      "checked_at": "2026-11-06T09:49:13+00:00",
+      "finder": 2
+    },
+    "adp": {
+      "status": "none",
+      "reason": "no website to look at",
+      "hint": "1c00c10ffbd56753",
+      "checked_at": "2026-11-06T09:49:13+00:00",
+      "finder": 2
+    },
+    "servicenow": {
+      "status": "none",
+      "reason": "servicenow.com: HTTP 403",
+      "hint": "aa95ebb791e401e7",
+      "checked_at": "2026-11-06T09:49:14+00:00",
+      "finder": 2
+    },
+    "swiggy": {
+      "status": "none",
+      "reason": "swiggy.in: HTTP 403; swiggy.com: HTTP 403",
+      "hint": "0bf58c91e0a16e50",
+      "checked_at": "2026-11-06T09:49:21+00:00",
+      "finder": 2
+    },
+    "uber": {
+      "status": "none",
+      "reason": "uber.com: HTTP 406",
+      "hint": "a6e45343f1e1f242",
+      "checked_at": "2026-11-06T09:49:22+00:00",
+      "finder": 2
     }
   }
 }
