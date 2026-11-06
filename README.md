@@ -5,3 +5,5 @@ Filters opportunities using job eligibility and experience criteria.
 Sends email alerts when qualifying new jobs are found.
 Features a dashboard for monitoring jobs, companies, and scan status.
 Built with Python, Streamlit, and GitHub Actions.
+
+How companies are chosen, and when alerts go out: [docs/MONITORING.md](docs/MONITORING.md).
