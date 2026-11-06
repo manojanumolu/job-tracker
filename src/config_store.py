@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent.parent          # the repository root (this file is in src/)
@@ -267,12 +268,59 @@ def shared_tailoring(settings: dict | None) -> dict | None:
     return t if isinstance(t, dict) else None
 
 
+# The shared email's cutoff (Nov 2026). Widening what the shared email
+# matches — its tailoring in settings.json, or the job families in
+# job_filters — must never send the backlog of jobs saved earlier that the
+# old rules held back (60 records at the time) as if they were new. So a job
+# is claimed only if it was first found at or after SHARED_SINCE_KEY (an ISO
+# time in settings.json, moved forward whenever those rules change) AND
+# within SHARED_MAX_AGE of now — the second bound needs no one to remember
+# the first. A job whose own earlier send failed (its claim was released,
+# "released_claim") is a retry, not backlog: it is exempt from both, so a
+# mail outage still never loses an alert. Personal alerts have their own
+# cutoff (the person's enabled_at, user_alerts.py) and don't use this.
+SHARED_SINCE_KEY = "shared_alert_since"
+SHARED_MAX_AGE = timedelta(days=7)
+
+
+def _iso_time(value) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        dt = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def shared_alert_cutoff(settings: dict | None, now: datetime | None = None) -> datetime:
+    """The earliest first_seen the shared email still claims: the later of
+    settings.json's shared_alert_since (ignored if missing or malformed) and
+    now - SHARED_MAX_AGE."""
+    now = now or datetime.now(timezone.utc)
+    floor = now - SHARED_MAX_AGE
+    since = _iso_time(settings.get(SHARED_SINCE_KEY)) if isinstance(settings, dict) else None
+    return max(floor, since) if since else floor
+
+
+def within_shared_cutoff(job: dict, cutoff: datetime | None) -> bool:
+    """Not backlog: first found at/after the cutoff, or a retry. A record
+    with no readable first_seen can't be dated, so the cutoff can't judge
+    it (every record the scraper writes has one: a dateless record is a
+    pre-classifier one, which alert_pending already never emails)."""
+    if cutoff is None or not isinstance(job, dict) or job.get("released_claim"):
+        return True
+    found = _iso_time(job.get("first_seen"))
+    return found is None or found >= cutoff
+
+
 def shared_alert_pending(job: dict, excluded: frozenset[str] | set[str] = frozenset(),
-                         tailoring: dict | None = None) -> bool:
-    """alert_pending, within the shared alerts' companies and the shared
-    email's tailoring. A job outside them stays untouched (pending) in the
-    shared ledger: it is simply never claimed for the shared email."""
-    if not (alert_pending(job) and job.get("company_id") not in excluded):
+                         tailoring: dict | None = None, cutoff: datetime | None = None) -> bool:
+    """alert_pending, within the shared alerts' companies, the shared
+    email's tailoring and its cutoff (shared_alert_cutoff; None = no
+    cutoff). A job outside them stays untouched (pending) in the shared
+    ledger: it is simply never claimed for the shared email."""
+    if not (alert_pending(job) and job.get("company_id") not in excluded and within_shared_cutoff(job, cutoff)):
         return False
     if not tailoring:
         return True

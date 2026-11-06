@@ -38,20 +38,39 @@ def _catalogue():
 
 def test_statuses_of_the_added_companies():
     cat = _catalogue()
-    assert monitoring_state(cat["tcs"]) == "blocked" and monitoring_state(cat["zepto"]) == "blocked"
-    assert monitoring_state(cat["uber"]) == "pending"
-    for cid in ("tcs", "zepto", "uber"):
-        assert in_shared_alerts(cat[cid]) and cat[cid]["status_reason"]
-        assert "Not scanned" in scraper.source_label(cat[cid])
     for cid in ACTIVE_ADDED:
         assert monitoring_state(cat[cid]) == "" and scraper.sources_for(cat[cid]), cid
         assert in_shared_alerts(cat[cid]) and "Playwright" not in scraper.source_label(cat[cid])
 
 
+def test_manual_only_companies_left_the_catalogue():
+    """Nov 2026 cleanup: Uber (no readable job list or official feed), TCS
+    (Access Denied to the scanner) and Zepto (bot challenge) could only be
+    checked by hand, so they are no longer listed. They never had a scan or
+    a saved job, so no history went with them."""
+    cat = _catalogue()
+    assert not ({"uber", "tcs", "zepto"} & set(cat))
+    seen = json.loads((REPO / "data" / "seen_jobs.json").read_text("utf-8"))
+    assert not [j for j in seen if j.get("company_id") in {"uber", "tcs", "zepto"}]
+    logos = json.loads((REPO / "data" / "logos.json").read_text("utf-8"))["logos"]
+    assert not ({"uber", "tcs", "zepto"} & set(logos))          # as the logo job drops removed companies
+
+
+def test_every_listed_company_is_monitored_automatically():
+    """The catalogue lists only companies the scheduled scan reads by itself:
+    a configured official source, no monitoring hold, never the generic
+    browser fallback."""
+    for cid, c in _catalogue().items():
+        assert monitoring_state(c) == "", cid
+        assert scraper.sources_for(c), cid
+        assert "Playwright" not in scraper.source_label(c) and "Not scanned" not in scraper.source_label(c), cid
+
+
 def test_account_2s_companies_are_untouched():
     cat = _catalogue()
     assert all(not in_shared_alerts(cat[cid]) and monitoring_state(cat[cid]) == "" for cid in ACCOUNT_2)
-    assert not (ACCOUNT_2 & (ACTIVE_ADDED | {"tcs", "zepto", "uber"}))
+    assert not (ACCOUNT_2 & ACTIVE_ADDED)
+    assert len(cat) == 44 and len([c for c in cat.values() if in_shared_alerts(c)]) == 39
 
 
 def test_discovery_is_not_narrowed_at_the_source():
@@ -357,7 +376,8 @@ def test_only_that_qualcomm_vacancy_is_excluded():
     for n, title in ((1, "2027 Campus Hire Software Engineer"), (2, "2027 Campus Hire_Associate Engineer_Android"), (3, "Graduate Software Engineer")):
         new = scraper.merge_new_jobs(seen, [_job("Qualcomm", f"https://careers.qualcomm.com/careers/job/90000{n}", title)], company_id="qualcomm")
         assert len(new) == 1 and config_store.shared_alert_pending(new[0], frozenset(), tailoring), title
-    assert sum(j.get("company") == "Qualcomm" for j in seen) == 1      # one record, not a company-wide rule
+    # one dismissed record, not a company-wide rule (the scan keeps saving other Qualcomm jobs)
+    assert sum(j.get("company") == "Qualcomm" and bool(j.get("dismissed")) for j in seen) == 1
 
 
 # ── a known limitation, to be addressed separately ────────────────

@@ -252,7 +252,8 @@ def test_the_summary_line_names_the_companies_naturally():
     many = build_alert_email([_job(company=f"Co{i}", url=f"https://x.example/{i}") for i in range(6)])[1]
     assert "From PwC." in one and "From PwC and Sanofi." in two and "From Co0, Co1, Co2, Co3 and 2 more." in many
     none = build_alert_email([_job(company="")])[1]
-    assert "From ." not in none and "From " not in none.split("New job alert")[1].split("</p>")[1][:20]
+    summary = none.split('text-transform:uppercase;">Job alert</p>')[1].split("</p>")[0].rsplit('">', 1)[1]
+    assert "From ." not in none and summary.startswith("Fresher and entry-level roles")      # no "From " without a company
 
 
 def test_long_and_hostile_text_is_escaped_clipped_and_wraps():

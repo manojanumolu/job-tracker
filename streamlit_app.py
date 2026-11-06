@@ -105,6 +105,7 @@ from config_store import (
     in_shared_alerts,
     job_key,
     monitoring_state,
+    shared_alert_cutoff,
     shared_alert_pending,
     shared_tailoring,
     update_json,
@@ -3777,6 +3778,12 @@ _all_active_jobs: list[dict] = (visible_jobs(all_records) if _HIDDEN is None    
 # each new member's Home. The Jobs page stays the place to browse every
 # shared listing: its company filter starts from the follows, and an empty
 # selection there means any company.
+# A follow of a company that has since left the catalogue (Nov 2026: Uber,
+# TCS and Zepto, which had no automatic source) stays in the person's stored
+# watchlist untouched, but is not counted or used here: "Following N" counts
+# only companies that are still tracked.
+if ME is not None:
+    ME = {**ME, "watchlist": set(ME["watchlist"]) & {str(c.get("id")) for c in companies}}
 _VIEW: dict | None = user_store.view_from(ME["profile"], ME["watchlist"]) if ME is not None else None
 
 
@@ -3926,7 +3933,9 @@ NEXT_SCAN_NOTE = "Overdue — GitHub may start it later" if SCAN_DUE else "GitHu
 # scraper status -> label; all of them use the red "failing" style/counts
 # (the scan keeps trying the source, and the status recovers by itself)
 _UNHEALTHY = {"failing": "Monitoring blocked", "broken": "Monitoring blocked", "needs_config": "Monitoring blocked"}
-_NO_SOURCE_LABELS = {"blocked": "Monitoring blocked", "pending": "Pending source"}
+# a company kept in the catalogue without a usable source is NOT scanned:
+# never "Monitoring blocked", which means a scan failed and will retry
+_NO_SOURCE_LABELS = {"blocked": "Not scanned: site blocks scanners", "pending": "Pending source"}
 
 
 def portal_status(c: dict) -> tuple[str, str]:
@@ -4007,6 +4016,7 @@ recipient, recipient_source = alert_recipient(settings)
 SHARED_EXCLUDED = excluded_from_shared_alerts(companies)
 # the primary admin's tailoring of the shared email (settings.json; None = every qualifying job)
 SHARED_TAILORING = shared_tailoring(settings)
+SHARED_CUTOFF = shared_alert_cutoff(settings)      # backlog older than this is never claimed (config_store)
 
 
 def company_jobs(c: dict) -> list[dict]:
@@ -5201,7 +5211,7 @@ def page_job_detail(j: dict):
                 src.append(("Email alert", "Sent" if j.get("notified")
                             else "Sending — delivery not yet confirmed" if j.get("notify_state") == "claimed"
                             else "Not sent (dismissed)" if j.get("dismissed")
-                            else "Pending — goes out after the next check" if shared_alert_pending(j, SHARED_EXCLUDED, SHARED_TAILORING)
+                            else "Pending — goes out after the next check" if shared_alert_pending(j, SHARED_EXCLUDED, SHARED_TAILORING, SHARED_CUTOFF)
                             else "Not emailed"))
             st.html(f'<h2 class="section-title">{_ms("link")}Source</h2><dl class="kv" style="grid-template-columns:110px minmax(0,1fr);">'
                     + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in src) + "</dl>")
@@ -5609,7 +5619,7 @@ def page_monitoring():
     st.html(f'<div class="legend">{_ms("info", "s20")}<p class="note">Statuses come from the scraper: <b>Active monitoring</b> = scanned successfully in the last {_STALE_H} hours, whatever jobs it has today · '
             f'<b>Delayed</b> = no successful scan for {_STALE_H}+ hours · <b>Monitoring blocked</b> = the source could not be read '
             f'(rate limits, errors, a block or a changed site); the scan keeps trying and it recovers by itself · '
-            f'<b>Pending source</b> = no reliable source yet · <b>Pending</b> = not scanned yet. Full run logs: <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">GitHub Actions</a>.</p></div>')
+            f'<b>Pending source</b> / <b>Not scanned</b> = no usable automatic source, so it is not scanned · <b>Pending</b> = not scanned yet. Full run logs: <a class="link" href="{ACTIONS_URL}" target="_blank" rel="noopener">GitHub Actions</a>.</p></div>')
 
 
 def _save_my_alerts(prefs: dict) -> None:
@@ -5888,7 +5898,7 @@ def page_email():
     # when the email actually went out (older records only know when the job was found)
     sent_times = [(_parse_iso(j.get("notified_at") or ""), found[id(j)]) for j in notified]
     last_mail, last_is_sent = max(((a or b, bool(a)) for a, b in sent_times if a or b), default=(None, False))
-    pending = [j for j in all_records if shared_alert_pending(j, SHARED_EXCLUDED, SHARED_TAILORING)]
+    pending = [j for j in all_records if shared_alert_pending(j, SHARED_EXCLUDED, SHARED_TAILORING, SHARED_CUTOFF)]
     # the full address is personal: only the primary admin sees it
     shown = recipient if is_primary() else mask_email(recipient)
     page_header("Email & Notifications", (
@@ -6400,7 +6410,7 @@ def page_settings():
                               use_container_width=True, on_click=_ask_clear_all)
         else:
             # only the primary admin's Dismiss all reaches the shared alerts
-            unsent = sum(1 for j in _all_active_jobs if shared_alert_pending(j, SHARED_EXCLUDED, SHARED_TAILORING)) if IS_PRIMARY else 0
+            unsent = sum(1 for j in _all_active_jobs if shared_alert_pending(j, SHARED_EXCLUDED, SHARED_TAILORING, SHARED_CUTOFF)) if IS_PRIMARY else 0
             with st.container(key="danger_confirm"):
                 st.html(f'<p class="note" style="color:var(--text);">Dismiss all <b>{len(_all_active_jobs)}</b> active jobs?'
                         + (f" This also cancels <b>{unsent}</b> alert{'s' if unsent != 1 else ''} that haven't been emailed yet "

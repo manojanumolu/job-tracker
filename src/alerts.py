@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 
 from access import alert_recipient
 from config_store import (
-    excluded_from_shared_alerts, load_companies, load_seen_jobs, load_settings, shared_alert_pending, shared_tailoring,
+    excluded_from_shared_alerts, load_companies, load_seen_jobs, load_settings, shared_alert_cutoff, shared_alert_pending, shared_tailoring,
 )
 from repo_sync import publish, record_key
 
@@ -42,15 +42,17 @@ def _now() -> str:
 
 
 def claim(seen: list[dict], now: str | None = None, excluded: frozenset[str] = frozenset(),
-          tailoring: dict | None = None) -> set[str]:
+          tailoring: dict | None = None, cutoff: datetime | None = None) -> set[str]:
     """``excluded``: companies outside the shared alerts (another admin's
     monitoring, config_store.excluded_from_shared_alerts) — never claimed.
     ``tailoring``: the shared email's tailoring (config_store.shared_tailoring)
-    — a job outside it is never claimed either."""
+    — a job outside it is never claimed either. ``cutoff``: the shared
+    email's cutoff (config_store.shared_alert_cutoff) — a job first found
+    before it is backlog, never claimed as a new alert."""
     now = now or _now()
     keys = set()
     for j in seen:
-        if shared_alert_pending(j, excluded, tailoring):
+        if shared_alert_pending(j, excluded, tailoring, cutoff):
             j["notify_state"] = "claimed"
             j["claimed_at"] = now
             keys.add(record_key(j))
@@ -89,7 +91,8 @@ def run(send=None, publisher=publish) -> int:
         settings = {}
     # the address is never logged in full: Actions logs of a public repo are public
     recipient, _ = alert_recipient(settings)
-    keys = (claim(seen, excluded=excluded_from_shared_alerts(companies), tailoring=shared_tailoring(settings))
+    keys = (claim(seen, excluded=excluded_from_shared_alerts(companies), tailoring=shared_tailoring(settings),
+                  cutoff=shared_alert_cutoff(settings))
             if recipient else set())
     if not recipient:
         log.info("No recipient email configured (the ALERT_RECIPIENT secret) — publishing data only")
