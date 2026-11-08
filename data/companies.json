@@ -6,7 +6,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:04:28.325334+00:00",
+    "last_checked": "2026-11-08T18:04:22.007526+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -26,8 +26,8 @@
         "alone is not evidence of an entry-level role": 2
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -36,7 +36,7 @@
       }
     },
     "source": "Avature job search",
-    "last_success": "2026-11-08T15:04:28.325334+00:00",
+    "last_success": "2026-11-08T18:04:22.007526+00:00",
     "shared_alerts": false
   },
   {
@@ -46,7 +46,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:04:33.920657+00:00",
+    "last_checked": "2026-11-08T18:04:26.306316+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -65,8 +65,8 @@
         "no fresher/entry-level evidence": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -75,7 +75,7 @@
       }
     },
     "source": "Jibe/iCIMS API",
-    "last_success": "2026-11-08T15:04:33.920657+00:00",
+    "last_success": "2026-11-08T18:04:26.306316+00:00",
     "shared_alerts": false
   },
   {
@@ -85,7 +85,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:04:35.988068+00:00",
+    "last_checked": "2026-11-08T18:04:28.497535+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -101,8 +101,8 @@
         "levelled title above entry": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -111,7 +111,7 @@
       }
     },
     "source": "Workday API",
-    "last_success": "2026-11-08T15:04:35.988068+00:00",
+    "last_success": "2026-11-08T18:04:28.497535+00:00",
     "shared_alerts": false
   },
   {
@@ -121,7 +121,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:04:56.428019+00:00",
+    "last_checked": "2026-11-08T18:04:51.296489+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -139,8 +139,8 @@
         "no fresher/entry-level evidence": 6
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -149,7 +149,7 @@
       }
     },
     "source": "Workday API",
-    "last_success": "2026-11-08T15:04:56.428019+00:00",
+    "last_success": "2026-11-08T18:04:51.296489+00:00",
     "shared_alerts": false
   },
   {
@@ -158,8 +158,8 @@
     "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers",
     "locked": true,
     "status": "active",
-    "last_job": "Associate",
-    "last_checked": "2026-11-08T15:07:14.312621+00:00",
+    "last_job": "IN_Associate_Data Science & Engineering_Data & Analytics_Advisory_Kolkata",
+    "last_checked": "2026-11-08T18:07:13.622831+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -179,8 +179,8 @@
         "broad experience range and no independent fresher/entry-leve": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -189,7 +189,7 @@
       }
     },
     "source": "Workday API",
-    "last_success": "2026-11-08T15:07:14.312621+00:00",
+    "last_success": "2026-11-08T18:07:13.622831+00:00",
     "shared_alerts": false
   },
   {
@@ -199,7 +199,7 @@
     "locked": true,
     "status": "active",
     "last_job": "Order to Cash Operations New Associate",
-    "last_checked": "2026-11-08T15:07:18.194791+00:00",
+    "last_checked": "2026-11-08T18:07:17.374064+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -216,8 +216,8 @@
         "no fresher/entry-level evidence": 16
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -226,7 +226,7 @@
       }
     },
     "source": "Accenture job-search API",
-    "last_success": "2026-11-08T15:07:18.194791+00:00"
+    "last_success": "2026-11-08T18:07:17.374064+00:00"
   },
   {
     "id": "c1783687965",
@@ -235,7 +235,7 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:07:22.244005+00:00",
+    "last_checked": "2026-11-08T18:07:21.349964+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -254,8 +254,8 @@
         "alone is not evidence of an entry-level role": 6
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -264,7 +264,7 @@
       }
     },
     "source": "Zoho Recruit career site",
-    "last_success": "2026-11-08T15:07:22.244005+00:00"
+    "last_success": "2026-11-08T18:07:21.349964+00:00"
   },
   {
     "id": "c1793696368",
@@ -273,10 +273,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Product Accessibility Engineer",
-    "last_checked": "2026-11-08T15:07:33.316935+00:00",
+    "last_checked": "2026-11-08T18:07:30.741529+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:07:33.316935+00:00",
+    "last_success": "2026-11-08T18:07:30.741529+00:00",
     "scan": {
       "postings_seen": 88,
       "candidates": 88,
@@ -292,8 +292,8 @@
         "no fresher/entry-level evidence": 2
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -310,10 +310,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Program Management",
-    "last_checked": "2026-11-08T15:08:08.732033+00:00",
+    "last_checked": "2026-11-08T18:08:04.255764+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:08:08.732033+00:00",
+    "last_success": "2026-11-08T18:08:04.255764+00:00",
     "scan": {
       "postings_seen": 315,
       "candidates": 315,
@@ -330,8 +330,8 @@
         "not a job posting": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -348,10 +348,10 @@
     "locked": false,
     "status": "active",
     "last_job": "ASIC Verification Engineer",
-    "last_checked": "2026-11-08T15:08:46.142967+00:00",
+    "last_checked": "2026-11-08T18:08:40.971911+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:08:46.142967+00:00",
+    "last_success": "2026-11-08T18:08:40.971911+00:00",
     "scan": {
       "postings_seen": 247,
       "candidates": 247,
@@ -367,8 +367,8 @@
         "no fresher/entry-level evidence": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -385,10 +385,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:09:01.516185+00:00",
+    "last_checked": "2026-11-08T18:08:54.943741+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:09:01.516185+00:00",
+    "last_success": "2026-11-08T18:08:54.943741+00:00",
     "scan": {
       "postings_seen": 92,
       "candidates": 92,
@@ -405,8 +405,8 @@
         "no fresher/entry-level evidence": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -423,10 +423,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:09:26.900790+00:00",
+    "last_checked": "2026-11-08T18:09:25.930905+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:09:26.900790+00:00",
+    "last_success": "2026-11-08T18:09:25.930905+00:00",
     "scan": {
       "postings_seen": 141,
       "candidates": 141,
@@ -442,8 +442,8 @@
         "no fresher/entry-level evidence": 10
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -460,10 +460,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:09:38.539319+00:00",
+    "last_checked": "2026-11-08T18:09:37.838612+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:09:38.539319+00:00",
+    "last_success": "2026-11-08T18:09:37.838612+00:00",
     "scan": {
       "postings_seen": 51,
       "candidates": 51,
@@ -480,8 +480,8 @@
         "alone is not evidence of an entry-level role": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -498,10 +498,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:09:41.091058+00:00",
+    "last_checked": "2026-11-08T18:09:40.263946+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:09:41.091058+00:00",
+    "last_success": "2026-11-08T18:09:40.263946+00:00",
     "scan": {
       "postings_seen": 5,
       "candidates": 5,
@@ -515,8 +515,8 @@
         "seniority in title": 5
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -533,10 +533,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:09:47.710038+00:00",
+    "last_checked": "2026-11-08T18:09:46.545331+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:09:47.710038+00:00",
+    "last_success": "2026-11-08T18:09:46.545331+00:00",
     "scan": {
       "postings_seen": 23,
       "candidates": 23,
@@ -552,8 +552,8 @@
         "no fresher/entry-level evidence": 4
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -570,10 +570,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:10:03.315403+00:00",
+    "last_checked": "2026-11-08T18:09:52.496962+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:10:03.315403+00:00",
+    "last_success": "2026-11-08T18:09:52.496962+00:00",
     "scan": {
       "postings_seen": 47,
       "candidates": 47,
@@ -591,8 +591,8 @@
         "no fresher/entry-level evidence": 2
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -609,10 +609,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:10:07.191343+00:00",
+    "last_checked": "2026-11-08T18:09:56.218169+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:10:07.191343+00:00",
+    "last_success": "2026-11-08T18:09:56.218169+00:00",
     "scan": {
       "postings_seen": 9,
       "candidates": 9,
@@ -627,8 +627,8 @@
         "explicit requirement": 4
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -645,10 +645,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:10:14.491081+00:00",
+    "last_checked": "2026-11-08T18:10:03.829295+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:10:14.491081+00:00",
+    "last_success": "2026-11-08T18:10:03.829295+00:00",
     "scan": {
       "postings_seen": 58,
       "candidates": 58,
@@ -666,8 +666,8 @@
         "alone is not evidence of an entry-level role": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -684,10 +684,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:11:48.763052+00:00",
+    "last_checked": "2026-11-08T18:11:47.076381+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:11:48.763052+00:00",
+    "last_success": "2026-11-08T18:11:47.076381+00:00",
     "scan": {
       "postings_seen": 754,
       "candidates": 754,
@@ -702,12 +702,12 @@
         "explicit requirement": 211,
         "no fresher/entry-level evidence": 18,
         "alone is not evidence of an entry-level role": 4,
-        "not a job posting": 1,
-        "levelled title above entry": 1
+        "levelled title above entry": 1,
+        "not a job posting": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -724,10 +724,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Program Management Analyst - Cigna Healthcare",
-    "last_checked": "2026-11-08T15:12:10.263300+00:00",
+    "last_checked": "2026-11-08T18:12:08.671670+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:12:10.263300+00:00",
+    "last_success": "2026-11-08T18:12:08.671670+00:00",
     "scan": {
       "postings_seen": 102,
       "candidates": 102,
@@ -744,8 +744,8 @@
         "alone is not evidence of an entry-level role": 2
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -762,10 +762,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Technology Early Career Entry Program",
-    "last_checked": "2026-11-08T15:12:25.220344+00:00",
+    "last_checked": "2026-11-08T18:12:25.564383+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:12:25.220344+00:00",
+    "last_success": "2026-11-08T18:12:25.564383+00:00",
     "scan": {
       "postings_seen": 240,
       "candidates": 240,
@@ -783,8 +783,8 @@
         "not a job posting": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -801,10 +801,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:12:43.335501+00:00",
+    "last_checked": "2026-11-08T18:12:45.941912+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:12:43.335501+00:00",
+    "last_success": "2026-11-08T18:12:45.941912+00:00",
     "scan": {
       "postings_seen": 226,
       "candidates": 226,
@@ -823,8 +823,8 @@
         "broad experience range and no independent fresher/entry-leve": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -840,11 +840,11 @@
     "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi",
     "locked": false,
     "status": "active",
-    "last_job": "Project Controlling Analyst - CCC",
-    "last_checked": "2026-11-08T15:15:57.305775+00:00",
+    "last_job": "Mechanical Design Engineer",
+    "last_checked": "2026-11-08T18:15:58.972133+00:00",
     "status_reason": "",
     "scan_note": "49 postings left for the next scan (detail-page budget)",
-    "last_success": "2026-11-08T15:15:57.305775+00:00",
+    "last_success": "2026-11-08T18:15:58.972133+00:00",
     "scan": {
       "postings_seen": 750,
       "candidates": 750,
@@ -857,14 +857,14 @@
       "rejections": {
         "explicit requirement": 308,
         "seniority in title": 274,
-        "no fresher/entry-level evidence": 75,
+        "no fresher/entry-level evidence": 73,
         "job page unreadable": 49,
         "experience level in title": 26,
-        "alone is not evidence of an entry-level role": 4
+        "alone is not evidence of an entry-level role": 5
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -881,10 +881,10 @@
     "locked": false,
     "status": "active",
     "last_job": "CA Industrial Trainee",
-    "last_checked": "2026-11-08T15:16:09.168888+00:00",
+    "last_checked": "2026-11-08T18:16:11.078553+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:16:09.168888+00:00",
+    "last_success": "2026-11-08T18:16:11.078553+00:00",
     "scan": {
       "postings_seen": 98,
       "candidates": 98,
@@ -901,8 +901,8 @@
         "safety gate failed": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -919,10 +919,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:16:18.985576+00:00",
+    "last_checked": "2026-11-08T18:16:22.892970+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:16:18.985576+00:00",
+    "last_success": "2026-11-08T18:16:22.892970+00:00",
     "scan": {
       "postings_seen": 56,
       "candidates": 56,
@@ -939,8 +939,8 @@
         "levelled title above entry": 3
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -957,10 +957,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:16:21.633553+00:00",
+    "last_checked": "2026-11-08T18:16:25.835641+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:16:21.633553+00:00",
+    "last_success": "2026-11-08T18:16:25.835641+00:00",
     "scan": {
       "postings_seen": 25,
       "candidates": 25,
@@ -975,8 +975,8 @@
         "explicit requirement": 2
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -993,10 +993,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Associate Industrial Engineer",
-    "last_checked": "2026-11-08T15:16:32.750664+00:00",
+    "last_checked": "2026-11-08T18:16:38.409255+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:16:32.750664+00:00",
+    "last_success": "2026-11-08T18:16:38.409255+00:00",
     "scan": {
       "postings_seen": 99,
       "candidates": 99,
@@ -1014,8 +1014,8 @@
         "broad experience range and no independent fresher/entry-leve": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -1032,10 +1032,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:16:38.660510+00:00",
+    "last_checked": "2026-11-08T18:16:46.194934+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:16:38.660510+00:00",
+    "last_success": "2026-11-08T18:16:46.194934+00:00",
     "scan": {
       "postings_seen": 40,
       "candidates": 40,
@@ -1053,8 +1053,8 @@
         "levelled title above entry": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -1071,10 +1071,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Scientist I, Protein Biology",
-    "last_checked": "2026-11-08T15:17:05.266864+00:00",
+    "last_checked": "2026-11-08T18:17:27.532503+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:17:05.266864+00:00",
+    "last_success": "2026-11-08T18:17:27.532503+00:00",
     "scan": {
       "postings_seen": 287,
       "candidates": 287,
@@ -1091,8 +1091,8 @@
         "no fresher/entry-level evidence": 9
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -1109,10 +1109,10 @@
     "locked": false,
     "status": "active",
     "last_job": "She Builds 1:1 Resume & Interview Coaching, India",
-    "last_checked": "2026-11-08T15:17:22.424875+00:00",
+    "last_checked": "2026-11-08T18:17:42.566607+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:17:22.424875+00:00",
+    "last_success": "2026-11-08T18:17:42.566607+00:00",
     "scan": {
       "postings_seen": 2068,
       "candidates": 2068,
@@ -1131,8 +1131,8 @@
         "broad experience range and no independent fresher/entry-leve": 12
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -1149,29 +1149,29 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:18:16.669957+00:00",
+    "last_checked": "2026-11-08T18:18:30.979299+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:18:16.669957+00:00",
+    "last_success": "2026-11-08T18:18:30.979299+00:00",
     "scan": {
       "postings_seen": 214,
-      "candidates": 213,
-      "details_read": 65,
+      "candidates": 211,
+      "details_read": 63,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
-      "rejected": 202,
-      "unknown": 11,
+      "rejected": 201,
+      "unknown": 10,
       "rejections": {
         "seniority in title": 128,
-        "explicit requirement": 54,
+        "explicit requirement": 53,
         "levelled title above entry": 20,
-        "no fresher/entry-level evidence": 6,
-        "alone is not evidence of an entry-level role": 5
+        "alone is not evidence of an entry-level role": 5,
+        "no fresher/entry-level evidence": 5
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -1188,10 +1188,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Software Engineer, PhD, Early Career, 2026",
-    "last_checked": "2026-11-08T15:18:28.085259+00:00",
+    "last_checked": "2026-11-08T18:18:40.154127+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:18:28.085259+00:00",
+    "last_success": "2026-11-08T18:18:40.154127+00:00",
     "scan": {
       "postings_seen": 79,
       "candidates": 79,
@@ -1209,8 +1209,8 @@
         "no fresher/entry-level evidence": 3
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -1227,10 +1227,10 @@
     "locked": false,
     "status": "active",
     "last_job": "SAP/EWM consultant",
-    "last_checked": "2026-11-08T15:18:34.294547+00:00",
+    "last_checked": "2026-11-08T18:18:44.338132+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:18:34.294547+00:00",
+    "last_success": "2026-11-08T18:18:44.338132+00:00",
     "scan": {
       "postings_seen": 1742,
       "candidates": 1742,
@@ -1247,8 +1247,8 @@
         "broad experience range and no independent fresher/entry-leve": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -1264,11 +1264,11 @@
     "url": "https://southasiacareers.deloitte.com/search/?locationsearch=Hyderabad",
     "locked": false,
     "status": "active",
-    "last_job": "Executive | Financial Crime | Gurugram | Forensic & Financial Crime",
-    "last_checked": "2026-11-08T15:20:30.630307+00:00",
+    "last_job": "Intern | Financial Accounts | Bengaluru | Finance & Accounts",
+    "last_checked": "2026-11-08T18:20:27.277828+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:20:30.630307+00:00",
+    "last_success": "2026-11-08T18:20:27.277828+00:00",
     "scan": {
       "postings_seen": 1856,
       "candidates": 1856,
@@ -1284,11 +1284,11 @@
         "no fresher/entry-level evidence": 79,
         "job page unreadable": 7,
         "alone is not evidence of an entry-level role": 6,
-        "levelled title above entry": 1
+        "not a job posting": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -1304,11 +1304,11 @@
     "url": "https://careers.qualcomm.com/careers?domain=qualcomm.com&location=Hyderabad",
     "locked": false,
     "status": "active",
-    "last_job": "2027 Campus Hire_ Engineer_ HW",
-    "last_checked": "2026-11-08T15:21:30.858776+00:00",
+    "last_job": "Associate Engineer - RF SW",
+    "last_checked": "2026-11-08T18:21:35.187846+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:21:30.858776+00:00",
+    "last_success": "2026-11-08T18:21:35.187846+00:00",
     "scan": {
       "postings_seen": 567,
       "candidates": 567,
@@ -1326,8 +1326,8 @@
         "not a job posting": 3
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -1344,10 +1344,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Software Engineer",
-    "last_checked": "2026-11-08T15:22:14.141963+00:00",
+    "last_checked": "2026-11-08T18:22:12.751135+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:22:14.141963+00:00",
+    "last_success": "2026-11-08T18:22:12.751135+00:00",
     "scan": {
       "postings_seen": 299,
       "candidates": 299,
@@ -1365,8 +1365,8 @@
         "levelled title above entry": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -1383,7 +1383,7 @@
     "locked": false,
     "status": "broken",
     "last_job": "",
-    "last_checked": "2026-11-08T15:22:15.863050+00:00",
+    "last_checked": "2026-11-08T18:22:14.449469+00:00",
     "status_reason": "HTTP 403 from jiostar.wd102.myworkdayjobs.com",
     "scan_note": "",
     "last_success": "2026-11-06T15:25:35.755713+00:00",
@@ -1398,8 +1398,8 @@
       "unknown": 0,
       "rejections": {},
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -1416,10 +1416,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:22:25.481495+00:00",
+    "last_checked": "2026-11-08T18:22:27.165229+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:22:25.481495+00:00",
+    "last_success": "2026-11-08T18:22:27.165229+00:00",
     "scan": {
       "postings_seen": 600,
       "candidates": 87,
@@ -1435,8 +1435,8 @@
         "explicit requirement": 6
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -1453,10 +1453,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:22:28.182073+00:00",
+    "last_checked": "2026-11-08T18:22:30.117802+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:22:28.182073+00:00",
+    "last_success": "2026-11-08T18:22:30.117802+00:00",
     "scan": {
       "postings_seen": 10,
       "candidates": 10,
@@ -1472,8 +1472,8 @@
         "no fresher/entry-level evidence": 2
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -1490,10 +1490,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:22:45.199987+00:00",
+    "last_checked": "2026-11-08T18:22:47.308340+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:22:45.199987+00:00",
+    "last_success": "2026-11-08T18:22:47.308340+00:00",
     "scan": {
       "postings_seen": 346,
       "candidates": 346,
@@ -1511,8 +1511,8 @@
         "not a job posting": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -1529,10 +1529,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Procurement Operations Specialist",
-    "last_checked": "2026-11-08T15:23:07.812809+00:00",
+    "last_checked": "2026-11-08T18:23:03.926409+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:23:07.812809+00:00",
+    "last_success": "2026-11-08T18:23:03.926409+00:00",
     "scan": {
       "postings_seen": 1681,
       "candidates": 1681,
@@ -1551,8 +1551,8 @@
         "not a job posting": 1
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -1569,10 +1569,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:23:10.090359+00:00",
+    "last_checked": "2026-11-08T18:23:06.220228+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:23:10.090359+00:00",
+    "last_success": "2026-11-08T18:23:06.220228+00:00",
     "scan": {
       "postings_seen": 1513,
       "candidates": 38,
@@ -1590,12 +1590,12 @@
       "feed": {
         "baseline": {
           "postings": 1513,
-          "at": "2026-11-08T15:23:09.932602+00:00"
+          "at": "2026-11-08T18:23:06.098763+00:00"
         }
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -1612,10 +1612,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:23:11.992676+00:00",
+    "last_checked": "2026-11-08T18:23:08.182472+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:23:11.992676+00:00",
+    "last_success": "2026-11-08T18:23:08.182472+00:00",
     "scan": {
       "postings_seen": 738,
       "candidates": 83,
@@ -1630,8 +1630,8 @@
         "explicit requirement": 13
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
@@ -1648,10 +1648,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-08T15:23:31.017329+00:00",
+    "last_checked": "2026-11-08T18:23:20.776258+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-08T15:23:31.017329+00:00",
+    "last_success": "2026-11-08T18:23:20.776258+00:00",
     "scan": {
       "postings_seen": 190,
       "candidates": 189,
@@ -1667,8 +1667,8 @@
         "explicit requirement": 7
       },
       "run": {
-        "started_at": "2026-11-08T15:02:57.741142+00:00",
-        "finished_at": "2026-11-08T15:23:32.019208+00:00",
+        "started_at": "2026-11-08T18:03:00.845599+00:00",
+        "finished_at": "2026-11-08T18:23:21.777858+00:00",
         "jobs_found": 99,
         "new_jobs": 0,
         "portals": 44,
