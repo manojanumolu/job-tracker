@@ -75,7 +75,10 @@ COMPANY_SOURCES: dict[str, list[dict]] = {
     # postings, all three readings counted as healthy scans), so it is checked against its own
     # last good size (_feed_size_check). ServiceNow's feed has no such history and is read as before.
     "adp": [{"type": "job_feed", "url": "https://jobs.adp.com/en/jobs/xml/",
-             "size_guard": {"min_ratio": 0.75, "first_scan_min": 1000, "settle_scans": 3}}],
+             # settle_scans 8 (was 3): ADP's partial feed (~700-810 postings, no India jobs) came back
+             # for 2 scans in a row twice (7 Nov 06:02-09:02, 9 Nov 15:02-18:02), so 3 would soon have
+             # accepted a partial feed as "normal". 8 = a day of the same size before it counts as real.
+             "size_guard": {"min_ratio": 0.75, "first_scan_min": 1000, "settle_scans": 8, "reread_wait_s": 30}}],
     "servicenow": [{"type": "job_feed", "url": "https://careers.servicenow.com/jobs/xml/"}],
     "swiggy": [{"type": "swiggy"}],
 }
@@ -446,6 +449,21 @@ def _scan_sources(company: dict, sources: list[dict]) -> Scan:
                 continue
             if isinstance(cfg.get("size_guard"), dict):
                 accept, why, scan.feed = _feed_size_check(result.seen, cfg["size_guard"], previous_feed)
+                wait = cfg["size_guard"].get("reread_wait_s")
+                if not accept and wait:
+                    # the feed answered 200 with too few postings: read it once more after a pause
+                    # (ADP's partial feed is intermittent) — never more than once per scan
+                    log.info("%s: %s; reading the feed once more in %s s", scan.name, why, wait)
+                    time.sleep(wait)
+                    try:
+                        again = read_source(client, cfg)
+                    except Exception as e:      # the re-read failing changes nothing: the first verdict stands
+                        log.info("%s: re-read failed (%s)", scan.name, type(e).__name__)
+                    else:
+                        ok2, why2, feed2 = _feed_size_check(again.seen, cfg["size_guard"], previous_feed)
+                        if ok2:
+                            result, accept, why, scan.feed = again, True, why2, feed2
+                            scan.notes.append(f"first reading was short; the re-read listed {again.seen:,} postings")
                 if not accept:
                     scan.seen += result.seen               # what the feed said, for the record
                     scan.fail("failing", why)
@@ -933,6 +951,25 @@ def merge_new_jobs(seen: list[dict], found: list[dict], now: datetime | None = N
     return new
 
 
+def _failure_streak(scan: Scan, previous: dict, was_failing: bool, now: str) -> dict:
+    """{"failing_since", "failed_scans"} for a failed scan (counting on from
+    the last scan's record when that one failed too); {} for a healthy one.
+    Diagnostics only: it never changes a status."""
+    if scan.status == "active":
+        return {}
+    if was_failing and isinstance(previous.get("failed_scans"), int) and previous.get("failing_since"):
+        return {"failing_since": previous["failing_since"], "failed_scans": previous["failed_scans"] + 1}
+    return {"failing_since": now, "failed_scans": 1}
+
+
+def _streak_label(iso: str) -> str:
+    try:
+        dt = datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(timezone.utc)
+    except (ValueError, AttributeError):
+        return str(iso)
+    return f"{dt.day} {dt:%b} {dt:%H:%M} UTC"
+
+
 def run_all() -> list[dict]:
     from config_store import load_companies, save_companies, load_seen_jobs, save_seen_jobs
 
@@ -945,19 +982,26 @@ def run_all() -> list[dict]:
     scanned = [c for c in companies if not monitoring_state(c)]   # the others have no usable source yet: left as they are
 
     for company in scanned:
+        previous = company.get("scan") if isinstance(company.get("scan"), dict) else {}
+        was_failing = company.get("status") not in (None, "", "active", "unknown")
         scan = scan_company(company)
         jobs_found += len(scan.jobs)
         portals_failed += scan.status != "active"
         company["status"] = scan.status
         company["status_reason"] = scan.reason      # problems only ("" when healthy)
+        streak = _failure_streak(scan, previous, was_failing, _now_iso())
+        if streak and streak["failed_scans"] >= 2:
+            company["status_reason"] += (f" — failing since {_streak_label(streak['failing_since'])} "
+                                         f"({streak['failed_scans']} scans in a row)")
         company["scan_note"] = scan.user_note
         company["last_checked"] = _now_iso()          # this attempt, whatever its outcome
         if scan.status == "active":
             company["last_success"] = company["last_checked"]   # a failed scan keeps the older one
-        company["scan"] = scan.summary()
+        company["scan"] = {**scan.summary(), **(streak or {})}
         company["source"] = source_label(company)
-        # reflect what this scrape actually sees
-        company["last_job"] = scan.jobs[0]["title"] if scan.jobs else ""
+        # reflect what this scrape actually sees — a failed scan saw nothing, so it keeps the last one
+        if scan.status == "active":
+            company["last_job"] = scan.jobs[0]["title"] if scan.jobs else ""
         new_jobs += merge_new_jobs(seen + new_jobs, scan.jobs, company_id=company.get("id"), stats=merge_stats)
         time.sleep(1)
 

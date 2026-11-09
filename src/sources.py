@@ -714,14 +714,34 @@ def successfactors_detail(client: httpx.Client, url: str, location: str) -> Deta
     return Detail(ok=True, description=description, location=location, posting_evidence=True, matched="successfactors job page")
 
 
+# A search page that times out is asked for again, after a pause: one slow
+# page out of ~75 used to fail Deloitte's whole scan (ReadTimeout on 6, 8 and
+# 9 Nov, each time on a later page after the first had loaded). Only timeouts
+# are retried; an HTTP error or a refused connection fails at once, as before.
+SF_TIMEOUT_RETRY_WAITS_S = (5, 15)
+
+
+def _sf_search_page(client: httpx.Client, host: str, cfg: dict, page: int) -> httpx.Response:
+    params = {"q": "", "locationsearch": cfg.get("location", "India"), "startrow": page * SF_PAGE}
+    for attempt, wait in enumerate((*SF_TIMEOUT_RETRY_WAITS_S, None)):
+        try:
+            return client.get(f"{host}/search/", params=params)
+        except httpx.TimeoutException as e:
+            if wait is None:
+                raise SourceError(f"network error reading career site: {type(e).__name__} "
+                                  f"(results page {page + 1}, after {attempt + 1} tries)", "failing") from e
+            log.info("career site timed out on results page %d; asking again in %d s", page + 1, wait)
+            time.sleep(wait)
+        except httpx.HTTPError as e:
+            raise SourceError(f"network error reading career site: {type(e).__name__}", "failing") from e
+    raise AssertionError("unreachable")
+
+
 def successfactors_listings(client: httpx.Client, cfg: dict) -> SourceResult:
     host = cfg["host"].rstrip("/")
     listings, known, total = [], set(), None
     for page in range(SF_MAX_PAGES):
-        try:
-            r = client.get(f"{host}/search/", params={"q": "", "locationsearch": cfg.get("location", "India"), "startrow": page * SF_PAGE})
-        except httpx.HTTPError as e:
-            raise SourceError(f"network error reading career site: {type(e).__name__}", "failing") from e
+        r = _sf_search_page(client, host, cfg, page)
         if r.status_code >= 400:
             raise SourceError(f"HTTP {r.status_code} from career site")
         rows = _SF_ROW_RE.findall(r.text)

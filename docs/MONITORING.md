@@ -30,8 +30,21 @@ kept in its `scan.feed` record:
   ("feed size anomaly ..."). Nothing is read from it, the last good size and
   `last_success` are kept, and the next scan retries.
 - The first scan with no recorded size needs at least 1,000 postings.
-- A smaller, non-empty size that holds within 10 % for 3 scans in a row is
-  accepted as the new normal.
+- A short feed is read once more, 30 seconds later, in the same scan. ADP's
+  partial feed is intermittent.
+- A smaller, non-empty size that holds within 10 % for 8 scans in a row (a
+  day) is accepted as the new normal. This was 3: ADP's partial feed came
+  back two scans in a row twice, so 3 would have accepted it.
+
+**Slow pages.** A SuccessFactors results page (Deloitte) that times out is
+asked for again, after 5 s and then 15 s. Before, one slow page out of ~75
+failed the whole scan. Only timeouts are retried. An HTTP error, such as
+JioHotstar's 403 from Workday, is never retried.
+
+**Failure streaks.** A failed scan records `failing_since` and `failed_scans`
+in its scan record. From the second failure in a row, the status reason says
+"failing since … (N scans in a row)". A failed scan keeps the company's
+`last_job`.
 
 ServiceNow's feed has no such check.
 
