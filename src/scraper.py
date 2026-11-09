@@ -74,6 +74,9 @@ COMPANY_SOURCES: dict[str, list[dict]] = {
     # ADP's feed is sometimes well-formed but empty or partial (6 Nov 2026: 1,482 -> 0 -> 1,493 -> 788
     # postings, all three readings counted as healthy scans), so it is checked against its own
     # last good size (_feed_size_check). ServiceNow's feed has no such history and is read as before.
+    # JioStar's Workday search API answers 403 "Your request has been blocked" since 6 Nov 2026;
+    # its robots.txt publishes the sitemap and allows the job pages, which carry a JobPosting
+    "jiohotstar": [{"type": "workday_sitemap", "site": "https://jiostar.wd102.myworkdayjobs.com/JioStar"}],
     "adp": [{"type": "job_feed", "url": "https://jobs.adp.com/en/jobs/xml/",
              # settle_scans 8 (was 3): ADP's partial feed (~700-810 postings, no India jobs) came back
              # for 2 scans in a row twice (7 Nov 06:02-09:02, 9 Nov 15:02-18:02), so 3 would soon have
@@ -89,7 +92,8 @@ _SOURCE_LABELS = {"workday": "Workday API", "accenture": "Accenture job-search A
                   "avature": "Avature job search", "zoho": "Zoho Recruit career site", "amazon": "Amazon jobs API",
                   "eightfold": "Eightfold API", "successfactors": "SuccessFactors career site", "infosys": "Infosys jobs API",
                   "google": "Google Careers site", "eightfold_v2": "Eightfold API", "oracle": "Oracle Recruiting API",
-                  "ibm": "IBM careers API", "job_feed": "Official job feed", "swiggy": "Swiggy careers site"}
+                  "ibm": "IBM careers API", "job_feed": "Official job feed", "swiggy": "Swiggy careers site",
+                  "workday_sitemap": "Workday sitemap + job pages"}
 
 
 def sources_for(company: dict) -> list[dict]:

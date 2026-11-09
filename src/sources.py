@@ -1077,6 +1077,90 @@ def swiggy_listings(client: httpx.Client, cfg: dict) -> SourceResult:
 # Registry
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Workday career-site sitemap (JioStar, Nov 2026). The site's firewall answers
+# its internal search API (/wday/cxs/...) with "Your request has been blocked"
+# (403) since 6 Nov 2026, while its robots.txt publishes the sitemap for
+# crawlers ("Sitemap: .../JioStar/siteMap.xml", "Allow: /JioStar/") and each
+# job page carries a schema.org JobPosting (title, full description,
+# location, datePosted, job ID) for search engines. This reads exactly that
+# public, crawler-intended channel, with the scanner's usual identity; it
+# never touches the blocked API.
+# ---------------------------------------------------------------------------
+_SITEMAP_LOC_RE = re.compile(r"<loc>\s*([^<\s]+)\s*</loc>")
+_WD_JOB_ID_RE = re.compile(r"_((?:JR|R)[-_]?\d[\w-]*)$")
+
+
+def _slug_title(slug: str) -> str:
+    """"Software-Development-Engineer-I_JR12321-1" -> "Software Development
+    Engineer I" (until the page's own JobPosting title replaces it)."""
+    slug = _WD_JOB_ID_RE.sub("", slug)
+    return re.sub(r"\s+", " ", slug.replace("---", " - ").replace("--", " ").replace("-", " ")).strip()
+
+
+def workday_sitemap_detail(client: httpx.Client, listing: Listing) -> Detail:
+    try:
+        r = client.get(listing.url, headers={"Accept": "text/html"})
+    except httpx.HTTPError as e:
+        return Detail.unreadable(f"network error reading job page: {type(e).__name__}")
+    if r.status_code >= 400:
+        return Detail.unreadable(f"HTTP {r.status_code} from job page")
+    from scraper import _pick_posting
+    posting = _pick_posting(jsonld_postings(r.text), listing.title, listing.job_id)
+    if posting is None:
+        return Detail.unreadable("job page has no JobPosting for this job")
+    title = str(posting.get("title") or "").strip()
+    if title:
+        listing.title = title                       # the page's own title, not the URL slug
+    place = posting.get("jobLocation")
+    place = place[0] if isinstance(place, list) and place else place
+    addr = place.get("address") if isinstance(place, dict) else None
+    location = ", ".join(str(addr.get(k)) for k in ("addressLocality", "addressRegion", "addressCountry")
+                         if isinstance(addr, dict) and addr.get(k)) or listing.location
+    description = html_to_text(html_lib.unescape(str(posting.get("description") or "")))
+    if len(description) < _MIN_DESCRIPTION_CHARS:
+        return Detail.unreadable("posting has no description")
+    return Detail(ok=True, description=description, location=location, posting_evidence=True,
+                  matched="JobPosting on the job page", posted_at=posting_date(posting.get("datePosted")))
+
+
+def workday_sitemap_listings(client: httpx.Client, cfg: dict) -> SourceResult:
+    """The jobs a Workday career site lists in its own sitemap, each read
+    from its public job page (workday_sitemap_detail)."""
+    site = cfg["site"].rstrip("/")                  # https://{tenant}.{wdN}.myworkdayjobs.com/{Site}
+    try:
+        r = client.get(f"{site}/siteMap.xml", headers={"Accept": "application/xml"})
+    except httpx.TimeoutException as e:
+        raise SourceError("timeout reading the career-site sitemap", "failing") from e
+    except httpx.HTTPError as e:
+        raise SourceError(f"network error reading the career-site sitemap: {type(e).__name__}", "failing") from e
+    if r.status_code in (429, 500, 502, 503, 504):
+        raise SourceError(f"HTTP {r.status_code} from the career-site sitemap", "failing")
+    if r.status_code >= 400:
+        raise SourceError(f"HTTP {r.status_code} from the career-site sitemap")
+    if "<urlset" not in r.text[:2000] or not r.text.rstrip().endswith("</urlset>"):
+        raise SourceError("the career-site sitemap is incomplete or not a sitemap")
+    base, site_name = site.rsplit("/", 1)
+    locale = cfg.get("locale", "en-US")
+    listings, seen = [], 0
+    for loc in dict.fromkeys(_SITEMAP_LOC_RE.findall(r.text)):
+        loc = html_lib.unescape(loc)
+        if f"/{site_name}/job/" not in loc:
+            continue
+        seen += 1
+        path = loc.split(f"/{site_name}/job/", 1)[1].strip("/")
+        place, _, slug = path.rpartition("/")
+        location = _slug_title(place)
+        if location and not is_india(location):
+            continue
+        m = _WD_JOB_ID_RE.search(slug)
+        listing = Listing(title=_slug_title(slug), url=f"{base}/{locale}/{site_name}/job/{path}", location=location,
+                          job_id=m.group(1) if m else "", posting_evidence=True)
+        listing.fetch_detail = lambda lst=listing: workday_sitemap_detail(client, lst)
+        listings.append(listing)
+    return SourceResult(listings, seen=seen)
+
+
 def read_source(client: httpx.Client, cfg: dict) -> SourceResult:
     kind = cfg.get("type")
     if kind == "workday":
@@ -1107,6 +1191,8 @@ def read_source(client: httpx.Client, cfg: dict) -> SourceResult:
         return ibm_listings(client, cfg)
     if kind == "job_feed":
         return job_feed_listings(client, cfg)
+    if kind == "workday_sitemap":
+        return workday_sitemap_listings(client, cfg)
     if kind == "swiggy":
         return swiggy_listings(client, cfg)
     raise SourceError(f"unknown source type {kind!r}", "needs_config")

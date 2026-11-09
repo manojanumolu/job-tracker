@@ -137,7 +137,7 @@ def _feed(total, india=0):
 def test_jiohotstar_403_is_never_retried_never_healthy_and_its_streak_is_recorded(scan):
     cos, asked, seen = scan()
     jio = cos["jiohotstar"]
-    assert jio["status"] == "broken" and jio["status_reason"] == "HTTP 403 from jiostar.wd102.myworkdayjobs.com"
+    assert jio["status"] == "broken" and jio["status_reason"] == "HTTP 403 from the career-site sitemap"
     assert asked["jiostar"] == 1                                          # one request: a refusal is not retried
     assert jio["scan"]["failed_scans"] == 1 and jio["scan"]["failing_since"]
     assert jio["last_success"] == "2026-11-06T15:25:35+00:00" and jio["last_job"] == "Software Engineer"   # kept
@@ -146,7 +146,7 @@ def test_jiohotstar_403_is_never_retried_never_healthy_and_its_streak_is_recorde
         cos, asked, seen = scan()
         jio = cos["jiohotstar"]
         assert jio["scan"]["failed_scans"] == n and jio["scan"]["failing_since"] == since
-        assert jio["status_reason"].startswith("HTTP 403 from jiostar.wd102.myworkdayjobs.com — failing since ")
+        assert jio["status_reason"].startswith("HTTP 403 from the career-site sitemap — failing since ")
         assert f"({n} scans in a row)" in jio["status_reason"] and asked["jiostar"] == 1
     assert [j["title"] for j in seen] == ["Kept Job"]                     # saved jobs untouched
 
@@ -154,7 +154,7 @@ def test_jiohotstar_403_is_never_retried_never_healthy_and_its_streak_is_recorde
 def test_a_recovered_company_clears_its_streak(scan):
     scan()
     scan()
-    cos, _, _ = scan(jiostar=lambda: httpx.Response(200, json={"total": 0, "jobPostings": [], "facets": []}))
+    cos, _, _ = scan(jiostar=lambda: httpx.Response(200, text='<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>'))
     jio = cos["jiohotstar"]
     assert jio["status"] == "active" and not jio["status_reason"]
     assert "failed_scans" not in jio["scan"] and "failing_since" not in jio["scan"]
@@ -188,6 +188,7 @@ def test_adp_partial_feed_is_not_accepted_as_normal_after_3_scans(scan):
 
 def test_the_workday_adapter_and_servicenow_are_unchanged():
     assert scraper.COMPANY_SOURCES["servicenow"] == [{"type": "job_feed", "url": "https://careers.servicenow.com/jobs/xml/"}]
-    assert "jiohotstar" not in scraper.COMPANY_SOURCES                    # still read through its Workday URL
-    assert scraper.sources_for({"id": "jiohotstar", "url": "https://jiostar.wd102.myworkdayjobs.com/JioStar"}) == [
-        {"type": "workday", "api": "https://jiostar.wd102.myworkdayjobs.com/wday/cxs/jiostar/JioStar/jobs"}]
+    # JioHotstar reads its sitemap + job pages (its search API is blocked); other Workday companies are unchanged
+    assert scraper.COMPANY_SOURCES["jiohotstar"] == [{"type": "workday_sitemap", "site": "https://jiostar.wd102.myworkdayjobs.com/JioStar"}]
+    assert scraper.sources_for({"id": "cisco", "url": "https://cisco.wd5.myworkdayjobs.com/Cisco_Careers"}) == [
+        {"type": "workday", "api": "https://cisco.wd5.myworkdayjobs.com/wday/cxs/cisco/Cisco_Careers/jobs"}]
