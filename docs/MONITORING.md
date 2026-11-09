@@ -41,6 +41,16 @@ asked for again, after 5 s and then 15 s. Before, one slow page out of ~75
 failed the whole scan. Only timeouts are retried. An HTTP error, such as
 JioHotstar's 403 from Workday, is never retried.
 
+**JioHotstar.** Since 6 Nov 2026, JioStar's firewall has answered its
+Workday search API (`/wday/cxs/…`) with 403 "Your request has been
+blocked". JioHotstar is therefore read from what the site publishes for
+crawlers: its `robots.txt` lists `/JioStar/siteMap.xml` and allows `/JioStar/`,
+and each job page carries a schema.org `JobPosting`. The adapter is
+`sources.workday_sitemap_listings`, and it never calls the blocked API. Jobs
+keep the identity they had under the old API (`id:JR…`), so none is saved or
+alerted twice. The sitemap listed 100 jobs on 9 Nov, against about 230 from
+the old API, so coverage may be narrower.
+
 **Failure streaks.** A failed scan records `failing_since` and `failed_scans`
 in its scan record. From the second failure in a row, the status reason says
 "failing since … (N scans in a row)". A failed scan keeps the company's
