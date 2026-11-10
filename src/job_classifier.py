@@ -425,6 +425,10 @@ _PROVEN_RE = re.compile(
     r"|\[\s*(?:x|n|xx|#)\s*\]\+?\s*(?:years?|yrs?)\s+(?:of\s+)?(?:[\w-]+\s+){0,3}?experience\b",
     re.IGNORECASE,
 )
+# "proven experience coding in languages including C, Java…" (Microsoft's
+# university-hire template) asks for the ability to code, which a graduate's
+# coursework and projects show; it is not a prior-employment requirement.
+_SKILL_AFTER_PROVEN_RE = re.compile(r"\s+(?:in\s+|with\s+)?(?:coding|programming|writing\s+code)\b", re.IGNORECASE)
 _NEGATION_RE = re.compile(
     r"\b(?:no|not|without|nil|zero|none|don't|doesn't|do\s+not|does\s+not|isn't|is\s+not|never)\b|\bn/a\b",
     re.IGNORECASE,
@@ -595,7 +599,9 @@ def prior_experience_requirement(text: str) -> str:
                 continue
             if _REQUIRED_HEADING_RE.search(sentence):
                 in_preferred_section = False
-        proven = _PROVEN_RE.search(sentence)
+        # "proven experience coding in C++" is a skill, not employment
+        proven = next((m for m in _PROVEN_RE.finditer(sentence)
+                       if not _SKILL_AFTER_PROVEN_RE.match(sentence, m.end())), None)
         if proven and not _NEGATION_RE.search(sentence[:proven.start()][-30:]) and not _PREFERRED_RE.search(sentence) \
                 and not (in_preferred_section and not _MANDATORY_RE.search(sentence)):
             return proven.group(0).strip()

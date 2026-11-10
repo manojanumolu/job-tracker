@@ -121,3 +121,41 @@ the most common kinds of reason a posting was not accepted, such as
 "seniority in title", "explicit requirement" or "no fresher/entry-level
 evidence". Use it to judge a company that never yields a job without reading
 the run log. The run record keeps `reposts_suppressed`.
+
+## Discovery fixes (10 Nov 2026)
+
+From the per-job decisions of the 09:02 UTC scan (14,257 rejections):
+
+* **Microsoft.** Its full-time university hire ("Software Engineering",
+  India, Multiple Locations) was rejected because "proven experience coding
+  in languages including C, Java…" was read as a prior-employment
+  requirement. Proven experience *coding / programming / writing code* is now
+  a skill, not employment ("proven experience in sales" still rejects).
+  Microsoft tags its university-hire positions with the "Microsoft Aspire"
+  media block and states the employment type; a **full-time** position with
+  that tag gets the line "Career site: early careers programme role". The
+  marker is set only in Microsoft's config (`early_career_media`).
+  Internships stay out: most are for current students (Summer 2027, PhD),
+  not 2026 graduates. The other ~210 Microsoft India postings are level II
+  or higher, or ask for years of experience.
+* **S&P Global, Qualcomm, Accenture, Salesforce.** No wrong rejection was
+  found. Their India postings ask for 1+ years, carry levels (II, III), or are
+  senior. Accenture's 0-2 years bucket mostly says "1 to 3 years".
+* **IBM.** IBM labels 1,855 of its 1,857 India postings "Professional" and
+  none "Entry Level" (`field_keyword_18`), so 0 matches is correct. Its
+  "Multiple Cities" postings come from the India-filtered search and are no
+  longer rejected as "not in India".
+* **Posting dates.** Eightfold sites (Microsoft, Qualcomm) now store the
+  `postedTs` they state as `posted_at`.
+* **India-wide locations.** A posting placed anywhere in India without a
+  city ("Multiple Locations", "Multiple Cities", "PAN India") matches every
+  city choice, so the Hyderabad-tailored shared email and personal
+  tailoring no longer drop it. A posting that names a city keeps only its
+  cities, and "Remote" is never implied.
+* **Detail budget.** This is now 500 detail pages per company (it was 400).
+  Hitachi needs ~450, and 46 of its postings were left for a later scan.
+  A Workday posting repeated across result pages is read once.
+
+Unchanged on purpose: years of experience (1+ still rejects), seniority and
+level titles, "Associate", "Intern" or "Engineer I" alone, repost
+suppression (same company, title and location), the cutoffs and recipients.

@@ -125,9 +125,23 @@ def job_families(job: dict) -> set[str]:
     return {name for name, rx in _FAMILY_RE.items() if rx.search(title)}
 
 
+# A posting the employer places anywhere in India without naming a city
+# ("India, Multiple Locations, Multiple Locations" - Microsoft's university
+# hire on 10 Nov 2026; "PAN India") can be taken from any Indian city, so it
+# matches every city choice. A posting that names a city keeps exactly the
+# cities it names, and "Remote" is never implied.
+_INDIA_WIDE_RE = re.compile(
+    r"(?<![a-z])(?:multiple\s+(?:locations?|cities)|various\s+locations?|pan[\s-]*india|anywhere\s+in\s+india|all\s+(?:over\s+)?india"
+    r"|across\s+india)(?![a-z])", re.IGNORECASE)
+_INDIA_RE = re.compile(r"(?<![a-z])india(?![a-z])", re.IGNORECASE)
+
+
 def job_location_choices(job: dict) -> set[str]:
     text = job.get("location") if isinstance(job.get("location"), str) else ""
-    return {name for name, rx in _LOCATION_RE.items() if rx.search(text)}
+    named = {name for name, rx in _LOCATION_RE.items() if rx.search(text)}
+    if not named - {"Remote"} and _INDIA_WIDE_RE.search(text) and _INDIA_RE.search(text):
+        named |= set(LOCATIONS) - {"Remote"}
+    return named
 
 
 def in_scope(job: dict, watch_all: bool, watchlist: Iterable[str]) -> bool:
