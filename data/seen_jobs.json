@@ -4356,5 +4356,91 @@
     "id": "S&P_Global_Apprentice,_Channels_Client_On-boarding_",
     "notified": false,
     "company_id": "c1793696385"
+  },
+  {
+    "title": "Software Engineering AMTS",
+    "url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Bangalore/Software-Engineering-AMTS_JR307116",
+    "company": "Salesforce",
+    "location": "India - Bangalore · India - Hyderabad · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'new graduates'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Our Futureforce University Recruiting program is dedicated to attracting, retaining and cultivating talent. Our interns and new graduates work on real projects ",
+        "To get the best candidate experience, please consider applying for a maximum of 3 roles within 12 months to ensure you are not duplicating efforts.",
+        "B.E/ B.Tech graduating in 2025 & 2026  in Computer Science, Electrical, Electronics, or equivalent fields with specialization in computer science. ​",
+        "Work closely with a team of engineers, product managers, user experience experts and performance engineers to build new features our customers will love, adopt "
+      ],
+      "fresher_evidence": "new graduates",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:JR307116",
+      "canonical_url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Bangalore/Software-Engineering-AMTS_JR307116",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "posted_at": "2026-11-10",
+    "uid": "salesforce|id:JR307116",
+    "date": "Nov 10, 15:07",
+    "first_seen": "2026-11-10T15:07:28.792310+00:00",
+    "id": "Salesforce_Software_Engineering_AMTS",
+    "notified": false,
+    "company_id": "c1793696368",
+    "notify_state": "claimed",
+    "claimed_at": "2026-11-10T15:38:07.007939+00:00"
+  },
+  {
+    "title": "Software Engineering",
+    "url": "https://apply.careers.microsoft.com/careers/job/1970393557050388",
+    "company": "Microsoft",
+    "location": "India, Multiple Locations, Multiple Locations",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'early careers programme'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Bachelor's Degree in Computer Science, or related technical discipline with proven experience coding in languages including, but not limited to, C, C++, C#, Jav",
+        "OR equivalent experience",
+        "Bachelor's Degree (or currently pursuing) in Computer Science or related technical field AND 1+ year(s) technical engineering experience with coding in language",
+        "OR Master's Degree (or currently pursuing) in Computer Science or related technical field with proven experience coding in languages including, but not limited "
+      ],
+      "fresher_evidence": "early careers programme",
+      "detail_read": true,
+      "detail_match": "eightfold position",
+      "job_id": "id:200064597",
+      "canonical_url": "https://apply.careers.microsoft.com/careers/job/1970393557050388",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "posted_at": "2026-10-29",
+    "uid": "microsoft|url:https://apply.careers.microsoft.com/careers/job/1970393557050388",
+    "date": "Nov 10, 15:31",
+    "first_seen": "2026-11-10T15:31:47.671016+00:00",
+    "id": "Microsoft_Software_Engineering",
+    "notified": false,
+    "company_id": "microsoft",
+    "notify_state": "claimed",
+    "claimed_at": "2026-11-10T15:38:07.007939+00:00"
   }
 ]
