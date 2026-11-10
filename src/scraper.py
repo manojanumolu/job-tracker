@@ -36,7 +36,8 @@ log = logging.getLogger("scraper")
 # emailed, not saved, retried on the next run. The only card-level evidence
 # strong enough on its own is an explicit 0-year experience range.
 MAX_DETAIL_FETCHES = 30        # browser detail pages per company (slow)
-MAX_API_DETAIL_FETCHES = 400   # HTTP detail requests per company (PwC India needs ~200)
+MAX_API_DETAIL_FETCHES = 500   # HTTP detail requests per company (PwC India needs ~200; Hitachi ~450 on
+                               # 10 Nov 2026, when 400 left 46 of its postings unread until a later scan)
 _FAILING_DETAIL_RATIO = 0.5    # more unreadable job pages than this -> "failing"
 
 # ---------------------------------------------------------------------------
@@ -61,7 +62,8 @@ COMPANY_SOURCES: dict[str, list[dict]] = {
     # Employers added Nov 2026, each from its official source, checked live.
     # They are monitored whatever they are hiring for today.
     "amazon": [{"type": "amazon", "country_code": "IND"}],
-    "microsoft": [{"type": "eightfold", "host": "https://apply.careers.microsoft.com", "domain": "microsoft.com", "location": "India"}],
+    "microsoft": [{"type": "eightfold", "host": "https://apply.careers.microsoft.com", "domain": "microsoft.com", "location": "India",
+                   "early_career_media": "Microsoft Aspire"}],
     "qualcomm": [{"type": "eightfold", "host": "https://careers.qualcomm.com", "domain": "qualcomm.com", "location": "India"}],
     "google": [{"type": "google", "location": "Hyderabad, India"}],
     "deloitte": [{"type": "successfactors", "host": "https://southasiacareers.deloitte.com", "location": "India"}],

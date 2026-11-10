@@ -264,12 +264,14 @@ def workday_listings(client: httpx.Client, api: str) -> SourceResult:
         page = _get_json(client, "POST", api, json={"limit": WORKDAY_PAGE, "offset": offset, "searchText": "",
                                                      "appliedFacets": applied})
     listings = []
+    paths: set[str] = set()
     for p in postings:
         title = str(p.get("title") or "").strip()
         ext = str(p.get("externalPath") or "")
         loc = str(p.get("locationsText") or "")
-        if not title or not ext:
+        if not title or not ext or ext in paths:   # a posting repeated across pages is read once
             continue
+        paths.add(ext)
         multi = bool(_WORKDAY_MULTI_LOC_RE.match(loc))
         # without an India facet, keep India and "N Locations" postings only
         if not applied and loc and not multi and not is_india(loc):
@@ -650,10 +652,41 @@ def eightfold_detail(client: httpx.Client, cfg: dict, position_id: str, location
     except SourceError as e:
         return Detail.unreadable(str(e))
     record = data.get("data") if isinstance(data, dict) else None
-    description = html_to_text(str((record or {}).get("jobDescription") or ""))
+    record = record if isinstance(record, dict) else {}
+    description = html_to_text(str(record.get("jobDescription") or ""))
     if len(description) < _MIN_DESCRIPTION_CHARS:
         return Detail.unreadable("empty job description")
-    return Detail(ok=True, description=description, location=location, posting_evidence=True, matched="eightfold position")
+    label = _eightfold_early_career_label(cfg, record)
+    if label:
+        description = f"{description}\n{label}"
+    return Detail(ok=True, description=description, location=location, posting_evidence=True, matched="eightfold position",
+                  posted_at=posting_date(record.get("postedTs")))
+
+
+def _eightfold_early_career_label(cfg: dict, record: dict) -> str:
+    """The employer's own early-career tag on a full-time position, as a
+    line the classifier reads ("" when there is none).
+
+    Microsoft publishes its university-hire positions with the "Microsoft
+    Aspire Experience" media block (Aspire is its programme for recent
+    graduates) and marks each position's employment type. On 10 Nov 2026,
+    5 of its 219 India positions carried it: four internships and the
+    full-time "Software Engineering" university hire. Internships are left
+    as they were (not a full-time job); only a full-time position gets the
+    label, and only where a company's config names its marker."""
+    marker = str(cfg.get("early_career_media") or "").strip().lower()
+    if not marker:
+        return ""
+    extra = record.get("positionExtraDetails")
+    videos = extra.get("videos") if isinstance(extra, dict) else None
+    titles = [str(v.get("title") or "") for v in videos or [] if isinstance(v, dict)]
+    employment = record.get("efcustomTextEmploymentType")
+    employment = [str(x) for x in employment] if isinstance(employment, list) else [str(employment or "")]
+    if not any(marker in t.lower() for t in titles):
+        return ""
+    if not any(re.fullmatch(r"\s*full[\s-]*time\s*", e, re.IGNORECASE) for e in employment):
+        return ""
+    return "Career site: early careers programme role (university hiring, full-time)"
 
 
 def eightfold_listings(client: httpx.Client, cfg: dict) -> SourceResult:
@@ -986,7 +1019,10 @@ def ibm_listings(client: httpx.Client, cfg: dict) -> SourceResult:
             if not title or not url.startswith("https://"):
                 continue
             place = str(src.get("field_keyword_19") or "")
-            location = f"{place} | India" if place.endswith(", IN") else place
+            # the search is filtered to the country, so a place without its own country
+            # ("Multiple Cities": 61 India postings on 10 Nov 2026) is in that country
+            country = cfg.get("country", "India")
+            location = f"{place} | {country}" if place.endswith(", IN") or (place and "," not in place) else place
             description = html_to_text(str(src.get("body") or src.get("description") or ""))
             detail = (Detail(ok=True, description=description, location=location, posting_evidence=True, matched="ibm record")
                       if len(description) >= _MIN_DESCRIPTION_CHARS else Detail.unreadable("empty job description"))
