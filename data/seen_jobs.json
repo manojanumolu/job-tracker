@@ -4317,5 +4317,44 @@
     "id": "State_Street_Apprentice_-_Accounting/Finance",
     "notified": false,
     "company_id": "c1793696381"
+  },
+  {
+    "title": "Apprentice, Channels Client On-boarding Specialist",
+    "url": "https://spgi.wd5.myworkdayjobs.com/SPGI_Careers/job/Hyderabad-Telangana/Apprentice--Channels-Client-On-boarding-Specialist_332203-1",
+    "company": "S&P Global",
+    "location": "Hyderabad, Telangana · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'Apprentice'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "You will liaise with different stakeholders and your input will make a difference regarding the overall customer experience.",
+        "Strong communication skills with experience collaborating across diverse teams and stakeholders"
+      ],
+      "fresher_evidence": "Apprentice",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:332203-1",
+      "canonical_url": "https://spgi.wd5.myworkdayjobs.com/SPGI_Careers/job/Hyderabad-Telangana/Apprentice--Channels-Client-On-boarding-Specialist_332203-1",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "posted_at": "2026-11-10",
+    "uid": "s&p global|workday:332203-1",
+    "date": "Nov 10, 08:09",
+    "first_seen": "2026-11-10T08:09:49.380873+00:00",
+    "id": "S&P_Global_Apprentice,_Channels_Client_On-boarding_",
+    "notified": false,
+    "company_id": "c1793696385"
   }
 ]
