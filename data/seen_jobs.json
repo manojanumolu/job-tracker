@@ -4395,10 +4395,11 @@
     "date": "Nov 10, 15:07",
     "first_seen": "2026-11-10T15:07:28.792310+00:00",
     "id": "Salesforce_Software_Engineering_AMTS",
-    "notified": false,
+    "notified": true,
     "company_id": "c1793696368",
-    "notify_state": "claimed",
-    "claimed_at": "2026-11-10T15:38:07.007939+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-11-10T15:38:07.007939+00:00",
+    "notified_at": "2026-11-10T15:38:10.316356+00:00"
   },
   {
     "title": "Software Engineering",
@@ -4438,9 +4439,10 @@
     "date": "Nov 10, 15:31",
     "first_seen": "2026-11-10T15:31:47.671016+00:00",
     "id": "Microsoft_Software_Engineering",
-    "notified": false,
+    "notified": true,
     "company_id": "microsoft",
-    "notify_state": "claimed",
-    "claimed_at": "2026-11-10T15:38:07.007939+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-11-10T15:38:07.007939+00:00",
+    "notified_at": "2026-11-10T15:38:10.316356+00:00"
   }
 ]
