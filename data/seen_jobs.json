@@ -4522,9 +4522,10 @@
     "date": "Nov 11, 12:07",
     "first_seen": "2026-11-11T12:07:45.413542+00:00",
     "id": "Salesforce_Summer_2027_Intern_-_Software_Engineer",
-    "notified": false,
+    "notified": true,
     "company_id": "c1793696368",
-    "notify_state": "claimed",
-    "claimed_at": "2026-11-11T12:27:38.190028+00:00"
+    "notify_state": "sent",
+    "claimed_at": "2026-11-11T12:27:38.190028+00:00",
+    "notified_at": "2026-11-11T12:27:41.238521+00:00"
   }
 ]
