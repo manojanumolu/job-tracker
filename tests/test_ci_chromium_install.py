@@ -157,6 +157,9 @@ def test_missing_optional_fonts_are_downloaded_then_installed(run):
     final = [c for c in apt if " install " in c and "--download-only" not in c]
     assert len(download) == 1 and len(final) == 1 and apt.index(download[0]) < apt.index(final[0])
     assert "Acquire::Retries=1" in download[0]                  # fails fast instead of minutes of retries
+    # an unreachable mirror must FAIL the update (plain `apt-get update` only
+    # warns and exits 0 — which cost 8.7 min on the first outage CI run)
+    assert all("--error-on=any" in c for c in apt if " update" in c)
     assert set(OPTIONAL) <= set(installed)
     assert "::warning" not in p.stdout
     assert _browser_and_verify_ran(calls)
@@ -181,6 +184,8 @@ def test_optional_font_failure_is_a_warning_and_the_job_continues(run, failure):
     assert _browser_and_verify_ran(calls)                        # the browser is still installed and checked
     if failure in ("download", "update"):
         assert not set(OPTIONAL) & set(installed)
+    if failure == "update":                                       # a failed update skips the download outright
+        assert not any("--download-only" in c for c in calls)
 
 
 def test_a_hung_mirror_is_cut_off_by_the_timeout(run):
@@ -248,3 +253,20 @@ def test_the_scripts_hold_no_secret_and_never_push():
         text = (REPO / ".github" / "scripts" / name).read_text("utf-8")
         for forbidden in ("secrets", "GITHUB_TOKEN", "git push", "curl ", "wget ", "pip install"):
             assert forbidden not in text, (name, forbidden)
+
+
+FAKE_TIMEOUT_LOGS = """#!/usr/bin/env bash
+echo "timeout $1" >> "$FAKE_LOG"
+shift
+exec "$@"
+"""
+
+
+def test_the_download_only_gets_what_is_left_of_one_shared_budget(run, tmp_path):
+    t = tmp_path / "bin" / "timeout-logs"
+    t.write_text(FAKE_TIMEOUT_LOGS)
+    t.chmod(0o755)
+    p, calls, _ = run(REQUIRED, TIMEOUT_CMD=str(t), JT_OPTIONAL_FONT_TIMEOUT_S="40")
+    assert p.returncode == 0, p.stdout + p.stderr
+    budgets = [int(c.split()[1]) for c in calls if c.startswith("timeout ")]
+    assert len(budgets) == 2 and budgets[0] == 40 and 0 < budgets[1] <= 40      # update, then the remainder

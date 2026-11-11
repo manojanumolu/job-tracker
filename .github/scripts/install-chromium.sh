@@ -18,14 +18,15 @@
 #             Latin font family, plus xvfb (kept as before; headless Chromium
 #             doesn't use it). Installed only if missing; any failure stops
 #             the job.
-#   OPTIONAL  the extra font families. Best effort, time-boxed: a failure is a
-#             workflow warning, never a failed job.
+#   OPTIONAL  the extra font families. Best effort: the network part has one
+#             time budget (default 180 s) and a failure is a workflow
+#             warning, never a failed job.
 # The browser download and the launch check stay mandatory: whatever apt did,
 # the job only continues with a Chromium that starts and renders a page.
 #
 # Test hooks (tests/test_ci_chromium_install.py): APT_GET, DPKG_QUERY,
 # PYTHON and TIMEOUT_CMD name the commands to run; JT_OPTIONAL_FONT_TIMEOUT_S
-# bounds each optional apt step (default 300 s).
+# is the optional fonts' total network budget (default 180 s).
 set -euo pipefail
 
 REQUIRED_PACKAGES=(
@@ -48,7 +49,7 @@ read -r -a APT <<< "${APT_GET:-sudo apt-get}"
 read -r -a DPKG <<< "${DPKG_QUERY:-dpkg-query}"
 read -r -a PY <<< "${PYTHON:-python}"
 read -r -a TIMEOUT <<< "${TIMEOUT_CMD:-timeout}"
-OPTIONAL_TIMEOUT_S="${JT_OPTIONAL_FONT_TIMEOUT_S:-300}"
+OPTIONAL_BUDGET_S="${JT_OPTIONAL_FONT_TIMEOUT_S:-180}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # fail fast instead of apt's default of retrying an unreachable mirror for minutes
@@ -87,12 +88,21 @@ mapfile -t want < <(missing "${OPTIONAL_FONT_PACKAGES[@]}")
 if ((${#want[@]})); then
   echo "Installing optional fonts (best effort): ${want[*]}"
   status=0
-  # download first, time-boxed: the network is the part that can hang; the
-  # install afterwards reads only the downloaded files
-  "${TIMEOUT[@]}" "$OPTIONAL_TIMEOUT_S" "${APT[@]}" "${APT_NET_OPTS[@]}" update || status=$?
+  # The network part shares one deadline. `apt-get update` exits 0 when every
+  # mirror is unreachable (it only warns, then uses stale lists: 3 min 20 s on
+  # 2026-11-11); --error-on=any makes that a failure, so the download is
+  # skipped instead of retried. The install afterwards reads only the
+  # downloaded files.
+  deadline=$((SECONDS + OPTIONAL_BUDGET_S))
+  "${TIMEOUT[@]}" "$OPTIONAL_BUDGET_S" "${APT[@]}" "${APT_NET_OPTS[@]}" --error-on=any update || status=$?
   if ((status == 0)); then
-    "${TIMEOUT[@]}" "$OPTIONAL_TIMEOUT_S" "${APT[@]}" "${APT_NET_OPTS[@]}" install -y --no-install-recommends \
-      --download-only "${want[@]}" || status=$?
+    left=$((deadline - SECONDS))
+    if ((left > 0)); then
+      "${TIMEOUT[@]}" "$left" "${APT[@]}" "${APT_NET_OPTS[@]}" install -y --no-install-recommends \
+        --download-only "${want[@]}" || status=$?
+    else
+      status=124
+    fi
   fi
   if ((status == 0)); then
     "${APT[@]}" install -y --no-install-recommends "${want[@]}" || status=$?
