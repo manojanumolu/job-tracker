@@ -6,7 +6,7 @@ import time
 import logging
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urldefrag, urljoin, urlparse
 
 import httpx
@@ -908,6 +908,55 @@ def _repost_key(job: dict) -> tuple | None:
     return ((job.get("company") or "").lower(), normalize_title(job.get("title", "")), location)
 
 
+# ---------------------------------------------------------------------------
+# Time-bound repost suppression (Nov 2026)
+# ---------------------------------------------------------------------------
+# Until now a new posting matching the title+location of ANY earlier record
+# was suppressed for ever: a role that closed and reopened months later (a
+# yearly graduate intake, say) could never be alerted again.
+#
+# Now a same-title+location posting under a new ID is suppressed only while
+# the key was SIGHTED within REPOST_WINDOW_DAYS. A sighting is:
+#   * the matching record's first_seen, and
+#   * repost_last_seen (a UTC date, day granularity): stamped on a record
+#     whenever a scan finds its own posting (same uid) still listed and still
+#     qualifying — never stamped on a suppressed candidate, or suppression
+#     would renew itself and the window could never expire.
+# Deliberately unchanged: while the recorded posting is still listed, its key
+# stays fresh, so a CONCURRENT same-title+location requisition stays
+# suppressed. That is the steady 36-39 "reposts_suppressed" of every scan
+# since 6 Nov 2026 (e.g. Cisco's several "Software Engineer" openings in
+# Bengaluru): the same open postings judged again each scan, not new ones.
+# A key not sighted for longer than the window is a vacancy that closed and
+# came back: it is alerted as a new job (counted as reposts_window_realerted)
+# and gets its own record. Legacy records with no readable date at all keep
+# today's behaviour (suppressed), so nothing old is re-emailed by surprise.
+# Eligibility rules are untouched: this only decides new-vs-repost for jobs
+# the classifier already accepted.
+REPOST_WINDOW_DAYS = 45
+REPOST_LAST_SEEN = "repost_last_seen"
+
+
+def _record_time(value) -> datetime | None:
+    """first_seen (full ISO time) or repost_last_seen (YYYY-MM-DD) as an
+    aware UTC datetime; None when unreadable."""
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def _last_sighting(records: list[dict]) -> datetime | None:
+    """The latest moment any of these records' postings is known to have
+    been listed: the newest first_seen / repost_last_seen among them."""
+    times = [_record_time(r.get(k)) for r in records for k in ("first_seen", REPOST_LAST_SEEN)]
+    times = [t for t in times if t]
+    return max(times) if times else None
+
+
 def _posting_key(url: str) -> str:
     """Company-independent identity: the posting's host + ATS job ID. It keeps
     a renamed company ("npcl" -> "NPCI") from re-alerting its old jobs."""
@@ -920,12 +969,33 @@ def merge_new_jobs(seen: list[dict], found: list[dict], now: datetime | None = N
     """New records for ``found`` jobs that aren't already known. Identity is
     the ATS job ID / canonical URL, so two different jobs with the same title
     both get through; the same title *and* location under a new ID is treated
-    as a repost of a job already alerted. ``company_id`` (the company's
-    immutable id) is stored on new records."""
+    as a repost of a job already alerted — but only while that key was
+    sighted within REPOST_WINDOW_DAYS (see the note above _record_time): a
+    key quiet for longer is a vacancy that came back, alerted as new.
+    Side effect: records whose own posting is in ``found`` (same uid) are
+    stamped with repost_last_seen (today's UTC date) in place; the caller
+    must save ``seen`` when stats["repost_stamps_updated"] says any changed.
+    ``company_id`` (the company's immutable id) is stored on new records."""
     now = now or datetime.now(timezone.utc)
     known = {record_uid(j) for j in seen if isinstance(j, dict)}
+    by_uid = {record_uid(j): j for j in seen if isinstance(j, dict)}
     known_postings = {k for k in (_posting_key(j.get("url", "")) for j in seen if isinstance(j, dict)) if k}
-    reposts = {k for k in (_repost_key(j) for j in seen if isinstance(j, dict)) if k}
+    by_repost_key: dict[tuple, list[dict]] = {}
+    for j in seen:
+        if isinstance(j, dict):
+            k = _repost_key(j)
+            if k:
+                by_repost_key.setdefault(k, []).append(j)
+    # stamp still-listed recorded postings FIRST, so a same-key candidate
+    # later in this very scan is judged against a fresh sighting
+    today = f"{now.astimezone(timezone.utc):%Y-%m-%d}"
+    for job in found:
+        record = by_uid.get(job_uid(job["company"], job["url"]))
+        if record is not None and record.get(REPOST_LAST_SEEN) != today:
+            record[REPOST_LAST_SEEN] = today
+            if stats is not None:
+                stats["repost_stamps_updated"] += 1
+    reposts = {k for k in by_repost_key}
     new: list[dict] = []
     for job in found:
         uid = job_uid(job["company"], job["url"])
@@ -934,10 +1004,18 @@ def merge_new_jobs(seen: list[dict], found: list[dict], now: datetime | None = N
         if uid in known or (pk and pk in known_postings):
             continue
         if rp and rp in reposts:
-            log.info("  %s: %s — repost of a job already alerted (same title and location)", job["company"], job["title"])
-            if stats is not None:          # measured (Nov 2026) before any change to how reposts are judged
-                stats["reposts_suppressed"] += 1
-            continue
+            last = _last_sighting(by_repost_key.get(rp, []))
+            if last is None or now - last <= timedelta(days=REPOST_WINDOW_DAYS):
+                log.info("  %s: %s — repost of a job already alerted (same title and location)",
+                         job["company"], job["title"])
+                if stats is not None:      # measured (Nov 2026) before any change to how reposts are judged
+                    stats["reposts_suppressed"] += 1
+                continue
+            log.info("  %s: %s — same title and location as a record last sighted %s (over %d days): a vacancy "
+                     "that came back, treated as new", job["company"], job["title"], f"{last:%Y-%m-%d}",
+                     REPOST_WINDOW_DAYS)
+            if stats is not None:
+                stats["reposts_window_realerted"] += 1
         record = dict(job)
         record.update({
             "uid": uid,
@@ -953,7 +1031,10 @@ def merge_new_jobs(seen: list[dict], found: list[dict], now: datetime | None = N
         if pk:
             known_postings.add(pk)
         if rp:
+            # the new record is a fresh sighting of its key: a second
+            # same-key candidate in this very scan is a repost of IT
             reposts.add(rp)
+            by_repost_key.setdefault(rp, []).append(record)
     return new
 
 
@@ -1021,14 +1102,17 @@ def run_all() -> list[dict]:
     # Settings → Scan details (scan_schedule.latest_run).
     run = {"started_at": started_at, "finished_at": _now_iso(), "jobs_found": jobs_found,
            "new_jobs": len(new_jobs), "portals": len(scanned), "portals_failed": portals_failed,
-           "reposts_suppressed": merge_stats["reposts_suppressed"]}
+           "reposts_suppressed": merge_stats["reposts_suppressed"],
+           "reposts_window_realerted": merge_stats["reposts_window_realerted"]}
     for company in scanned:
         company["scan"]["run"] = dict(run)
 
     # commit=False: alerts.py publishes the data (merge-safe) before and
     # after emailing — see alerts.py
     save_companies(companies, commit=False)
-    if new_jobs:
+    # repost_last_seen stamps mutate existing records in place, so the file
+    # must be written even when no new job was found (repo_sync merges them)
+    if new_jobs or merge_stats["repost_stamps_updated"]:
         save_seen_jobs(seen + new_jobs, commit=False)
     return new_jobs
 
