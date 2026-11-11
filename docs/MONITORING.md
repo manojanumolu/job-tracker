@@ -110,9 +110,29 @@ Relative text such as "Posted 30+ days ago" is never turned into a date.
 
 The email says "New fresher job" only for jobs posted within 7 days of being
 found. Otherwise it says "Fresher job found", and each job shows its posting
-date (or "Not stated by the site") next to when the tracker found it. A
-repost of a job already alerted (the same title and location under a new
-ID) is never emailed.
+date (or "Not stated by the site") next to when the tracker found it.
+
+**Reposts (time-bound since Nov 2026).** A posting with the same company,
+title and location as an earlier record but a new ATS ID is a repost and
+is not emailed — but only while that title and location were *sighted*
+within the last 45 days (`scraper.REPOST_WINDOW_DAYS`). A sighting is the
+record's `first_seen`, or `repost_last_seen`: the UTC date a scan last found
+the record's own posting still listed and still qualifying (stamped at most
+once a day, and only moving forward when published). A posting left unread
+for a scan (detail budget, a failing portal) simply isn't stamped that scan. A suppressed repost never stamps anything,
+so the window always runs out. A key quiet for more than 45 days is a
+vacancy that closed and came back: it is alerted as a new job and counted in
+the run record's `reposts_window_realerted`. Records with no readable date
+keep the old rule (suppressed).
+
+What the window does *not* change: while a recorded posting is still
+listed, a second requisition with the same title and location stays
+suppressed. The run records from 6–11 Nov 2026 show `reposts_suppressed` at
+a steady 36–39 every scan — the same open duplicate requisitions (for
+example Cisco's several "Software Engineer" openings in Bengaluru) judged
+again each scan, not 39 new reposts. They are not saved, so they don't
+appear in the app either. Showing them in the app without emailing them is a
+separate, data-changing decision.
 
 ## Scan diagnostics
 
@@ -120,7 +140,16 @@ Each company's `scan` record keeps `rejected`, `unknown` and `rejections`:
 the most common kinds of reason a posting was not accepted, such as
 "seniority in title", "explicit requirement" or "no fresher/entry-level
 evidence". Use it to judge a company that never yields a job without reading
-the run log. The run record keeps `reposts_suppressed`.
+the run log. The run record keeps `reposts_suppressed` and
+`reposts_window_realerted`.
+
+## Measuring discovery quality
+
+`tests/golden/` holds a labelled golden set (222 postings from production
+records, production scan-log decisions and curated edge cases), checked on
+every test run: precision, recall and the false-rejection rate are printed,
+and any accepted reject, lost accept or category drift fails CI. See
+`tests/golden/README.md` before changing the classifier.
 
 ## Discovery fixes (10 Nov 2026)
 
@@ -159,3 +188,23 @@ From the per-job decisions of the 09:02 UTC scan (14,257 rejections):
 Unchanged on purpose: years of experience (1+ still rejects), seniority and
 level titles, "Associate", "Intern" or "Engineer I" alone, repost
 suppression (same company, title and location), the cutoffs and recipients.
+
+## Discovery fixes (11 Nov 2026)
+
+* **Role-named "Role: …" titles.** A title shaped like "Two Words: …" was
+  always read as a career story ("Priya Sharma: My first year"). Cisco and
+  Qualcomm title real requisitions that way ("Software Engineer: Silicon
+  One (C++)", "Sr Engineer: Embedded AI"), so all five such postings in the
+  11 Nov 06:02 scan were discarded as stories. Each was senior or asked for
+  years, so nothing was lost that day — but a graduate opening titled
+  "Software Engineer: Graduate Hire" would have been. A heading that names a
+  role or a grade is now judged as a job title by every other rule; a name
+  ("Priya Sharma:") or any other heading ("Employee Spotlight:") is still a
+  story. Measured on the golden set: precision unchanged at 1.000, recall
+  0.983 -> 1.000.
+* **Repost window.** Reposts are suppressed for 45 days after their last
+  sighting instead of forever (see "Reposts" above).
+
+Unchanged on purpose: every eligibility rule — years of experience,
+seniority and level titles, "Associate", "Intern" or "Engineer I" alone —
+and the cutoffs and recipients.
