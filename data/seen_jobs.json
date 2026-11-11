@@ -4527,5 +4527,84 @@
     "notify_state": "sent",
     "claimed_at": "2026-11-11T12:27:38.190028+00:00",
     "notified_at": "2026-11-11T12:27:41.238521+00:00"
+  },
+  {
+    "title": "Apprentice, Order to Cash",
+    "url": "https://spgi.wd5.myworkdayjobs.com/SPGI_Careers/job/Hyderabad-Telangana/Apprentice--Order-to-Cash_332023-1",
+    "company": "S&P Global",
+    "location": "Hyderabad, Telangana · IN - NOIDA CANDOR TECHSPACE SECTOR 62 · India",
+    "category": "FRESHER",
+    "reason": "fresher signal: 'Freshers only'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "At least a bachelor's degree in any field or relevant discipline – Freshers only.",
+        "Experience in Customer Service, Collections, or Billing roles is a plus but not required"
+      ],
+      "fresher_evidence": "Freshers only",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:332023-1",
+      "canonical_url": "https://spgi.wd5.myworkdayjobs.com/SPGI_Careers/job/Hyderabad-Telangana/Apprentice--Order-to-Cash_332023-1",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "posted_at": "2026-11-11",
+    "uid": "s&p global|workday:332023-1",
+    "date": "Nov 11, 17:22",
+    "first_seen": "2026-11-11T17:22:15.117942+00:00",
+    "id": "S&P_Global_Apprentice,_Order_to_Cash",
+    "notified": false,
+    "company_id": "c1793696385"
+  },
+  {
+    "title": "Applications Dev Engineer",
+    "url": "https://careers.servicenow.com/jobs/744000161074019/applications-dev-engineer/",
+    "company": "ServiceNow",
+    "location": "Hyderabad, India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-2+ years'",
+    "evidence": {
+      "experience": [
+        "0-2+ years"
+      ],
+      "experience_lines": [
+        "0-2+ years of experience with Java or a similar OO language",
+        "Experience in leveraging or critically thinking about how to integrate AI into work processes, decision-making, or problem-solving. This may include using AI-po",
+        "Experience with data structures, algorithms, object-oriented design, design patterns, and performance/scale considerations",
+        "Experience with any of the modern UI frameworks like Angular, React or Vue"
+      ],
+      "fresher_evidence": "0-2+ years",
+      "detail_read": true,
+      "detail_match": "company job feed",
+      "job_id": "id:JB0076907",
+      "canonical_url": "https://careers.servicenow.com/jobs/744000161074019/applications-dev-engineer",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "servicenow|url:https://careers.servicenow.com/jobs/744000161074019/applications-dev-engineer",
+    "date": "Nov 11, 17:28",
+    "first_seen": "2026-11-11T17:28:39.202532+00:00",
+    "id": "ServiceNow_Applications Dev_Engineer",
+    "notified": false,
+    "company_id": "servicenow"
   }
 ]
