@@ -4444,5 +4444,44 @@
     "notify_state": "sent",
     "claimed_at": "2026-11-10T15:38:07.007939+00:00",
     "notified_at": "2026-11-10T15:38:10.316356+00:00"
+  },
+  {
+    "title": "Growth Associate",
+    "url": "https://jobs.smartrecruiters.com/SWIGGY/6000000001568410-growth-associate?trid=d86cb472-0d87-4b8a-83bb-0c0ef90b26f4",
+    "company": "Swiggy",
+    "location": "Raipur, India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-2 years'",
+    "evidence": {
+      "experience": [
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "0-2 years in B2B sales, field sales, or business development (preferably in fmcg, food/beverage, or hotel industry)",
+        "Experience & Background:",
+        "Post - Graduated preferably in marketing or sales"
+      ],
+      "fresher_evidence": "0-2 years",
+      "detail_read": true,
+      "detail_match": "public job page",
+      "job_id": "smartrecruiters:6000000001568410",
+      "canonical_url": "https://jobs.smartrecruiters.com/SWIGGY/6000000001568410-growth-associate?trid=d86cb472-0d87-4b8a-83bb-0c0ef90b26f4",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "swiggy|smartrecruiters:6000000001568410",
+    "date": "Nov 11, 06:24",
+    "first_seen": "2026-11-11T06:24:51.266592+00:00",
+    "id": "Swiggy_Growth_Associate",
+    "notified": false,
+    "company_id": "swiggy"
   }
 ]
