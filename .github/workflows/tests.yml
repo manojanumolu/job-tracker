@@ -21,8 +21,10 @@ jobs:
         with:
           python-version: "3.12"   # same as check_jobs.yml
       - name: Install dependencies
-        run: |
-          pip install --require-hashes -r requirements/requirements-dev.txt
-          playwright install chromium --with-deps
+        run: pip install --require-hashes -r requirements/requirements-dev.txt
+      # required Chromium libraries and the browser are mandatory; extra fonts
+      # are best effort, so an apt mirror outage can't stop the tests (see the script)
+      - name: Install Chromium and check that it launches
+        run: bash .github/scripts/install-chromium.sh
       - name: Run tests
         run: python -m pytest -q
