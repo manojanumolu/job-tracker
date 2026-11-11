@@ -4483,5 +4483,48 @@
     "id": "Swiggy_Growth_Associate",
     "notified": false,
     "company_id": "swiggy"
+  },
+  {
+    "title": "Summer 2027 Intern - Software Engineer",
+    "url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Bangalore/Summer-2027-Intern---Software-Engineer_JR337715",
+    "company": "Salesforce",
+    "location": "India - Bangalore · India - Hyderabad · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'new graduates'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Our Futureforce University Recruiting program is dedicated to attracting, retaining and cultivating talent. Our interns and new graduates work on real projects ",
+        "To get the best candidate experience, please consider applying for a maximum of 3 roles within 12 months to ensure you are not duplicating efforts.",
+        "● Enrolled in sophomore year or higher at a college/university or any year at a graduate school",
+        "● Working towards a B.E/ B.Tech in Computer Science, Information Technology and Circuit Branch graduating in 2028"
+      ],
+      "fresher_evidence": "new graduates",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:JR337715",
+      "canonical_url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Bangalore/Summer-2027-Intern---Software-Engineer_JR337715",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "posted_at": "2026-11-11",
+    "uid": "salesforce|id:JR337715",
+    "date": "Nov 11, 12:07",
+    "first_seen": "2026-11-11T12:07:45.413542+00:00",
+    "id": "Salesforce_Summer_2027_Intern_-_Software_Engineer",
+    "notified": false,
+    "company_id": "c1793696368",
+    "notify_state": "claimed",
+    "claimed_at": "2026-11-11T12:27:38.190028+00:00"
   }
 ]
