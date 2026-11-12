@@ -43,85 +43,145 @@ Firestore steps, every permission block, and action pins.
 
 ## Manual GitHub configuration (needs the repository owner)
 
-None of this has been done. Each step changes production configuration, so
-each needs your approval. **Do them in this order**: steps 1–2 need no code
-change, and step 3 is what makes the data branch take effect.
+None of this has been done. Each step changes production configuration and
+needs the owner. **Follow the order below.** Each stage starts only after
+the previous one is verified.
 
-### 1. Restrict which branches can use secrets (recommended first)
+A rule throughout: **do not delete the repository secrets until stage C has
+passed.** They are what keeps scans and emails working if anything in
+stages A–C is wrong.
 
-*Settings → Environments → `production`* (it appears after the first
-Check Jobs run of this code; or create it with **New environment**):
+### Stage A: before merging this branch (no effect on running workflows)
 
-1. **Deployment branches and tags → Selected branches and tags → Add rule**:
-   `main`.
-2. Do **not** add required reviewers or a wait timer: scans run unattended
-   and would stall.
-3. **Environment secrets → Add secret**: `GMAIL_ADDRESS`,
-   `GMAIL_APP_PASSWORD`, `ALERT_RECIPIENT`, `FIREBASE_SERVICE_ACCOUNT`, with
-   the same values as the repository secrets. (GitHub never shows a secret's
-   value; paste it again from your password manager or the Firebase console.)
-4. Run **Check Jobs → Run workflow** (main) once, and check that the
-   publish step logs `delivery: this run …` and the personal step logs its
-   counts. (This sends real alerts for any pending jobs, as every scan does.)
-5. Then delete the four **repository** secrets (*Settings → Secrets and
-   variables → Actions → Repository secrets*). Until you do, a dispatch on
-   another branch can still read them: jobs outside the environment get
-   repository secrets.
+1. *Settings → Environments → New environment*, name exactly
+   `production`.
+2. In it, *Deployment branches and tags → Selected branches and tags →
+   Add deployment branch rule*: `main`.
+3. Leave **Required reviewers**, **Wait timer** and other protection rules
+   **off**. Scans and alert runs are unattended; a reviewer rule would make
+   every run wait for approval.
+4. In it, *Environment secrets → Add environment secret*, four times,
+   with the **same names and values** as today's repository secrets:
+   `GMAIL_ADDRESS`, `GMAIL_APP_PASSWORD`, `ALERT_RECIPIENT`,
+   `FIREBASE_SERVICE_ACCOUNT`. GitHub never shows a stored secret's value;
+   paste each one again from where you keep it.
+5. **Keep the repository secrets.**
 
-### 2. Protect `main`
+Consequence: none yet. Today's workflows don't reference the environment.
+Once this branch is merged, an environment secret overrides a repository
+secret of the same name.
+
+### Stage B: merge this branch (between runs)
+
+* Merge when no *Check Jobs* run is queued or running.
+* Avoid the 6-hourly personal-alert pass at 00:20, 06:20, 12:20 and
+  18:20 UTC.
+* **Merging starts a workflow.** This branch changes
+  `scan_scheduler.yml`, whose push trigger restarts the scan scheduler. The
+  scheduler dispatches *Check Jobs* in "plan" mode, which scans **only if
+  one is due**, as every scheduled tick does.
+* **Do not** use *Run workflow* to test: it starts a real scan, and sends
+  real alert emails for any pending jobs. Wait for the scheduled runs.
+
+### Stage C: verify the new workflows (read-only)
+
+On the first scan after the merge (Actions → *Check Jobs* → the run):
+
+1. *plan*: "Checkout the schedule code" and "Checkout schedule inputs"
+   succeed, and "Decide what this run does" prints its plan.
+2. *scrape*: "Checkout the data" succeeds, and the uploaded
+   `scan-results` artifact holds exactly 2 files.
+3. *publish*:
+   * the run page shows a **production** deployment;
+   * "Checkout the data branch" succeeds;
+   * the log contains `publish: pushed (chore: update seen_jobs + companies [skip ci])`
+     and a `delivery: this run …` line;
+   * "Send personal email alerts" logs its counts.
+4. The next 6-hourly *personal-alerts* job: a production deployment, and
+   its counts.
+5. The next daily *Application retention* run (03:05 IST): it succeeds in
+   the production environment.
+
+If any of these fails: revert the merge. While the data is still on `main`,
+reverting is complete; nothing else needs undoing. If the publish job fails
+before its first push, nothing is emailed for that run.
+
+### Stage D: delete the repository secrets (closes the main risk)
+
+Only after stage C has passed in full: *Settings → Secrets and variables →
+Actions → Repository secrets* → delete `GMAIL_ADDRESS`,
+`GMAIL_APP_PASSWORD`, `ALERT_RECIPIENT`, `FIREBASE_SERVICE_ACCOUNT`.
+
+* **Consequence:** only jobs running on `main` in the `production`
+  environment can read the secrets. A workflow started on any other branch
+  gets none.
+* **Not affected:** the Streamlit app's own secrets, and workflows without
+  secrets (Tests, Company logos, Scan scheduler).
+* **Verify:** the next scan and personal pass behave as in stage C.
+
+### Stage E: move the data to its own branch (a production migration)
+
+Do this in a quiet window, with the scans paused. Otherwise, for a few
+minutes the app and the scans write different branches, and a job dismissed
+in the app could still be emailed.
+
+1. *Actions → Check Jobs → ⋯ → Disable workflow*, and the same for *Scan
+   scheduler*. Check that no run is in progress.
+2. Create branch `data` from the latest `main` (*Code → branches → New
+   branch*).
+3. *Settings → Secrets and variables → Actions → Variables → New repository
+   variable*: `JT_DATA_BRANCH` = `data`.
+4. In the Streamlit app's secrets (top level): `JT_DATA_BRANCH = "data"`.
+   Save, then reboot the app.
+5. Re-enable both workflows.
+6. **Verify:**
+   * the next scan's commit lands on `data`, not `main`;
+   * the app shows that scan's jobs;
+   * a dismissal made in the app appears on `data`.
+
+After the move:
+
+* `main`'s copy of `data/*.json` stops changing. The app uses it only if it
+  can't reach GitHub.
+* The logos workflow's push trigger (on `main`) no longer fires; its daily
+  schedule still runs.
+* **Rollback:**
+  1. Disable the workflows.
+  2. Copy `data/*.json` from `data` to `main`.
+  3. Delete the variable and the Streamlit secret.
+  4. Reboot the app and re-enable the workflows.
+
+### Stage F: protect the branches (after stage E)
 
 *Settings → Rules → Rulesets → New branch ruleset*:
 
-* Name `protect-main`, **Enforcement: Active**, target **Default branch**.
-* Rules: **Restrict deletions**, **Block force pushes**, **Require a pull
-  request before merging** (0 approvals is fine for a single maintainer),
-  **Require status checks to pass**: `test`.
-* **Bypass list:** leave it empty if you can. Bypass is checked against the
-  actor, and a personal access token acts as you. So if you bypass, so does
-  any token of yours, the app's included.
+* `protect-main`: target the default branch. Restrict deletions, block force
+  pushes, require a pull request before merging, require status check
+  `test`. **No bypass list.** Bypass is checked against the actor, and the
+  app's token acts as you.
+* `protect-data`: target `data`. Restrict deletions and block force pushes
+  only. The scans and the app must still push to it.
 
-While the data is still on `main` (step 3 not done), this ruleset **blocks
-the scans' and the app's data commits**. Either do step 3 first, or add
-**Repository admin** to the bypass list until step 3 is done. That bypass is
-weaker, because the app's token acts as the admin; remove it after step 3.
+Consequence: every later change to `main` goes through a pull request. Doing
+this before stage E would block the scans' data commits to `main`.
 
-### 3. Move the data to its own branch (a production migration)
+### Stage G: narrow the app's token (after stage F)
 
-1. Create the branch from the current `main` **between scans**: *Code →
-   branch menu → View all branches → New branch* named `data`, source `main`.
-2. *Settings → Secrets and variables → Actions → Variables → New repository
-   variable*: `JT_DATA_BRANCH` = `data`.
-3. In the Streamlit app's secrets (top level): `JT_DATA_BRANCH = "data"`,
-   then reboot the app.
-4. Watch the next scan. Publish should push to `data`, and the app should
-   show the new jobs. `main` keeps a frozen copy of `data/*.json`, which the
-   app uses only as an offline fallback.
-5. Optional: a second ruleset on `data` with **Block force pushes** and
-   **Restrict deletions** (no pull-request rule: the scans push to it).
+1. Create a **fine-grained personal access token** (*Settings → Developer
+   settings → Fine-grained tokens*):
+   * repository access: only this repository;
+   * **Contents: Read and write**;
+   * **Actions: Read and write**, which the app's "Run check" button needs;
+     drop it if you can do without the button;
+   * nothing else, in particular **no Workflows** permission;
+   * an expiry date.
+2. Put it in the Streamlit secrets as `GITHUB_TOKEN` and reboot.
+3. Check that a dismissal saves and that "Run check" works.
+4. Then revoke the old token.
 
-Rollback: delete the variable and the Streamlit secret. Everything then
-reads and writes `main` again. First copy `data/*.json` from `data` back to
-`main` so no scan result is lost.
-
-### 4. Narrow the app's token
-
-Replace the app's token with a **fine-grained personal access token**
-(*Settings → Developer settings → Fine-grained tokens*):
-
-* Repository access: only `manojanumolu/job-tracker`.
-* Permissions: **Contents: Read and write** (data saves), **Actions: Read and
-  write** (the app's "Run check" button and run status). Nothing else. In
-  particular, no **Workflows** permission, so it can't change
-  `.github/workflows`.
-* An expiry date, and a calendar reminder to rotate it.
-
-With steps 2 and 3 done, this token can write data to `data`, but it can't
-change `main` (pull requests only) or any workflow file. Dispatching Check
-Jobs on another branch doesn't reach the secrets (step 1).
-
-The app needs **Actions: write** only for "Run check". If you can do without
-that button, drop the permission: then the token can't start workflows at
-all.
+With stages D–G done, that token can write only data, on `data`. It can't
+change `main` (pull requests only) or any workflow, and a workflow it starts
+on another branch gets no secrets.
 
 ## What remains
 
