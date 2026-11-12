@@ -78,10 +78,11 @@ def _content(db):
 @pytest.fixture
 def seeded(tmp_path):
     db = _db()
-    for ref in db.collection("users").list_documents():          # a clean emulator project
-        for s in ref.collection("deliveries").list_documents():
-            s.delete()
-        ref.delete()
+    # a clean emulator project: other emulator tests leave accounts with
+    # other subcollections, which a document-by-document delete would miss
+    import httpx
+    httpx.delete(f"http://{FS_HOST}/emulator/v1/projects/demo-job-tracker/databases/(default)/documents",
+                 timeout=30).raise_for_status()
     for uid, docs in ACCOUNTS.items():
         db.document(f"users/{uid}").set({"email": "private-person@example.org", "notifications": {"enabled": True}})
         for i, doc in enumerate(docs):
