@@ -60,7 +60,8 @@ def test_chips_wrap_and_fields_match_the_search_box():
 
 def test_every_jobs_multiselect_wraps_and_has_no_select_all():
     calls = re.findall(r"st\.multiselect\((.*?)\)\n", SRC, re.S)
-    assert len(calls) == 7          # the Jobs filters (4) and the Application Tracker's (3, Nov 2026)
+    # the Jobs filters (4), the Application Tracker's (3, Nov 2026) and Settings → Your skills (Milestone 5)
+    assert len(calls) == 8
     for call in calls:
         assert "wrap=True" in call and "select_all=False" in call, call
 

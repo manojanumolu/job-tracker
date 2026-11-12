@@ -5421,7 +5421,7 @@ def skills_card() -> None:
             st.text_area("…or paste its text", key="skills_paste", height=120)
             st.button("Suggest skills", key="btn_skills_suggest", icon=":material/auto_awesome:", on_click=_suggest_skills)
         st.multiselect("Your skills", list(job_intel.SKILLS), key="skills_pick", placeholder="Pick your skills",
-                       max_selections=job_intel.MAX_SKILLS)
+                       max_selections=job_intel.MAX_SKILLS, wrap=True, select_all=False)
         st.button("Save skills", key="btn_skills_save", type="primary", icon=":material/check:", on_click=_save_skills)
         msg = st.session_state.pop("_skills_msg", None)
         if msg:
