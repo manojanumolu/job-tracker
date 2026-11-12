@@ -4885,5 +4885,127 @@
     "notified": false,
     "repost_last_seen": "2026-11-12",
     "company_id": "adp"
+  },
+  {
+    "title": "Analyst | Finance AI Implementation | Bengaluru | Finance Transformation | Finance Strategy",
+    "url": "https://southasiacareers.deloitte.com/job/Bengaluru-Analyst-Finance-AI-Implementation-Bengaluru-Finance-Transformation-Finance-Strategy/61496144/",
+    "company": "Deloitte",
+    "location": "Bengaluru, IN · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-2 years'",
+    "evidence": {
+      "experience": [
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "0-2 years of relevant experience across consulting and/or industry roles, post degree completion would be preferred",
+        "Undergraduate degree from Tier 1 engineering college",
+        "Excellent academic credentials for undergraduate coursework"
+      ],
+      "fresher_evidence": "0-2 years",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Bengaluru-Analyst-Finance-AI-Implementation-Bengaluru-Finance-Transformation-Finance-Strategy/61496144",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Bengaluru-Analyst-Finance-AI-Implementation-Bengaluru-Finance-Transformation-Finance-Strategy/61496144",
+    "date": "Nov 12, 15:27",
+    "first_seen": "2026-11-12T15:27:10.486060+00:00",
+    "id": "Deloitte_Analyst_|_Finance_AI_Implementation_|_Be",
+    "notified": false,
+    "repost_last_seen": "2026-11-12",
+    "company_id": "deloitte"
+  },
+  {
+    "title": "T&T | Automation Testing | Associate Analyst | Quality Bengaluru | Engineering",
+    "url": "https://southasiacareers.deloitte.com/job/Bengaluru-T&T-Automation-Testing-Associate-Analyst-Quality-Bengaluru-Engineering/59048844/",
+    "company": "Deloitte",
+    "location": "Bengaluru, IN · India",
+    "category": "FRESHER",
+    "reason": "fresher signal: 'fresh graduates'",
+    "evidence": {
+      "experience": [
+        "up to 2 years",
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "This role is ideal for fresh graduates or professionals with up to 2 years of experience who are passionate about software testing, automation, and delivering h",
+        "0-2 years of experience",
+        "Internship or academic project experience in automation testing is an advantage.",
+        "Structured learning and mentoring from experienced QA professionals."
+      ],
+      "fresher_evidence": "fresh graduates",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Bengaluru-T&T-Automation-Testing-Associate-Analyst-Quality-Bengaluru-Engineering/59048844",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Bengaluru-T&T-Automation-Testing-Associate-Analyst-Quality-Bengaluru-Engineering/59048844",
+    "date": "Nov 12, 15:27",
+    "first_seen": "2026-11-12T15:27:10.486060+00:00",
+    "id": "Deloitte_T&T_|_Automation_Testing_|_Associate_Ana",
+    "notified": false,
+    "repost_last_seen": "2026-11-12",
+    "company_id": "deloitte"
+  },
+  {
+    "title": "ASIC Engineer – (New Grad) - India Cisco CAG UHR (Evergreen)",
+    "url": "https://cisco.wd5.myworkdayjobs.com/Cisco_Careers/job/Bangalore-India/ASIC-Engineer----New-Grad----India-Cisco-CAG-UHR--Evergreen-_2027556",
+    "company": "Cisco",
+    "location": "Bangalore, India · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'New Grad'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Eligibility:  The requirement is for 2027 graduates only.",
+        "Collaboration:  Experience in establishing and sustaining strong relationships with the extended team."
+      ],
+      "fresher_evidence": "New Grad",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:2027556",
+      "canonical_url": "https://cisco.wd5.myworkdayjobs.com/Cisco_Careers/job/Bangalore-India/ASIC-Engineer----New-Grad----India-Cisco-CAG-UHR--Evergreen-_2027556",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "posted_at": "2026-11-12",
+    "uid": "cisco|workday:2027556",
+    "date": "Nov 12, 15:29",
+    "first_seen": "2026-11-12T15:29:23.527045+00:00",
+    "id": "Cisco_ASIC_Engineer_–_(New_Grad)_-_India_Cisco",
+    "notified": false,
+    "repost_last_seen": "2026-11-12",
+    "company_id": "cisco"
   }
 ]
