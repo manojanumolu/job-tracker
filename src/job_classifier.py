@@ -103,9 +103,12 @@ def normalize_title(title: str) -> str:
 # Career pages mix real postings with employee-spotlight/blog content
 # ("Meet Nils Libert, Associate Scientist in R&D") that happens to contain
 # fresher keywords but isn't a job listing at all.
-_NOT_A_JOB_RE = re.compile(
-    r"^\s*meet\b|^\s*[\w'’.-]+\s+[\w'’.-]+\s*:\s", re.IGNORECASE,
-)
+_NOT_A_JOB_RE = re.compile(r"^\s*meet\b", re.IGNORECASE)
+# "Priya Sharma: My first year" — a two-word heading before a colon. Real
+# requisitions use the same shape ("Software Engineer: Silicon One (C++)",
+# "Sr Engineer: Embedded AI", Cisco and Qualcomm, Nov 2026 scan log), so the
+# heading is a story only when it names no role or grade (_story_heading).
+_NAME_COLON_RE = re.compile(r"^\s*([\w'’.-]+\s+[\w'’.-]+)\s*:\s", re.IGNORECASE)
 _NOT_A_JOB_URL_RE = re.compile(r"/(blog|news|stories|insights|article|life|events?|people|culture)s?/", re.IGNORECASE)
 # Career-site navigation that carries early-career words but links to a
 # landing page, not a posting: "Early Careers", "Graduate Programs",
@@ -181,12 +184,23 @@ _AUDIENCE_WORD_RE = re.compile(
 )
 
 
+def _story_heading(title: str) -> bool:
+    """"Firstname Lastname: ..." (a spotlight or blog heading), but not
+    "Software Engineer: Silicon One" — a heading naming a role or a grade
+    is a job title, judged by every other rule like any title."""
+    m = _NAME_COLON_RE.match(title)
+    if not m:
+        return False
+    head = m.group(1)
+    return not (_ROLE_NOUN_RE.search(head) or _SENIOR_TITLE_RE.search(head) or _ENTRY_TITLE_RE.search(head))
+
+
 def not_a_job_reason(title: str, href: str = "", *, posting_evidence: bool = False) -> str:
     """Why ``title``/``href`` is not a job posting ("" when it may be one)."""
     title = _normalize(title)
     if not title:
         return "empty title"
-    if _NOT_A_JOB_RE.search(title) or _INFO_PAGE_RE.search(title):
+    if _NOT_A_JOB_RE.search(title) or _story_heading(title) or _INFO_PAGE_RE.search(title):
         return "career story / event / informational page"
     if _LANDING_PAGE_RE.search(title):
         return "career landing page"

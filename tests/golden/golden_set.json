@@ -1,0 +1,3121 @@
+{
+ "version": 1,
+ "note": "Labelled golden set for the fresher-eligibility classifier. See tests/golden/README.md for provenance. Cases are frozen copies: they never read live data.",
+ "cases": [
+  {
+   "id": "seen-815564c88a",
+   "source": "production/seen_jobs.json",
+   "company": "Sanofi",
+   "title": "Scientific Sales Executive",
+   "description": "Experience: freshers / Prior experience in pharma sales is preferred",
+   "url": "https://sanofi.wd3.myworkdayjobs.com/SanofiCareers/job/Bangalore/Scientific-Sales-Executive_R2867486",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-97675d8d00",
+   "source": "production/seen_jobs.json",
+   "company": "PwC",
+   "title": "Associate",
+   "description": "Mandatory Skills:  CA Fresher\nPreferred Skills:  CA Fresher\nYears of Experience:  0\nExperience: 0",
+   "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Kolkata-DN-57/Associate_458500WD-2",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-3799d4ffa0",
+   "source": "production/seen_jobs.json",
+   "company": "PwC",
+   "title": "Specialist 2",
+   "description": "Commerce or relevant stream graduate with 0-3 years of relevant experience\nRelevant tax experience during previous employment will be an added advantage",
+   "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/GandhiNagar---GIFT-CITY/Specialist-2_406384WD-2",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-3f4f9bb830",
+   "source": "production/seen_jobs.json",
+   "company": "PwC",
+   "title": "Specialist 3",
+   "description": "Years of Experience:  fresher\nExperience: fresher",
+   "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Gurugram-10-C/Specialist-3_515042WD",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-e16f0e7371",
+   "source": "production/seen_jobs.json",
+   "company": "PwC",
+   "title": "IN_Associate _ Internal Audit _Internal Audit Services_ Advisory_ Bangalore",
+   "description": "0-3yrs\nExperience in Internal Audit/ Process Audit concepts & methodology\nClient and internal stakeholder management  Project / delivery management Experience with analysis in high volume data environments.\nYears of experience required:",
+   "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Bengaluru-Millenia/IN-Senior-Associate---Internal-Audit--Internal-Audit-Services--Advisory--Bangalore_570925WD-1",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-65c67e3324",
+   "source": "production/seen_jobs.json",
+   "company": "PwC",
+   "title": "Associate-CA fresher-TC",
+   "description": "fresher",
+   "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Kolkata/Associate-CA-fresher-TC_197771WD",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-e419e57260",
+   "source": "production/seen_jobs.json",
+   "company": "PwC",
+   "title": "Associate - CA Freshers - RDC",
+   "description": "Associate - CA Freshers",
+   "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Kolkata/Associate---CA-Freshers---RDC_216252WD",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-c4d004c8c6",
+   "source": "production/seen_jobs.json",
+   "company": "PwC",
+   "title": "IN_Specialist 3_Internal audit_Managed Services_Advisory_Gurgaon",
+   "description": "Experience in Internal Audit/ Process Audit concepts &     methodology\nYears of Experience Required:\n0  -2  years\n0 -2 years",
+   "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Gurugram-8-B/IN-Specialist-2-Internal-audit-Managed-Services-Advisory-Gurgaon_754540WD-1",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-640b1a2dc4",
+   "source": "production/seen_jobs.json",
+   "company": "Accenture",
+   "title": "Customer Contact Comms New Associate - Messaging",
+   "description": "Years of Experience: 0-1 Year\nQualifications: Any Graduation\nAccenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil\nAny Graduation   Important Notice",
+   "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01654133_en&title=Customer+Contact+Comms+New+Associate+-+Messaging",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-647f9e089c",
+   "source": "production/seen_jobs.json",
+   "company": "Accenture",
+   "title": "Order to Cash Operations New Associate",
+   "description": "Years of Experience: 0 to 1 years\nQualifications: Any Graduation\nAccenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil\nAny Graduation   Important Notice",
+   "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01668317_en&title=Order+to+Cash+Operations+New+Associate",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-68b12e5128",
+   "source": "production/seen_jobs.json",
+   "company": "Accenture",
+   "title": "Procure to Pay Operations New Associate",
+   "description": "Years of Experience: 0 to 1 years\nAccenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil",
+   "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01656686_en&title=Procure+to+Pay+Operations+New+Associate",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-cc5b93d98d",
+   "source": "production/seen_jobs.json",
+   "company": "Accenture",
+   "title": "Record to Report Ops New Associate",
+   "description": "Years of Experience: 0 to 1 years\nAccenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil",
+   "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01653090_en&title=Record+to+Report+Ops+New+Associate",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-d1d18d510f",
+   "source": "production/seen_jobs.json",
+   "company": "Accenture",
+   "title": "Business Advisory New Associate",
+   "description": "Years of Experience: 0-1 Years\nQualifications: Any Graduation\nAccenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil\nAny Graduation   Important Notice",
+   "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01656911_en&title=Business+Advisory+New+Associate",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-9d84da0ad4",
+   "source": "production/seen_jobs.json",
+   "company": "Accenture",
+   "title": "Procurement Operations New Associate",
+   "description": "Years of Experience: 0 to 1 years\nQualifications: Any Graduation\nAccenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil\nAny Graduation   Important Notice",
+   "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01667607_en&title=Procurement+Operations+New+Associate",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-d5f71c847e",
+   "source": "production/seen_jobs.json",
+   "company": "Accenture",
+   "title": "Customer Service New Associate",
+   "description": "Years of Experience: 0 to 1 years\nQualifications: Any Graduation\nAccenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil\nWhat are we looking for?  • Experience in US Retirement Services domain Defined Contributions Managing participant level services",
+   "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01664954_en&title=Customer+Service+New+Associate",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-2d2c74689a",
+   "source": "production/seen_jobs.json",
+   "company": "Accenture",
+   "title": "Business Advisory New Associate-Voice",
+   "description": "Years of Experience: 0 to 1 years\nQualifications: Any Graduation\nAccenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil\nExperience Required",
+   "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01642826_en&title=Business+Advisory+New+Associate-Voice",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-0d6d73d13d",
+   "source": "production/seen_jobs.json",
+   "company": "Accenture",
+   "title": "Underwriting New Associate",
+   "description": "Years of Experience: 0 to 1 year\nQualifications: Any Graduation\nAccenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil\nWhat would you do?  0-3  years  of  experience  in  Property  &  Casualty  Underwriting  or  Policy  Servicing  across  shared  services/Third  Party  BPO  serv",
+   "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01642432_en&title=Underwriting+New+Associate",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-addbeb8343",
+   "source": "production/seen_jobs.json",
+   "company": "Accenture",
+   "title": "Int Controls & Compliance Associate",
+   "description": "Years of Experience: 0-1 year\nQualifications: Any Graduation\nAccenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil\nAny Graduation   Important Notice",
+   "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01654271_en&title=Int+Controls+%26+Compliance+Associate",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-69e706e227",
+   "source": "production/seen_jobs.json",
+   "company": "PwC",
+   "title": "IN_Associate_FDD_Transaction Services_Advisory_Gurgaon",
+   "description": "0-1 yr\nYears of experience required:",
+   "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Gurugram-Downtown-4/IN-Associate-FDD-Transaction-Services-Advisory-Gurgaon_744808WD-1",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-e418302e3d",
+   "source": "production/seen_jobs.json",
+   "company": "PwC",
+   "title": "IN_Specialist 3_BC/NAV_MS Dynamics_Advisory_Bangalore",
+   "description": "Responsibilities:   A minimum of 0-2 years of experience in Microsoft Dynamics NAV(NAV 2013 & upward)/D365\nYears of experience required:       0-2 Years\nExperience in Visual Studio and . NET\nExperience in the upgrade process and Support activities",
+   "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Bengaluru-Millenia/IN-Senior-Associate-PowerApps-Developer-MS-Dynamics-Advisory-Bangalore_737996WD-2",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-07ac80d01e",
+   "source": "production/seen_jobs.json",
+   "company": "PwC",
+   "title": "IN_Specialist 3_SAP SAC _SAP_Advisory_Mumbai",
+   "description": "0 to 1 year\nUtilize HTML and CSS concepts to customize SAC analytic applications and improve user experience.\nExperience working with Joule integration to extend SAC functionality via natural language querying and AI insights.\nHands-on experience in integrating SAC with SAP Datasphere and other data sources for seamless data connectivity and harmonization.",
+   "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Mumbai-Goregaon/IN-Senior-Associate-SAP-SD-SAP-Advisory-Gurgaon_741745WD-1",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-bf0c1edf4f",
+   "source": "production/seen_jobs.json",
+   "company": "Accenture",
+   "title": "ISSRRN000656 - Infra Tech Support Practitioner Copy 09",
+   "description": "A minimum of 0 years of experience in relevant related skills.",
+   "url": "https://www.accenture.com/in-en/careers/jobdetails?id=14264500_en&title=ISSRRN000656+-+Infra+Tech+Support+Practitioner+Copy+09",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-0907797c90",
+   "source": "production/seen_jobs.json",
+   "company": "Accenture",
+   "title": "ISSRRN000733 - Infra Tech Support Practitioner",
+   "description": "A minimum of 0 years of experience in relevant related skills.",
+   "url": "https://www.accenture.com/in-en/careers/jobdetails?id=14263574_en&title=ISSRRN000733+-+Infra+Tech+Support+Practitioner",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-55e42fd6bd",
+   "source": "production/seen_jobs.json",
+   "company": "PwC",
+   "title": "IN_Specialist 3_ Frontend Developer_AppTech_Advisory_Pune",
+   "description": "We are seeking a talented and enthusiastic Front-End Developer with 0-2+ years of experience. The ideal candidate will be responsible for building high-quality,\n0-2 years\nExperience in working with RESTful APIs and third-party libraries.\nHands-on experience in developing cross-platform mobile applications using Flutter.",
+   "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Pune/IN-Specialist-3--Frontend-Developer-AppTech-Advisory-Pune_DB_006073-2",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-aaa4675ef4",
+   "source": "production/seen_jobs.json",
+   "company": "PwC",
+   "title": "IN-Associate_IA_Internal Audit Services_Advisory_Mumbai",
+   "description": "Experience in Internal Audit/ Process Audit concepts & methodology\nExperience with analysis in high volume data environments.\nYears of experience required:\n0  -  1   Years\n0 - 1 Years",
+   "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Mumbai-Shivaji-Park/IN-Associate-IA-Internal-Audit-Services-Advisory-Mumbai_751155WD-2",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-c90fe9f314",
+   "source": "production/seen_jobs.json",
+   "company": "PwC",
+   "title": "IN_Associate_Metal & Mining_Fuels & Resources S&O_Advisory_Gurgaon",
+   "description": "0-3 years\nYears of experience   required  :",
+   "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Gurugram-Downtown-4/IN-Specialist-2-Metal---Mining-Fuels---Resources-S-O-Advisory-Gurgaon_755063WD-1",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-b4bb1f786f",
+   "source": "production/seen_jobs.json",
+   "company": "Accenture",
+   "title": "Order to Cash Operations New Associate-Voice",
+   "description": "Years of Experience: 0 to 1 years\nYears of Experience :0 to 1 years\nQualifications: Any Graduation\nAccenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil",
+   "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01641859_en&title=Order+to+Cash+Operations+New+Associate-Voice",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-59d10c6015",
+   "source": "production/seen_jobs.json",
+   "company": "PwC",
+   "title": "IN_Specialist 2_Accounts receivable_Operational Excellence_IFS_Gurgaon",
+   "description": "0-1 year\nYears of experience required:",
+   "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Gurugram-Novus-Tower/IN-Specialist-2-Accounts-receivable-Operational-Excellence-IFS-Gurgaon_DB_007027-1",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-9212ce1ed1",
+   "source": "production/seen_jobs.json",
+   "company": "PwC",
+   "title": "IN_Specialist 2_Accounts receivable_BEST Operations_IFS_Gurgaon",
+   "description": "0-1 year\nYears of experience required:",
+   "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Gurugram-Novus-Tower/IN-Specialist-2-Accounts-receivable-BEST-Operations-IFS-Gurgaon_DB_007025-1",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-aa5d0b2cb2",
+   "source": "production/seen_jobs.json",
+   "company": "Accenture",
+   "title": "Procure to Pay Operations New Associate",
+   "description": "Years of Experience: 0 to 1 years\nAccenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil",
+   "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01669487_en&title=Procure+to+Pay+Operations+New+Associate",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-749b12b03c",
+   "source": "production/seen_jobs.json",
+   "company": "Accenture",
+   "title": "Order to Cash Operations New Associate",
+   "description": "Years of Experience: 0 to 1 years\nYears of Experience :0 to 1 years\nQualifications: Any Graduation\nAccenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil",
+   "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01642082_en&title=Order+to+Cash+Operations+New+Associate",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-16f54bc1a3",
+   "source": "production/seen_jobs.json",
+   "company": "Accenture",
+   "title": "Delivery Operations New Associate",
+   "description": "Years of Experience: 0 to 1 years\nQualifications: Any Graduation\nAccenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil\nAny Graduation   Important Notice",
+   "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01601620_en&title=Delivery+Operations+New+Associate",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-cd037d11de",
+   "source": "production/seen_jobs.json",
+   "company": "MetLife",
+   "title": "Associate Big Data Engineer",
+   "description": "0-3 years of experience in Data Engineering, Big Data, Data Analytics, or related technology domains.\nExperience with ETL/ELT pipeline development and data integration processes.\nExperience working in cloud-based data engineering environments.",
+   "url": "https://www.metlifecareers.com/en_US/ml/JobDetail/Associate-Big-Data-Engineer/20923",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-92f3ee4d02",
+   "source": "production/seen_jobs.json",
+   "company": "Accenture",
+   "title": "Sales Prog & Incentive Mgmt New Assoc",
+   "description": "Years of Experience: 0 to 1 years\nFreshers and candidates with up to one year of relevant experience may apply.\nQualifications: Any Graduation\nAccenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil",
+   "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01672698_en&title=Sales+Prog+%26+Incentive+Mgmt+New+Assoc",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-942933d3bc",
+   "source": "production/seen_jobs.json",
+   "company": "PwC",
+   "title": "IN_Intern/Trainee",
+   "description": "0 – 1 year (Freshers can apply)\nEnsure positive candidate experience and adherence to hiring timelines\nYears of experience required:",
+   "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Bengaluru-Millenia/IN-Intern-Trainee_764518WD",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-4776276006",
+   "source": "production/seen_jobs.json",
+   "company": "Salesforce",
+   "title": "Content Marketing Analyst",
+   "description": "Our Futureforce University Recruiting program is dedicated to attracting, retaining and cultivating talent. Our interns and new graduates work on real projects \nTo get the best candidate experience, please consider applying for a maximum of 3 roles within 12 months to ensure you are not duplicating efforts.\nExperience/Skills Required:\nExperience/Skills Desired:",
+   "url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Bangalore/Content-Writing-Analyst_JR356687",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-5236f29e79",
+   "source": "production/seen_jobs.json",
+   "company": "Micron",
+   "title": "Associate Engineer, IT Eng System Mgr",
+   "description": "fresh graduates",
+   "url": "https://micron.wd1.myworkdayjobs.com/External/job/Hyderabad---Phoenix-Aquila-India/Associate-Engineer--IT-Eng-System-Mgr_JR112672",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-f6faf34ccf",
+   "source": "production/seen_jobs.json",
+   "company": "Micron",
+   "title": "PDE CEM Graduate Engineering Technician",
+   "description": "Fresh graduates with relevant internship experience are welcome to apply\nQualification  s     & Experience:\nExperience:\n0–3 years of experience in an administrative, engineering support, or office coordination role",
+   "url": "https://micron.wd1.myworkdayjobs.com/External/job/Sanand---303A---ATSSDMOD-India/PDE-CEM-Graduate-Engineering-Technician_JR105741",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-6f69820c83",
+   "source": "production/seen_jobs.json",
+   "company": "Micron",
+   "title": "Technician Apprentice",
+   "description": "Apprenticeship Tenure:  12 months (1 year)\nTenure:  12 months Apprenticeship\nAs India’s first Semiconductor ATMP facility, Micron Semiconductor India invites Diploma graduates from the 2026 batch for the opportunity to join our 12-Months\nEducation:  Diploma Candidates Graduated in  2026",
+   "url": "https://micron.wd1.myworkdayjobs.com/External/job/Sanand---303A---ATSSDMOD-India/Technician-Apprentice_JR107694",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-e0d5f6c734",
+   "source": "production/seen_jobs.json",
+   "company": "Micron",
+   "title": "Engineer, GQ OPS -REL Process",
+   "description": "Fresh graduates are welcome.\nBachelors Degree or equivalent experience\nExperience",
+   "url": "https://micron.wd1.myworkdayjobs.com/External/job/Sanand---303A---ATSSDMOD-India/Engineer--GQ-OPS--REL-Process_JR105601",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-28c2881f39",
+   "source": "production/seen_jobs.json",
+   "company": "NVIDIA",
+   "title": "Formal Verification Engineer - New College Graduate 2026",
+   "description": "Hands-on experience with HDLs such as Verilog / System Verilog\nGraduate",
+   "url": "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite/job/India-Gurugram/Formal-Verification-Engineer---New-College-Graduate-2026_JR2028897",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-98adee2bb8",
+   "source": "production/seen_jobs.json",
+   "company": "NVIDIA",
+   "title": "ASIC Verification Engineer",
+   "description": "BS or MS in Computer Science or Electronics Engineering or equivalent experience with 0-2 years of experience\nPrevious experience handling Silicon Bringup and in enabling Emulation/FPGA related test frameworks.",
+   "url": "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite/job/India-Hyderabad/ASIC-Verification-Engineer_JR2020484",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-8ce657174a",
+   "source": "production/seen_jobs.json",
+   "company": "Evernorth (Cigna)",
+   "title": "Program Management Analyst - Cigna Healthcare",
+   "description": "Experience of Microsoft applications – word, outlook, excel and Jira would be an advantage but not essential\nThis is an entry level",
+   "url": "https://cigna.wd5.myworkdayjobs.com/cignacareers/job/Bengaluru-India/Program-Management-Analyst---Cigna-Healthcare_26012136",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-54c80aac1f",
+   "source": "production/seen_jobs.json",
+   "company": "Evernorth (Cigna)",
+   "title": "Enrollment/ Billing Associate Representative",
+   "description": "Freshers OR 0 - 1 years of experience\nAccounts Receivable experience  a plus",
+   "url": "https://cigna.wd5.myworkdayjobs.com/cignacareers/job/Bengaluru-India/Enrollment--Billing-Associate-Representative_26010627",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-8089b8f0a2",
+   "source": "production/seen_jobs.json",
+   "company": "Evernorth (Cigna)",
+   "title": "Back Office Operations Analyst – Band 1",
+   "description": "0–1+ years of experience in an operations environment internship or entry‑level experience welcomed.\n0-1+ years",
+   "url": "https://cigna.wd5.myworkdayjobs.com/cignacareers/job/Bengaluru-India/Back-Office-Operations-Analyst---Band-1_26007839",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-f9ad13dd62",
+   "source": "production/seen_jobs.json",
+   "company": "Evernorth (Cigna)",
+   "title": "Administrative Assistant Representative",
+   "description": "0–1+ years of experience in an operations environment (claims, admin, eligibility, onboarding, customer service support, or similar) — internship or entry‑level\n0-1+ years",
+   "url": "https://cigna.wd5.myworkdayjobs.com/cignacareers/job/Bengaluru-India/Administrative-Assistant-Representative_26007842",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-314d0a776b",
+   "source": "production/seen_jobs.json",
+   "company": "State Street",
+   "title": "Project Management Apprenticeship",
+   "description": "The apprentice will work alongside Project and Program Managers to gain hands-on experience in project delivery, reporting, resource coordination, financial tra\nB.Tech / MBA graduate\nApprenticeship",
+   "url": "https://statestreet.wd1.myworkdayjobs.com/Global/job/Hyderabad-India/Project-Management-Apprenticeship_R-797303",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-53f0562f6b",
+   "source": "production/seen_jobs.json",
+   "company": "State Street",
+   "title": "Operations Early Career Entry Program",
+   "description": "Our  Operations Early Career Entry Program is  designed to develop graduates both technically and professionally towards becoming our future leaders. You’ll lea\nA buddy who can offer you their experience, knowledge and guidance throughout your internship.\nFinal Year Students Enrolled in full time education at undergraduates in the penultimate year of degree in one of the following areas: Finance, Accounting, or E\nInclusion, Diversity and Social Responsibility.  We truly believe our employees’ diverse backgrounds, experiences and perspectives are a powerful contributor to",
+   "url": "https://statestreet.wd1.myworkdayjobs.com/Global/job/Bangalore-India/Operations-Early-Career-Entry-Program_R-799807",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-a134bcb851",
+   "source": "production/seen_jobs.json",
+   "company": "Hitachi",
+   "title": "R&D Simulation Model Engineer - IDC",
+   "description": "Required ME Power Systems / ME Power Electronics with 0-3+ years of experience in modelling IBR’s for power quality and power conversion applications.\nYou should have experience in simulation tools such as EMTDC / PSCAD, PSS/E, EMPTV-RV and Dig Silent Power factory. Required Good knowledge of FORTRAN, Python, \nUnderstanding application of Power Electronics in HV/EHV system. Experience in performing power system studies like load flow, short circuit, transient stabilit",
+   "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Chennai-Tamil-Nadu-India/R-D-Simulation-Model-Engineer---IDC_R0140763",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-5cac11bd19",
+   "source": "production/seen_jobs.json",
+   "company": "Hitachi",
+   "title": "Finance Specialist",
+   "description": "Looking for a chartered accountant with 0 to 1 year experience in Financial reporting domain of listed and unlisted entities in India. The ideal candidate shoul",
+   "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Bengaluru-Karnataka-India/Finance-Specialist_R0079837",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-76633b2430",
+   "source": "production/seen_jobs.json",
+   "company": "Hitachi",
+   "title": "Factory/ Plant Controller - CP&O",
+   "description": "Up to 4 years of experience in Financial Planning and Analysis.\nHands‑on experience in SAP FICO, including CO‑PA.\nManufacturing industry experience preferred.",
+   "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Bengaluru-Karnataka-India/Factory--Plant-Controller---CP-O_R0126304",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-e4561664b1",
+   "source": "production/seen_jobs.json",
+   "company": "Hitachi",
+   "title": "Electrical Design Engineer",
+   "description": "0 to 1 year of experience working in Electrical design for Distribution/Dry Transformers manufacturing Industry.\nExperience in Simulation or software development would be advantageous.\nExperience on Microsoft office and tools.",
+   "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Maneja-Gujarat-India/Electrical-Design-Engineer_R0123385",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-efe805df13",
+   "source": "production/seen_jobs.json",
+   "company": "Hitachi",
+   "title": "Mechanical Design Engineer",
+   "description": "0–2 years Experienced working in Mechanical Design for Distribution Dry transformer manufacturing Industry. Candidates with higher experience also to be conside\nExperience in winding design / Tank & externals is an advantage\nExperience in Simulation or software development would be advantageous.\nExperience on Microsoft office and tools.\n0-2 years",
+   "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Maneja-Gujarat-India/Mechanical-Design-Engineer_R0144088",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-5d107e4165",
+   "source": "production/seen_jobs.json",
+   "company": "Hitachi",
+   "title": "Project Controlling Analyst - CCC",
+   "description": "Up to 4-year experience in Financial Planning and Analysis, with manufacturing experience background preferable.\nHands on experience in SAP FICO including CO-PA and Understanding on other modules like SD, PP, MM, PS\nExperience:",
+   "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Bengaluru-Karnataka-India/Project-Controlling-Analyst---CCC_R0097334",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-9fa214f42c",
+   "source": "production/seen_jobs.json",
+   "company": "Hitachi",
+   "title": "Diploma Trainee",
+   "description": "Trainee",
+   "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Savli-Gujarat-India/Diploma-Trainee_R0109078",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-ea556c3d7d",
+   "source": "production/seen_jobs.json",
+   "company": "Hitachi",
+   "title": "Management Trainee",
+   "description": "Trainee",
+   "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Bengaluru-Karnataka-India/Management-Trainee_R0087362",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-0a8898abe6",
+   "source": "production/seen_jobs.json",
+   "company": "Hitachi",
+   "title": "General Finance Management Analyst- Controlling Capability Center",
+   "description": "Up to 4 years’ experience in Financial Planning and Analysis, with manufacturing experience background preferable.\nHands-on experience in SAP FICO including CO-PA and understanding on other modules",
+   "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Bengaluru-Karnataka-India/General-Finance-Management-Analyst--Controlling-Capability-Center_R0098238",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-9456a93e68",
+   "source": "production/seen_jobs.json",
+   "company": "Medtronic",
+   "title": "Co-op/Apprentice (Non-Tech)",
+   "description": "0 years of experience required.\nAutonomy:  Entry-level position typically requiring little to no prior experience.\nRequired Knowledge and Experience:  Requires no or little job knowledge of systems and procedures.",
+   "url": "https://medtronic.wd1.myworkdayjobs.com/MedtronicCareers/job/Gurgaon-Haryana-India/Co-op-Apprentice--Non-Tech-_R66780-1",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-4c066d46d8",
+   "source": "production/seen_jobs.json",
+   "company": "Medtronic",
+   "title": "CA Industrial Trainee",
+   "description": "0 years of experience required.\nAutonomy:  Entry-level position typically requiring little to no prior experience.\nRequired Knowledge and Experience:  Requires no or little job knowledge of systems and procedures.",
+   "url": "https://medtronic.wd1.myworkdayjobs.com/MedtronicCareers/job/Gurgaon-Haryana-India/Co-op-Apprentice--Non-Tech-_R80647-1",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-4c5436e2ea",
+   "source": "production/seen_jobs.json",
+   "company": "Analog Devices",
+   "title": "Associate Industrial Engineer",
+   "description": "Come join Analog Devices (ADI) – a place where Innovation meets Impact. For more than 55 years, Analog Devices has been inventing new breakthrough technologies \nInternship, co-op, or academic project experience in manufacturing, operations research, data analytics, or process optimization.\nWork Experience\n0–2 years of Industrial Engineering or analytical experience.\nearly-career role",
+   "url": "https://analogdevices.wd1.myworkdayjobs.com/External/job/India-Gandhinagar/Associate-Industrial-Engineer_R264340",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted",
+    "category-drift"
+   ]
+  },
+  {
+   "id": "seen-8ad27c4783",
+   "source": "production/seen_jobs.json",
+   "company": "Analog Devices",
+   "title": "Associate Analyst, Supply Chain Planning",
+   "description": "0 - 3years of relevant experience\nCome join Analog Devices (ADI) – a place where Innovation meets Impact. For more than 55 years, Analog Devices has been inventing new breakthrough technologies \nHands on Python is added advantage and experience in driving improvements using machine learning\nJob Req Type: Graduate Job",
+   "url": "https://analogdevices.wd1.myworkdayjobs.com/External/job/India-Gandhinagar/Associate-Analyst--Supply-Chain-Planning_R264285",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-b3b3c1ed2e",
+   "source": "production/seen_jobs.json",
+   "company": "Thermo Fisher Scientific",
+   "title": "Scientist for Single Cell Sorting",
+   "description": "Applicants should have Masters with 0-4 year's experience or a PhD in a life sciences field (submitted within the last one year) with a strong focus on immunolo\nEducation & Experience levels:\nNature of experience:\nThorough in immunology and flowcytometry workflows. Experience in cell sorting is required",
+   "url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Bangalore-India/Scientist-for-Single-Cell-Sorting_R-01372949-1",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-3c1b3f63db",
+   "source": "production/seen_jobs.json",
+   "company": "Thermo Fisher Scientific",
+   "title": "Safety Reporting Specialist",
+   "description": "Previous experience that provides the knowledge, skills, and abilities to perform the job (comparable to 0 to 2 years’).\nEducation and Experience Requirements:\nand/or directly related experience, will be considered sufficient for an individual to meet the",
+   "url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Hyderabad-India/Safety-Reporting-Specialist_R-01372494",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-c4eb800384",
+   "source": "production/seen_jobs.json",
+   "company": "Thermo Fisher Scientific",
+   "title": "Scientist I, Protein Biology",
+   "description": "Applicants should have Masters with 0-4 years confirmed experience or a PhD in a life sciences field (submitted within the last one year) with a strong focus on\nEducation & Experience levels:\nNature of experience:\nExperience in working with different expression systems, inclusion bodies and re-folding",
+   "url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Bangalore-India/Scientist-I--Protein-Biology_R-01372950-1",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-c8ed9fe434",
+   "source": "production/seen_jobs.json",
+   "company": "Thermo Fisher Scientific",
+   "title": "Scientist I, Molecular Biology",
+   "description": "Applicants should have Master’s with 0-3 years confirmed experience or a fresh PhD (submitted within last one year) in a life sciences field with a strong focus\nEducation & Experience levels:\nNature of experience:\nExperience in molecular biology, which could include nucleic acid extraction, PCR, and cloning. Familiarity with In-vitro transcription (IVT), mRNA delivery, LN",
+   "url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Bangalore-India/Scientist-I--Molecular-Biology_R-01372981",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-f9908ed5d0",
+   "source": "production/seen_jobs.json",
+   "company": "Thermo Fisher Scientific",
+   "title": "Operations Finance Analyst",
+   "description": "Bachelor's Degree required, no prior experience required\nExperience with account reconciliations and journal entry preparation\nExperience with financial reporting tools and systems (Hyperion, BlackLine) preferred",
+   "url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Bangalore-India/Operations-Finance-Analyst_R-01364214",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-54db010a23",
+   "source": "production/seen_jobs.json",
+   "company": "Thermo Fisher Scientific",
+   "title": "Associate Investigator Grants Analyst (AIGA)",
+   "description": "Previous experience that provides the knowledge, skills, and abilities to perform the job (comparable to 0 to 2 years’).\nEducation & Experience Requirements:\nIn some cases an equivalency, consisting of a combination of appropriate education, training and/or directly related experience, will be considered sufficient f\nBasic experience with automated systems and computerized applications, such as, Microsoft Outlook, Excel, Word, etc",
+   "url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Remote-India/Associate-Investigator-Grants-Analyst--AIGA-_R-01369366",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-3e105c5743",
+   "source": "production/seen_jobs.json",
+   "company": "Micron",
+   "title": "Program Management",
+   "description": "Fresh graduates / entry-level candidates are eligible.\nExperience:  Entry Level / College Fresher\nThis role is ideal for a recent graduate interested in developing a career in  Program Management, Operations, Quality, or Project Management .",
+   "url": "https://micron.wd1.myworkdayjobs.com/External/job/Sanand---303A---ATSSDMOD-India/Program-Management_JR116632",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-069aac4cf5",
+   "source": "production/seen_jobs.json",
+   "company": "Hitachi",
+   "title": "Financial Planning & Analysis Specialist – Project Controlling – CCC",
+   "description": "Up to 4-year experience in Financial Planning and Analysis, with manufacturing experience background preferable.\nHands on experience in SAP FICO including CO-PA and Understanding on other modules like SD, PP, MM, PS\nExperience:",
+   "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi/job/Bengaluru-Karnataka-India/Financial-Planning---Analysis-Specialist---Project-Controlling---CCC-_R0103102",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-fd049acb9e",
+   "source": "production/seen_jobs.json",
+   "company": "PwC",
+   "title": "IN_Associate_Data Science & Engineering_Data & Analytics_Advisory_Kolkata",
+   "description": "Fresher / 0 to 2 Years\nHands-on experience with Generative AI, including designing, developing, and deploying GenAI applications in production environments using Python and cloud plat\nProficiency in Python, SQL, and R, combined with experience in distributed data processing frameworks and cloud-based data engineering tools.\nYears of experience required:",
+   "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Kolkata-DN-57/IN-Associate-Data-Science---Engineering-Data---Analytics-Advisory-Kolkata_DB_005563-1",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-4944a57480",
+   "source": "production/seen_jobs.json",
+   "company": "State Street",
+   "title": "Apprentice",
+   "description": " Bachelor’s degree in business, Finance, or equivalent work experience• Good understanding of asset classes Equity, Fixed Income and Trade Life Cycle.\nInclusion, Diversity and Social Responsibility.  We truly believe our employees’ diverse backgrounds, experiences and perspective are a powerful contributor to \nApprentice",
+   "url": "https://statestreet.wd1.myworkdayjobs.com/Global/job/Bangalore-India/Apprentice_R-799731",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-176867fe02",
+   "source": "production/seen_jobs.json",
+   "company": "Amazon",
+   "title": "She Builds 1:1 Resume & Interview Coaching, India",
+   "description": "When you join Amazon Web Services as a student or recent graduate, you’ll have the chance for your voice to be heard and amplified. That’s because our teams are\nDiverse Experiences\nAmazon values diverse experiences. Even if you do not meet all of the preferred qualifications and skills listed in the job description, we encourage candidates\nExperience working in a fast paced, quickly changing or international environment",
+   "url": "https://www.amazon.jobs/en/jobs/10557386/she-builds-1-1-resume-interview-coaching-india",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-1b16ba3f67",
+   "source": "production/seen_jobs.json",
+   "company": "Amazon",
+   "title": "Transportation Specialist, Quick Commerce, AmazonNowCO, RoW APEX",
+   "description": "Experience in e-commerce, quick commerce, or last-mile logistics.\nExperience with Excel\nExperience with SQL\n0–2 years of experience in operations, logistics, supply chain, or customer service\n0-2 years",
+   "url": "https://www.amazon.jobs/en/jobs/10531029/transportation-specialist-quick-commerce-amazonnowco-row-apex",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-021c907376",
+   "source": "production/seen_jobs.json",
+   "company": "Amazon",
+   "title": "Financial Analyst Intern",
+   "description": "Available to intern with us for 12-18 months.\nas a trainee",
+   "url": "https://www.amazon.jobs/en/jobs/10498382/financial-analyst-intern",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-2904514d18",
+   "source": "production/seen_jobs.json",
+   "company": "Amazon",
+   "title": "AHS Specialist - English & German, Account Health Support",
+   "description": "Min. Education - Undergraduate Campus Language Degree from Renowned University (2026 pass out or completed) can apply",
+   "url": "https://www.amazon.jobs/en/jobs/10571485/ahs-specialist-english-german-account-health-support",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-e47b772de1",
+   "source": "production/seen_jobs.json",
+   "company": "Infosys",
+   "title": "SAP/EWM consultant",
+   "description": "Required experience: 0 to 2 years.",
+   "url": "https://career.infosys.com/jobdesc?jobReferenceCode=INFSYS-EXTERNAL-255211",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-166b8a9ba6",
+   "source": "production/seen_jobs.json",
+   "company": "Infosys",
+   "title": "CA Fresher",
+   "description": "Required experience: 0 to 5 years.\nFresher",
+   "url": "https://career.infosys.com/jobdesc?jobReferenceCode=INFSYS-EXTERNAL-251995",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-195060271f",
+   "source": "production/seen_jobs.json",
+   "company": "Deloitte",
+   "title": "Analyst | PMO | Ahmedabad | Organizational Transformation",
+   "description": "0-3 years of experience in PMO / programme support roles\nExperience supporting large-scale transformation or technology programmes\nStrong experience in reporting and governance management\nExperience working in client-facing environments",
+   "url": "https://southasiacareers.deloitte.com/job/Ahmedabad-Analyst-PMO-Ahmedabad-Organizational-Transformation/61050744/",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-13ea38a406",
+   "source": "production/seen_jobs.json",
+   "company": "Deloitte",
+   "title": "Executive | Financial Crime | Gurugram | Forensic & Financial Crime",
+   "description": "      The candidate should have between 0-3 years of work experience and could have worked in sectors such as media, consulting, financial services, policy thin\n      Ideal candidates should possess a post graduate degree with a specialization in Finance. Candidates with post graduate degrees in other disciplines includ",
+   "url": "https://southasiacareers.deloitte.com/job/Delhi-Executive-Financial-Crime-Gurugram-Forensic-&-Financial-Crime/58331544/",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-4ca4d8e406",
+   "source": "production/seen_jobs.json",
+   "company": "Deloitte",
+   "title": "Executive | GST & Pre GST Advisory | Mumbai | Indirect Tax",
+   "description": "Graduates/Semi-Qualified C.A/C.S/MBA(Finance) with 0-2 years of Experience in Indirect Taxation\nAs an Executive in our Indirect Tax team, you’ll build and nurture positive working relationships with teams and clients with the intention to exceed client exp\nWorking experience in some accounting software like Tally/SAP/Oracle (preferable)",
+   "url": "https://southasiacareers.deloitte.com/job/Mumbai-Executive-GST-&-Pre-GST-Advisory-Mumbai-Indirect-Tax/57077644/",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-35217e0f9d",
+   "source": "production/seen_jobs.json",
+   "company": "Deloitte",
+   "title": "Consultant | Anaplan | Bengaluru | Finance Transformation | Business Finance",
+   "description": "0-3+ years of relevant experience  in Anaplan implementation, Finance, FP&A, Accounting, Costing, Management Accounting, Supply Chain Planning, Business Plannin\nParticipate in or lead project delivery activities depending on experience, ensuring timely and quality execution of Anaplan implementations.\nGraduate/Postgraduate qualification, preferably  CA, CMA, MBA/PGDM (Finance, Operations or Supply Chain), B.Com, M.Com or equivalent .\nFor experienced candidates, hands-on Anaplan model development, solution design, implementation and/or project delivery experience will be valued.\nFreshers with",
+   "url": "https://southasiacareers.deloitte.com/job/Bengaluru-Consultant-Anaplan-Bengaluru-Finance-Transformation-Business-Finance/60524644/",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-878004a058",
+   "source": "production/seen_jobs.json",
+   "company": "Deloitte",
+   "title": "Consultant | FT: Strategy & Ops | Bengaluru | Finance Transformation | Finance Strategy",
+   "description": "o   0-2 years of relevant experience across consulting and/or industry roles, post qualification would be preferred\no   Excellent academic credentials for both undergraduate and graduate coursework\n      Experience",
+   "url": "https://southasiacareers.deloitte.com/job/Bengaluru-Consultant-FT-Strategy-&-Ops-Bengaluru-Finance-Transformation-Finance-Strategy/60510544/",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-36cdb29ea7",
+   "source": "production/seen_jobs.json",
+   "company": "Deloitte",
+   "title": "T&T | Cyber: CST | Analyst | Third Party Risk Management | Coimbatore",
+   "description": "Relevant experience of 0-1 year in IT Audits, Cloud security\nCyber TPRM experience ranging from 1 year to 7yrs is mandatory.\nExperience with ISO22301 implementation and audits\nWork experience in Infrastructure / Application Security",
+   "url": "https://southasiacareers.deloitte.com/job/Coimbatore-T&T-Cyber-CST-Analyst-Third-Party-Risk-Management-Coimbatore/60979644/",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-65e1dff782",
+   "source": "production/seen_jobs.json",
+   "company": "Deloitte",
+   "title": "T&T | Cyber: D&R | Analyst | Incident Response & Handling | Delhi",
+   "description": "Overall experience of 0 to 2 years in cybersecurity, including relevant internships, academic projects, lab work, SOC exposure, incident response, digital foren",
+   "url": "https://southasiacareers.deloitte.com/job/Delhi-T&T-Cyber-D&R-Analyst-Incident-Response-&-Handling-Delhi/60941544/",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-177fef71c0",
+   "source": "production/seen_jobs.json",
+   "company": "Qualcomm",
+   "title": "2027 Campus Hire_Engineer_SW",
+   "description": "Campus",
+   "url": "https://careers.qualcomm.com/careers/job/446719783573",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-14e0870fc5",
+   "source": "production/seen_jobs.json",
+   "company": "Qualcomm",
+   "title": "2027 Campus Hire_ Engineer_ HW",
+   "description": "Verilog or VHDL, C/C++, Tcl/Perl/shell-scripting. RTL design experience and/or strong OO programming knowledge\nCampus",
+   "url": "https://careers.qualcomm.com/careers/job/446719783487",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-2fff93cca1",
+   "source": "production/seen_jobs.json",
+   "company": "Qualcomm",
+   "title": "Engineer - RF SW - M.Tech - Communication background - 2025/26",
+   "description": "Qualcomm is looking for Modem-RF Wireless SW engineers at levels with 0-1 yrs of experience, with knowledge of RF and Digital Communications. The candidate will\nAs a leading technology innovator, Qualcomm pushes the boundaries of what's possible to enable next-generation experiences and drives digital transformation to \nModem/Communications device driver development experience is an added advantage.",
+   "url": "https://careers.qualcomm.com/careers/job/446721218767",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-323f029ac5",
+   "source": "production/seen_jobs.json",
+   "company": "Qualcomm",
+   "title": "2027 Campus Hire_ Associate Engineer_ HW",
+   "description": "Verilog or VHDL, C/C++, Tcl/Perl/shell-scripting. RTL design experience and/or strong OO programming knowledge\nCampus",
+   "url": "https://careers.qualcomm.com/careers/job/446719783557",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-638b0d7b1f",
+   "source": "production/seen_jobs.json",
+   "company": "Qualcomm",
+   "title": "Business Operations Analyst, Processor",
+   "description": "          0 -1 year of experience in PC OEM’s, Semi-Conductor Channel Partner & or Business Ops\nKey skills / experience required:\n          Master’s degree in business management, Operations, Analytics, or related experience",
+   "url": "https://careers.qualcomm.com/careers/job/446720810529",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-0cc2b6d0ac",
+   "source": "production/seen_jobs.json",
+   "company": "Cisco",
+   "title": "Software Engineer",
+   "description": "Bachelor's in Computer Science (or equivalent) with 5 years or Master's with 3 years or PhD with 0 year of related experience.\nExperience programming with Go, C/C++, Java and/or Python\nExperience with microservices software architecture and large-scale distributed systems\nExperience with data structures, algorithms, and software design",
+   "url": "https://cisco.wd5.myworkdayjobs.com/Cisco_Careers/job/Bangalore-India/Software-Engineer_2023748",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-003775a3c7",
+   "source": "production/seen_jobs.json",
+   "company": "Cisco",
+   "title": "Solutions Engineer - Strategic Partners",
+   "description": "PhD + 0 years of related experience\nBachelors + 5 years of related\nexperience, or\nMasters + 3 years of related",
+   "url": "https://cisco.wd5.myworkdayjobs.com/Cisco_Careers/job/Mumbai-India/Solutions-Engineer---Strategic-Partners_2025515",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-e2ed664757",
+   "source": "production/seen_jobs.json",
+   "company": "JioHotstar (JioStar)",
+   "title": "Intern- On Platform Storefront Merchandising",
+   "description": "No prior experience required. Internships or projects in content, digital marketing or e-commerce are a plus",
+   "url": "https://jiostar.wd102.myworkdayjobs.com/JioStar/job/Bengaluru/Intern_JR12520",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-3093640e75",
+   "source": "production/seen_jobs.json",
+   "company": "Oracle",
+   "title": "Support Engineer 1",
+   "description": "A minimum of 0-2 year experience and a bachelor's degree including:\n0-2 year experience in application support, client/customer support, incident management, problem management and change management.",
+   "url": "https://careers.oracle.com/en/sites/jobsearch/job/345517",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-c8396394dc",
+   "source": "production/seen_jobs.json",
+   "company": "State Street",
+   "title": "Technology Early Career Entry Program",
+   "description": "Our program is designed to develop graduates both technically and professionally towards becoming our future leaders and technology experts. You’ll learn from s\nInclusion, Diversity and Social Responsibility.    We truly believe our employees’ diverse backgrounds, experiences and perspectives are a powerful contributor \nEarly Career",
+   "url": "https://statestreet.wd1.myworkdayjobs.com/Global/job/Bangalore-India/Technology-Early-Career-Entry-Program_R-800791",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-f6c439b525",
+   "source": "production/seen_jobs.json",
+   "company": "Qualcomm",
+   "title": "Associate Engineer - RF SW",
+   "description": "Qualcomm is looking for Modem-RF Wireless SW engineers at levels with 0-1 yrs of experience, with knowledge of RF and Digital Communications. The candidate will\nAs a leading technology innovator, Qualcomm pushes the boundaries of what's possible to enable next-generation experiences and drives digital transformation to \nModem/Communications device driver development experience is an added advantage.",
+   "url": "https://careers.qualcomm.com/careers/job/446720761539",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-da087b5ed1",
+   "source": "production/seen_jobs.json",
+   "company": "State Street",
+   "title": "ISG Operations Apprentice",
+   "description": "Apprentice",
+   "url": "https://statestreet.wd1.myworkdayjobs.com/Global/job/Bangalore-India/ISG-Operations-Apprentice_R-800830",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-c9f2c23109",
+   "source": "production/seen_jobs.json",
+   "company": "Deloitte",
+   "title": "Intern | Financial Accounts | Bengaluru | Finance & Accounts",
+   "description": "Fresher or candidate with prior finance/accounting internship exposure.",
+   "url": "https://southasiacareers.deloitte.com/job/Bengaluru-Intern-Financial-Accounts-Bengaluru-Finance-&-Accounts/61353044/",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-0d18a2b046",
+   "source": "production/seen_jobs.json",
+   "company": "Deloitte",
+   "title": "Management Trainee | M&A Regulatory | Delhi | Mergers & Acquisitions (Tax)",
+   "description": "Trainee",
+   "url": "https://southasiacareers.deloitte.com/job/Delhi-Management-Trainee-M&A-Regulatory-Delhi-Mergers-&-Acquisitions-%28Tax%29/61351544/",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-bc8215243f",
+   "source": "production/seen_jobs.json",
+   "company": "IBM",
+   "title": "Procurement Operations Specialist",
+   "description": "0-4years",
+   "url": "https://careers.ibm.com/careers/JobDetail?jobId=140613",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-ba8c365349",
+   "source": "production/seen_jobs.json",
+   "company": "Salesforce",
+   "title": "Software Engineering AMTS",
+   "description": "Our Futureforce University Recruiting program is dedicated to attracting, retaining and cultivating talent. Our interns and new graduates work on real projects \nTo get the best candidate experience, please consider applying for a maximum of 3 roles within 12 months to ensure you are not duplicating efforts.\nB.E/ B.Tech graduating in 2027 in Computer Science, Electrical, Electronics, or equivalent fields with specialization in computer science. ​\nWork closely with a team of engineers, product managers, user experience experts and performance engineers to build new features our customers will love, adopt ",
+   "url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Hyderabad/Software-Engineering-AMTS_JR356580",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-fcc11c6764",
+   "source": "production/seen_jobs.json",
+   "company": "Salesforce",
+   "title": "Product Accessibility Engineer",
+   "description": "Our Futureforce University Recruiting program is dedicated to attracting, retaining and cultivating talent. Our interns and new graduates work on real projects \nTo get the best candidate experience, please consider applying for a maximum of 3 roles within 12 months to ensure you are not duplicating efforts.\nUser Experience\nAI Development (Bonus): If you have experience in AI, you may have the opportunity to contribute to projects involving AI-powered accessibility features.",
+   "url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Bangalore/Product-Accessibility-Engineer_JR367595",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-c5b938887c",
+   "source": "production/seen_jobs.json",
+   "company": "Salesforce",
+   "title": "System Analyst",
+   "description": "0-3 years of hands-on platform or systems support, administration, or implementation experience in an enterprise IT environment.\nTo get the best candidate experience, please consider applying for a maximum of 3 roles within 12 months to ensure you are not duplicating efforts.\nOur Futureforce University Recruiting program is dedicated to attracting, retaining and cultivating talent. Our interns and new graduates work on real projects \nBachelor's degree in computer science, business, or equivalent experience.",
+   "url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Hyderabad/System-Analyst_JR367594",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-80adf4ef72",
+   "source": "production/seen_jobs.json",
+   "company": "State Street",
+   "title": "Apprentice - Accounting/Finance",
+   "description": "Prior coursework or experience with programming and BI tools is a plus\nApprentice",
+   "url": "https://statestreet.wd1.myworkdayjobs.com/Global/job/Bangalore-India/Apprentice---Accounting-Finance_R-798960",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-4b7f9fb2f1",
+   "source": "production/seen_jobs.json",
+   "company": "S&P Global",
+   "title": "Apprentice, Channels Client On-boarding Specialist",
+   "description": "You will liaise with different stakeholders and your input will make a difference regarding the overall customer experience.\nStrong communication skills with experience collaborating across diverse teams and stakeholders\nApprentice",
+   "url": "https://spgi.wd5.myworkdayjobs.com/SPGI_Careers/job/Hyderabad-Telangana/Apprentice--Channels-Client-On-boarding-Specialist_332203-1",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-f91a3f8e68",
+   "source": "production/seen_jobs.json",
+   "company": "Salesforce",
+   "title": "Software Engineering AMTS",
+   "description": "Our Futureforce University Recruiting program is dedicated to attracting, retaining and cultivating talent. Our interns and new graduates work on real projects \nTo get the best candidate experience, please consider applying for a maximum of 3 roles within 12 months to ensure you are not duplicating efforts.\nB.E/ B.Tech graduating in 2025 & 2026  in Computer Science, Electrical, Electronics, or equivalent fields with specialization in computer science. ​\nWork closely with a team of engineers, product managers, user experience experts and performance engineers to build new features our customers will love, adopt ",
+   "url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Bangalore/Software-Engineering-AMTS_JR307116",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "ENTRY_LEVEL",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-da7887d81d",
+   "source": "production/seen_jobs.json",
+   "company": "Swiggy",
+   "title": "Growth Associate",
+   "description": "0-2 years in B2B sales, field sales, or business development (preferably in fmcg, food/beverage, or hotel industry)\nExperience & Background:\nPost - Graduated preferably in marketing or sales",
+   "url": "https://jobs.smartrecruiters.com/SWIGGY/6000000001568410-growth-associate?trid=d86cb472-0d87-4b8a-83bb-0c0ef90b26f4",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text)",
+   "expect": "accept",
+   "category": "FRESHER",
+   "tags": [
+    "production-accepted"
+   ]
+  },
+  {
+   "id": "seen-07eb2fdc7f",
+   "source": "production/seen_jobs.json",
+   "company": "Salesforce",
+   "title": "Associate Technical Support Engineer (French Speaking)",
+   "description": "Our Futureforce University Recruiting program is dedicated to attracting, retaining and cultivating talent. Our interns and new graduates work on real projects \nTo get the best candidate experience, please consider applying for a maximum of 3 roles within 12 months to ensure you are not duplicating efforts.\nCandidates with a French language certification or prior experience handling customer queries in French over calls are preferred\nUpto 12-24 months of experience in Voice support or IT/Product Support operations or a customer handling role",
+   "url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Hyderabad/Associate-Technical-Support-Engineer_JR356515",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text); out of context these lines parse as a mandatory requirement, so the full-posting verdict (ENTRY_LEVEL) is not reproduced",
+   "expect": "borderline",
+   "current": "EXPERIENCED",
+   "tags": [
+    "production-accepted",
+    "reconstruction-artifact"
+   ]
+  },
+  {
+   "id": "seen-90e25fe145",
+   "source": "production/seen_jobs.json",
+   "company": "Qualcomm",
+   "title": "2027 Campus Hire_ System Engineer",
+   "description": "As a leading technology innovator, Qualcomm pushes the boundaries of what's possible to enable next-generation experiences and drives digital transformation to \n    1+ year of experience working in a large matrixed organization.\nCampus",
+   "url": "https://careers.qualcomm.com/careers/job/446721334828",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text); out of context these lines parse as a mandatory requirement, so the full-posting verdict (ENTRY_LEVEL) is not reproduced",
+   "expect": "borderline",
+   "current": "EXPERIENCED",
+   "tags": [
+    "production-accepted",
+    "reconstruction-artifact"
+   ]
+  },
+  {
+   "id": "seen-8d0f9a94fd",
+   "source": "production/seen_jobs.json",
+   "company": "Microsoft",
+   "title": "Software Engineering",
+   "description": "Bachelor's Degree in Computer Science, or related technical discipline with proven experience coding in languages including, but not limited to, C, C++, C#, Jav\nOR equivalent experience\nBachelor's Degree (or currently pursuing) in Computer Science or related technical field AND 1+ year(s) technical engineering experience with coding in language\nOR Master's Degree (or currently pursuing) in Computer Science or related technical field with proven experience coding in languages including, but not limited \nearly careers programme",
+   "url": "https://apply.careers.microsoft.com/careers/job/1970393557050388",
+   "notes": "description reconstructed from the record's stored evidence lines (real posting text); out of context these lines parse as a mandatory requirement, so the full-posting verdict (ENTRY_LEVEL) is not reproduced",
+   "expect": "borderline",
+   "current": "EXPERIENCED",
+   "tags": [
+    "production-accepted",
+    "reconstruction-artifact"
+   ]
+  },
+  {
+   "id": "log-9c93873d80",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Oracle",
+   "title": "Revenue Analyst 1-Fin(Portuguese)",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "NOT_A_JOB",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: not a job posting: country / location picker"
+  },
+  {
+   "id": "log-264a5cf2e5",
+   "source": "production/scan-log-run-42969601176",
+   "company": "ServiceNow",
+   "title": "Advisory Solution Consultant",
+   "description": "Experience required: 7+ years.",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "requirement-from-description"
+   ],
+   "notes": "production decision: explicit requirement: '7+ years' (minimum 7 yr)"
+  },
+  {
+   "id": "log-aafe18f167",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Netflix",
+   "title": "Coordinator, Production Management - India",
+   "description": "Experience required: 8-10 years.",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "requirement-from-description"
+   ],
+   "notes": "production decision: explicit requirement: '8-10 years' (minimum 8 yr)"
+  },
+  {
+   "id": "log-661d1df4ea",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "Business Systems Engineer III, Metronome - Confluent",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: levelled title above entry: 'III'"
+  },
+  {
+   "id": "log-5fc3437ada",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Oracle",
+   "title": "Core Infrastructure Engineer 2",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: levelled title above entry: 'Engineer 2'"
+  },
+  {
+   "id": "log-7a12716dda",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Cisco",
+   "title": "Software Engineer: C/C++/Python & Layer 2 (L2), Layer 3 (L3), VXLAN | 5 to 9yrs| Bangalore",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "colon-title-was-read-as-story"
+   ],
+   "notes": "production decision: not a job posting: career story / event / informational page (production verdict NOT_A_JOB; since the story-heading fix:"
+  },
+  {
+   "id": "log-20571b625b",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Cisco",
+   "title": "Software Engineer: Silicon One (C++/Networking Protocols) - 4+ Years",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "colon-title-was-read-as-story"
+   ],
+   "notes": "production decision: not a job posting: career story / event / informational page (production verdict NOT_A_JOB; since the story-heading fix:"
+  },
+  {
+   "id": "log-9db49553c4",
+   "source": "production/scan-log-run-42969601176",
+   "company": "JioHotstar (JioStar)",
+   "title": "Software Development Engineer II",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: levelled title above entry: 'II'"
+  },
+  {
+   "id": "log-8a3e7241b1",
+   "source": "production/scan-log-run-42969601176",
+   "company": "ServiceNow",
+   "title": "Mgr, Software Engrg Mgmt",
+   "description": "Experience required: 10-12+ years.",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "requirement-from-description"
+   ],
+   "notes": "production decision: explicit requirement: '10-12+ years' (minimum 10 yr)"
+  },
+  {
+   "id": "log-b75a850864",
+   "source": "production/scan-log-run-42969601176",
+   "company": "JioHotstar (JioStar)",
+   "title": "Visual Designer II",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: levelled title above entry: 'II'"
+  },
+  {
+   "id": "log-8df5163f13",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Qualcomm",
+   "title": "Engineer - Linker Developer",
+   "description": "Experience required: 1- 3 Yrs.",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "requirement-from-description"
+   ],
+   "notes": "production decision: explicit requirement: '1- 3 Yrs' (minimum 1 yr)"
+  },
+  {
+   "id": "log-64d7031ba0",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Cisco",
+   "title": "Emerging Talent Recruiter",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "NOT_A_JOB",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: not a job posting: recruiting / programme-staff role, not an entry-level posting"
+  },
+  {
+   "id": "log-8f615ff083",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "PROCESS DELIVERY SPECIALIST-PROCURE TO PAY",
+   "description": "Experience required: minimum of 3-6 years.",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "requirement-from-description"
+   ],
+   "notes": "production decision: explicit requirement: 'minimum of 3-6 years' (minimum 3 yr)"
+  },
+  {
+   "id": "log-54a4fedd90",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "Attorney",
+   "description": "Experience required: 4-8 years.",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "requirement-from-description"
+   ],
+   "notes": "production decision: explicit requirement: '4-8 years' (minimum 4 yr)"
+  },
+  {
+   "id": "log-fa1f9f3dd4",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Cisco",
+   "title": "Software Development Test Engineer",
+   "description": "Experience required: 5-8 years.",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "requirement-from-description"
+   ],
+   "notes": "production decision: explicit requirement: '5-8 years' (minimum 5 yr)"
+  },
+  {
+   "id": "log-eede225800",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Deloitte",
+   "title": "Consultant | SAP IBP | Mumbai | SAP | DSA CoE",
+   "description": "Experience required: 3-5 Years.",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "requirement-from-description"
+   ],
+   "notes": "production decision: explicit requirement: '3-5 Years' (minimum 3 yr)"
+  },
+  {
+   "id": "log-32163937d7",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Oracle",
+   "title": "Systems Engineer 2",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: levelled title above entry: 'Engineer 2'"
+  },
+  {
+   "id": "log-2a1301c0d6",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Oracle",
+   "title": "Credit & Collections Analyst 2-Fin",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: levelled title above entry: 'Analyst 2'"
+  },
+  {
+   "id": "log-61d4f39cbc",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Oracle",
+   "title": "Financial Analyst 4 Corp FP&A",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: levelled title above entry: 'Analyst 4'"
+  },
+  {
+   "id": "log-a7e7a7bb59",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "Cloud & AI Engineer",
+   "description": "Experience required: 7+ years.",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "requirement-from-description"
+   ],
+   "notes": "production decision: explicit requirement: '7+ years' (minimum 7 yr)"
+  },
+  {
+   "id": "log-225c051850",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Oracle",
+   "title": "Revenue Analyst 2-Fin",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: levelled title above entry: 'Analyst 2'"
+  },
+  {
+   "id": "log-717f2018d5",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Oracle",
+   "title": "Platform Software Engineer 2",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: levelled title above entry: 'Engineer 2'"
+  },
+  {
+   "id": "log-069b71db43",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Oracle",
+   "title": "AI Technology Instructor (Contract to Hire role) - (Pro-Code & No-Code Development, OpenAI Codex, API Integration, Oracle VBCS, AI Agent Development, Node-Based Workflows & Automation)",
+   "description": "Experience required: At least 10 years.",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "requirement-from-description"
+   ],
+   "notes": "production decision: explicit requirement: 'At least 10 years' (minimum 10 yr)"
+  },
+  {
+   "id": "log-7c6539fb6e",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Cisco",
+   "title": "Software QA Engineer",
+   "description": "Experience required: 1-3 years.",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "requirement-from-description"
+   ],
+   "notes": "production decision: explicit requirement: '1-3 years' (minimum 1 yr)"
+  },
+  {
+   "id": "log-1ec5c3ae0e",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Cisco",
+   "title": "Full Stack Engineer – Ruby on Rails, React.js from 4+ years",
+   "description": "Experience required: 4+ years.",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "requirement-from-description"
+   ],
+   "notes": "production decision: explicit requirement: '4+ years' (minimum 4 yr)"
+  },
+  {
+   "id": "log-6b84c3f1c0",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Deloitte",
+   "title": "Consultant | Full Stack - Java + React | Bengaluru | Engineering | Data Modernization & Migration",
+   "description": "Experience required: 3+ years.",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "requirement-from-description"
+   ],
+   "notes": "production decision: explicit requirement: '3+ years' (minimum 3 yr)"
+  },
+  {
+   "id": "log-029fe7c5ae",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Oracle",
+   "title": "Financial Analyst 3",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: levelled title above entry: 'Analyst 3'"
+  },
+  {
+   "id": "log-6c42c19c98",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Qualcomm",
+   "title": "Graphics Modelling Engineer",
+   "description": "Experience required: 3+ years.",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "requirement-from-description"
+   ],
+   "notes": "production decision: explicit requirement: '3+ years' (minimum 3 yr)"
+  },
+  {
+   "id": "log-2057a121e3",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Deloitte",
+   "title": "Analyst | Onestream: All | Ahmedabad | Finance Transformation | Business Finance",
+   "description": "Experience required: 2-5 years.",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "requirement-from-description"
+   ],
+   "notes": "production decision: explicit requirement: '2-5 years' (minimum 2 yr)"
+  },
+  {
+   "id": "log-77cda2b8d1",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "PROCESS DELIVERY SPECIALIST-RECORD TO REPORT",
+   "description": "Experience required: minimum of 4-6 years.",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "requirement-from-description"
+   ],
+   "notes": "production decision: explicit requirement: 'minimum of 4-6 years' (minimum 4 yr)"
+  },
+  {
+   "id": "log-55a80e400b",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Oracle",
+   "title": "Software Developer 4",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: levelled title above entry: 'Developer 4'"
+  },
+  {
+   "id": "log-a2631ef35f",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Qualcomm",
+   "title": "Memory Circuit Designer",
+   "description": "Experience required: 2+ years.",
+   "url": "",
+   "expect": "reject",
+   "category": "EXPERIENCED",
+   "tags": [
+    "requirement-from-description"
+   ],
+   "notes": "production decision: explicit requirement: '2+ years' (minimum 2 yr)"
+  },
+  {
+   "id": "log-2dd0aa8382",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Qualcomm",
+   "title": "FPGA prototyping/FPGA design Engineer (Lead/Staff)",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "SENIOR",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: seniority in title: 'Lead'"
+  },
+  {
+   "id": "log-56c5a675cc",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Qualcomm",
+   "title": "Sr Engineer: Embedded AI Architecture and Systems Engineer",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "SENIOR",
+   "tags": [
+    "colon-title-was-read-as-story"
+   ],
+   "notes": "production decision: not a job posting: career story / event / informational page (production verdict NOT_A_JOB; since the story-heading fix:"
+  },
+  {
+   "id": "log-fd499bf4f2",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Qualcomm",
+   "title": "Senior Engineer - Wireless R&D",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "SENIOR",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: seniority in title: 'Senior'"
+  },
+  {
+   "id": "log-ef81bd8cc2",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Qualcomm",
+   "title": "WRD(RTL ) Design - Staff/Manager",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "SENIOR",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: seniority in title: 'Staff'"
+  },
+  {
+   "id": "log-4714c8cba7",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "Application Architect-AI Integration",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "SENIOR",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: seniority in title: 'Architect'"
+  },
+  {
+   "id": "log-ae884342c1",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Deloitte",
+   "title": "Senior Consultant | Workday FINS Functional | Across Locations | Emerging ERP Solutions",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "SENIOR",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: seniority in title: 'Senior'"
+  },
+  {
+   "id": "log-2ddd12b3a2",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Deloitte",
+   "title": "T&T-EAID-Associate Director- QA Automation Architect-Playwright+ typescript-Bengaluru-Engineering",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "SENIOR",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: seniority in title: 'Director'"
+  },
+  {
+   "id": "log-78354d5a19",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "Solution Architect-Data Platforms",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "SENIOR",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: seniority in title: 'Architect'"
+  },
+  {
+   "id": "log-5c49db01d0",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Deloitte",
+   "title": "Lead Senior Associate | Testing Automation | Chennai | Engineering as a Service/ Operate",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "SENIOR",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: seniority in title: 'Lead'"
+  },
+  {
+   "id": "log-fbca6d9e89",
+   "source": "production/scan-log-run-42969601176",
+   "company": "ServiceNow",
+   "title": "Staff SRE Engineer - Voice Core Platform",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "SENIOR",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: seniority in title: 'Staff'"
+  },
+  {
+   "id": "log-7b5e1c1560",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Deloitte",
+   "title": "Senior Consultant | SAP Basis | Ahmedabad | SAP | DSA Metals, Mining and Industrial",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "SENIOR",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: seniority in title: 'Senior'"
+  },
+  {
+   "id": "log-88158a0e14",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Qualcomm",
+   "title": "CPU Software Senior Engineer",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "SENIOR",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: seniority in title: 'Senior'"
+  },
+  {
+   "id": "log-256643fe25",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Deloitte",
+   "title": "T&T -Customer - Customer Strategy & Design- Senior Consultant- Cards and Payments- PM/BA",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "SENIOR",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: seniority in title: 'Senior'"
+  },
+  {
+   "id": "log-c6271859f4",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "Sourcing Leader : Procurement Sourcing Professional",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "SENIOR",
+   "tags": [
+    "colon-title-was-read-as-story"
+   ],
+   "notes": "production decision: not a job posting: career story / event / informational page (production verdict NOT_A_JOB; since the story-heading fix:"
+  },
+  {
+   "id": "log-b41c68aa98",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Qualcomm",
+   "title": "Senior Engineer: Electroacoustics Engineer (Audio Systems, Sr Eng)",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "SENIOR",
+   "tags": [
+    "colon-title-was-read-as-story"
+   ],
+   "notes": "production decision: not a job posting: career story / event / informational page (production verdict NOT_A_JOB; since the story-heading fix:"
+  },
+  {
+   "id": "log-9c92f62c8f",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Qualcomm",
+   "title": "CPU Design Verification Sr Lead Engineer",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "SENIOR",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: seniority in title: 'Sr'"
+  },
+  {
+   "id": "log-e073624678",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Oracle",
+   "title": "Senior Platform Software Engineer",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "SENIOR",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: seniority in title: 'Senior'"
+  },
+  {
+   "id": "log-8ec566b301",
+   "source": "production/scan-log-run-42969601176",
+   "company": "ServiceNow",
+   "title": "Key Account Director - CRM - TMT",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "category": "SENIOR",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: seniority in title: 'Director'"
+  },
+  {
+   "id": "log-79ed9265c4",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "Security Consultant-AI-Driven Threat Management",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: no fresher/entry-level evidence"
+  },
+  {
+   "id": "log-959db80b7b",
+   "source": "production/scan-log-run-42969601176",
+   "company": "JioHotstar (JioStar)",
+   "title": "Intern - E-Commerce",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: 'Intern' alone is not evidence of an entry-level role"
+  },
+  {
+   "id": "log-78ab8af759",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Qualcomm",
+   "title": "Interim Engineering Intern_2027_HW",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: 'Intern' alone is not evidence of an entry-level role"
+  },
+  {
+   "id": "log-750d9955ff",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "Data Engineer-Data Platforms-Google",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: no fresher/entry-level evidence"
+  },
+  {
+   "id": "log-a9e19fe4de",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Deloitte",
+   "title": "Consultant | Mulesoft | Bengaluru | Engineering | Platform Development & Integration",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: no fresher/entry-level evidence"
+  },
+  {
+   "id": "log-a18454ed1e",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Deloitte",
+   "title": "Associate | Others | Bengaluru | Engineering as a Service/ Operate",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: 'Associate' alone is not evidence of an entry-level role"
+  },
+  {
+   "id": "log-8f34940104",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "Application Developer-Hybrid Cloud Manage",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: no fresher/entry-level evidence"
+  },
+  {
+   "id": "log-e5cfa32707",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "Data Engineer-Data Platforms-Databricks",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: no fresher/entry-level evidence"
+  },
+  {
+   "id": "log-4fed5c1a05",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "Package Consultant-SAP FIN PS-Capital Accounting",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: no fresher/entry-level evidence"
+  },
+  {
+   "id": "log-07bd87a985",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "Security Consultant-Data Security",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: no fresher/entry-level evidence"
+  },
+  {
+   "id": "log-b1f563b779",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "Technical Consultant-Threat Detection Response & Intelligence",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: no fresher/entry-level evidence"
+  },
+  {
+   "id": "log-dc9d4878f5",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Qualcomm",
+   "title": "Associate Engineer - WLAN Firmware",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: 'Associate' alone is not evidence of an entry-level role"
+  },
+  {
+   "id": "log-487dda98fd",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "IBM Research/Research Software - Intern",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: 'Intern' alone is not evidence of an entry-level role"
+  },
+  {
+   "id": "log-b55ce838c1",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "Package Consultant-SAP NextGen Manufacturing",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: no fresher/entry-level evidence"
+  },
+  {
+   "id": "log-f6bde031f9",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "Technical Consultant-AI Integration",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: no fresher/entry-level evidence"
+  },
+  {
+   "id": "log-c5b7bd2b72",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "Data Engineer-Data Platforms-SnowFlake",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: no fresher/entry-level evidence"
+  },
+  {
+   "id": "log-a65240320b",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "Package Consultant-SAP HANA EPM",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: no fresher/entry-level evidence"
+  },
+  {
+   "id": "log-dfcdf0dfb0",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "Technical Consultant-Threat Detection Content & Administration",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: no fresher/entry-level evidence"
+  },
+  {
+   "id": "log-e2ccf731da",
+   "source": "production/scan-log-run-42969601176",
+   "company": "Deloitte",
+   "title": "Intern | Talent Acquisition | Noida | Talent",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: 'Intern' alone is not evidence of an entry-level role"
+  },
+  {
+   "id": "log-85568e56dd",
+   "source": "production/scan-log-run-42969601176",
+   "company": "IBM",
+   "title": "AIX Developer (COBOL)",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "category": "UNKNOWN",
+   "tags": [
+    "title-level"
+   ],
+   "notes": "production decision: no fresher/entry-level evidence"
+  },
+  {
+   "id": "cur-01d201e7d0",
+   "source": "curated",
+   "company": "",
+   "title": "Graduate Engineer Trainee",
+   "description": "Eligibility: B.E/B.Tech 2026 pass-outs. Freshers welcome.\nTraining period of 12 months.",
+   "url": "",
+   "expect": "accept",
+   "tags": [
+    "duration-vs-requirement"
+   ],
+   "notes": "a 12-month training period is a duration, not an experience requirement",
+   "category": "FRESHER"
+  },
+  {
+   "id": "cur-7176aefd0a",
+   "source": "curated",
+   "company": "",
+   "title": "Software Engineer",
+   "description": "Experience: 0-1 years\nService agreement of 2 years applies.",
+   "url": "",
+   "expect": "accept",
+   "tags": [
+    "bond"
+   ],
+   "notes": "a 2-year bond next to a 0-start range stays fresher",
+   "category": "FRESHER"
+  },
+  {
+   "id": "cur-6e42b2928d",
+   "source": "curated",
+   "company": "",
+   "title": "Associate Analyst",
+   "description": "We are a firm with over 150 years of experience in financial services.\nOpen to recent graduates.",
+   "url": "",
+   "expect": "accept",
+   "tags": [
+    "company-boilerplate"
+   ],
+   "notes": "the 150 years belong to the company, not the applicant",
+   "category": "ENTRY_LEVEL"
+  },
+  {
+   "id": "cur-2c8784e64b",
+   "source": "curated",
+   "company": "",
+   "title": "Trainee Engineer",
+   "description": "Mentored by senior engineers with 10+ years of experience.\nNo prior experience required.",
+   "url": "",
+   "expect": "accept",
+   "tags": [
+    "colleague-experience"
+   ],
+   "notes": "the 10+ years are the mentors'",
+   "category": "FRESHER"
+  },
+  {
+   "id": "cur-232778e38b",
+   "source": "curated",
+   "company": "",
+   "title": "QA Engineer",
+   "description": "Preferred qualifications:\n2+ years of Selenium is a plus.\nRequirements:\nStrong CS fundamentals. Freshers may apply.",
+   "url": "",
+   "expect": "accept",
+   "tags": [
+    "preferred-section"
+   ],
+   "notes": "a preferred-section quantity never makes a role experienced",
+   "category": "FRESHER"
+  },
+  {
+   "id": "cur-bbdf9faaa7",
+   "source": "curated",
+   "company": "",
+   "title": "Data Analyst",
+   "description": "Experience: 2-4",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "unitless-range"
+   ],
+   "notes": "the unit-less Indian-portal form is a requirement",
+   "category": "EXPERIENCED"
+  },
+  {
+   "id": "cur-8b4b00e569",
+   "source": "curated",
+   "company": "",
+   "title": "Software Developer",
+   "description": "Minimum 6 months of professional development experience required.",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "months"
+   ],
+   "notes": "months convert to years and 0.5 > 0",
+   "category": "EXPERIENCED"
+  },
+  {
+   "id": "cur-d14888b366",
+   "source": "curated",
+   "company": "",
+   "title": "Software Engineer",
+   "description": "You bring 3 years building backend services.",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "experience-without-the-word"
+   ],
+   "notes": "'3 years building X' is applicant experience",
+   "category": "EXPERIENCED"
+  },
+  {
+   "id": "cur-990026f2fa",
+   "source": "curated",
+   "company": "",
+   "title": "Analyst",
+   "description": "Prior industry experience required in equity research.",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "prior-no-number"
+   ],
+   "notes": "a mandatory requirement with no number still rejects",
+   "category": "EXPERIENCED"
+  },
+  {
+   "id": "cur-f69ade81ef",
+   "source": "curated",
+   "company": "",
+   "title": "Support Engineer",
+   "description": "Freshers or 1-2 years of experience.",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "freshers-or-range"
+   ],
+   "notes": "deliberate rule: a stated range above 0 wins over the word freshers",
+   "category": "EXPERIENCED"
+  },
+  {
+   "id": "cur-34ef1a0b16",
+   "source": "curated",
+   "company": "",
+   "title": "Member of Technical Staff",
+   "description": "New college graduates are encouraged to apply.",
+   "url": "",
+   "expect": "accept",
+   "tags": [
+    "mts"
+   ],
+   "notes": "plain MTS is a common graduate title; only its senior grades are senior",
+   "category": "ENTRY_LEVEL"
+  },
+  {
+   "id": "cur-c56b1f9f02",
+   "source": "curated",
+   "company": "",
+   "title": "Senior Member of Technical Staff",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "mts"
+   ],
+   "notes": "SMTS stays senior",
+   "category": "SENIOR"
+  },
+  {
+   "id": "cur-77605bc1e4",
+   "source": "curated",
+   "company": "",
+   "title": "Post Graduate Teacher - Physics",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "tags": [
+    "post-graduate"
+   ],
+   "notes": "'Post Graduate' is a teaching grade, not a graduate role",
+   "category": "UNKNOWN"
+  },
+  {
+   "id": "cur-90fb203590",
+   "source": "curated",
+   "company": "",
+   "title": "Engineer 2026 Batch",
+   "description": "Campus hiring for the class of 2026.",
+   "url": "",
+   "expect": "accept",
+   "tags": [
+    "batch-year"
+   ],
+   "notes": "'Engineer 2026' is a year, not a level",
+   "category": "ENTRY_LEVEL"
+  },
+  {
+   "id": "cur-249c2a3ef5",
+   "source": "curated",
+   "company": "",
+   "title": "SDE-2",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "levelled-title"
+   ],
+   "notes": "numbered level above entry",
+   "category": "EXPERIENCED"
+  },
+  {
+   "id": "cur-f0a87f54b4",
+   "source": "curated",
+   "company": "",
+   "title": "Early Careers",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "landing-page"
+   ],
+   "notes": "an audience word alone is a landing page",
+   "category": "NOT_A_JOB"
+  },
+  {
+   "id": "cur-90101e9050",
+   "source": "curated",
+   "company": "",
+   "title": "Campus Recruiter",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "recruiter-role"
+   ],
+   "notes": "hires freshers; is not a fresher role",
+   "category": "NOT_A_JOB"
+  },
+  {
+   "id": "cur-935c81b681",
+   "source": "curated",
+   "company": "",
+   "title": "Meet Priya, Associate Scientist in R&D",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "story"
+   ],
+   "notes": "employee spotlight",
+   "category": "NOT_A_JOB"
+  },
+  {
+   "id": "cur-3fc23b420d",
+   "source": "curated",
+   "company": "",
+   "title": "India (English)",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "language-picker"
+   ],
+   "notes": "country/language picker",
+   "category": "NOT_A_JOB"
+  },
+  {
+   "id": "cur-db59d28bd3",
+   "source": "curated",
+   "company": "",
+   "title": "Graduate Trainee",
+   "description": "Experience: up to 7 years.",
+   "url": "",
+   "expect": "unknown",
+   "tags": [
+    "broad-range"
+   ],
+   "notes": "a 0..7 range says nothing; the title word alone is not enough",
+   "category": "UNKNOWN"
+  },
+  {
+   "id": "cur-10250f04e5",
+   "source": "curated",
+   "company": "",
+   "title": "Graduate Trainee",
+   "description": "Experience: up to 7 years.\nThis is an entry-level position for recent graduates.",
+   "url": "",
+   "expect": "accept",
+   "tags": [
+    "broad-range"
+   ],
+   "notes": "independent applicant evidence overrides the broad range",
+   "category": "ENTRY_LEVEL"
+  },
+  {
+   "id": "cur-ab348601e7",
+   "source": "curated",
+   "company": "",
+   "title": "HR Executive",
+   "description": "Responsible for hiring freshers across our Hyderabad campus.",
+   "url": "",
+   "expect": "unknown",
+   "tags": [
+    "staff-context"
+   ],
+   "notes": "freshers are who the role hires, not who may apply",
+   "category": "UNKNOWN"
+  },
+  {
+   "id": "cur-0cf7f29bfb",
+   "source": "curated",
+   "company": "",
+   "title": "Process Associate",
+   "description": "We are hiring freshers for our Hyderabad office.",
+   "url": "",
+   "expect": "accept",
+   "tags": [
+    "applicant-context"
+   ],
+   "notes": "'we are hiring freshers' is about the applicant",
+   "category": "FRESHER"
+  },
+  {
+   "id": "cur-2c983ac045",
+   "source": "curated",
+   "company": "",
+   "title": "Junior Developer",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "tags": [
+    "ambiguous-word"
+   ],
+   "notes": "'Junior' alone is not evidence",
+   "category": "UNKNOWN"
+  },
+  {
+   "id": "cur-8ef4a08a05",
+   "source": "curated",
+   "company": "",
+   "title": "Software Engineer II",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "levelled-title"
+   ],
+   "notes": "roman-numeral level above entry",
+   "category": "EXPERIENCED"
+  },
+  {
+   "id": "cur-671853b67c",
+   "source": "curated",
+   "company": "",
+   "title": "Intern - Data Science",
+   "description": "",
+   "url": "",
+   "expect": "unknown",
+   "tags": [
+    "intern-alone"
+   ],
+   "notes": "'Intern' alone is not evidence of an entry-level JOB",
+   "category": "UNKNOWN"
+  },
+  {
+   "id": "cur-d77ccc3694",
+   "source": "curated",
+   "company": "",
+   "title": "Software Engineer",
+   "description": "At least [X] years of experience in Java.",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "unfilled-template"
+   ],
+   "notes": "an unfilled template meant a number",
+   "category": "EXPERIENCED"
+  },
+  {
+   "id": "cur-b1147dd7f8",
+   "source": "curated",
+   "company": "",
+   "title": "Accountant",
+   "description": "Proven experience as an SAP SD Consultant required.",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "proven"
+   ],
+   "notes": "proven experience is a requirement without a number",
+   "category": "EXPERIENCED"
+  },
+  {
+   "id": "cur-3543b0eba8",
+   "source": "curated",
+   "company": "",
+   "title": "Software Engineer: Graduate Hire",
+   "description": "Experience: 0-1 years",
+   "url": "",
+   "expect": "accept",
+   "tags": [
+    "colon-title"
+   ],
+   "notes": "Cisco's 'Role: specialisation' title shape; before the fix this was discarded as a story",
+   "category": "FRESHER"
+  },
+  {
+   "id": "cur-2b3a2f30f9",
+   "source": "curated",
+   "company": "",
+   "title": "Associate Engineer: Embedded Firmware",
+   "description": "This is an entry-level position for recent graduates.",
+   "url": "",
+   "expect": "accept",
+   "tags": [
+    "colon-title"
+   ],
+   "notes": "role-named heading, independent entry evidence",
+   "category": "ENTRY_LEVEL"
+  },
+  {
+   "id": "cur-2ab55bcbc2",
+   "source": "curated",
+   "company": "",
+   "title": "Priya Sharma: My first year at the company",
+   "description": "Freshers welcome",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "colon-title",
+    "story"
+   ],
+   "notes": "a name before the colon is still a story, whatever the text says",
+   "category": "NOT_A_JOB"
+  },
+  {
+   "id": "cur-eefa203a2b",
+   "source": "curated",
+   "company": "",
+   "title": "Employee Spotlight: Rahul, Associate Engineer",
+   "description": "",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "colon-title",
+    "story"
+   ],
+   "notes": "a non-role heading before the colon is still a story",
+   "category": "NOT_A_JOB"
+  },
+  {
+   "id": "cur-ce80440e0f",
+   "source": "curated",
+   "company": "",
+   "title": "Senior Software Engineer",
+   "description": "Fresh graduates are encouraged to apply.",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "adversarial-seniority"
+   ],
+   "notes": "title seniority overrides any description signal",
+   "category": "SENIOR"
+  },
+  {
+   "id": "cur-4a0efb84d0",
+   "source": "curated",
+   "company": "",
+   "title": "Team Lead - Customer Support",
+   "description": "Freshers welcome. Experience: 0-1 years.",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "adversarial-seniority"
+   ],
+   "notes": "a lead role is never a fresher alert",
+   "category": "SENIOR"
+  },
+  {
+   "id": "cur-6bfc7a3baf",
+   "source": "curated",
+   "company": "",
+   "title": "Assistant Manager - Finance",
+   "description": "Experience: 0-1 years",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "adversarial-seniority"
+   ],
+   "notes": "manager grade in title",
+   "category": "SENIOR"
+  },
+  {
+   "id": "cur-0d3a946b6a",
+   "source": "curated",
+   "company": "",
+   "title": "Principal Engineer",
+   "description": "This is an entry-level position for recent graduates.",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "adversarial-seniority"
+   ],
+   "notes": "principal grade in title",
+   "category": "SENIOR"
+  },
+  {
+   "id": "cur-7ddc0d8234",
+   "source": "curated",
+   "company": "",
+   "title": "Staff Data Scientist",
+   "description": "Graduate programme hire, batch of 2026.",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "adversarial-seniority"
+   ],
+   "notes": "staff grade in title (not Member of Technical Staff)",
+   "category": "SENIOR"
+  },
+  {
+   "id": "cur-3b7a473215",
+   "source": "curated",
+   "company": "",
+   "title": "Experienced Hire - Software Developer",
+   "description": "Freshers can apply.",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "adversarial-seniority"
+   ],
+   "notes": "'Experienced' in the title is mid-level",
+   "category": "EXPERIENCED"
+  },
+  {
+   "id": "cur-a1bbad4253",
+   "source": "curated",
+   "company": "",
+   "title": "Software Engineer III",
+   "description": "Open to recent graduates.",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "adversarial-seniority"
+   ],
+   "notes": "levelled title beats the description",
+   "category": "EXPERIENCED"
+  },
+  {
+   "id": "cur-3122dd8bbd",
+   "source": "curated",
+   "company": "",
+   "title": "Graduate Trainee",
+   "description": "Freshers welcome.\nMinimum 2 years of experience in sales is mandatory.",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "adversarial-requirement"
+   ],
+   "notes": "an explicit requirement beats 'freshers welcome'",
+   "category": "EXPERIENCED"
+  },
+  {
+   "id": "cur-f93423efe8",
+   "source": "curated",
+   "company": "",
+   "title": "Associate Consultant",
+   "description": "Freshers need not apply.",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "adversarial-requirement"
+   ],
+   "notes": "explicit exclusion of freshers",
+   "category": "EXPERIENCED"
+  },
+  {
+   "id": "cur-453a59a86f",
+   "source": "curated",
+   "company": "",
+   "title": "Junior Analyst",
+   "description": "Seniority level: Mid-Senior level",
+   "url": "",
+   "expect": "reject",
+   "tags": [
+    "adversarial-requirement"
+   ],
+   "notes": "a level field rejects",
+   "category": "EXPERIENCED"
+  },
+  {
+   "id": "cur-2676f441fd",
+   "source": "curated",
+   "company": "",
+   "title": "Software Engineering",
+   "description": "Proven experience coding in languages including C, C++, Java.\nCareer site: early careers programme role (university hiring, full-time)",
+   "url": "",
+   "expect": "accept",
+   "tags": [
+    "proven-coding-skill",
+    "early-career-label"
+   ],
+   "notes": "proven experience CODING is a skill a graduate shows, and the employer's own early-careers tag is the entry evidence (Microsoft university hire, as the Eightfold adapter labels it)",
+   "category": "ENTRY_LEVEL"
+  }
+ ]
+}

@@ -6,7 +6,8 @@ overwrite a dismissal made in the app meanwhile. Instead, each publish
 re-reads the latest remote copy and merges *records*:
 
   seen_jobs.json  — union by job identity; flags only move forward
-                    (dismissed, notified, notify_state never go back)
+                    (dismissed, notified, notify_state and the repost
+                    window's repost_last_seen never go back)
   companies.json  — the remote list wins for membership and configuration
                     (added/removed/renamed in the app); this run only
                     contributes its scan results (status, last_checked, ...)
@@ -58,6 +59,11 @@ def merge_record(remote: dict, local: dict) -> dict:
     for k in ("claimed_at", "notified_at"):
         if remote.get(k) and not local.get(k) and not (k == "claimed_at" and state == "pending"):
             merged[k] = remote[k]
+    # the repost-window sighting (scraper.REPOST_LAST_SEEN, "YYYY-MM-DD")
+    # only moves forward, like every other flag here
+    stamps = [v for v in (remote.get("repost_last_seen"), local.get("repost_last_seen")) if isinstance(v, str) and v]
+    if stamps:
+        merged["repost_last_seen"] = max(stamps)
     if not merged["dismissed"]:
         merged.pop("dismissed", None)
     return merged
