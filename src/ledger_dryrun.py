@@ -3,9 +3,11 @@ ledgers (users/{uid}/deliveries/*), before it is deployed. Counts only.
 
 Safety:
   * Read-only. It only lists and reads documents, and every Firestore write
-    method (set, update, create, delete, batch and transaction commits) is
-    replaced with one that raises before any client exists. A write attempt
-    stops the run.
+    path is replaced with one that raises before any client exists: the
+    document, batch, transaction and bulk-writer methods, and underneath
+    them the low-level API calls every write goes through (commit,
+    batch_write, write, create/update/delete_document, transactions,
+    pipelines), sync and async. A write attempt stops the run.
   * No personal data in the output. It never prints a UID, an email
     address, a job or a document id. Accounts are numbered #1, #2, ... in the
     order of a hash of their UID.
@@ -34,23 +36,35 @@ from collections import Counter
 import user_store
 
 ABANDONED_AFTER_S = user_store.DELIVERY_CLAIM_TTL_S
+KNOWN_STATES = (None, "pending", "claimed", "sending", "sent", "failed", "uncertain")
 
 
 class WriteAttempted(RuntimeError):
     """The dry run tried to write: it never should."""
 
 
+# the low-level Firestore API calls that change data (or open a transaction
+# to); every high-level write ends in one of them
+LOW_LEVEL_WRITES = ("commit", "batch_write", "write", "create_document", "update_document", "delete_document",
+                    "begin_transaction", "execute_pipeline")
+
+
 def install_read_only_guard() -> None:
     """Make every Firestore write raise, whatever calls it."""
-    from google.cloud.firestore_v1 import batch, document, transaction
+    from google.cloud.firestore_v1 import batch, bulk_writer, document, transaction
+    from google.cloud.firestore_v1.services.firestore import async_client, client as api
 
     def refuse(*_a, **_k):
         raise WriteAttempted("the ledger dry run is read-only")
     for cls, names in ((document.DocumentReference, ("set", "update", "create", "delete")),
                        (batch.WriteBatch, ("commit", "set", "update", "create", "delete")),
-                       (transaction.Transaction, ("commit", "set", "update", "create", "delete"))):
+                       (transaction.Transaction, ("commit", "set", "update", "create", "delete")),
+                       (bulk_writer.BulkWriter, ("create", "set", "update", "delete", "flush", "close")),
+                       (api.FirestoreClient, LOW_LEVEL_WRITES),
+                       (async_client.FirestoreAsyncClient, LOW_LEVEL_WRITES)):
         for name in names:
-            setattr(cls, name, refuse)
+            if hasattr(cls, name):
+                setattr(cls, name, refuse)
 
 
 def client(project: str | None, key_file: str | None):
@@ -95,10 +109,11 @@ def judge(uid: str, doc: dict, now: float) -> str:
 
 def summarise(db, now: float | None = None) -> dict:
     now = time.time() if now is None else now
-    accounts = []
+    accounts, skipped = [], 0
     for ref in db.collection("users").list_documents():
         uid = ref.id
         if not user_store.valid_uid(uid):
+            skipped += 1                       # reported, so a missed account can't go unnoticed
             continue
         prof = ref.get().to_dict() or {}
         notif = prof.get("notifications") if isinstance(prof.get("notifications"), dict) else {}
@@ -108,7 +123,8 @@ def summarise(db, now: float | None = None) -> dict:
             state = doc.get("state")
             c["total"] += 1
             c["old_format"] += doc.get("v") != user_store.DELIVERY_SCHEMA
-            c[f"state:{state}"] += 1
+            # only states the code writes are named; anything else is counted, never echoed
+            c[f"state:{state if state in KNOWN_STATES else 'unrecognised'}"] += 1
             if state in ("claimed", "sending"):
                 age = _age_s(doc.get("sending_at" if state == "sending" else "claimed_at"), now)
                 c["abandoned (claimed/sending older than 2 h)" if age is None or age > ABANDONED_AFTER_S
@@ -123,11 +139,12 @@ def summarise(db, now: float | None = None) -> dict:
     total: Counter = Counter()
     for a in accounts:
         total.update(a["counts"])
-    return {"accounts": accounts, "total": dict(total)}
+    return {"accounts": accounts, "total": dict(total), "skipped_user_documents": skipped}
 
 
 def _print(report: dict) -> None:
-    print(f"Accounts: {len(report['accounts'])}")
+    print(f"Accounts: {len(report['accounts'])}"
+          f" (user documents skipped as not a Firebase UID: {report['skipped_user_documents']})")
     for a in report["accounts"]:
         print(f"\nAccount {a['account']} (alerts {'on' if a['alerts_on'] else 'off'})")
         for k, v in sorted(a["counts"].items()):
@@ -138,7 +155,7 @@ def _print(report: dict) -> None:
     print("\nAll accounts")
     print(f"  delivery records: {t.get('total', 0)}")
     print(f"  old-format (written before this release): {t.get('old_format', 0)}")
-    for s in ("sent", "failed", "pending", "claimed", "sending", "uncertain"):
+    for s in ("sent", "failed", "pending", "claimed", "sending", "uncertain", "unrecognised"):
         print(f"  state {s}: {t.get(f'state:{s}', 0)}")
     print(f"  abandoned claims: {t.get('abandoned (claimed/sending older than 2 h)', 0)}")
     print(f"  would become uncertain (never sent): {uncertain}")

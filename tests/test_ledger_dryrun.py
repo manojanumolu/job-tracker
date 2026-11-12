@@ -83,6 +83,7 @@ def seeded(tmp_path):
     import httpx
     httpx.delete(f"http://{FS_HOST}/emulator/v1/projects/demo-job-tracker/databases/(default)/documents",
                  timeout=30).raise_for_status()
+    db.document("users/not.a-firebase-uid").set({"email": "private-person@example.org"})   # skipped, but counted
     for uid, docs in ACCOUNTS.items():
         db.document(f"users/{uid}").set({"email": "private-person@example.org", "notifications": {"enabled": True}})
         for i, doc in enumerate(docs):
@@ -120,6 +121,8 @@ def test_the_dry_run_counts_every_account_and_writes_nothing(seeded):
     assert t["M2: abandoned sending: becomes uncertain, never resent"] == 1
     assert t["M2: pending: retried on the next eligible run"] == 1
     assert sorted(a["counts"].get("total", 0) for a in report["accounts"]) == [0, len(OLD), len(NEW)]
+    assert report["skipped_user_documents"] == 1                        # never silently missing an account
+    assert t["state:unrecognised"] == 1 and "state:odd" not in t        # an unknown state is counted, not echoed
 
 
 @emulator
@@ -129,7 +132,8 @@ def test_the_output_has_no_identifiers(seeded):
         r = _run(key_file, *args)
         assert r.returncode == 0, r.stderr[-400:]
         out = r.stdout + r.stderr
-        for secret in ("private-person", "example.org", "DryRunUser", "secretco", "jobs.example"):
+        for secret in ("private-person", "example.org", "DryRunUser", "secretco", "jobs.example", "not.a-firebase-uid",
+                       "odd"):
             assert secret not in out
         for uid in ACCOUNTS:
             assert uid not in out and hashlib.sha256(uid.encode()).hexdigest() not in out
@@ -143,11 +147,14 @@ def test_the_write_guard_stops_any_write(seeded):
             "from google.auth.credentials import AnonymousCredentials; from google.cloud import firestore; "
             "db = firestore.Client(project='demo-job-tracker', credentials=AnonymousCredentials()); "
             "ref = db.document('users/DryRunUserAaaaaaaaaaaaaaaaa1')\n"
+            "def bulk():\n    w = db.bulk_writer(); w.set(ref, {'x': 1}); w.close()\n"
+            "def raw():\n    db._firestore_api.commit(request={'database': db._database_string, 'writes': []})\n"
+            "def txn():\n    t = db.transaction(); t._begin()\n"
             "for attempt in (lambda: ref.set({'x': 1}), lambda: ref.update({'x': 1}), lambda: ref.delete(),\n"
-            "                lambda: db.batch().commit()):\n"
+            "                lambda: db.batch().commit(), lambda: db.collection('users').add({'x': 1}), bulk, raw, txn):\n"
             "    try:\n        attempt(); print('WROTE')\n"
             "    except ledger_dryrun.WriteAttempted:\n        print('refused')\n")
     before = _content(db)
     r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=60)
-    assert r.stdout.split() == ["refused"] * 4, r.stdout + r.stderr[-300:]
+    assert r.stdout.split() == ["refused"] * 8, r.stdout + r.stderr[-300:]
     assert _content(db) == before
