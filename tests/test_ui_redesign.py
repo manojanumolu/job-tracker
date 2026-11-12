@@ -1,6 +1,7 @@
 """Regression tests for the Oct 2026 visual redesign: the new components must
 stay truthful, accessible and lightweight, and never change behaviour."""
 import hashlib
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 import json
 import re
 from datetime import datetime, timedelta, timezone
@@ -9,7 +10,7 @@ from pathlib import Path
 from test_streamlit_app import NEW_RECORD, _html, _key, _nav, app  # noqa: F401  (fixture re-export)
 
 NOW = datetime.now(timezone.utc)
-SRC = (Path(__file__).resolve().parent.parent / "streamlit_app.py").read_text(encoding="utf-8")
+SRC = app_source()
 CSS = SRC[SRC.index('_CSS = """'):SRC.index('"""', SRC.index('_CSS = """') + 10)]
 
 GATE = {k: True for k in ("real_job_posting", "india_location", "detail_read", "detail_is_this_job",

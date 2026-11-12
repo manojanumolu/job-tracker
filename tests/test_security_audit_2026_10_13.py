@@ -12,6 +12,7 @@ Regression tests for what the audit found and fixed:
 and for Settings → Scan details (administrator only). Google and Firebase
 are never contacted (test_firebase_auth's fakes)."""
 import json
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 import time
 from datetime import datetime, timedelta, timezone
 from html import unescape
@@ -568,7 +569,7 @@ def test_scan_details_start_nothing_and_call_nothing():
     computed from the shared copy every page already has."""
     import ast
     from test_streamlit_app import REPO
-    tree = ast.parse((REPO / "streamlit_app.py").read_text("utf-8"))
+    tree = ast.parse(app_source())
     funcs = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}
     for name in ("scan_details_rows", "scan_details_card"):
         names = {getattr(n, "id", None) or getattr(n, "attr", None) for n in ast.walk(funcs[name])}

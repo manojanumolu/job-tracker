@@ -13,6 +13,7 @@ Plus the account header (first name, ADMIN for admins only) and the cost of
 clicks. In-memory store; nothing is emailed and Google/Firebase are never
 contacted."""
 import json
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -464,7 +465,7 @@ def test_p_a_stale_personal_copy_is_refreshed_without_making_the_click_wait(app,
 def _first_name():
     """streamlit_app.first_name, without running the app module."""
     import ast
-    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    src = app_source()
     fn = next(n for n in ast.parse(src).body if isinstance(n, ast.FunctionDef) and n.name == "first_name")
     ns = {"re": __import__("re")}
     exec(compile(ast.Module(body=[fn], type_ignores=[]), "streamlit_app.py", "exec"), ns)

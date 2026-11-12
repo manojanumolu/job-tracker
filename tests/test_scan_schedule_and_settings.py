@@ -17,6 +17,7 @@ The rules under test:
 In-memory stores and a fake GitHub repository: nothing touches production,
 and no email is sent."""
 import json
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 import os
 import random
 import re
@@ -261,7 +262,7 @@ def test_a_failed_send_is_released_and_retried_at_the_next_pass(store):
 
 
 def test_the_cadence_stamp_is_never_written_by_the_app():
-    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    src = app_source()
     assert "alert_cadence" not in src and "record_alert_sent" not in src
 
 

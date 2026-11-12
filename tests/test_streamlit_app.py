@@ -18,7 +18,7 @@ CATALOGUE_FILE = REPO / "tests" / "fixtures" / "companies.json"
 APP_FILES = ["streamlit_app.py", "config_store.py", "notifier.py", "job_classifier.py", "scraper.py",
              "sources.py", "identity.py", "locations.py", "repo_sync.py", "access.py", "firebase_auth.py",
              "user_store.py", "job_filters.py", "snapshot_cache.py", "applications.py", "application_export.py",
-             "job_page.py", "discovery.py"]
+             "job_page.py", "discovery.py", "data_location.py", "app_theme.py", "ui_format.py"]
 OWNER_PASSWORD = "correct horse battery staple"
 
 OLD_RECORD = {  # shape written before the classifier existed

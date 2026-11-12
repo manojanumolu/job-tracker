@@ -15,6 +15,7 @@
 
 Firestore is user_store.MemoryBackend; nothing reaches Google or Firebase."""
 import json
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 import re
 from html import unescape
 
@@ -27,7 +28,7 @@ from test_firebase_auth import _buttons, _login_page, admins, google_env, no_env
 from test_phase3_user_data import _sign_in, store  # noqa: F401
 from test_streamlit_app import CATALOGUE_FILE, REPO, _companies, _html, _nav, app  # noqa: F401
 
-SRC = (REPO / "streamlit_app.py").read_text("utf-8")
+SRC = app_source()
 OWN = ("Accenture", "NPCI")                          # Account 1's own two of the frozen seven
 
 

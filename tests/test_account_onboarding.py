@@ -2,6 +2,7 @@
 companies and the member/admin split. Firestore is user_store.MemoryBackend;
 Google and Firebase are never contacted and no email is sent."""
 import json
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 import re
 from html import escape
 
@@ -357,7 +358,7 @@ def test_legacy_mode_keeps_the_admin_dashboard(app):
 # ── presentation guards (the browser checks are separate) ────────────────────
 
 def test_motion_is_light_and_respects_reduced_motion():
-    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    src = app_source()
     blocks = re.findall(r"@media \(prefers-reduced-motion: reduce\) \{(.*?)\n\}", src, re.S)
     joined = "\n".join(blocks)
     for selector in (".lp-card-in", ".st-key-onboard", ".lp-title", ".lp-copy"):
@@ -494,5 +495,5 @@ def test_nothing_sticks_out_of_the_fixed_width_sidebar():
     248 px sidebar by 5 px and showed as a white bar at its edge while pages
     redrew (measured in Chromium: 55 of 273 frames before, 0 of 298 after).
     The wrapper must stay hidden, not just the handle inside it."""
-    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    src = app_source()
     assert 'section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]) { display: none !important; }' in src

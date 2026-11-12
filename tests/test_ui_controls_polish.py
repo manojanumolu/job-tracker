@@ -14,6 +14,7 @@ The browser half runs a small page with the app's own _CSS and _MENU_GUARD
 and multiselects configured exactly like the Jobs filters.
 """
 import ast
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 import re
 import shutil
 import socket
@@ -26,7 +27,7 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parent.parent
-SRC = (REPO / "streamlit_app.py").read_text("utf-8")
+SRC = app_source()
 CONSTS = {t.targets[0].id: t.value.value for t in ast.parse(SRC).body
           if isinstance(t, ast.Assign) and len(t.targets) == 1 and isinstance(t.targets[0], ast.Name)
           and t.targets[0].id in ("_CSS", "_MENU_GUARD") and isinstance(t.value, ast.Constant)}
@@ -134,7 +135,8 @@ def _free_port() -> int:
 def mini(tmp_path_factory):
     pw = pytest.importorskip("playwright.sync_api")
     root = tmp_path_factory.mktemp("menus")
-    (root / "mini.py").write_text(MINI.format(repo=REPO / "streamlit_app.py"), "utf-8")
+    (root / "app_src.py").write_text(SRC, "utf-8")            # the app + the modules it was split into
+    (root / "mini.py").write_text(MINI.format(repo=root / "app_src.py"), "utf-8")
     (root / ".streamlit").mkdir()
     shutil.copy(REPO / ".streamlit" / "config.toml", root / ".streamlit" / "config.toml")
     port = _free_port()
