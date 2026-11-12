@@ -121,9 +121,10 @@ def test_member_hero_has_the_original_discovery_feed(app, google_env, store):
     # the feed's animations and the card that keeps its glow inside
     assert re.search(r"\.feed-row\.r1 \{[^}]*animation:", html) or re.search(r"\.feed-row[^{]*\{[^}]*animation: jt-feed-row", html)
     assert "@keyframes jt-feed-row" in html and "@keyframes jt-glow-drift" in html
-    assert ".st-key-mh_hero { position: relative; overflow: hidden; isolation: isolate;" in html
-    reduced = html.split("@media (prefers-reduced-motion: reduce) {")
-    assert any(".feed-q .qbar i, .feed-row, .feed-row .ok, .feed-seal, .opps > .glow-bg { animation: none !important;"
+    # the stylesheet is sent minified (app_theme.CSS): no spaces around { and ;
+    assert ".st-key-mh_hero{position: relative;overflow: hidden;isolation: isolate;" in html
+    reduced = html.split("@media (prefers-reduced-motion: reduce){")
+    assert any(".feed-q .qbar i, .feed-row, .feed-row .ok, .feed-seal, .opps > .glow-bg{animation: none !important;"
                in r for r in reduced)
 
 
