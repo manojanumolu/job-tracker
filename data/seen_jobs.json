@@ -4811,5 +4811,79 @@
     "notified": false,
     "repost_last_seen": "2026-11-12",
     "company_id": "deloitte"
+  },
+  {
+    "title": "Consultant | INTELLIGENT OPERATIONS | Pune | Technology Strategy & Transformation",
+    "url": "https://southasiacareers.deloitte.com/job/Pune-Consultant-INTELLIGENT-OPERATIONS-Pune-Technology-Strategy-&-Transformation/61473144/",
+    "company": "Deloitte",
+    "location": "Pune, IN · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'Graduates are eligible'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Any Graduates are eligible"
+      ],
+      "fresher_evidence": "Graduates are eligible",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Pune-Consultant-INTELLIGENT-OPERATIONS-Pune-Technology-Strategy-&-Transformation/61473144",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Pune-Consultant-INTELLIGENT-OPERATIONS-Pune-Technology-Strategy-&-Transformation/61473144",
+    "date": "Nov 12, 12:22",
+    "first_seen": "2026-11-12T12:22:24.979898+00:00",
+    "id": "Deloitte_Consultant_|_INTELLIGENT_OPERATIONS_|_Pu",
+    "notified": false,
+    "repost_last_seen": "2026-11-12",
+    "company_id": "deloitte"
+  },
+  {
+    "title": "COS PSC ESR Hyd BPO 172480",
+    "url": "https://jobs.adp.com/en/jobs/ind172480/cos-psc-esr-hyd-bpo-172480/",
+    "company": "ADP",
+    "location": "Hyderabad, Telangana, India",
+    "category": "FRESHER",
+    "reason": "fresher signal: 'Freshers or'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [],
+      "fresher_evidence": "Freshers or",
+      "detail_read": true,
+      "detail_match": "company job feed",
+      "job_id": "id:ind172480",
+      "canonical_url": "https://jobs.adp.com/en/jobs/ind172480/cos-psc-esr-hyd-bpo-172480",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "adp|url:https://jobs.adp.com/en/jobs/ind172480/cos-psc-esr-hyd-bpo-172480",
+    "date": "Nov 12, 12:25",
+    "first_seen": "2026-11-12T12:25:04.952977+00:00",
+    "id": "ADP_COS_PSC_ESR_Hyd_BPO_172480",
+    "notified": false,
+    "repost_last_seen": "2026-11-12",
+    "company_id": "adp"
   }
 ]
