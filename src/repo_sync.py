@@ -23,11 +23,16 @@ import os
 import subprocess
 from pathlib import Path
 
+from data_location import data_root, valid_branch
 from identity import job_uid
 
 log = logging.getLogger("repo_sync")
 
 BASE = Path(__file__).resolve().parent.parent          # the repository root (this file is in src/)
+# publish() works in the data checkout (JT_DATA_ROOT, data_location.py): it
+# hard-resets that checkout to the remote data branch, so it must never be
+# the checkout whose code is running
+DATA_ROOT = data_root()
 DATA_FILES = ("data/seen_jobs.json", "data/companies.json")
 SCAN_FIELDS = ("status", "status_reason", "scan_note", "last_checked", "last_success", "last_job", "scan", "source")
 _STATE_RANK = {None: 0, "": 0, "pending": 0, "claimed": 1, "sending": 2,
@@ -195,13 +200,17 @@ def _repo_path(name: str, cwd: Path) -> str:
     return f"{prefix}{name}"
 
 
-def publish(message: str, local: dict[str, object], *, cwd: Path = BASE, branch: str | None = None,
+def publish(message: str, local: dict[str, object], *, cwd: Path | None = None, branch: str | None = None,
             remote: str = "origin", attempts: int = 3) -> bool:
     """Merge ``local`` data ({"seen_jobs.json": [...], "companies.json": [...]})
     onto the latest remote branch and push. Returns True once pushed (or when
     nothing changed); False if it could not push — the caller must then not
     act as if the data were durable."""
+    cwd = cwd if cwd is not None else DATA_ROOT
     branch = branch or os.environ.get("PUBLISH_BRANCH", "main")
+    if not valid_branch(branch):
+        log.error("publish: refusing an invalid branch name")
+        return False
     for attempt in range(1, attempts + 1):
         try:
             _git("fetch", remote, branch, cwd=cwd)

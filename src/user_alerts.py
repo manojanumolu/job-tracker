@@ -66,10 +66,16 @@ import email_policy
 import job_filters
 import scan_schedule
 from config_store import job_key
+from data_location import DataLocationError, data_root
 from user_store import UserStore, UserStoreError, configure
 
 log = logging.getLogger("user_alerts")
-BASE = Path(__file__).resolve().parent.parent          # the repository root (this file is in src/)
+try:
+    # where data/seen_jobs.json is read: the data checkout (JT_DATA_ROOT,
+    # data_location.py); this repository's root when it is unset
+    BASE: Path | None = data_root()
+except DataLocationError:
+    BASE = None
 
 
 def _parse_time(value) -> datetime | None:
@@ -200,6 +206,8 @@ def main(argv=None) -> int:
         log.info("Per-user alerts are not set up%s — nothing to do", f" ({problem})" if problem else "")
         return 1 if problem else 0
     try:
+        if BASE is None:
+            raise DataLocationError("JT_DATA_ROOT")
         seen = json.loads((BASE / "data" / "seen_jobs.json").read_text("utf-8"))
         send = None
         if args.send:

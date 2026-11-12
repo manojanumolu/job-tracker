@@ -21,6 +21,9 @@ jobs:
   purge:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # the Firebase key is a secret: only refs the "production" environment
+    # allows may use it (docs/SECURITY_GITHUB.md)
+    environment: production
     permissions:
       contents: read
     steps:

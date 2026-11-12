@@ -276,7 +276,10 @@ def plan(event: str, schedule: str, settings, companies, now: datetime | None = 
 
 def _load(name: str, default):
     try:
-        return json.loads((BASE / "data" / name).read_text("utf-8"))
+        # the data checkout (JT_DATA_ROOT; see data_location.py — not imported:
+        # the plan job checks out this one file of code)
+        root = Path(os.environ.get("JT_DATA_ROOT", "").strip() or BASE)
+        return json.loads((root / "data" / name).read_text("utf-8"))
     except Exception:
         return default
 
