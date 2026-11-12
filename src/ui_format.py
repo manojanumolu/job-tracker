@@ -2,8 +2,6 @@
 Nov 2026 — Milestone 4): host names, "3h ago", India-time stamps, plurals,
 icon spans. No Streamlit, no I/O; tests/test_ui_format.py covers them."""
 
-from __future__ import annotations
-
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 

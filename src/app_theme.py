@@ -6,8 +6,6 @@ streamlit_app.py sends ``CSS`` (the stylesheet below, minified) and the
 active palette as ``:root`` variables on every run.
 """
 
-from __future__ import annotations
-
 import functools
 import re
 

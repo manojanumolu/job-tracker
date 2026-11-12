@@ -3,14 +3,18 @@
 streamlit_app.py imports its design tokens and stylesheet from
 src/app_theme.py and its text formatting from src/ui_format.py. Tests that
 check the app's source (a CSS rule, a helper's definition) read all three as
-one text, in this order, so they keep checking the same code wherever it
-lives. Each part is a complete module, so the joined text is valid Python
-for the tests that parse it.
+one text, so they keep checking the same code wherever it lives.
+
+The stylesheet module comes first: tests find the stylesheet by the first
+_CSS assignment in the text, and the app's own _LOGIN_CSS assignment ends
+with the same characters, so it must not come before it. Neither module has
+a "from __future__" import, so the joined text is valid Python for the tests
+that parse it.
 """
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-APP_PARTS = ("streamlit_app.py", "src/app_theme.py", "src/ui_format.py")
+APP_PARTS = ("src/app_theme.py", "streamlit_app.py", "src/ui_format.py")
 
 
 def app_source() -> str:
