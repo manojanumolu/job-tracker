@@ -260,9 +260,11 @@ def test_tailored_jobs_still_go_through_claim_send_finalize(store):
     assert store.for_uid(A).delivery(job_key(PUNE_SW)) is None                    # never claimed
     mail = Mailer()
     user_alerts.run(store, CATALOGUE, mail, run_id="r2")
+    assert mail.sent == []                                         # Nov 2026: not inside its retry backoff
+    user_alerts.run(store, CATALOGUE, mail, run_id="r2b", now=LATER)
     assert _sent(mail) == sorted(job_key(j) for j in (HYD_SW, HYD_DATA, HYD_HR))
     mail = Mailer()
-    user_alerts.run(store, CATALOGUE, mail, run_id="r3")
+    user_alerts.run(store, CATALOGUE, mail, run_id="r3", now=LATER + timedelta(hours=7))
     assert mail.sent == []                                                       # exactly once
 
 
