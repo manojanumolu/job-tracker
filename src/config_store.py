@@ -211,6 +211,11 @@ def job_key(job: dict) -> str:
 ALERT_CATEGORIES = ("FRESHER", "ENTRY_LEVEL")
 
 
+# notify_state values that still mean "not emailed yet"; every other value
+# means handled (see alert_pending)
+PENDING_STATES = (None, "", "pending")
+
+
 def alert_pending(job: dict) -> bool:
     """Should this record still be emailed? Only accepted jobs that passed
     every safety-gate check (stored in ``evidence.checks`` by the scraper),
@@ -224,7 +229,13 @@ def alert_pending(job: dict) -> bool:
         and isinstance(checks, dict) and bool(checks) and all(checks.values())
         and not job.get("dismissed")
         and not job.get("notified")
-        and job.get("notify_state") not in ("claimed", "sent", "skipped")
+        # Only a record that was never claimed, or was explicitly released
+        # for a retry, is still pending. Any other state (including ones a
+        # newer version writes: "sending", "uncertain", "failed") is treated
+        # as handled, so this code never re-sends what a newer version
+        # recorded (Nov 2026: makes rolling back the email-reliability
+        # release safe).
+        and job.get("notify_state") in PENDING_STATES
     )
 
 
