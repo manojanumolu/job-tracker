@@ -12,7 +12,8 @@
     "date": "Nov 4, 18:00",
     "first_seen": "2026-11-04T18:00:00+00:00",
     "notified": false,
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Software Engineer, PhD, Early Career, 2026",
@@ -27,7 +28,8 @@
     "date": "Nov 4, 17:30",
     "first_seen": "2026-11-04T17:30:00+00:00",
     "notified": false,
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Junior Associate - Evidence Synthesis, Clinical Outcome assessments (COA)",
@@ -36,7 +38,8 @@
     "date": "Jul 15, 13:45",
     "id": "Sanofi_Junior_Associate_-_Evidence_Synthesis,_C",
     "notified": true,
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Associate – Evidence Synthesis",
@@ -45,7 +48,8 @@
     "date": "Jul 16, 05:43",
     "id": "Sanofi_Associate_–_Evidence_Synthesis",
     "notified": true,
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Associate – HEVA (Evidence Synthesis)",
@@ -54,7 +58,8 @@
     "date": "Jul 23, 05:57",
     "id": "Sanofi_Associate_–_HEVA_(Evidence_Synthesis)",
     "notified": true,
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Central Clinical Research Associate (CRA)",
@@ -63,7 +68,8 @@
     "date": "Jul 29, 11:28",
     "id": "Sanofi_Central_Clinical_Research_Associate_(CRA",
     "notified": true,
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "S2P Solution Associate Specialist",
@@ -72,7 +78,8 @@
     "date": "Aug 6, 14:13",
     "id": "Sanofi_S2P_Solution_Associate_Specialist",
     "notified": true,
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Associate Container Platform Engineer",
@@ -81,7 +88,8 @@
     "date": "Aug 7, 13:07",
     "id": "Sanofi_Associate_Container_Platform_Engineer",
     "notified": true,
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Source-to-Pay Strategic Support Associate",
@@ -90,7 +98,8 @@
     "date": "Sep 24, 11:17",
     "id": "Sanofi_Source-to-Pay_Strategic_Support_Associat",
     "notified": true,
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Associate Project Specialist – Medical Communications",
@@ -99,7 +108,8 @@
     "date": "Sep 28, 13:11",
     "id": "Sanofi_Associate_Project_Specialist_–_Medical_C",
     "notified": true,
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Scientific Sales Executive",
@@ -140,7 +150,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Associate",
@@ -183,7 +194,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Specialist 2",
@@ -225,7 +237,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Specialist 3",
@@ -266,7 +279,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "IN_Associate _ Internal Audit _Internal Audit Services_ Advisory_ Bangalore",
@@ -310,7 +324,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Associate-CA fresher-TC",
@@ -349,7 +364,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Associate - CA Freshers - RDC",
@@ -390,7 +406,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "IN_Specialist 3_Internal audit_Managed Services_Advisory_Gurgaon",
@@ -433,7 +450,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Customer Contact Comms New Associate - Messaging",
@@ -478,7 +496,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Order to Cash Operations New Associate",
@@ -523,7 +542,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Procure to Pay Operations New Associate",
@@ -566,7 +586,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Record to Report Ops New Associate",
@@ -609,7 +630,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Business Advisory New Associate",
@@ -654,7 +676,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Procurement Operations New Associate",
@@ -699,7 +722,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Customer Service New Associate",
@@ -744,7 +768,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Business Advisory New Associate-Voice",
@@ -789,7 +814,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Underwriting New Associate",
@@ -835,7 +861,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Int Controls & Compliance Associate",
@@ -880,7 +907,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T00:11:32.740020+00:00",
     "notified_at": "2026-09-30T00:11:37.715079+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "IN_Associate_FDD_Transaction Services_Advisory_Gurgaon",
@@ -922,7 +950,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-09-30T09:30:49.797715+00:00",
     "notified_at": "2026-09-30T09:30:53.154363+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "IN_Specialist 3_BC/NAV_MS Dynamics_Advisory_Bangalore",
@@ -967,7 +996,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-10-05T13:59:12.034548+00:00",
     "notified_at": "2026-10-05T13:59:15.281758+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "IN_Specialist 3_SAP SAC _SAP_Advisory_Mumbai",
@@ -1011,7 +1041,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-10-05T13:59:12.034548+00:00",
     "notified_at": "2026-10-05T13:59:15.281758+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "ISSRRN000656 - Infra Tech Support Practitioner Copy 09",
@@ -1053,7 +1084,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-10-06T05:27:02.759250+00:00",
     "notified_at": "2026-10-06T05:27:06.251097+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "ISSRRN000733 - Infra Tech Support Practitioner",
@@ -1095,7 +1127,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-10-06T05:27:02.759250+00:00",
     "notified_at": "2026-10-06T05:27:06.251097+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "IN_Specialist 3_ Frontend Developer_AppTech_Advisory_Pune",
@@ -1140,7 +1173,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-10-06T13:02:08.597436+00:00",
     "notified_at": "2026-10-06T13:02:13.211865+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "IN-Associate_IA_Internal Audit Services_Advisory_Mumbai",
@@ -1184,7 +1218,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-10-07T18:41:29.941374+00:00",
     "notified_at": "2026-10-07T18:41:33.683014+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "IN_Associate_Metal & Mining_Fuels & Resources S&O_Advisory_Gurgaon",
@@ -1226,7 +1261,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-10-07T18:41:29.941374+00:00",
     "notified_at": "2026-10-07T18:41:33.683014+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Order to Cash Operations New Associate-Voice",
@@ -1272,7 +1308,8 @@
     "notify_state": "sent",
     "claimed_at": "2026-10-08T10:15:35.558203+00:00",
     "notified_at": "2026-10-08T10:15:38.079379+00:00",
-    "dismissed": true
+    "dismissed": true,
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "IN_Specialist 2_Accounts receivable_Operational Excellence_IFS_Gurgaon",
@@ -1313,7 +1350,8 @@
     "company_id": "pwc",
     "notify_state": "sent",
     "claimed_at": "2026-10-15T12:07:56.932505+00:00",
-    "notified_at": "2026-10-15T12:08:01.220308+00:00"
+    "notified_at": "2026-10-15T12:08:01.220308+00:00",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "IN_Specialist 2_Accounts receivable_BEST Operations_IFS_Gurgaon",
@@ -1354,7 +1392,8 @@
     "company_id": "pwc",
     "notify_state": "sent",
     "claimed_at": "2026-10-15T12:07:56.932505+00:00",
-    "notified_at": "2026-10-15T12:08:01.220308+00:00"
+    "notified_at": "2026-10-15T12:08:01.220308+00:00",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Procure to Pay Operations New Associate",
@@ -1396,7 +1435,8 @@
     "company_id": "accenture",
     "notify_state": "sent",
     "claimed_at": "2026-10-18T18:07:40.074336+00:00",
-    "notified_at": "2026-10-18T18:07:44.235155+00:00"
+    "notified_at": "2026-10-18T18:07:44.235155+00:00",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Order to Cash Operations New Associate",
@@ -1441,7 +1481,8 @@
     "company_id": "accenture",
     "notify_state": "sent",
     "claimed_at": "2026-10-18T18:07:40.074336+00:00",
-    "notified_at": "2026-10-18T18:07:44.235155+00:00"
+    "notified_at": "2026-10-18T18:07:44.235155+00:00",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Delivery Operations New Associate",
@@ -1485,7 +1526,8 @@
     "company_id": "accenture",
     "notify_state": "sent",
     "claimed_at": "2026-10-18T18:07:40.074336+00:00",
-    "notified_at": "2026-10-18T18:07:44.235155+00:00"
+    "notified_at": "2026-10-18T18:07:44.235155+00:00",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Associate Big Data Engineer",
@@ -1527,7 +1569,8 @@
     "company_id": "metlife",
     "notify_state": "sent",
     "claimed_at": "2026-10-28T09:07:37.705536+00:00",
-    "notified_at": "2026-10-28T09:07:41.358016+00:00"
+    "notified_at": "2026-10-28T09:07:41.358016+00:00",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Sales Prog & Incentive Mgmt New Assoc",
@@ -1572,7 +1615,8 @@
     "company_id": "accenture",
     "notify_state": "sent",
     "claimed_at": "2026-10-28T21:09:53.331576+00:00",
-    "notified_at": "2026-10-28T21:10:05.580419+00:00"
+    "notified_at": "2026-10-28T21:10:05.580419+00:00",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "IN_Intern/Trainee",
@@ -1614,7 +1658,8 @@
     "company_id": "pwc",
     "notify_state": "sent",
     "claimed_at": "2026-10-29T12:07:47.978658+00:00",
-    "notified_at": "2026-10-29T12:07:52.472272+00:00"
+    "notified_at": "2026-10-29T12:07:52.472272+00:00",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Content Marketing Analyst",
@@ -1654,7 +1699,8 @@
     "first_seen": "2026-11-03T09:07:53.251241+00:00",
     "id": "Salesforce_Content_Marketing_Analyst",
     "notified": false,
-    "company_id": "c1793696368"
+    "company_id": "c1793696368",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Associate Engineer, IT Eng System Mgr",
@@ -1692,7 +1738,8 @@
     "company_id": "c1793696369",
     "notify_state": "sent",
     "claimed_at": "2026-11-03T09:18:21.889035+00:00",
-    "notified_at": "2026-11-03T09:18:26.972012+00:00"
+    "notified_at": "2026-11-03T09:18:26.972012+00:00",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "PDE CEM Graduate Engineering Technician",
@@ -1732,7 +1779,8 @@
     "first_seen": "2026-11-03T09:08:29.088063+00:00",
     "id": "Micron_PDE_CEM_Graduate_Engineering_Technician",
     "notified": false,
-    "company_id": "c1793696369"
+    "company_id": "c1793696369",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Technician Apprentice",
@@ -1772,7 +1820,8 @@
     "first_seen": "2026-11-03T09:08:29.088063+00:00",
     "id": "Micron_Technician_Apprentice",
     "notified": false,
-    "company_id": "c1793696369"
+    "company_id": "c1793696369",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Engineer, GQ OPS -REL Process",
@@ -1811,7 +1860,8 @@
     "first_seen": "2026-11-03T09:08:29.088063+00:00",
     "id": "Micron_Engineer,_GQ_OPS_-REL_Process",
     "notified": false,
-    "company_id": "c1793696369"
+    "company_id": "c1793696369",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Formal Verification Engineer - New College Graduate 2026",
@@ -1848,7 +1898,8 @@
     "first_seen": "2026-11-03T09:09:05.742827+00:00",
     "id": "NVIDIA_Formal_Verification_Engineer_-_New_Colle",
     "notified": false,
-    "company_id": "c1793696370"
+    "company_id": "c1793696370",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "ASIC Verification Engineer",
@@ -1886,7 +1937,8 @@
     "first_seen": "2026-11-03T09:09:05.742827+00:00",
     "id": "NVIDIA_ASIC_Verification_Engineer",
     "notified": false,
-    "company_id": "c1793696370"
+    "company_id": "c1793696370",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Program Management Analyst - Cigna Healthcare",
@@ -1923,7 +1975,8 @@
     "first_seen": "2026-11-03T09:12:14.932710+00:00",
     "id": "Evernorth_(Cigna)_Program_Management_Analyst_-_Cigna_Healt",
     "notified": false,
-    "company_id": "c1793696380"
+    "company_id": "c1793696380",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Enrollment/ Billing Associate Representative",
@@ -1961,7 +2014,8 @@
     "first_seen": "2026-11-03T09:12:14.932710+00:00",
     "id": "Evernorth_(Cigna)_Enrollment/_Billing_Associate_Representa",
     "notified": false,
-    "company_id": "c1793696380"
+    "company_id": "c1793696380",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Back Office Operations Analyst – Band 1",
@@ -1998,7 +2052,8 @@
     "first_seen": "2026-11-03T09:12:14.932710+00:00",
     "id": "Evernorth_(Cigna)_Back_Office_Operations_Analyst_–_Band_1",
     "notified": false,
-    "company_id": "c1793696380"
+    "company_id": "c1793696380",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Administrative Assistant Representative",
@@ -2035,7 +2090,8 @@
     "first_seen": "2026-11-03T09:12:14.932710+00:00",
     "id": "Evernorth_(Cigna)_Administrative_Assistant_Representative",
     "notified": false,
-    "company_id": "c1793696380"
+    "company_id": "c1793696380",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Project Management Apprenticeship",
@@ -2073,7 +2129,8 @@
     "first_seen": "2026-11-03T09:12:30.395107+00:00",
     "id": "State_Street_Project_Management_Apprenticeship",
     "notified": false,
-    "company_id": "c1793696381"
+    "company_id": "c1793696381",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Operations Early Career Entry Program",
@@ -2113,7 +2170,8 @@
     "first_seen": "2026-11-03T09:12:30.395107+00:00",
     "id": "State_Street_Operations_Early_Career_Entry_Program",
     "notified": false,
-    "company_id": "c1793696381"
+    "company_id": "c1793696381",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "R&D Simulation Model Engineer - IDC",
@@ -2152,7 +2210,8 @@
     "first_seen": "2026-11-03T09:16:30.913026+00:00",
     "id": "Hitachi_R&D_Simulation_Model_Engineer_-_IDC",
     "notified": false,
-    "company_id": "c1793696383"
+    "company_id": "c1793696383",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Finance Specialist",
@@ -2189,7 +2248,8 @@
     "first_seen": "2026-11-03T09:16:30.913026+00:00",
     "id": "Hitachi_Finance_Specialist",
     "notified": false,
-    "company_id": "c1793696383"
+    "company_id": "c1793696383",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Factory/ Plant Controller - CP&O",
@@ -2228,7 +2288,8 @@
     "first_seen": "2026-11-03T09:16:30.913026+00:00",
     "id": "Hitachi_Factory/_Plant_Controller_-_CP&O",
     "notified": false,
-    "company_id": "c1793696383"
+    "company_id": "c1793696383",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Electrical Design Engineer",
@@ -2267,7 +2328,8 @@
     "first_seen": "2026-11-03T09:16:30.913026+00:00",
     "id": "Hitachi_Electrical_Design_Engineer",
     "notified": false,
-    "company_id": "c1793696383"
+    "company_id": "c1793696383",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Mechanical Design Engineer",
@@ -2307,7 +2369,8 @@
     "first_seen": "2026-11-03T09:16:30.913026+00:00",
     "id": "Hitachi_Mechanical_Design_Engineer",
     "notified": false,
-    "company_id": "c1793696383"
+    "company_id": "c1793696383",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Project Controlling Analyst - CCC",
@@ -2346,7 +2409,8 @@
     "first_seen": "2026-11-03T09:16:30.913026+00:00",
     "id": "Hitachi_Project_Controlling_Analyst_-_CCC",
     "notified": false,
-    "company_id": "c1793696383"
+    "company_id": "c1793696383",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Diploma Trainee",
@@ -2381,7 +2445,8 @@
     "first_seen": "2026-11-03T09:16:30.913026+00:00",
     "id": "Hitachi_Diploma_Trainee",
     "notified": false,
-    "company_id": "c1793696383"
+    "company_id": "c1793696383",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Management Trainee",
@@ -2416,7 +2481,8 @@
     "first_seen": "2026-11-03T09:16:30.913026+00:00",
     "id": "Hitachi_Management_Trainee",
     "notified": false,
-    "company_id": "c1793696383"
+    "company_id": "c1793696383",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "General Finance Management Analyst- Controlling Capability Center",
@@ -2454,7 +2520,8 @@
     "first_seen": "2026-11-03T09:16:30.913026+00:00",
     "id": "Hitachi_General_Finance_Management_Analyst-_Cont",
     "notified": false,
-    "company_id": "c1793696383"
+    "company_id": "c1793696383",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Co-op/Apprentice (Non-Tech)",
@@ -2493,7 +2560,8 @@
     "first_seen": "2026-11-03T09:16:45.774939+00:00",
     "id": "Medtronic_Co-op/Apprentice_(Non-Tech)",
     "notified": false,
-    "company_id": "c1793696384"
+    "company_id": "c1793696384",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "CA Industrial Trainee",
@@ -2532,7 +2600,8 @@
     "first_seen": "2026-11-03T09:16:45.774939+00:00",
     "id": "Medtronic_CA_Industrial_Trainee",
     "notified": false,
-    "company_id": "c1793696384"
+    "company_id": "c1793696384",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Associate Industrial Engineer",
@@ -2572,7 +2641,8 @@
     "first_seen": "2026-11-03T09:17:08.922447+00:00",
     "id": "Analog_Devices_Associate_Industrial_Engineer",
     "notified": false,
-    "company_id": "c1793696387"
+    "company_id": "c1793696387",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Associate Analyst, Supply Chain Planning",
@@ -2612,7 +2682,8 @@
     "first_seen": "2026-11-03T09:17:08.922447+00:00",
     "id": "Analog_Devices_Associate_Analyst,_Supply_Chain_Planning",
     "notified": false,
-    "company_id": "c1793696387"
+    "company_id": "c1793696387",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Scientist for Single Cell Sorting",
@@ -2652,7 +2723,8 @@
     "first_seen": "2026-11-03T09:17:56.841150+00:00",
     "id": "Thermo_Fisher_Scientific_Scientist_for_Single_Cell_Sorting",
     "notified": false,
-    "company_id": "c1793696389"
+    "company_id": "c1793696389",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Safety Reporting Specialist",
@@ -2691,7 +2763,8 @@
     "first_seen": "2026-11-03T09:17:56.841150+00:00",
     "id": "Thermo_Fisher_Scientific_Safety_Reporting_Specialist",
     "notified": false,
-    "company_id": "c1793696389"
+    "company_id": "c1793696389",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Scientist I, Protein Biology",
@@ -2731,7 +2804,8 @@
     "first_seen": "2026-11-03T09:17:56.841150+00:00",
     "id": "Thermo_Fisher_Scientific_Scientist_I,_Protein_Biology",
     "notified": false,
-    "company_id": "c1793696389"
+    "company_id": "c1793696389",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Scientist I, Molecular Biology",
@@ -2771,7 +2845,8 @@
     "first_seen": "2026-11-03T09:17:56.841150+00:00",
     "id": "Thermo_Fisher_Scientific_Scientist_I,_Molecular_Biology",
     "notified": false,
-    "company_id": "c1793696389"
+    "company_id": "c1793696389",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Operations Finance Analyst",
@@ -2810,7 +2885,8 @@
     "first_seen": "2026-11-03T09:17:56.841150+00:00",
     "id": "Thermo_Fisher_Scientific_Operations_Finance_Analyst",
     "notified": false,
-    "company_id": "c1793696389"
+    "company_id": "c1793696389",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Associate Investigator Grants Analyst (AIGA)",
@@ -2850,7 +2926,8 @@
     "first_seen": "2026-11-03T09:17:56.841150+00:00",
     "id": "Thermo_Fisher_Scientific_Associate_Investigator_Grants_Analyst_(A",
     "notified": false,
-    "company_id": "c1793696389"
+    "company_id": "c1793696389",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Program Management",
@@ -2889,7 +2966,8 @@
     "first_seen": "2026-11-03T10:07:56.147236+00:00",
     "id": "Micron_Program_Management",
     "notified": false,
-    "company_id": "c1793696369"
+    "company_id": "c1793696369",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Financial Planning & Analysis Specialist – Project Controlling – CCC",
@@ -2928,7 +3006,8 @@
     "first_seen": "2026-11-03T11:16:17.706120+00:00",
     "id": "Hitachi_Financial_Planning_&_Analysis_Specialist",
     "notified": false,
-    "company_id": "c1793696383"
+    "company_id": "c1793696383",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "IN_Associate_Data Science & Engineering_Data & Analytics_Advisory_Kolkata",
@@ -2968,7 +3047,8 @@
     "first_seen": "2026-11-03T14:07:32.907429+00:00",
     "id": "PwC_IN_Associate_Data_Science_&_Engineering_",
     "notified": false,
-    "company_id": "pwc"
+    "company_id": "pwc",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Associate Technical Support Engineer (French Speaking)",
@@ -3008,7 +3088,8 @@
     "first_seen": "2026-11-04T12:07:38.520501+00:00",
     "id": "Salesforce_Associate_Technical_Support_Engineer_(Fr",
     "notified": false,
-    "company_id": "c1793696368"
+    "company_id": "c1793696368",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Apprentice",
@@ -3046,7 +3127,8 @@
     "first_seen": "2026-11-04T12:13:14.843834+00:00",
     "id": "State_Street_Apprentice",
     "notified": false,
-    "company_id": "c1793696381"
+    "company_id": "c1793696381",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "She Builds 1:1 Resume & Interview Coaching, India",
@@ -3086,7 +3168,8 @@
     "first_seen": "2026-11-04T21:21:13.310579+00:00",
     "id": "Amazon_She_Builds_1:1_Resume_&_Interview_Coachi",
     "notified": false,
-    "company_id": "amazon"
+    "company_id": "amazon",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Transportation Specialist, Quick Commerce, AmazonNowCO, RoW APEX",
@@ -3126,7 +3209,8 @@
     "first_seen": "2026-11-04T21:21:13.310579+00:00",
     "id": "Amazon_Transportation_Specialist,_Quick_Commerc",
     "notified": false,
-    "company_id": "amazon"
+    "company_id": "amazon",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Financial Analyst Intern",
@@ -3163,7 +3247,8 @@
     "first_seen": "2026-11-04T21:21:13.310579+00:00",
     "id": "Amazon_Financial_Analyst_Intern",
     "notified": false,
-    "company_id": "amazon"
+    "company_id": "amazon",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "AHS Specialist - English & German, Account Health Support",
@@ -3200,7 +3285,8 @@
     "first_seen": "2026-11-04T21:21:13.310579+00:00",
     "id": "Amazon_AHS_Specialist_-_English_&_German,_Accou",
     "notified": false,
-    "company_id": "amazon"
+    "company_id": "amazon",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "SAP/EWM consultant",
@@ -3237,7 +3323,8 @@
     "first_seen": "2026-11-04T21:21:55.947550+00:00",
     "id": "Infosys_SAP/EWM_consultant",
     "notified": false,
-    "company_id": "infosys"
+    "company_id": "infosys",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "CA Fresher",
@@ -3274,7 +3361,8 @@
     "first_seen": "2026-11-04T21:21:55.947550+00:00",
     "id": "Infosys_CA_Fresher",
     "notified": false,
-    "company_id": "infosys"
+    "company_id": "infosys",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Analyst | PMO | Ahmedabad | Organizational Transformation",
@@ -3314,7 +3402,8 @@
     "first_seen": "2026-11-04T21:23:41.990592+00:00",
     "id": "Deloitte_Analyst_|_PMO_|_Ahmedabad_|_Organization",
     "notified": false,
-    "company_id": "deloitte"
+    "company_id": "deloitte",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Executive | Financial Crime | Gurugram | Forensic & Financial Crime",
@@ -3352,7 +3441,8 @@
     "first_seen": "2026-11-04T21:23:41.990592+00:00",
     "id": "Deloitte_Executive_|_Financial_Crime_|_Gurugram_|",
     "notified": false,
-    "company_id": "deloitte"
+    "company_id": "deloitte",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Executive | GST & Pre GST Advisory | Mumbai | Indirect Tax",
@@ -3391,7 +3481,8 @@
     "first_seen": "2026-11-04T21:23:41.990592+00:00",
     "id": "Deloitte_Executive_|_GST_&_Pre_GST_Advisory_|_Mum",
     "notified": false,
-    "company_id": "deloitte"
+    "company_id": "deloitte",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Consultant | Anaplan | Bengaluru | Finance Transformation | Business Finance",
@@ -3431,7 +3522,8 @@
     "first_seen": "2026-11-04T21:23:41.990592+00:00",
     "id": "Deloitte_Consultant_|_Anaplan_|_Bengaluru_|_Finan",
     "notified": false,
-    "company_id": "deloitte"
+    "company_id": "deloitte",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Consultant | FT: Strategy & Ops | Bengaluru | Finance Transformation | Finance Strategy",
@@ -3470,7 +3562,8 @@
     "first_seen": "2026-11-04T21:23:41.990592+00:00",
     "id": "Deloitte_Consultant_|_FT:_Strategy_&_Ops_|_Bengal",
     "notified": false,
-    "company_id": "deloitte"
+    "company_id": "deloitte",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "T&T | Cyber: CST | Analyst | Third Party Risk Management | Coimbatore",
@@ -3510,7 +3603,8 @@
     "first_seen": "2026-11-04T21:23:41.990592+00:00",
     "id": "Deloitte_T&T_|_Cyber:_CST_|_Analyst_|_Third_Party",
     "notified": false,
-    "company_id": "deloitte"
+    "company_id": "deloitte",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "T&T | Cyber: D&R | Analyst | Incident Response & Handling | Delhi",
@@ -3547,7 +3641,8 @@
     "first_seen": "2026-11-04T21:23:41.990592+00:00",
     "id": "Deloitte_T&T_|_Cyber:_D&R_|_Analyst_|_Incident_Re",
     "notified": false,
-    "company_id": "deloitte"
+    "company_id": "deloitte",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "2027 Campus Hire_Engineer_SW",
@@ -3582,7 +3677,8 @@
     "first_seen": "2026-11-04T21:24:45.533493+00:00",
     "id": "Qualcomm_2027_Campus_Hire_Engineer_SW",
     "notified": false,
-    "company_id": "qualcomm"
+    "company_id": "qualcomm",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "2027 Campus Hire_ Engineer_ HW",
@@ -3619,7 +3715,8 @@
     "first_seen": "2026-11-04T21:24:45.533493+00:00",
     "id": "Qualcomm_2027_Campus_Hire__Engineer__HW",
     "notified": false,
-    "company_id": "qualcomm"
+    "company_id": "qualcomm",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "2027 Campus Hire_ System Engineer",
@@ -3657,7 +3754,8 @@
     "first_seen": "2026-11-04T21:24:45.533493+00:00",
     "id": "Qualcomm_2027_Campus_Hire__System_Engineer",
     "notified": false,
-    "company_id": "qualcomm"
+    "company_id": "qualcomm",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Engineer - RF SW - M.Tech - Communication background - 2025/26",
@@ -3696,7 +3794,8 @@
     "first_seen": "2026-11-04T21:24:45.533493+00:00",
     "id": "Qualcomm_Engineer_-_RF_SW_-_M.Tech_-_Communicatio",
     "notified": false,
-    "company_id": "qualcomm"
+    "company_id": "qualcomm",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "2027 Campus Hire_ Associate Engineer_ HW",
@@ -3733,7 +3832,8 @@
     "first_seen": "2026-11-04T21:24:45.533493+00:00",
     "id": "Qualcomm_2027_Campus_Hire__Associate_Engineer__HW",
     "notified": false,
-    "company_id": "qualcomm"
+    "company_id": "qualcomm",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Business Operations Analyst, Processor",
@@ -3772,7 +3872,8 @@
     "first_seen": "2026-11-04T21:24:45.533493+00:00",
     "id": "Qualcomm_Business_Operations_Analyst,_Processor",
     "notified": false,
-    "company_id": "qualcomm"
+    "company_id": "qualcomm",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Software Engineer",
@@ -3812,7 +3913,8 @@
     "first_seen": "2026-11-04T21:25:41.136512+00:00",
     "id": "Cisco_Software_Engineer",
     "notified": false,
-    "company_id": "cisco"
+    "company_id": "cisco",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Solutions Engineer - Strategic Partners",
@@ -3852,7 +3954,8 @@
     "first_seen": "2026-11-04T21:25:41.136512+00:00",
     "id": "Cisco_Solutions_Engineer_-_Strategic_Partners",
     "notified": false,
-    "company_id": "cisco"
+    "company_id": "cisco",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Intern- On Platform Storefront Merchandising",
@@ -3889,7 +3992,8 @@
     "first_seen": "2026-11-04T21:25:54.581600+00:00",
     "id": "JioHotstar_(JioStar)_Intern-_On_Platform_Storefront_Merchandi",
     "notified": false,
-    "company_id": "jiohotstar"
+    "company_id": "jiohotstar",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Support Engineer 1",
@@ -3927,7 +4031,8 @@
     "first_seen": "2026-11-04T21:26:25.142874+00:00",
     "id": "Oracle_Support_Engineer_1",
     "notified": false,
-    "company_id": "oracle"
+    "company_id": "oracle",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Technology Early Career Entry Program",
@@ -3965,7 +4070,8 @@
     "first_seen": "2026-11-05T09:12:20.661849+00:00",
     "id": "State_Street_Technology_Early_Career_Entry_Program",
     "notified": false,
-    "company_id": "c1793696381"
+    "company_id": "c1793696381",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Associate Engineer - RF SW",
@@ -4007,7 +4113,8 @@
     "company_id": "qualcomm",
     "notify_state": "sent",
     "claimed_at": "2026-11-05T09:24:10.518574+00:00",
-    "notified_at": "2026-11-05T09:24:13.687993+00:00"
+    "notified_at": "2026-11-05T09:24:13.687993+00:00",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "ISG Operations Apprentice",
@@ -4042,7 +4149,8 @@
     "first_seen": "2026-11-05T15:14:23.822097+00:00",
     "id": "State_Street_ISG_Operations_Apprentice",
     "notified": false,
-    "company_id": "c1793696381"
+    "company_id": "c1793696381",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Intern | Financial Accounts | Bengaluru | Finance & Accounts",
@@ -4079,7 +4187,8 @@
     "first_seen": "2026-11-06T12:21:45.536622+00:00",
     "id": "Deloitte_Intern_|_Financial_Accounts_|_Bengaluru_",
     "notified": false,
-    "company_id": "deloitte"
+    "company_id": "deloitte",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Management Trainee | M&A Regulatory | Delhi | Mergers & Acquisitions (Tax)",
@@ -4114,7 +4223,8 @@
     "first_seen": "2026-11-06T12:21:45.536622+00:00",
     "id": "Deloitte_Management_Trainee_|_M&A_Regulatory_|_De",
     "notified": false,
-    "company_id": "deloitte"
+    "company_id": "deloitte",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Procurement Operations Specialist",
@@ -4149,7 +4259,8 @@
     "first_seen": "2026-11-06T12:25:12.980021+00:00",
     "id": "IBM_Procurement_Operations_Specialist",
     "notified": false,
-    "company_id": "ibm"
+    "company_id": "ibm",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Software Engineering AMTS",
@@ -4193,7 +4304,8 @@
     "company_id": "c1793696368",
     "notify_state": "sent",
     "claimed_at": "2026-11-06T15:27:20.316947+00:00",
-    "notified_at": "2026-11-06T15:27:25.102665+00:00"
+    "notified_at": "2026-11-06T15:27:25.102665+00:00",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Product Accessibility Engineer",
@@ -4234,7 +4346,8 @@
     "first_seen": "2026-11-06T15:07:45.106727+00:00",
     "id": "Salesforce_Product_Accessibility_Engineer",
     "notified": false,
-    "company_id": "c1793696368"
+    "company_id": "c1793696368",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "System Analyst",
@@ -4278,7 +4391,8 @@
     "company_id": "c1793696368",
     "notify_state": "sent",
     "claimed_at": "2026-11-06T15:27:20.316947+00:00",
-    "notified_at": "2026-11-06T15:27:25.102665+00:00"
+    "notified_at": "2026-11-06T15:27:25.102665+00:00",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Apprentice - Accounting/Finance",
@@ -4316,7 +4430,8 @@
     "first_seen": "2026-11-06T15:13:36.904780+00:00",
     "id": "State_Street_Apprentice_-_Accounting/Finance",
     "notified": false,
-    "company_id": "c1793696381"
+    "company_id": "c1793696381",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Apprentice, Channels Client On-boarding Specialist",
@@ -4355,7 +4470,8 @@
     "first_seen": "2026-11-10T08:09:49.380873+00:00",
     "id": "S&P_Global_Apprentice,_Channels_Client_On-boarding_",
     "notified": false,
-    "company_id": "c1793696385"
+    "company_id": "c1793696385",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Software Engineering AMTS",
@@ -4399,7 +4515,8 @@
     "company_id": "c1793696368",
     "notify_state": "sent",
     "claimed_at": "2026-11-10T15:38:07.007939+00:00",
-    "notified_at": "2026-11-10T15:38:10.316356+00:00"
+    "notified_at": "2026-11-10T15:38:10.316356+00:00",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Software Engineering",
@@ -4443,7 +4560,8 @@
     "company_id": "microsoft",
     "notify_state": "sent",
     "claimed_at": "2026-11-10T15:38:07.007939+00:00",
-    "notified_at": "2026-11-10T15:38:10.316356+00:00"
+    "notified_at": "2026-11-10T15:38:10.316356+00:00",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Growth Associate",
@@ -4482,7 +4600,8 @@
     "first_seen": "2026-11-11T06:24:51.266592+00:00",
     "id": "Swiggy_Growth_Associate",
     "notified": false,
-    "company_id": "swiggy"
+    "company_id": "swiggy",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Summer 2027 Intern - Software Engineer",
@@ -4526,7 +4645,8 @@
     "company_id": "c1793696368",
     "notify_state": "sent",
     "claimed_at": "2026-11-11T12:27:38.190028+00:00",
-    "notified_at": "2026-11-11T12:27:41.238521+00:00"
+    "notified_at": "2026-11-11T12:27:41.238521+00:00",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Apprentice, Order to Cash",
@@ -4565,7 +4685,8 @@
     "first_seen": "2026-11-11T17:22:15.117942+00:00",
     "id": "S&P_Global_Apprentice,_Order_to_Cash",
     "notified": false,
-    "company_id": "c1793696385"
+    "company_id": "c1793696385",
+    "repost_last_seen": "2026-11-12"
   },
   {
     "title": "Applications Dev Engineer",
@@ -4605,6 +4726,90 @@
     "first_seen": "2026-11-11T17:28:39.202532+00:00",
     "id": "ServiceNow_Applications Dev_Engineer",
     "notified": false,
-    "company_id": "servicenow"
+    "company_id": "servicenow",
+    "repost_last_seen": "2026-11-12"
+  },
+  {
+    "title": "Summer Intern 2027 - Content Writer",
+    "url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Bangalore/Summer-Intern-2027---Content-Writer_JR368157",
+    "company": "Salesforce",
+    "location": "India - Bangalore · India - Hyderabad · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'new graduates'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Our Futureforce University Recruiting program is dedicated to attracting, retaining and cultivating talent. Our interns and new graduates work on real projects ",
+        "To get the best candidate experience, please consider applying for a maximum of 3 roles within 12 months to ensure you are not duplicating efforts.",
+        "● Experience with corporate marketing and branding, and a clear understanding of marketing strategies and concepts.",
+        "Graduating in 2028 and no active backlogs"
+      ],
+      "fresher_evidence": "new graduates",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:JR368157",
+      "canonical_url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Bangalore/Summer-Intern-2027---Content-Writer_JR368157",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "posted_at": "2026-11-12",
+    "uid": "salesforce|id:JR368157",
+    "date": "Nov 12, 09:07",
+    "first_seen": "2026-11-12T09:07:11.858416+00:00",
+    "id": "Salesforce_Summer_Intern_2027_-_Content_Writer",
+    "notified": false,
+    "repost_last_seen": "2026-11-12",
+    "company_id": "c1793696368"
+  },
+  {
+    "title": "Consultant | Public Finance | Delhi | Operations, Industry & Domain Solutions | GPS Industry Solutio",
+    "url": "https://southasiacareers.deloitte.com/job/Delhi-Consultant-Public-Finance-Delhi-Operations%2C-Industry-&-Domain-Solutions-GPS-Industry-Solutio/61468344/",
+    "company": "Deloitte",
+    "location": "Delhi, IN · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 to 2 years'",
+    "evidence": {
+      "experience": [
+        "0 to 2 years"
+      ],
+      "experience_lines": [
+        "      Work experience: 0 to 2 years of work experience",
+        "Qualifications, experience and work location",
+        "      Strong academic performance in undergraduate degree",
+        "      Past experience of working with Government will be an added advantage"
+      ],
+      "fresher_evidence": "0 to 2 years",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Delhi-Consultant-Public-Finance-Delhi-Operations%2C-Industry-&-Domain-Solutions-GPS-Industry-Solutio/61468344",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Delhi-Consultant-Public-Finance-Delhi-Operations%2C-Industry-&-Domain-Solutions-GPS-Industry-Solutio/61468344",
+    "date": "Nov 12, 09:22",
+    "first_seen": "2026-11-12T09:22:08.922543+00:00",
+    "id": "Deloitte_Consultant_|_Public_Finance_|_Delhi_|_Op",
+    "notified": false,
+    "repost_last_seen": "2026-11-12",
+    "company_id": "deloitte"
   }
 ]

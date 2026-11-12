@@ -35,6 +35,14 @@ _STATE_RANK = {None: 0, "": 0, "pending": 0, "claimed": 1, "sending": 2,
 _LIVE = ("claimed", "sending")
 # the fields that say who holds a claim and how far it got
 _CLAIM_FIELDS = ("claim_id", "claimed_at", "sending_at")
+# a state this version doesn't know (written by a newer one) ranks as
+# settled, so a merge never turns it back into a pending or claimed record
+# (Nov 2026, rollback and forward compatibility)
+_UNKNOWN_RANK = 3
+
+
+def _rank(state) -> int:
+    return _STATE_RANK.get(state, _UNKNOWN_RANK)
 
 
 def record_key(job: dict) -> str:
@@ -64,7 +72,7 @@ def merge_record(remote: dict, local: dict) -> dict:
     merged["dismissed"] = bool(remote.get("dismissed") or local.get("dismissed"))
     merged["notified"] = bool(remote.get("notified") or local.get("notified"))
     rs, ls = remote.get("notify_state"), local.get("notify_state")
-    state = rs if _STATE_RANK.get(rs, 0) >= _STATE_RANK.get(ls, 0) else ls
+    state = rs if _rank(rs) >= _rank(ls) else ls
     keep_remote_claim = False
     if rs in _LIVE and ls in _LIVE + ("sent", "skipped", "failed", "uncertain") and _owner(local) != _owner(remote):
         # another run holds this claim: nothing of ours changes it
