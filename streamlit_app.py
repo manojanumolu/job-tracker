@@ -5356,7 +5356,7 @@ def job_intel_panel(j: dict) -> None:
                     f'Based only on the {_plural(m["named"], "skill")} named in the posting text kept here — '
                     'an estimate, not a verdict, and it never hides or filters a job.</p>')
         else:
-            st.html('<p class="note">Add your skills in Settings → Skills to see how well this job matches (an estimate).</p>')
+            st.html('<p class="note">Add your skills in Settings → Skills &amp; interview prep to see how well this job matches (an estimate).</p>')
         facts = [f'<li>{escape(x["text"])}</li>' for x in why if x["passed"]]
         when = (f'{escape(fresh["label"])} — {fresh["days"]} day{"s" if fresh["days"] != 1 else ""} since '
                 f'{escape(fresh["source"])}' if fresh["days"] is not None else "Unknown")
@@ -5417,7 +5417,7 @@ def skills_card() -> None:
                 'well jobs match you. A résumé is read on this page, in memory, and never saved or sent anywhere — '
                 'only the skill names you confirm are kept, in your own account.</p></div></div>')
         with st.expander("Suggest skills from a résumé"):
-            st.file_uploader("Résumé (.txt or .docx)", type=["txt", "docx"], key="skills_resume")
+            st.file_uploader("Résumé (.txt or .docx, up to 2 MB)", type=["txt", "docx"], key="skills_resume")
             st.text_area("…or paste its text", key="skills_paste", height=120)
             st.button("Suggest skills", key="btn_skills_suggest", icon=":material/auto_awesome:", on_click=_suggest_skills)
         st.multiselect("Your skills", list(job_intel.SKILLS), key="skills_pick", placeholder="Pick your skills",
