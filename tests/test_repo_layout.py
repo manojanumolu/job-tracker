@@ -56,6 +56,10 @@ def test_every_script_a_workflow_runs_exists():
     seen = []
     for wf in (REPO / ".github" / "workflows").glob("*.yml"):
         text = wf.read_text("utf-8")
+        if wf.name == "ledger_dryrun.yml":
+            # runs a pinned, reviewed commit, not this tree: what it runs is
+            # checked in tests/test_ledger_dryrun_workflow.py
+            continue
         for script in re.findall(r"\bpython3? (?:-m \S+ )?([\w./-]+\.py)\b", text):
             seen.append(script)
             assert (REPO / script).is_file(), (wf.name, script)
