@@ -228,7 +228,13 @@ def _duplicate_of_every_key(seen: list[dict]) -> list[dict]:
 @pytest.mark.parametrize("deploy", ["2026-11-11", "2026-11-14", "2026-11-25", "2026-12-01", "2027-02-01",
                                    "2027-11-11"])
 def test_production_data_releases_nothing_on_any_deployment_day(deploy):
+    """The deployment safeguard, replayed on the production records as they
+    were before the repost window was deployed: without sighting stamps.
+    (Production has been stamped since the real deployment on 12 Nov 2026;
+    those stamps are checked in the next test.)"""
     seen = copy.deepcopy(_production_seen())
+    for j in seen:
+        j.pop(scraper.REPOST_LAST_SEEN, None)
     found = _duplicate_of_every_key(seen)
     assert len(found) > 50                                          # the real file, not an empty fixture
     deploy_at = datetime.fromisoformat(deploy + "T21:02:00+00:00")
@@ -237,6 +243,25 @@ def test_production_data_releases_nothing_on_any_deployment_day(deploy):
     assert stats["reposts_window_realerted"] == 0
     # and nothing for the whole window afterwards, even if no twin is ever seen again
     assert scraper.merge_new_jobs(seen, found, now=deploy_at + WINDOW * DAY) == []
+
+
+def test_production_stamps_hold_every_key_for_the_full_window():
+    """The production records as they are now, stamped by the scans since
+    the real deployment: a duplicate of any key is suppressed through day
+    stamp + 45 and every quiet key is free again from day stamp + 46."""
+    seen = copy.deepcopy(_production_seen())
+    stamps = {j.get(scraper.REPOST_LAST_SEEN) for j in seen}
+    if None in stamps or not stamps:
+        pytest.skip("production data predates the repost window's stamps")
+    found = _duplicate_of_every_key(seen)
+    assert len(found) > 50
+    first = date.fromisoformat(min(stamps))
+    last = date.fromisoformat(max(stamps))
+    end_of_window = datetime(first.year, first.month, first.day, 23, 59, tzinfo=UTC) + WINDOW * DAY
+    assert scraper.merge_new_jobs(copy.deepcopy(seen), found, now=end_of_window) == []
+    after = datetime(last.year, last.month, last.day, 0, 1, tzinfo=UTC) + (WINDOW + 1) * DAY
+    keys = {scraper._repost_key(j) for j in found}
+    assert {scraper._repost_key(j) for j in scraper.merge_new_jobs(copy.deepcopy(seen), found, now=after)} == keys
 
 
 def test_production_data_keys_come_back_only_after_the_full_window():

@@ -31,6 +31,14 @@ BASE = Path(__file__).resolve().parent.parent          # the repository root (th
 DATA_FILES = ("data/seen_jobs.json", "data/companies.json")
 SCAN_FIELDS = ("status", "status_reason", "scan_note", "last_checked", "last_success", "last_job", "scan", "source")
 _STATE_RANK = {None: 0, "": 0, "pending": 0, "claimed": 1, "sent": 2, "skipped": 2}
+# a state this version doesn't know (written by a newer one: "sending",
+# "uncertain", "failed") ranks as settled, so a merge never turns it back
+# into a pending or claimed record (Nov 2026, rollback safety)
+_UNKNOWN_RANK = 2
+
+
+def _rank(state) -> int:
+    return _STATE_RANK.get(state, _UNKNOWN_RANK)
 
 
 def record_key(job: dict) -> str:
@@ -42,7 +50,7 @@ def merge_record(remote: dict, local: dict) -> dict:
     merged["dismissed"] = bool(remote.get("dismissed") or local.get("dismissed"))
     merged["notified"] = bool(remote.get("notified") or local.get("notified"))
     rs, ls = remote.get("notify_state"), local.get("notify_state")
-    state = rs if _STATE_RANK.get(rs, 0) >= _STATE_RANK.get(ls, 0) else ls
+    state = rs if _rank(rs) >= _rank(ls) else ls
     # a run that claimed a job and then failed to send releases *its own*
     # claim so the next run retries; any other claim is never undone
     released = local.get("released_claim")
