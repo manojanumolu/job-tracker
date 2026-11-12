@@ -122,8 +122,20 @@ once a day, and only moving forward when published). A posting left unread
 for a scan (detail budget, a failing portal) simply isn't stamped that scan. A suppressed repost never stamps anything,
 so the window always runs out. A key quiet for more than 45 days is a
 vacancy that closed and came back: it is alerted as a new job and counted in
-the run record's `reposts_window_realerted`. Records with no readable date
-keep the old rule (suppressed).
+the run record's `reposts_window_realerted`. Dates are whole UTC days: a key
+last sighted on day D stays suppressed through D + 45 and can be alerted from
+the next day.
+
+**Deployment safety.** Records saved before this rule have no
+`repost_last_seen`, and judging them by `first_seen` alone would have
+released duplicates on the first scan (on 14 Nov 2026, 19 of 114 keys were
+already over 45 days old). So a record without a reliable stamp (missing,
+malformed or in the future) is stamped once with the day of the first scan
+that sees it — the actual deployment day — counted in the run record's
+`repost_dates_backfilled`. New records are stamped when created. No
+duplicate can therefore be emailed because of missing history: an old key
+can come back only 46 days after deployment, and only if its posting was not
+seen in all that time.
 
 What the window does *not* change: while a recorded posting is still
 listed, a second requisition with the same title and location stays

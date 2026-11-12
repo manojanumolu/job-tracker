@@ -6,7 +6,7 @@ import time
 import logging
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from urllib.parse import urldefrag, urljoin, urlparse
 
 import httpx
@@ -929,32 +929,80 @@ def _repost_key(job: dict) -> tuple | None:
 # Bengaluru): the same open postings judged again each scan, not new ones.
 # A key not sighted for longer than the window is a vacancy that closed and
 # came back: it is alerted as a new job (counted as reposts_window_realerted)
-# and gets its own record. Legacy records with no readable date at all keep
-# today's behaviour (suppressed), so nothing old is re-emailed by surprise.
-# Eligibility rules are untouched: this only decides new-vs-repost for jobs
-# the classifier already accepted.
+# and gets its own record. Eligibility rules are untouched: this only decides
+# new-vs-repost for jobs the classifier already accepted.
+#
+# Dates are whole UTC days. A key last sighted on day D is suppressed through
+# D + REPOST_WINDOW_DAYS (inclusive) and can be alerted from the day after.
+#
+# Deployment (Nov 2026 review): records saved before this code have no
+# repost_last_seen, and their first_seen can be weeks old — judged by
+# first_seen alone, keys would fall outside the window on the first scan and
+# a duplicate suppressed today could be emailed just because history was
+# missing. So any record without a reliable stamp (missing, malformed or in
+# the future) is stamped with the day of the first scan that sees it, once:
+# in production that is the actual deployment day, and its 45 days start
+# there. New records are stamped when created, so "no stamp" only ever means
+# "saved before deployment". Counted as repost_dates_backfilled.
 REPOST_WINDOW_DAYS = 45
 REPOST_LAST_SEEN = "repost_last_seen"
+_STAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
-def _record_time(value) -> datetime | None:
-    """first_seen (full ISO time) or repost_last_seen (YYYY-MM-DD) as an
-    aware UTC datetime; None when unreadable."""
+def _utc_today(now: datetime) -> date:
+    return (now if now.tzinfo else now.replace(tzinfo=timezone.utc)).astimezone(timezone.utc).date()
+
+
+def _first_seen_day(value) -> date | None:
+    """A record's first_seen (an ISO time, any UTC offset) as its UTC day;
+    None when unreadable."""
     if not isinstance(value, str) or not value:
         return None
     try:
         dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         return None
-    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    return (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).astimezone(timezone.utc).date()
 
 
-def _last_sighting(records: list[dict]) -> datetime | None:
-    """The latest moment any of these records' postings is known to have
-    been listed: the newest first_seen / repost_last_seen among them."""
-    times = [_record_time(r.get(k)) for r in records for k in ("first_seen", REPOST_LAST_SEEN)]
-    times = [t for t in times if t]
-    return max(times) if times else None
+def _stamp_day(value, today: date) -> date | None:
+    """A reliable repost_last_seen: exactly YYYY-MM-DD, a real date, not
+    after ``today``. Anything else counts as no stamp."""
+    if not isinstance(value, str) or not _STAMP_RE.match(value):
+        return None
+    try:
+        day = date.fromisoformat(value)
+    except ValueError:
+        return None
+    return day if day <= today else None
+
+
+def _last_sighting_day(records: list[dict], today: date) -> date | None:
+    """The latest UTC day any of these records' postings is known to have
+    been listed: the newest first_seen (not after today) or reliable stamp."""
+    days = [d for r in records for d in (_first_seen_day(r.get("first_seen")), _stamp_day(r.get(REPOST_LAST_SEEN), today))
+            if d is not None and d <= today]
+    return max(days) if days else None
+
+
+def repost_suppressed(last_day: date | None, today: date) -> bool:
+    """Still within the window? An unknown sighting stays suppressed."""
+    return last_day is None or (today - last_day).days <= REPOST_WINDOW_DAYS
+
+
+def backfill_repost_dates(seen: list[dict], now: datetime, stats: Counter | None = None) -> int:
+    """Stamp every record without a reliable repost_last_seen with today's
+    UTC day (see the deployment note above). Idempotent; returns how many
+    records it stamped."""
+    today = _utc_today(now)
+    n = 0
+    for j in seen:
+        if isinstance(j, dict) and _stamp_day(j.get(REPOST_LAST_SEEN), today) is None:
+            j[REPOST_LAST_SEEN] = today.isoformat()
+            n += 1
+    if stats is not None and n:
+        stats["repost_dates_backfilled"] += n
+    return n
 
 
 def _posting_key(url: str) -> str:
@@ -970,13 +1018,17 @@ def merge_new_jobs(seen: list[dict], found: list[dict], now: datetime | None = N
     the ATS job ID / canonical URL, so two different jobs with the same title
     both get through; the same title *and* location under a new ID is treated
     as a repost of a job already alerted — but only while that key was
-    sighted within REPOST_WINDOW_DAYS (see the note above _record_time): a
-    key quiet for longer is a vacancy that came back, alerted as new.
-    Side effect: records whose own posting is in ``found`` (same uid) are
-    stamped with repost_last_seen (today's UTC date) in place; the caller
-    must save ``seen`` when stats["repost_stamps_updated"] says any changed.
+    sighted within REPOST_WINDOW_DAYS (see the notes above): a key quiet for
+    longer is a vacancy that came back, alerted as new.
+    Side effects on ``seen``, in place: records without a reliable
+    repost_last_seen are backfilled with today (backfill_repost_dates), and
+    records whose own posting is in ``found`` (same uid) are stamped today;
+    the caller must save ``seen`` when stats says either happened.
     ``company_id`` (the company's immutable id) is stored on new records."""
     now = now or datetime.now(timezone.utc)
+    today = _utc_today(now)
+    stamp = today.isoformat()
+    backfill_repost_dates(seen, now, stats)
     known = {record_uid(j) for j in seen if isinstance(j, dict)}
     by_uid = {record_uid(j): j for j in seen if isinstance(j, dict)}
     known_postings = {k for k in (_posting_key(j.get("url", "")) for j in seen if isinstance(j, dict)) if k}
@@ -988,11 +1040,10 @@ def merge_new_jobs(seen: list[dict], found: list[dict], now: datetime | None = N
                 by_repost_key.setdefault(k, []).append(j)
     # stamp still-listed recorded postings FIRST, so a same-key candidate
     # later in this very scan is judged against a fresh sighting
-    today = f"{now.astimezone(timezone.utc):%Y-%m-%d}"
     for job in found:
         record = by_uid.get(job_uid(job["company"], job["url"]))
-        if record is not None and record.get(REPOST_LAST_SEEN) != today:
-            record[REPOST_LAST_SEEN] = today
+        if record is not None and record.get(REPOST_LAST_SEEN) != stamp:
+            record[REPOST_LAST_SEEN] = stamp
             if stats is not None:
                 stats["repost_stamps_updated"] += 1
     reposts = {k for k in by_repost_key}
@@ -1004,15 +1055,15 @@ def merge_new_jobs(seen: list[dict], found: list[dict], now: datetime | None = N
         if uid in known or (pk and pk in known_postings):
             continue
         if rp and rp in reposts:
-            last = _last_sighting(by_repost_key.get(rp, []))
-            if last is None or now - last <= timedelta(days=REPOST_WINDOW_DAYS):
+            last = _last_sighting_day(by_repost_key.get(rp, []), today)
+            if repost_suppressed(last, today):
                 log.info("  %s: %s — repost of a job already alerted (same title and location)",
                          job["company"], job["title"])
                 if stats is not None:      # measured (Nov 2026) before any change to how reposts are judged
                     stats["reposts_suppressed"] += 1
                 continue
             log.info("  %s: %s — same title and location as a record last sighted %s (over %d days): a vacancy "
-                     "that came back, treated as new", job["company"], job["title"], f"{last:%Y-%m-%d}",
+                     "that came back, treated as new", job["company"], job["title"], last.isoformat(),
                      REPOST_WINDOW_DAYS)
             if stats is not None:
                 stats["reposts_window_realerted"] += 1
@@ -1023,6 +1074,7 @@ def merge_new_jobs(seen: list[dict], found: list[dict], now: datetime | None = N
             "first_seen": now.isoformat(),
             "id": f"{job['company']}_{job['title'][:40]}".replace(" ", "_"),
             "notified": False,
+            REPOST_LAST_SEEN: stamp,
         })
         if company_id:
             record["company_id"] = company_id
@@ -1103,7 +1155,8 @@ def run_all() -> list[dict]:
     run = {"started_at": started_at, "finished_at": _now_iso(), "jobs_found": jobs_found,
            "new_jobs": len(new_jobs), "portals": len(scanned), "portals_failed": portals_failed,
            "reposts_suppressed": merge_stats["reposts_suppressed"],
-           "reposts_window_realerted": merge_stats["reposts_window_realerted"]}
+           "reposts_window_realerted": merge_stats["reposts_window_realerted"],
+           "repost_dates_backfilled": merge_stats["repost_dates_backfilled"]}
     for company in scanned:
         company["scan"]["run"] = dict(run)
 
@@ -1112,7 +1165,7 @@ def run_all() -> list[dict]:
     save_companies(companies, commit=False)
     # repost_last_seen stamps mutate existing records in place, so the file
     # must be written even when no new job was found (repo_sync merges them)
-    if new_jobs or merge_stats["repost_stamps_updated"]:
+    if new_jobs or merge_stats["repost_stamps_updated"] or merge_stats["repost_dates_backfilled"]:
         save_seen_jobs(seen + new_jobs, commit=False)
     return new_jobs
 
