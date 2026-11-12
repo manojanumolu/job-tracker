@@ -37,7 +37,14 @@ STEP_MARK = "\n      # Personal alerts (per-user"
 # "ref: ${{ github.ref }}" (scan the branch tip, not the commit the run was
 # queued on, so a queued run never re-scans a window); no command, step or
 # permission changed.
-GLOBAL_SCAN_STEPS_SHA256 = "f50948caa548abe7f375696997b5848604f8164c6fefdbb944cdcfd29822735d"
+# Re-pinned 2026-11-11: the scrape job's "Install dependencies" step keeps
+# only the hashed pip install, and a new step "Install Chromium and check that
+# it launches" runs .github/scripts/install-chromium.sh in place of
+# "playwright install chromium --with-deps" (required libraries and the
+# browser mandatory, extra fonts best effort, then a launch check — after an
+# Ubuntu mirror outage failed every scan over optional fonts). No other
+# command, step or permission changed; the publish steps are untouched.
+GLOBAL_SCAN_STEPS_SHA256 = "cce215dd3a683de906727fa2d939dd565b6aa4fc83bf9214d4fec762b6fc01a6"
 
 
 def _wf() -> str:
@@ -94,7 +101,8 @@ def test_the_personal_step_runs_last_and_can_never_fail_the_job():
     assert names == ["Checkout repo", "Set up Python", "Install dependencies", "Download the scan results",
                      "Take over the scan results", "Publish results and send email alerts",
                      "Send personal email alerts"]
-    assert list(_steps(_wf(), "scrape")) == ["Checkout repo", "Set up Python", "Install dependencies", "Run scraper",
+    assert list(_steps(_wf(), "scrape")) == ["Checkout repo", "Set up Python", "Install dependencies",
+                                             "Install Chromium and check that it launches", "Run scraper",
                                              "Hand the results to the publish job"]
     step = steps["Send personal email alerts"]
     assert "continue-on-error: true" in step                         # its failure leaves the job green

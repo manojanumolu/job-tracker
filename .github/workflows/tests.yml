@@ -11,8 +11,9 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    # the suite took 9.5-14.5 min in Oct 2026 and twice hit a 15 min cap
-    timeout-minutes: 25
+    # the suite took 9.5-14.5 min in Oct 2026 and twice hit a 15 min cap;
+    # by 11 Nov 2026 it took 20.6-23.3 min (a run finished 50 s inside 25)
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -21,8 +22,10 @@ jobs:
         with:
           python-version: "3.12"   # same as check_jobs.yml
       - name: Install dependencies
-        run: |
-          pip install --require-hashes -r requirements/requirements-dev.txt
-          playwright install chromium --with-deps
+        run: pip install --require-hashes -r requirements/requirements-dev.txt
+      # required Chromium libraries and the browser are mandatory; extra fonts
+      # are best effort, so an apt mirror outage can't stop the tests (see the script)
+      - name: Install Chromium and check that it launches
+        run: bash .github/scripts/install-chromium.sh
       - name: Run tests
         run: python -m pytest -q

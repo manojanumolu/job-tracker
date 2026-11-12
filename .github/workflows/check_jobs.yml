@@ -96,9 +96,13 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: |
-          pip install --require-hashes -r requirements.txt
-          playwright install chromium --with-deps
+        run: pip install --require-hashes -r requirements.txt
+
+      # required Chromium libraries and the browser are mandatory; extra fonts
+      # are best effort: on 2026-11-11 an Ubuntu mirror outage failed every
+      # scan for want of optional CJK/Thai/Cyrillic fonts (see the script)
+      - name: Install Chromium and check that it launches
+        run: bash .github/scripts/install-chromium.sh
 
       - name: Run scraper
         run: python src/scraper.py
