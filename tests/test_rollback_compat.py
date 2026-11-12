@@ -40,7 +40,7 @@ NEWER_STATES = {
 STILL_PENDING = {
     "never claimed": {},
     "released for a retry": {"notify_state": "pending", "send_attempts": 2, "released_claim": "c5",
-                             "released_from": "sending", "next_attempt_at": "2099-01-01T00:15:00+00:00"},
+                             "released_from": "sending", "next_attempt_at": "2000-01-01T00:15:00+00:00"},   # its wait is over
 }
 
 
@@ -112,5 +112,5 @@ def test_old_personal_ledger_never_reclaims_newer_records():
         store.backend.set(user._delivery_path(key), {"job_key": key, **doc})
         assert user.claim_delivery(key, "old-run") is False, key
     store.backend.set(user._delivery_path("retry"), {"job_key": "retry", "state": "pending", "v": 2, "attempts": 1,
-                                                       "next_attempt_at": "2099-01-01T00:15:00Z"})
+                                                       "next_attempt_at": "2000-01-01T00:15:00Z"})   # wait over
     assert user.claim_delivery("retry", "old-run") is True                  # a released retry is still retried
