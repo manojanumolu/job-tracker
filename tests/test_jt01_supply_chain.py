@@ -45,7 +45,7 @@ EXPECTED_PERMISSIONS = {
     ("logos.yml", "publish"): {"contents": "write"},
     ("scan_scheduler.yml", "wait-and-dispatch"): {"contents": "read", "actions": "write"},
     # one-off, read-only, started by hand (Nov 2026; tests/test_ledger_dryrun_workflow.py)
-    ("ledger_dryrun.yml", "dry-run"): {"contents": "read"},
+    ("ledger_dryrun.yml", "dry-run"): {"contents": "read", "id-token": "write"},
 }
 # the deployed lock stays at the root (Streamlit Community Cloud reads it
 # there); the test and logo-finder locks live in requirements/

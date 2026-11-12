@@ -3,18 +3,25 @@ name: Ledger dry run (read-only, one-off)
 # A one-off, read-only check before the email-reliability release (Nov 2026):
 # how that release will read the existing personal alert ledgers
 # (users/{uid}/deliveries in Firestore), as counts only.
+# Setup and removal: docs/LEDGER_DRYRUN.md.
 #
+#   * No stored key, and never the Firebase admin key. GitHub gives this run
+#     a short-lived identity token; Google exchanges it (Workload Identity
+#     Federation) for a reader service account that holds only "Cloud
+#     Datastore Viewer". Google's permissions, not just this code, make the
+#     run read-only. The exchange is accepted only for this workflow file,
+#     on main, started by hand (the provider's attribute condition).
 #   * Runs only when someone presses "Run workflow": no schedule, no push.
-#   * Runs the reviewed release code, pinned to one commit below, never
-#     this branch's or main's code. That code blocks every Firestore write
+#   * Runs the reviewed release code, pinned to one commit below, never this
+#     branch's or main's code. That code also blocks every Firestore write
 #     path before it connects, and prints counts only: no UID, address, job
 #     or document id. This log is public, so that matters.
-#   * The Firebase key reaches only the dry-run step, as a file in the
-#     runner's temporary directory, deleted when the step ends. No other
-#     secret is used. No email, scan, push or deployment happens here.
+#   * The two settings it needs (the provider's resource name and the
+#     reader's email) are identifiers, not keys; they are kept as secrets
+#     only so the log masks them. Temporary files are 0600 and deleted when
+#     the step ends. No email, scan, push or deployment happens here.
 #   * Temporary: delete this file after the one run, before the GitHub
-#     security release, whose tests allow secrets only in the "production"
-#     environment.
+#     security release.
 on:
   workflow_dispatch:
 
@@ -30,6 +37,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      id-token: write   # a short-lived GitHub identity token for the exchange; no stored key
     steps:
       - name: Checkout the reviewed release code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -46,13 +54,41 @@ jobs:
       - name: Install dependencies
         run: pip install --require-hashes -r requirements.txt
 
-      - name: Count the personal alert ledgers (read-only, counts only)
+      - name: Count the personal alert ledgers (read-only identity, counts only)
         env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          WIF_PROVIDER: ${{ secrets.LEDGER_WIF_PROVIDER }}
+          READER_SA: ${{ secrets.LEDGER_READER_SERVICE_ACCOUNT }}
         run: |
           umask 077
-          key="$RUNNER_TEMP/ledger-dryrun-key.json"
-          trap 'rm -f "$key"' EXIT
-          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$key"
-          unset FIREBASE_SERVICE_ACCOUNT
-          python src/ledger_dryrun.py --key-file "$key"
+          tok="$RUNNER_TEMP/github-identity.json"
+          cfg="$RUNNER_TEMP/google-identity.json"
+          trap 'rm -f "$tok" "$cfg"' EXIT
+          python3 - <<'PY'
+          import os, re, sys
+          provider, reader = os.environ.get("WIF_PROVIDER", ""), os.environ.get("READER_SA", "")
+          if not re.fullmatch(r"projects/[0-9]+/locations/global/workloadIdentityPools/[a-z0-9-]{4,32}/providers/[a-z0-9-]{4,32}", provider):
+              sys.exit("LEDGER_WIF_PROVIDER is missing or not a workload identity provider resource name")
+          if not re.fullmatch(r"[a-z][a-z0-9-]{4,28}[a-z0-9]@[a-z][a-z0-9-]{4,28}[a-z0-9]\.iam\.gserviceaccount\.com", reader):
+              sys.exit("LEDGER_READER_SERVICE_ACCOUNT is missing or not a service-account email")
+          if reader.startswith("firebase-adminsdk"):
+              sys.exit("refusing the Firebase admin service account: use the read-only reader")
+          PY
+          curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://iam.googleapis.com/$WIF_PROVIDER" -o "$tok"
+          python3 - "$tok" "$cfg" <<'PY'
+          import json, os, sys
+          provider, reader = os.environ["WIF_PROVIDER"], os.environ["READER_SA"]
+          config = {"type": "external_account", "audience": "//iam.googleapis.com/" + provider,
+                    "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
+                    "token_url": "https://sts.googleapis.com/v1/token",
+                    "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/"
+                                                         f"serviceAccounts/{reader}:generateAccessToken",
+                    "credential_source": {"file": sys.argv[1],
+                                          "format": {"type": "json", "subject_token_field_name": "value"}}}
+          with open(sys.argv[2], "w") as f:
+              json.dump(config, f)
+          PY
+          project="${READER_SA#*@}"
+          project="${project%.iam.gserviceaccount.com}"
+          unset WIF_PROVIDER
+          GOOGLE_APPLICATION_CREDENTIALS="$cfg" python src/ledger_dryrun.py --project "$project"
