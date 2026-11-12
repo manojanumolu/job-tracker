@@ -1,0 +1,58 @@
+name: Ledger dry run (read-only, one-off)
+
+# A one-off, read-only check before the email-reliability release (Nov 2026):
+# how that release will read the existing personal alert ledgers
+# (users/{uid}/deliveries in Firestore), as counts only.
+#
+#   * Runs only when someone presses "Run workflow": no schedule, no push.
+#   * Runs the reviewed release code, pinned to one commit below, never
+#     this branch's or main's code. That code blocks every Firestore write
+#     path before it connects, and prints counts only: no UID, address, job
+#     or document id. This log is public, so that matters.
+#   * The Firebase key reaches only the dry-run step, as a file in the
+#     runner's temporary directory, deleted when the step ends. No other
+#     secret is used. No email, scan, push or deployment happens here.
+#   * Temporary: delete this file after the one run, before the GitHub
+#     security release, whose tests allow secrets only in the "production"
+#     environment.
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ledger-dryrun
+  cancel-in-progress: false
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout the reviewed release code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # claude/m2-email-reliability, reviewed: src/ledger_dryrun.py
+          ref: 9a151ba8419039e26d44de200eea87f9953c3116
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install --require-hashes -r requirements.txt
+
+      - name: Count the personal alert ledgers (read-only, counts only)
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          umask 077
+          key="$RUNNER_TEMP/ledger-dryrun-key.json"
+          trap 'rm -f "$key"' EXIT
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$key"
+          unset FIREBASE_SERVICE_ACCOUNT
+          python src/ledger_dryrun.py --key-file "$key"
