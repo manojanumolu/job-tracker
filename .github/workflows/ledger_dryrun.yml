@@ -7,10 +7,12 @@ name: Ledger dry run (read-only, one-off)
 #
 #   * No stored key, and never the Firebase admin key. GitHub gives this run
 #     a short-lived identity token; Google exchanges it (Workload Identity
-#     Federation) for a reader service account that holds only "Cloud
-#     Datastore Viewer". Google's permissions, not just this code, make the
-#     run read-only. The exchange is accepted only for this workflow file,
-#     on main, started by hand (the provider's attribute condition).
+#     Federation) for a reader service account whose only role is a custom
+#     one with datastore.entities.get and datastore.entities.list. Google's
+#     permissions, not just this code, make the run read-only. The exchange
+#     is accepted only for this repository (pinned by its numeric id and its
+#     owner's), this workflow file, on main, started by hand (the provider's
+#     attribute condition).
 #   * Runs only when someone presses "Run workflow": no schedule, no push.
 #   * Runs the reviewed release code, pinned to one commit below, never this
 #     branch's or main's code. That code also blocks every Firestore write
