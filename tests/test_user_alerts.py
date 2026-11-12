@@ -226,13 +226,15 @@ def test_a_failed_send_is_retried_and_does_not_touch_anyone_else(store):
     assert store.for_uid(B).delivery(job_key(seen[0]))["state"] == "sent"
     fixed = Mailer()
     user_alerts.run(store, seen, fixed, run_id="r2")
+    assert fixed.sent == []                                   # Nov 2026: not before its retry backoff is over
+    user_alerts.run(store, seen, fixed, run_id="r3", now=LATER)
     assert fixed.sent == [("alice@example.org", [job_key(seen[0])])]             # retried, Bob not again
 
 
 def test_failed_send_errors_never_log_the_address(store, caplog):
     _person(store, A, "alice@example.org")
     user_alerts.run(store, [job(1)], Mailer(fail_for={"alice@example.org"}))
-    assert "a personal alert email failed (RuntimeError) — released for the next run" in caplog.text
+    assert "a personal alert email failed (RuntimeError) — retried after a backoff" in caplog.text
     assert "alice@example.org" not in caplog.text and "a•••" not in caplog.text and A not in caplog.text
     assert "SMTP refused" not in caplog.text                              # never the exception message
 

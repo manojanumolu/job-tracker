@@ -23,12 +23,19 @@ their next email — never twice (the ledger below), never an empty email.
 This module runs after every scan and in a 6-hourly pass of its own
 (check_jobs.yml), so the cadence holds for a 12-hour scan interval too.
 
-Exactly once, per person: each job is claimed in the person's own ledger
-before sending (one concurrent claimant wins), finalized as "sent" after a
-successful send, or released for the next run if the send failed. A crash
-between claim and finalize leaves the claim in place: that job is then
-never sent rather than sent twice (the shared notifier makes the same
-choice). One person's state never touches another's.
+At most once, per person (the same state machine as the shared email,
+alerts.py): each job is claimed in the person's own ledger (a
+compare-and-set: one concurrent claimant wins), marked "sending" just before
+the message goes to Gmail, then recorded "sent"; if Gmail definitely did
+not take it, released to "pending" with a backoff (and "failed" after
+user_store.DELIVERY_MAX_ATTEMPTS); if its fate is unknown (the connection
+dropped after the message was handed over), "uncertain" — never resent.
+A run that dies leaves its claims behind: a "claimed" one is recovered by a
+later run after user_store.DELIVERY_CLAIM_TTL_S (nothing was sent), a
+"sending" one becomes "uncertain". Not exactly once: Gmail can accept a
+message and the run die before "sent" is written — that job is then never
+resent, and is counted as uncertain. One person's state never touches
+another's.
 
 The shared notifier (alerts.py) is unchanged and keeps running. This one
 runs as the LAST step of check_jobs.yml ("Send personal email alerts"),
@@ -94,8 +101,9 @@ def select_jobs(seen: list[dict], view: dict, dismissed: set[str], since: dateti
 
 
 def run_for_user(store: UserStore, uid: str, seen: list[dict], send, run_id: str,
-                 dry_run: bool = False, now: datetime | None = None) -> tuple[str, int]:
-    """(outcome, number of jobs) for one person."""
+                 dry_run: bool = False, now: datetime | None = None, ledger: dict | None = None) -> tuple[str, int]:
+    """(outcome, number of jobs) for one person. ``ledger`` collects counts
+    of claim recoveries and anomalies (no address, no UID)."""
     now = now or datetime.now(timezone.utc)
     user = store.for_uid(uid)
     view = user.personal_view()
@@ -120,21 +128,44 @@ def run_for_user(store: UserStore, uid: str, seen: list[dict], send, run_id: str
     jobs = select_jobs(seen, view, user.dismissed(), since)
     if dry_run:
         return ("would_send" if jobs else "nothing"), len(jobs)
-    claimed = [j for j in jobs if user.claim_delivery(job_key(j), run_id)]
+    from notifier import DeliveryUncertain
+    ledger = ledger if ledger is not None else {}
+    stamp = now.timestamp()
+    claimed = [j for j in jobs if user.claim_delivery(job_key(j), run_id, now=stamp, stats=ledger)]
     if not claimed:
         return "nothing", 0
+    marked = []
+    for j in claimed:                                 # only a job marked "sending" may be sent
+        if user.mark_sending(job_key(j), run_id, now=stamp):
+            marked.append(j)
+        else:
+            ledger["claims_lost"] = ledger.get("claims_lost", 0) + 1
+    if not marked:
+        return "nothing", 0
     try:
-        send(claimed, account["email"])
-        ok = True
+        send(marked, account["email"])
+        outcome = "sent"
+    except DeliveryUncertain as e:
+        outcome = "uncertain"
+        log.error("a personal alert email stopped after it was handed to Gmail (%s) — recorded as uncertain, "
+                  "never resent", getattr(e, "stage", "") or type(e).__name__)
     except Exception as e:
-        ok = False
-        # a public log: the exception TYPE only (an SMTP error can echo the address)
-        log.error("a personal alert email failed (%s) — released for the next run", type(e).__name__)
-    for j in claimed:
-        user.finalize_delivery(job_key(j), run_id, ok)
-    if ok:
-        user.record_alert_sent(now.timestamp())       # the next email waits 6 h
-    return ("sent" if ok else "failed"), len(claimed)
+        outcome = "not_sent"
+        # a public log: the exception TYPE / stage only (an SMTP error can echo the address)
+        log.error("a personal alert email failed (%s) — retried after a backoff",
+                  getattr(e, "stage", "") or type(e).__name__)
+    unrecorded = 0
+    for j in marked:
+        try:
+            if not user.finalize_delivery(job_key(j), run_id, outcome, now=stamp):
+                unrecorded += 1
+        except UserStoreError:
+            unrecorded += 1            # stays "sending" -> a later run records it "uncertain", never resends it
+    if unrecorded:
+        ledger["outcome_unrecorded"] = ledger.get("outcome_unrecorded", 0) + unrecorded
+    if outcome != "not_sent":
+        user.record_alert_sent(stamp)                 # the next email waits 6 h (uncertain: probably delivered)
+    return {"sent": "sent", "uncertain": "uncertain"}.get(outcome, "failed"), len(marked)
 
 
 def run(store: UserStore, seen: list[dict], send, *, run_id: str | None = None, dry_run: bool = False,
@@ -142,9 +173,10 @@ def run(store: UserStore, seen: list[dict], send, *, run_id: str | None = None, 
     """Every person, independently: one failure never stops the others."""
     run_id = run_id or uuid.uuid4().hex
     stats: Counter = Counter()
+    ledger: dict = {}
     for uid in store.user_ids():
         try:
-            outcome, n = run_for_user(store, uid, seen, send, run_id, dry_run, now)
+            outcome, n = run_for_user(store, uid, seen, send, run_id, dry_run, now, ledger)
         except UserStoreError:
             outcome, n = "error", 0
         except Exception as e:                 # anything else about one person never stops the others
@@ -152,6 +184,8 @@ def run(store: UserStore, seen: list[dict], send, *, run_id: str | None = None, 
             outcome, n = "error", 0
         stats[outcome] += 1
         stats[f"{outcome}_jobs"] += n
+    for name, n in ledger.items():
+        stats[f"ledger_{name}"] += n
     return dict(stats)
 
 
@@ -175,7 +209,8 @@ def main(argv=None) -> int:
         log.error("personal alerts stopped: %s", type(e).__name__)
         return 1
     log.info("%s: %s", "sent" if args.send else "dry run", json.dumps(stats, sort_keys=True))
-    return 1 if stats.get("failed") or stats.get("error") or stats.get("policy_unavailable") else 0
+    return 1 if (stats.get("failed") or stats.get("uncertain") or stats.get("error")
+                 or stats.get("policy_unavailable")) else 0
 
 
 if __name__ == "__main__":

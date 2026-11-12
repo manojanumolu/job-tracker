@@ -74,6 +74,15 @@ SESSION_MAX_S = 30 * 86400              # never longer than Streamlit's own Goog
 NOTIFY_MODES = ("general", "tailored")
 ONBOARDING_PENDING, ONBOARDING_COMPLETE = "pending", "complete"
 DELIVERY_CLAIMED, DELIVERY_SENT, DELIVERY_PENDING = "claimed", "sent", "pending"
+# Nov 2026: the same delivery states as the shared email (config_store):
+# "sending" is written just before the message goes to Gmail; an abandoned
+# "sending" becomes "uncertain" and is never resent; definite failures retry
+# after a backoff and end as "failed".
+DELIVERY_SENDING, DELIVERY_UNCERTAIN, DELIVERY_FAILED = "sending", "uncertain", "failed"
+DELIVERY_SCHEMA = 2                     # claims made by this code carry it; older ones can't be trusted as unsent
+DELIVERY_CLAIM_TTL_S = 2 * 3600
+DELIVERY_MAX_ATTEMPTS = 5
+DELIVERY_BACKOFF_S = (15 * 60, 30 * 60, 3600, 2 * 3600)
 MAX_PREF_ITEMS, MAX_PREF_LEN = 50, 80
 DISPLAY_NAME_MAX = 60                                      # characters, after trimming
 # profile avatars a person can pick: the company marks in brand_logos.py
@@ -647,15 +656,54 @@ class UserData:
         return f"{self._root}/deliveries/{_hash_id(job_key)}"
 
     @_guard
-    def claim_delivery(self, job_key: str, run_id: str, now: float | None = None) -> bool:
-        """Claim the right to email this person about this job. Exactly one
-        concurrent claimant wins; a sent job can never be claimed again; a
-        released claim (failed send) can be claimed by a later run."""
+    def claim_delivery(self, job_key: str, run_id: str, now: float | None = None,
+                       stats: dict | None = None) -> bool:
+        """Claim the right to email this person about this job — a
+        compare-and-set, so exactly one concurrent claimant wins. Claimable:
+        no ledger entry yet; "pending" once its retry backoff is over; or a
+        "claimed" entry abandoned for DELIVERY_CLAIM_TTL_S by a run that
+        never started sending (recovered). Never: "sending" (an abandoned one
+        becomes "uncertain"), "sent", "failed", "uncertain", or a claim from
+        before DELIVERY_SCHEMA (the old code could have sent it: "uncertain")."""
+        now = time.time() if now is None else now
+        stats = stats if stats is not None else {}
         path = self._delivery_path(job_key)
-        claimed = {"job_key": job_key, "state": DELIVERY_CLAIMED, "claim_id": run_id, "claimed_at": _now_iso(now)}
+        claimed = {"job_key": job_key, "state": DELIVERY_CLAIMED, "claim_id": run_id, "claimed_at": _now_iso(now),
+                   "v": DELIVERY_SCHEMA}
         if self._backend.create(path, claimed):
             return True
-        return self._backend.update_if(path, {"state": DELIVERY_PENDING}, claimed)
+        cur = self._backend.get(path) or {}
+        state = cur.get("state")
+        if state == DELIVERY_PENDING:
+            due = _iso_seconds(cur.get("next_attempt_at"))
+            if due is not None and now < due:
+                return False                              # still in its retry backoff
+            return self._backend.update_if(path, {"state": DELIVERY_PENDING, "claim_id": cur.get("claim_id")}, claimed)
+        if state not in (DELIVERY_CLAIMED, DELIVERY_SENDING):
+            return False
+        expected = {"state": state, "claim_id": cur.get("claim_id")}
+        if state == DELIVERY_CLAIMED and cur.get("v") != DELIVERY_SCHEMA:
+            if self._backend.update_if(path, expected, {"state": DELIVERY_UNCERTAIN, "settled_at": _now_iso(now)}):
+                stats["legacy_claims_uncertain"] = stats.get("legacy_claims_uncertain", 0) + 1
+            return False
+        since = _iso_seconds(cur.get("sending_at" if state == DELIVERY_SENDING else "claimed_at"))
+        if since is not None and now - since <= DELIVERY_CLAIM_TTL_S:
+            return False                                  # a live run may still own it
+        if state == DELIVERY_SENDING:
+            if self._backend.update_if(path, expected, {"state": DELIVERY_UNCERTAIN, "settled_at": _now_iso(now)}):
+                stats["abandoned_sending_uncertain"] = stats.get("abandoned_sending_uncertain", 0) + 1
+            return False
+        won = self._backend.update_if(path, expected, {**claimed, "recovered_from": cur.get("claim_id")})
+        if won:
+            stats["abandoned_claims_recovered"] = stats.get("abandoned_claims_recovered", 0) + 1
+        return won
+
+    @_guard
+    def mark_sending(self, job_key: str, run_id: str, now: float | None = None) -> bool:
+        """Just before the message goes to Gmail: only the run holding the
+        claim can mark it, and only a marked job may be sent."""
+        return self._backend.update_if(self._delivery_path(job_key), {"state": DELIVERY_CLAIMED, "claim_id": run_id},
+                                       {"state": DELIVERY_SENDING, "sending_at": _now_iso(now)})
 
     @_guard
     def save_alert_settings(self, enabled: bool, mode: str, watch_all: bool) -> dict:
@@ -686,13 +734,33 @@ class UserData:
         return stamp
 
     @_guard
-    def finalize_delivery(self, job_key: str, run_id: str, sent: bool, now: float | None = None) -> bool:
-        """Only the run holding the claim can settle it: sent -> "sent"
-        (final), not sent -> "pending" (released for a retry)."""
-        data = ({"state": DELIVERY_SENT, "sent_at": _now_iso(now)} if sent
-                else {"state": DELIVERY_PENDING, "released_at": _now_iso(now)})
-        return self._backend.update_if(self._delivery_path(job_key),
-                                       {"state": DELIVERY_CLAIMED, "claim_id": run_id}, data)
+    def finalize_delivery(self, job_key: str, run_id: str, sent: bool | str, now: float | None = None) -> bool:
+        """Only the run holding the claim can settle it. ``sent``: True or
+        "sent" -> "sent" (final); "uncertain" -> "uncertain" (final, never
+        resent); False or "not_sent" -> back to "pending" after a backoff,
+        or "failed" after DELIVERY_MAX_ATTEMPTS. Works from "sending" (the
+        normal path) and from "claimed" (nothing was marked or sent)."""
+        now = time.time() if now is None else now
+        outcome = "sent" if sent is True else "not_sent" if sent is False else sent
+        path = self._delivery_path(job_key)
+        cur = self._backend.get(path) or {}
+        if cur.get("claim_id") != run_id or cur.get("state") not in (DELIVERY_CLAIMED, DELIVERY_SENDING):
+            return False
+        if outcome == "sent":
+            data = {"state": DELIVERY_SENT, "sent_at": _now_iso(now)}
+        elif outcome == "uncertain":
+            data = {"state": DELIVERY_UNCERTAIN, "settled_at": _now_iso(now)}
+        else:
+            prior = cur.get("attempts")
+            prior = prior if isinstance(prior, int) and not isinstance(prior, bool) and prior > 0 else 0
+            attempts = prior + (1 if cur.get("state") == DELIVERY_SENDING else 0)
+            if attempts >= DELIVERY_MAX_ATTEMPTS:
+                data = {"state": DELIVERY_FAILED, "attempts": attempts, "settled_at": _now_iso(now)}
+            else:
+                wait = DELIVERY_BACKOFF_S[min(max(attempts, 1), len(DELIVERY_BACKOFF_S)) - 1] if attempts else 0
+                data = {"state": DELIVERY_PENDING, "attempts": attempts, "released_at": _now_iso(now),
+                        "next_attempt_at": _now_iso(now + wait)}
+        return self._backend.update_if(path, {"state": cur.get("state"), "claim_id": run_id}, data)
 
     @_guard
     def delivery(self, job_key: str) -> dict | None:

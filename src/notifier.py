@@ -42,14 +42,100 @@ def _message(subject: str, html: str, text: str, images: dict | None = None):
     return msg
 
 
+# ---------------------------------------------------------------------------
+# Delivery outcome (Nov 2026). An email is either definitely NOT sent, or its
+# fate is UNCERTAIN; the callers' ledgers (alerts.py, user_alerts.py) never
+# resend an uncertain one, so a failure can't turn into a duplicate.
+#
+#   connect, TLS, login, MAIL FROM, RCPT TO, and the server refusing DATA
+#       -> DeliveryNotSent: Gmail has not accepted the message; a retry is safe
+#   the message has been handed over (after DATA's 354) and the connection
+#   drops or times out before Gmail's final reply
+#       -> DeliveryUncertain: Gmail may or may not have accepted it
+#   Gmail's final reply is a refusal (an SMTP error code after the message)
+#       -> DeliveryNotSent
+#
+# The window that remains: Gmail's final "250 OK" arrives, then the process
+# dies before the caller records "sent". The caller's durable "sending" mark,
+# written before DATA, makes the next run record that email as "uncertain"
+# instead of sending it again — at most once, never exactly once.
+# ---------------------------------------------------------------------------
+SMTP_HOST, SMTP_PORT = "smtp.gmail.com", 465
+SMTP_TIMEOUT_S = 60            # per socket operation: a hung server can't hold the job until GitHub kills it
+
+
+class DeliveryNotSent(Exception):
+    """The mail server did not accept the message (safe to retry).
+    ``permanent``: the server answered with a 5xx refusal."""
+
+    def __init__(self, stage: str, permanent: bool = False):
+        super().__init__(f"not sent ({stage})")
+        self.stage, self.permanent = stage, permanent
+
+
+class DeliveryUncertain(Exception):
+    """The message was handed to the server but no final answer came back:
+    it may have been delivered. Never retried automatically."""
+
+    def __init__(self, stage: str):
+        super().__init__(f"delivery uncertain ({stage})")
+        self.stage = stage
+
+
+def _code_is_permanent(e: Exception) -> bool:
+    code = getattr(e, "smtp_code", None)
+    if isinstance(e, smtplib.SMTPRecipientsRefused):
+        codes = [c for c, _ in (e.recipients or {}).values()]
+        return bool(codes) and all(500 <= c < 600 for c in codes)
+    return isinstance(code, int) and 500 <= code < 600
+
+
 def _send(to: str, subject: str, html: str, text: str, images: dict | None = None) -> None:
+    """One message to one recipient, in explicit SMTP phases so a failure
+    says whether the message can have been accepted (see above). Exceptions
+    carry the stage only: an SMTP error text can echo the address."""
     addr, pwd = _smtp_creds()
     msg = _message(subject, html, text, images)
     msg["From"] = f"Fresher Job Tracker <{addr}>"
     msg["To"] = to
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login(addr, pwd)
-        server.sendmail(addr, to, msg.as_string())
+    raw = msg.as_string()
+    try:
+        server = smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=SMTP_TIMEOUT_S)
+    except (OSError, smtplib.SMTPException):
+        raise DeliveryNotSent("connect") from None
+    try:
+        stage = "login"
+        try:
+            server.login(addr, pwd)
+            stage = "mail"
+            code, _ = server.mail(addr)
+            if code != 250:
+                raise DeliveryNotSent(stage, permanent=500 <= code < 600)
+            stage = "rcpt"
+            code, _ = server.rcpt(to)
+            if code not in (250, 251):
+                raise DeliveryNotSent(stage, permanent=500 <= code < 600)
+        except DeliveryNotSent:
+            raise
+        except (OSError, smtplib.SMTPException) as e:
+            raise DeliveryNotSent(stage, permanent=_code_is_permanent(e)) from None
+        try:
+            # data() sends DATA, waits for 354, sends the message and waits for
+            # the final reply; it raises SMTPDataError when either reply is a
+            # refusal, i.e. the server did not take the message
+            server.data(raw)
+        except smtplib.SMTPDataError as e:
+            raise DeliveryNotSent("data", permanent=_code_is_permanent(e)) from None
+        except (OSError, smtplib.SMTPException):
+            raise DeliveryUncertain("data") from None
+    finally:
+        try:
+            server.quit()
+        except Exception:                      # the message's fate is already decided above
+            try:
+                server.close()
+            except Exception:
+                pass
 
 
 # ---------------------------------------------------------------------------
