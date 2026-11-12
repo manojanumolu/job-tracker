@@ -5007,5 +5007,81 @@
     "notified": false,
     "repost_last_seen": "2026-11-12",
     "company_id": "cisco"
+  },
+  {
+    "title": "Analyst | FT: Strategy & Ops | Bengaluru | Finance Transformation | Finance Strategy",
+    "url": "https://southasiacareers.deloitte.com/job/Bengaluru-Analyst-FT-Strategy-&-Ops-Bengaluru-Finance-Transformation-Finance-Strategy/61497544/",
+    "company": "Deloitte",
+    "location": "Bengaluru, IN · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-2 years'",
+    "evidence": {
+      "experience": [
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "0-2 years of relevant experience across consulting and/or industry roles, post degree completion would be preferred",
+        "Undergraduate degree from Tier 1 engineering college",
+        "Excellent academic credentials for undergraduate coursework"
+      ],
+      "fresher_evidence": "0-2 years",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Bengaluru-Analyst-FT-Strategy-&-Ops-Bengaluru-Finance-Transformation-Finance-Strategy/61497544",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Bengaluru-Analyst-FT-Strategy-&-Ops-Bengaluru-Finance-Transformation-Finance-Strategy/61497544",
+    "date": "Nov 12, 18:25",
+    "first_seen": "2026-11-12T18:25:52.292436+00:00",
+    "id": "Deloitte_Analyst_|_FT:_Strategy_&_Ops_|_Bengaluru",
+    "notified": false,
+    "repost_last_seen": "2026-11-12",
+    "company_id": "deloitte"
+  },
+  {
+    "title": "Process Associate Order Management - Health Care (Voice)",
+    "url": "https://careers.ibm.com/careers/JobDetail?jobId=142361",
+    "company": "IBM",
+    "location": "GURGAON, IN · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-1 year'",
+    "evidence": {
+      "experience": [
+        "0-1 year"
+      ],
+      "experience_lines": [],
+      "fresher_evidence": "0-1 year",
+      "detail_read": true,
+      "detail_match": "ibm record",
+      "job_id": "",
+      "canonical_url": "https://careers.ibm.com/careers/JobDetail?jobId=142361",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "ibm|url:https://careers.ibm.com/careers/JobDetail?jobId=142361",
+    "date": "Nov 12, 18:28",
+    "first_seen": "2026-11-12T18:28:47.149766+00:00",
+    "id": "IBM_Process_Associate_Order_Management_-_Hea",
+    "notified": false,
+    "repost_last_seen": "2026-11-12",
+    "company_id": "ibm"
   }
 ]
