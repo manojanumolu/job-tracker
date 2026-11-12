@@ -447,6 +447,19 @@ class UserData:
         self._backend.set(self._root, {"avatar": choice}, merge=True)
         return choice
 
+    @_guard
+    def set_skills(self, skills: object) -> list[str]:
+        """The skills this person confirmed (users/{uid}.skills) for match
+        estimates (job_intel.py, Milestone 5): known skill names only, at
+        most job_intel.MAX_SKILLS — never résumé text. Touches nothing else.
+        Returns what was saved ([] clears them)."""
+        import job_intel
+        if not isinstance(skills, (list, tuple, set, frozenset)):
+            raise InvalidInput("skills must be a list")
+        clean = job_intel.clean_skills(skills)
+        self._backend.set(self._root, {"skills": clean}, merge=True)
+        return clean
+
     # -- browser sessions of an email sign-in ------------------------------------
     def _session_path(self, token_hash: str) -> str:
         if not isinstance(token_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", token_hash):

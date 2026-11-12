@@ -313,6 +313,24 @@ def _evidence(listing: Listing, detail: Detail, result: Classification, checks: 
     }
 
 
+def _posting_skills(description: str, limit: int = 15) -> dict[str, str]:
+    """{skill: the posting line that names it} (job_intel's vocabulary), for
+    a job that has already been accepted — Milestone 5's match estimates
+    quote it. It never affects classification, and a failure here only
+    leaves the field out."""
+    try:
+        import job_intel
+        found: dict[str, str] = {}
+        for ln in description.splitlines():
+            ln = ln.strip(" \t·•*-")[:160]
+            for name in job_intel.extract_skills(ln) if ln else ():
+                found.setdefault(name, ln)
+        ordered = [name for name in job_intel.SKILLS if name in found]           # vocabulary order
+        return {name: found[name] for name in ordered[:limit]}
+    except Exception:                      # never let a descriptive field cost a job
+        return {}
+
+
 def decide(company: str, listing: Listing, detail: Detail | None) -> tuple[Classification, dict | None]:
     """Final verdict for one posting. Never accepts without the posting's own
     detail (the safety gate requires it), and every alert must pass all
@@ -339,6 +357,9 @@ def decide(company: str, listing: Listing, detail: Detail | None) -> tuple[Class
     shown = " | ".join(india_segments(location)) or location
     job = _job(title, listing.url, company, result, shown if is_india(detail.location) else location)
     job["evidence"] = _evidence(listing, detail, result, checks)
+    skills = _posting_skills(description)
+    if skills:                             # descriptive only: added after every gate has passed
+        job["evidence"]["skills"] = skills
     if detail.posted_at:                   # only what the source states — never a guess (sources.posting_date)
         job["posted_at"] = detail.posted_at
     return result, job

@@ -126,6 +126,7 @@ import discovery
 import email_policy
 import firebase_auth
 import job_filters
+import job_intel
 import job_page
 import scan_schedule
 import snapshot_cache
@@ -3741,6 +3742,7 @@ def page_job_detail(j: dict):
             with st.expander("Description & requirements"):
                 st.html('<p class="note">The scraper reads the full posting to classify it but only keeps the evidence '
                         'above, not the full description. Open the posting on the company site for the complete details.</p>')
+            job_intel_panel(j)
     with side:
         with st.container(key="job_side"):
             src = [("Portal", escape(_host(url)) if url else "—"),
@@ -4919,6 +4921,7 @@ def page_settings():
     else:
         owner_card()
     personal_summary_card()
+    skills_card()
     with st.container(key="set_appearance"):
         a1, a2 = st.columns([4, 1], vertical_alignment="center")
         with a1:
@@ -5316,6 +5319,130 @@ def page_member_home():
             with f2:
                 st.button("View all jobs", key="btn_all_jobs", icon=":material/arrow_forward:", icon_position="right",
                           on_click=go, args=("jobs",))
+
+
+def _my_skills() -> list[str]:
+    """The skills this person confirmed: their own profile when signed in,
+    else this browser session only (never stored)."""
+    if ME is not None:
+        return job_intel.clean_skills(ME["profile"].get("skills") or [])
+    return job_intel.clean_skills(st.session_state.get("_session_skills") or [])
+
+
+def job_intel_panel(j: dict) -> None:
+    """Job detail: what the posting names (facts, quoted), why it passed
+    (the stored safety checks) and, when the person saved skills, a match
+    ESTIMATE. Nothing here changes whether the job is shown or emailed."""
+    named = job_intel.job_skills(j)
+    fresh = job_intel.freshness(j, NOW)
+    why = job_intel.eligibility_explanation(j)
+    with st.container(key="job_intel"):
+        st.html('<div class="divider"></div><div class="eyebrow">Job intelligence</div>'
+                f'<h2 class="section-title" style="margin-top:4px;">{_ms("insights")}Skills &amp; match</h2>')
+        if named:
+            st.html('<p class="note"><b>Skills this posting names</b> (verified: quoted from the posting)</p><dl class="kv">'
+                    + "".join(f"<dt>{escape(s)}</dt><dd>“{escape(q)}”</dd>" for s, q in named.items()) + "</dl>")
+        else:
+            st.html('<p class="note">The lines this tracker kept from the posting don\'t name a skill it knows. '
+                    'Open the posting for the full requirements.</p>')
+        mine = _my_skills()
+        if mine:
+            m = job_intel.match(mine, j)
+            score = "—" if m["score"] is None else f'{m["score"]}%'
+            have = ", ".join(escape(s) for s, _ in m["matched"]) or "none of them"
+            lack = ", ".join(escape(s) for s, _ in m["missing"]) or "none"
+            st.html(f'<p class="note" role="note"><span class="chip">Estimate</span> <b>Match: {score}</b> '
+                    f'({escape(job_intel.match_label(m["score"]))}). You have {have}; missing: {lack}. '
+                    f'Based only on the {_plural(m["named"], "skill")} named in the posting text kept here — '
+                    'an estimate, not a verdict, and it never hides or filters a job.</p>')
+        else:
+            st.html('<p class="note">Add your skills in Settings → Skills to see how well this job matches (an estimate).</p>')
+        facts = [f'<li>{escape(x["text"])}</li>' for x in why if x["passed"]]
+        when = (f'{escape(fresh["label"])} — {fresh["days"]} day{"s" if fresh["days"] != 1 else ""} since '
+                f'{escape(fresh["source"])}' if fresh["days"] is not None else "Unknown")
+        st.html(f'<p class="note"><b>Freshness:</b> {when}</p>'
+                + (f'<p class="note"><b>Why it is listed</b> (checks it passed)</p><ul class="note">{"".join(facts)}</ul>'
+                   if facts else ""))
+
+
+def _suggest_skills() -> None:
+    """Read a résumé (file or pasted text) IN MEMORY and pre-select the
+    skills it names. Nothing is stored or sent until the person saves the
+    skills they confirm — and then only the skill names."""
+    text = st.session_state.get("skills_paste") or ""
+    up = st.session_state.get("skills_resume")
+    if up is not None:
+        try:
+            text += "\n" + job_intel.resume_text(up.name, up.getvalue())
+        except job_intel.ResumeError as e:
+            st.session_state._skills_msg = ("err", str(e))
+            return
+    found = job_intel.extract_skills(text)
+    if not found:
+        st.session_state._skills_msg = ("err", "No skills this app knows were found. Pick them from the list instead.")
+        return
+    st.session_state.skills_pick = job_intel.clean_skills(set(st.session_state.get("skills_pick") or []) | found)
+    st.session_state._skills_msg = ("ok", f"Found {_plural(len(found), 'skill')} — review them below, then save.")
+
+
+def _save_skills() -> None:
+    picked = job_intel.clean_skills(st.session_state.get("skills_pick") or [])
+    if USER is None:
+        st.session_state._session_skills = picked           # this browser session only
+        st.session_state._skills_msg = ("ok", "Using these skills for this session (sign in to keep them).")
+        return
+    try:
+        saved = USER.set_skills(picked)
+    except user_store.InvalidInput as e:
+        st.session_state._skills_msg = ("err", str(e))
+        return
+    except user_store.UserStoreError:
+        personal_changed()
+        st.session_state._skills_msg = ("err", "Couldn't save your skills right now — try again in a moment.")
+        return
+    _personal_patched(profile={"skills": saved})
+    st.session_state._skills_msg = ("ok", f"Saved {_plural(len(saved), 'skill')} to your account.")
+    toast("Skills saved", "success")
+
+
+def skills_card() -> None:
+    """Settings: the person's skills (optional), their skill gaps across the
+    jobs they can see, and interview topics. Local and deterministic: no AI
+    service, and the résumé never leaves this page."""
+    mine = _my_skills()
+    st.session_state.setdefault("skills_pick", mine)
+    with st.container(key="set_skills"):
+        st.html(f'<div class="set-head"><span class="ic">{_ms("psychology")}</span><div><div class="eyebrow">Optional</div>'
+                '<h2 class="section-title">Skills &amp; interview prep</h2><p class="section-sub">Used only to estimate how '
+                'well jobs match you. A résumé is read on this page, in memory, and never saved or sent anywhere — '
+                'only the skill names you confirm are kept, in your own account.</p></div></div>')
+        with st.expander("Suggest skills from a résumé"):
+            st.file_uploader("Résumé (.txt or .docx)", type=["txt", "docx"], key="skills_resume")
+            st.text_area("…or paste its text", key="skills_paste", height=120)
+            st.button("Suggest skills", key="btn_skills_suggest", icon=":material/auto_awesome:", on_click=_suggest_skills)
+        st.multiselect("Your skills", list(job_intel.SKILLS), key="skills_pick", placeholder="Pick your skills",
+                       max_selections=job_intel.MAX_SKILLS)
+        st.button("Save skills", key="btn_skills_save", type="primary", icon=":material/check:", on_click=_save_skills)
+        msg = st.session_state.pop("_skills_msg", None)
+        if msg:
+            kind, text = msg
+            st.html(f'<div class="name-msg {kind}" role="{"status" if kind == "ok" else "alert"}">'
+                    f'{_ms("check_circle" if kind == "ok" else "error", "s20")}<div>{escape(text)}</div></div>')
+        if not mine:
+            return
+        gaps = job_intel.skill_gaps(mine, _all_active_jobs)
+        if gaps:
+            st.html('<p class="note"><b>Skill gaps</b> — skills the jobs you can see name that you haven\'t listed '
+                    '(counts are facts; the next steps are guidance)</p><dl class="kv">'
+                    + "".join(f'<dt>{escape(g["skill"])}</dt><dd>named by {_plural(g["jobs"], "job")} · '
+                              f'{escape(g["next_step"])}</dd>' for g in gaps) + "</dl>")
+        level = st.segmented_control("Interview topics", list(job_intel.DIFFICULTIES), key="skills_level",
+                                     default="basic", format_func=str.capitalize) or "basic"
+        topics = job_intel.interview_topics(mine + [g["skill"] for g in gaps[:3]], level)
+        if topics:
+            st.html('<dl class="kv">' + "".join(f'<dt>{escape(s)}</dt><dd>{"; ".join(escape(t) for t in ts)}</dd>'
+                                               for s, ts in topics.items()) + "</dl>"
+                    '<p class="note">A curated list, not generated: practise each one out loud.</p>')
 
 
 def personal_summary_card() -> None:
