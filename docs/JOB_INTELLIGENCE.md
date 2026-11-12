@@ -35,10 +35,19 @@ their skills.
 
 ## Known limits
 
-* Coverage. The tracker keeps a posting's title and up to four requirement
-  lines, not the whole description. Of the 112 accepted jobs on 12 Nov 2026,
-  the kept lines name a known skill for 34, and at least two skills (enough
-  for a score) for 15. Scans after this change store `evidence.skills` from
-  the full posting, so coverage grows as jobs are found again.
+* **Coverage of existing jobs is fixed.** The tracker keeps a posting's
+  title and up to four requirement lines, not the whole description. Of the
+  112 accepted jobs on 12 Nov 2026, those lines name a known skill for 34,
+  and at least two skills (enough for a score) for 15.
+* **Only newly discovered jobs get full-posting skills.** The scraper reads
+  the full posting and stores `evidence.skills` only when it first records a
+  job: it skips jobs that are already in the history
+  (`scraper.merge_new_jobs`). So jobs recorded before this release never gain
+  the field. Their skills, match scores and skill gaps stay limited to their
+  title and requirement lines, permanently.
+* **Full-posting coverage is not measured yet.** No stored data holds full
+  postings. Measure it on the first weeks of newly discovered jobs before
+  relying on match scores. Until then, skill gaps count mostly the few jobs
+  whose stored lines name skills.
 * The vocabulary is curated (about 70 skills with aliases) and English-only.
   A skill outside it is invisible here.
