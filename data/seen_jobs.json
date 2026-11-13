@@ -5199,5 +5199,47 @@
     "notified": false,
     "repost_last_seen": "2026-11-13",
     "company_id": "deloitte"
+  },
+  {
+    "title": "Customer Service Associate",
+    "url": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01673851_en&title=Customer+Service+Associate",
+    "company": "Accenture",
+    "location": "Gurugram · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 to 1 year'",
+    "evidence": {
+      "experience": [
+        "0 to 1 year",
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "Years of Experience: 0 to 1 year",
+        "Qualifications: Any Graduation",
+        "Accenture is a global professional services company with leading capabilities in digital, cloud and security.Combining unmatched experience and specialized skil",
+        "Any Graduation   Important Notice"
+      ],
+      "fresher_evidence": "0 to 1 year",
+      "detail_read": true,
+      "detail_match": "ATS record of this listing",
+      "job_id": "accenture:AIOC-S01673851_en",
+      "canonical_url": "https://accenture.com/in-en/careers/jobdetails?id=AIOC-S01673851_en&title=Customer+Service+Associate",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "accenture|accenture:AIOC-S01673851_en",
+    "date": "Nov 13, 21:07",
+    "first_seen": "2026-11-13T21:07:07.425008+00:00",
+    "id": "Accenture_Customer_Service_Associate",
+    "notified": false,
+    "repost_last_seen": "2026-11-13",
+    "company_id": "accenture"
   }
 ]
