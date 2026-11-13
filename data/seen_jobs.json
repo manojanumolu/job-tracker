@@ -3089,7 +3089,7 @@
     "id": "Salesforce_Associate_Technical_Support_Engineer_(Fr",
     "notified": false,
     "company_id": "c1793696368",
-    "repost_last_seen": "2026-11-12"
+    "repost_last_seen": "2026-11-13"
   },
   {
     "title": "Apprentice",
@@ -5083,5 +5083,85 @@
     "notified": false,
     "repost_last_seen": "2026-11-13",
     "company_id": "ibm"
+  },
+  {
+    "title": "IN_Specialist 3_ SAP Commission _SAP_Advisory_Gurgaon",
+    "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Gurugram-10-C/IN--Manager---SAP-CPI--SAP-Advisory-Gurgaon_749246WD-2",
+    "company": "PwC",
+    "location": "Gurugram 10 C · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 to 2 years'",
+    "evidence": {
+      "experience": [
+        "0 to 2 years"
+      ],
+      "experience_lines": [
+        "0 to 2 years",
+        "Years of experience required:"
+      ],
+      "fresher_evidence": "0 to 2 years",
+      "detail_read": true,
+      "detail_match": "Workday record for the listing's path + same title",
+      "job_id": "workday:749246WD-2",
+      "canonical_url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers/job/Gurugram-10-C/IN--Manager---SAP-CPI--SAP-Advisory-Gurgaon_749246WD-2",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "posted_at": "2026-11-13",
+    "uid": "pwc|workday:749246WD-2",
+    "date": "Nov 13, 09:07",
+    "first_seen": "2026-11-13T09:07:01.140841+00:00",
+    "id": "PwC_IN_Specialist_3__SAP_Commission__SAP_Adv",
+    "notified": false,
+    "repost_last_seen": "2026-11-13",
+    "company_id": "pwc"
+  },
+  {
+    "title": "Executive | GST & Pre GST Advisory | Delhi | Indirect Tax",
+    "url": "https://southasiacareers.deloitte.com/job/Delhi-Executive-GST-&-Pre-GST-Advisory-Delhi-Indirect-Tax/61517244/",
+    "company": "Deloitte",
+    "location": "Delhi, IN · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-2 years'",
+    "evidence": {
+      "experience": [
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "Graduates/Semi-Qualified C.A/C.S/MBA(Finance) with 0-2 years of Experience in Indirect Taxation",
+        "As an Executive in our Indirect Tax team, you’ll build and nurture positive working relationships with teams and clients with the intention to exceed client exp",
+        "Working experience in some accounting software like Tally/SAP/Oracle (preferable)"
+      ],
+      "fresher_evidence": "0-2 years",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Delhi-Executive-GST-&-Pre-GST-Advisory-Delhi-Indirect-Tax/61517244",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Delhi-Executive-GST-&-Pre-GST-Advisory-Delhi-Indirect-Tax/61517244",
+    "date": "Nov 13, 09:20",
+    "first_seen": "2026-11-13T09:20:34.486416+00:00",
+    "id": "Deloitte_Executive_|_GST_&_Pre_GST_Advisory_|_Del",
+    "notified": false,
+    "repost_last_seen": "2026-11-13",
+    "company_id": "deloitte"
   }
 ]
