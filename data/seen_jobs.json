@@ -5163,5 +5163,41 @@
     "notified": false,
     "repost_last_seen": "2026-11-13",
     "company_id": "deloitte"
+  },
+  {
+    "title": "Consultant | Oracle Planning | Delhi | Finance Transformation | Business Finance",
+    "url": "https://southasiacareers.deloitte.com/job/Delhi-Consultant-Oracle-Planning-Delhi-Finance-Transformation-Business-Finance/60080644/",
+    "company": "Deloitte",
+    "location": "Delhi, IN · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'Management Trainee'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [],
+      "fresher_evidence": "Management Trainee",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Delhi-Consultant-Oracle-Planning-Delhi-Finance-Transformation-Business-Finance/60080644",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Delhi-Consultant-Oracle-Planning-Delhi-Finance-Transformation-Business-Finance/60080644",
+    "date": "Nov 13, 12:21",
+    "first_seen": "2026-11-13T12:21:44.023178+00:00",
+    "id": "Deloitte_Consultant_|_Oracle_Planning_|_Delhi_|_F",
+    "notified": false,
+    "repost_last_seen": "2026-11-13",
+    "company_id": "deloitte"
   }
 ]
