@@ -1,6 +1,7 @@
 """Notification idempotency: a job is emailed at most once, only when it is
 accepted, not dismissed and its record has been published first."""
 import json
+from datetime import datetime, timedelta, timezone
 import shutil
 import subprocess
 
@@ -136,12 +137,14 @@ def test_final_push_failure_never_causes_a_resend(data):
 def test_send_failure_releases_claim_and_retries(data):
     data([dict(NEW)])
     remote = FakeRemote()
-    assert alerts.run(send=Mailer(fail=True), publisher=remote) == 1
+    t0 = datetime.now(timezone.utc)
+    assert alerts.run(send=Mailer(fail=True), publisher=remote, now=t0) == 1
     rec = remote.seen[0]
     assert rec["notify_state"] == "pending" and not rec.get("notified")
+    assert rec["send_attempts"] == 1 and rec["next_attempt_at"]       # retried after a backoff (Nov 2026)
     data(remote.seen)
     mail = Mailer()
-    assert alerts.run(send=mail, publisher=remote) == 0
+    assert alerts.run(send=mail, publisher=remote, now=t0 + timedelta(minutes=20)) == 0
     assert mail.sent == [["Source-to-Pay Strategic Support Associate"]]
 
 

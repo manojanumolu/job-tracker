@@ -197,20 +197,27 @@ def test_mime_message_has_plain_and_html_parts(monkeypatch):
     sent = {}
 
     class FakeSMTP:
-        def __init__(self, *a):
+        """The SMTP phases _send uses: login, MAIL FROM, RCPT TO, DATA."""
+        def __init__(self, *a, **k):
             pass
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            return False
 
         def login(self, *a):
             pass
 
-        def sendmail(self, frm, to, raw):
-            sent.update(frm=frm, to=to, raw=raw)
+        def mail(self, frm):
+            sent["frm"] = frm
+            return 250, b"ok"
+
+        def rcpt(self, to):
+            sent["to"] = to
+            return 250, b"ok"
+
+        def data(self, raw):
+            sent["raw"] = raw
+            return 250, b"queued"
+
+        def quit(self):
+            pass
 
     monkeypatch.setenv("GMAIL_ADDRESS", "bot@example.com")
     monkeypatch.setenv("GMAIL_APP_PASSWORD", "x")

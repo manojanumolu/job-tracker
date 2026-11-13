@@ -210,6 +210,62 @@ def job_key(job: dict) -> str:
 
 ALERT_CATEGORIES = ("FRESHER", "ENTRY_LEVEL")
 
+# The shared email's delivery states (seen_jobs.json "notify_state", Nov 2026):
+#   pending / absent  may be claimed (after next_attempt_at, if a retry)
+#   claimed           a run owns it (claim_id) but has NOT started sending —
+#                     abandoned for CLAIM_TTL, it is released and retried
+#   sending           written durably just before the message goes to Gmail —
+#                     abandoned for CLAIM_TTL, it becomes "uncertain", never resent
+#   sent              Gmail accepted it (final)
+#   skipped           dismissed before it was sent (final)
+#   failed            MAX_SEND_ATTEMPTS definite failures (final)
+#   uncertain         it may have been delivered: a crash or lost connection
+#                     after the message was handed over (final, never resent)
+NOTIFY_LIVE_CLAIMS = ("claimed", "sending")
+NOTIFY_FINAL = ("sent", "skipped", "failed", "uncertain")
+CLAIM_TTL = timedelta(hours=2)          # far longer than a publish job (30 min cap)
+MAX_SEND_ATTEMPTS = 5
+RETRY_BACKOFF = (timedelta(minutes=15), timedelta(minutes=30), timedelta(hours=1), timedelta(hours=2))
+
+
+def retry_backoff(attempts: int) -> timedelta:
+    """How long after its n-th definite failure a job waits (15 min, 30 min,
+    1 h, then 2 h; runs come every few hours, so this mostly means "next run")."""
+    return RETRY_BACKOFF[min(max(attempts, 1), len(RETRY_BACKOFF)) - 1]
+
+
+def retry_due(job: dict, now: datetime | None = None) -> bool:
+    """A job whose last send failed may be claimed again only after its backoff."""
+    at = _iso_time(job.get("next_attempt_at")) if isinstance(job, dict) else None
+    return at is None or (now or datetime.now(timezone.utc)) >= at
+
+
+def send_attempts(job: dict) -> int:
+    """The failed-send count on a record; anything malformed counts as 0."""
+    n = job.get("send_attempts") if isinstance(job, dict) else None
+    return n if isinstance(n, int) and not isinstance(n, bool) and n > 0 else 0
+
+
+def delivery_health(seen: list[dict], now: datetime | None = None) -> dict[str, int]:
+    """Counts for monitoring the shared email's ledger (no job or address in
+    them): live claims, claims older than CLAIM_TTL, retries waiting, and the
+    final outcomes."""
+    now = now or datetime.now(timezone.utc)
+    out = {k: 0 for k in ("claimed", "sending", "stale_claims", "retrying", "failed", "uncertain", "sent")}
+    for j in seen or []:
+        if not isinstance(j, dict):
+            continue
+        state = j.get("notify_state")
+        if state in out:
+            out[state] += 1
+        if state in NOTIFY_LIVE_CLAIMS:
+            at = _iso_time(j.get("sending_at") if state == "sending" else j.get("claimed_at"))
+            if at is None or now - at > CLAIM_TTL:
+                out["stale_claims"] += 1
+        if state in (None, "", "pending") and send_attempts(j) > 0:
+            out["retrying"] += 1
+    return out
+
 
 # notify_state values that still mean "not emailed yet"; every other value
 # means handled (see alert_pending)

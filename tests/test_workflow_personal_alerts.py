@@ -272,6 +272,9 @@ def test_many_people_one_failure_the_others_still_get_their_email(cli_env, caplo
     assert s.for_uid(B).delivery(job_key(_job(1)))["state"] == "pending"
     assert "b@example.org" not in caplog.text and B not in caplog.text
     cli_env["fail_for"].clear()
+    assert user_alerts.main(["--send"]) == 0 and len(cli_env["sent"]) == 2     # Nov 2026: not inside its backoff
+    path = s.for_uid(B)._delivery_path(job_key(_job(1)))
+    s.backend.set(path, {"next_attempt_at": "2000-01-01T00:00:00Z"}, merge=True)   # ... the backoff is over
     assert user_alerts.main(["--send"]) == 0                           # the retry
     assert sorted(to for to, _ in cli_env["sent"]) == ["a@example.org", "b@example.org", "c@example.org"]
 

@@ -98,6 +98,9 @@ _LOCAL_MODULES = ["scan_schedule", "identity", "locations", "job_classifier", "s
 _reload_changed_local_modules()
 
 from config_store import (
+    NOTIFY_FINAL,
+    NOTIFY_LIVE_CLAIMS,
+    delivery_health,
     dismiss_jobs,
     excluded_from_shared_alerts,
     fetch_remote_json,
@@ -2300,7 +2303,8 @@ def _restore_jobs(keys: set[str]):
         for j in seen:
             if isinstance(j, dict) and job_key(j) in keys:
                 j.pop("dismissed", None)
-                if not j.get("notified") and j.get("notify_state") not in ("claimed", "sent"):
+                # a live claim or a settled delivery (sent / uncertain / failed) keeps its state
+                if not j.get("notified") and j.get("notify_state") not in NOTIFY_LIVE_CLAIMS + NOTIFY_FINAL:
                     j["notify_state"] = "skipped"
         return seen
     return _mutate
@@ -5209,7 +5213,9 @@ def page_job_detail(j: dict):
                    ("Posting", f'<a class="link" href="{escape(url, quote=True)}" target="_blank" rel="noopener">Open posting {_ms("open_in_new", "s16")}</a>' if url else "No link")]
             if not OTHER_ADMIN:      # the shared email's ledger: the primary admin's history, not another admin's
                 src.append(("Email alert", "Sent" if j.get("notified")
-                            else "Sending — delivery not yet confirmed" if j.get("notify_state") == "claimed"
+                            else "Sending — delivery not yet confirmed" if j.get("notify_state") in NOTIFY_LIVE_CLAIMS
+                            else "Delivery unconfirmed — not resent" if j.get("notify_state") == "uncertain"
+                            else "Not sent — gave up after repeated failures" if j.get("notify_state") == "failed"
                             else "Not sent (dismissed)" if j.get("dismissed")
                             else "Pending — goes out after the next check" if shared_alert_pending(j, SHARED_EXCLUDED, SHARED_TAILORING, SHARED_CUTOFF)
                             else "Not emailed"))
@@ -5838,8 +5844,10 @@ def _send_test_click() -> None:
         cooldown.cancel()
         owner_only("send test emails")
     except Exception as ex:
-        cooldown.cancel()                   # nothing was sent: a retry may go at once
-        log.warning("test mail failed: %s", type(ex).__name__)
+        from notifier import DeliveryUncertain
+        if not isinstance(ex, DeliveryUncertain):
+            cooldown.cancel()               # nothing was sent: a retry may go at once
+        log.warning("test mail failed: %s", getattr(ex, "stage", "") or type(ex).__name__)
         st.session_state.test_status = (False, stamp)
         toast("Email isn't configured for this app (Gmail address / app password missing)." if "GMAIL_" in str(ex)
               else "Couldn't send the test email. Check the Gmail app password and try again.", "error")
@@ -5921,6 +5929,17 @@ def page_email():
             <div><dt>Jobs emailed</dt><dd class="num">{len(notified)}</dd></div>
             <div><dt>Waiting to send</dt><dd class="num">{f"{len(pending)} — sent after the next check" if pending else "0"}</dd></div>
           </dl>""")
+        if is_primary():
+            # delivery monitoring (counts only): the states a healthy ledger never shows
+            health = delivery_health(all_records, NOW)
+            issues = [(n, label) for n, label in (
+                (health["stale_claims"], "abandoned claim(s) — settled by the next check"),
+                (health["retrying"], "job(s) waiting to retry after a failed send"),
+                (health["uncertain"], "job(s) with unconfirmed delivery (never resent)"),
+                (health["failed"], "job(s) not sent after repeated failures")) if n]
+            if issues:
+                st.html('<p class="note" role="status">' + _ms("monitor_heart", "s16") + " Delivery: "
+                        + " · ".join(f'<span class="num">{n}</span> {label}' for n, label in issues) + "</p>")
 
     # The recipient is read-only here: the repository is public, so the
     # address lives in the ALERT_RECIPIENT secret rather than in a file the
@@ -5947,7 +5966,7 @@ def page_email():
         steps = [("travel_explore", "A check runs", f"Scheduled {interval_label(SCAN_HOURS).lower()} (GitHub often starts runs later). Every tracked portal is scanned."),
                  ("fact_check", "Only qualifying jobs are kept", "Fresher and entry-level jobs in India whose own posting was read — never a guess from a title."),
                  ("outgoing_mail", "New jobs go out in one email", "Each job is emailed at most once. Dismissed jobs are never emailed, and stay in the history so they're never sent again."),
-                 ("replay", "Failures retry safely", "If sending fails, the jobs stay unsent and the next check retries. A job is recorded before its email goes out, so a failed save can't cause a duplicate.")]
+                 ("replay", "Failures retry safely", "If Gmail refuses or can't be reached, the jobs stay unsent and are retried with growing waits. A job is marked before its email goes out, so a crash or a failed save can't cause a duplicate — at worst a delivery is left unconfirmed, never sent twice.")]
         st.html(f'<div><h2 class="section-title">{_ms("route")}How alerts work</h2></div><ol class="timeline">'
                 + "".join(f'<li class="step"><span class="node">{_ms(i)}</span><div><b>{t}</b><p>{d}</p></div></li>' for i, t, d in steps)
                 + '</ol><p class="note" style="font-size:13px;">Mail is sent through the Gmail account configured in the repository\'s GitHub Actions secrets — credentials are never shown here.</p>')

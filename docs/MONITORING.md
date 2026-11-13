@@ -94,12 +94,64 @@ Add a company only after checking all of the following:
   days ago (`config_store.shared_alert_cutoff`). **Whenever you widen the
   tailoring or the job families, set `shared_alert_since` to the current
   UTC time**, so that saved jobs the old rules held back aren't sent as new.
-  The 7-day bound applies even if you forget. A retry after a failed send is
-  exempt, so a mail outage never loses an alert.
+  The 7-day bound applies even if you forget. A retry after a failed send
+  (or a recovered claim) is exempt from the cutoff; a mail outage longer than
+  five retries ends as `failed` (see below).
 * Personal alerts have their own cutoff: the time the person turned alerts
   on (`user_alerts.py`). They don't use the shared cutoff.
 * Hardware, VLSI and embedded titles are not in the email's job families on
   purpose. The app shows them under "Explore beyond your preferences".
+
+## Email delivery: states, recovery and retries (Nov 2026)
+
+Both ledgers use one state machine: the shared email (`notify_state` in
+`data/seen_jobs.json`, `src/alerts.py`) and each person's emails
+(`users/{uid}/deliveries/*` in Firestore, `src/user_alerts.py`).
+
+| State | Meaning | Next |
+|---|---|---|
+| *(none)* / `pending` | not emailed yet (after a failure: waiting out its backoff, `next_attempt_at`) | claimed by a run |
+| `claimed` | a run holds it (`claim_id`, `claimed_at`); nothing has been sent | `sending`; or, abandoned for 2 h, back to `pending` |
+| `sending` | marked just before the message goes to Gmail (`sending_at`) | `sent` / `pending` / `failed` / `uncertain` |
+| `sent` | Gmail accepted it | final |
+| `skipped` | dismissed before it went out | final |
+| `failed` | Gmail refused it or was unreachable 5 times (`MAX_SEND_ATTEMPTS`) | final |
+| `uncertain` | it may have been delivered: the connection dropped after the message was handed over, or the run died while `sending` | final, **never resent** |
+
+* **Every transition is a compare-and-swap.** Shared: each step is pushed to
+  git and `repo_sync.merge_record` decides every race (the first published
+  claim wins; a release or recovery lands only on the claim it saw). Personal:
+  a Firestore write conditioned on the document's last update time
+  (`FirestoreBackend.update_if`). Of two concurrent workers, one claims a job
+  and the other finds nothing of its own to send.
+* **Failures from Gmail.** Connecting, logging in, or Gmail refusing the
+  sender, the recipient or the message means it was definitely not sent:
+  retried after 15 min, 30 min, 1 h, 2 h, 2 h (only when a check runs), then
+  `failed`. A timeout or disconnect after the message was handed over means
+  the outcome is unknown: `uncertain`.
+* **Crashes.** Before `sending` is recorded: nothing was sent, and a run 2 h
+  later recovers the claim and sends it. After: never resent.
+* **Guarantee: at most once, not exactly once.** The window that remains is
+  between Gmail accepting a message (its `250` reply) and the run recording
+  `sent`. If the run dies or can't save in that window, the job stays
+  `sending`, the next run records it `uncertain`, and it is not sent again —
+  the person probably got it, but the ledger can't prove it. SMTP has no
+  idempotency key, so closing this window would mean risking duplicates.
+* **Claims left by the old code** (before 12 Nov 2026: no `claim_id` in the
+  shared ledger, no `v` in a personal one) may already have been emailed:
+  they become `uncertain`, never resent.
+* **Monitoring.** Each shared run logs `delivery: this run {...} · ledger
+  {...}` — counts only (`abandoned_claims_recovered`,
+  `abandoned_sending_uncertain`, `legacy_claims_uncertain`,
+  `claims_lost_to_another_run`, `retries_scheduled`, `failed_final`,
+  `uncertain`, `sent`; ledger: `claimed`, `sending`, `stale_claims`,
+  `retrying`, `failed`, `uncertain`, `sent`). The personal step logs its
+  counts with `ledger_*` keys. The primary admin's Email page lists any
+  abandoned, retrying, uncertain or failed deliveries.
+* **To resend a `failed` job** (after fixing the cause), set its
+  `notify_state` back to `pending` and remove `send_attempts` and
+  `next_attempt_at` in `data/seen_jobs.json`. Don't do this for `uncertain`
+  jobs unless you know the email didn't arrive.
 
 ## Posting dates and "new"
 

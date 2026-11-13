@@ -30,11 +30,15 @@ log = logging.getLogger("repo_sync")
 BASE = Path(__file__).resolve().parent.parent          # the repository root (this file is in src/)
 DATA_FILES = ("data/seen_jobs.json", "data/companies.json")
 SCAN_FIELDS = ("status", "status_reason", "scan_note", "last_checked", "last_success", "last_job", "scan", "source")
-_STATE_RANK = {None: 0, "": 0, "pending": 0, "claimed": 1, "sent": 2, "skipped": 2}
-# a state this version doesn't know (written by a newer one: "sending",
-# "uncertain", "failed") ranks as settled, so a merge never turns it back
-# into a pending or claimed record (Nov 2026, rollback safety)
-_UNKNOWN_RANK = 2
+_STATE_RANK = {None: 0, "": 0, "pending": 0, "claimed": 1, "sending": 2,
+               "sent": 3, "skipped": 3, "failed": 3, "uncertain": 3}
+_LIVE = ("claimed", "sending")
+# the fields that say who holds a claim and how far it got
+_CLAIM_FIELDS = ("claim_id", "claimed_at", "sending_at")
+# a state this version doesn't know (written by a newer one) ranks as
+# settled, so a merge never turns it back into a pending or claimed record
+# (Nov 2026, rollback and forward compatibility)
+_UNKNOWN_RANK = 3
 
 
 def _rank(state) -> int:
@@ -45,18 +49,65 @@ def record_key(job: dict) -> str:
     return job.get("uid") or job_uid(job.get("company", ""), job.get("url", ""))
 
 
+def _owner(rec: dict) -> str:
+    """Who holds a claim: its claim_id, or for a claim made before claim ids
+    (Nov 2026) its claimed_at."""
+    return rec.get("claim_id") or rec.get("claimed_at") or ""
+
+
 def merge_record(remote: dict, local: dict) -> dict:
+    """One job, merged from the latest remote copy and this run's copy.
+    The publish is a compare-and-swap: a push only lands on the remote it
+    was merged with, so the rules here decide every race —
+
+      * flags only move forward (dismissed, notified, the state's rank);
+      * a live claim belongs to whoever made it first: a different run's
+        claim on the remote is kept, and this run's competing claim or
+        "sending" mark is dropped (it then finds nothing of its own to send);
+      * "sending" lands only on this run's own claim — never over a claim
+        that was released or taken meanwhile;
+      * a release (back to "pending", for a retry or a recovered claim)
+        lands only when it names the claim the remote still holds."""
     merged = {**remote, **local}
     merged["dismissed"] = bool(remote.get("dismissed") or local.get("dismissed"))
     merged["notified"] = bool(remote.get("notified") or local.get("notified"))
     rs, ls = remote.get("notify_state"), local.get("notify_state")
     state = rs if _rank(rs) >= _rank(ls) else ls
-    # a run that claimed a job and then failed to send releases *its own*
-    # claim so the next run retries; any other claim is never undone
+    keep_remote_claim = False
+    if rs in _LIVE and ls in _LIVE + ("sent", "skipped", "failed", "uncertain") and _owner(local) != _owner(remote):
+        # another run holds this claim: nothing of ours changes it
+        state, keep_remote_claim = rs, True
+    elif ls in _LIVE and rs in ("sent", "skipped", "failed", "uncertain"):
+        # settled elsewhere while we held a stale copy: the settled record,
+        # and whose claim it was, stand
+        state, keep_remote_claim = rs, True
+    elif ls == "sending" and rs not in _LIVE:
+        # our claim was released or finished elsewhere before we marked it:
+        # we must not send it, so the remote state stands
+        state, keep_remote_claim = rs, True
+    # a run that claimed a job and then failed to send (or a later run that
+    # recovered an abandoned claim) releases *that* claim so it is retried;
+    # any other claim is never undone
+    # — and only from the state it saw: a recovery releases an abandoned
+    # "claimed", never a "sending" (which may have reached Gmail)
     released = local.get("released_claim")
-    if ls == "pending" and rs == "claimed" and released and released == remote.get("claimed_at"):
+    released_ok = (bool(released) and released == _owner(remote) and rs in _LIVE
+                   and local.get("released_from", rs) == rs)
+    if ls == "pending" and released_ok:
         state = "pending"
-        merged.pop("claimed_at", None)
+        keep_remote_claim = False
+        for k in _CLAIM_FIELDS:
+            merged.pop(k, None)
+    elif ls == "claimed" and rs == "claimed" and released_ok and local.get("released_from") == "claimed":
+        # a run recovered the abandoned claim and claimed the job itself in
+        # the same publish: its claim replaces the abandoned one
+        state, keep_remote_claim = "claimed", False
+    if keep_remote_claim:
+        for k in _CLAIM_FIELDS + ("send_attempts", "next_attempt_at", "released_claim", "released_from"):
+            if k in remote:
+                merged[k] = remote[k]
+            else:
+                merged.pop(k, None)
     # (legacy records without a notify_state are left exactly as they are)
     if merged["notified"] and (rs or ls):
         state = "sent"
@@ -67,6 +118,9 @@ def merge_record(remote: dict, local: dict) -> dict:
     for k in ("claimed_at", "notified_at"):
         if remote.get(k) and not local.get(k) and not (k == "claimed_at" and state == "pending"):
             merged[k] = remote[k]
+    attempts = [a for a in (remote.get("send_attempts"), local.get("send_attempts")) if isinstance(a, int)]
+    if attempts and not keep_remote_claim:
+        merged["send_attempts"] = max(attempts)
     # the repost-window sighting (scraper.REPOST_LAST_SEEN, "YYYY-MM-DD")
     # only moves forward, like every other flag here
     stamps = [v for v in (remote.get("repost_last_seen"), local.get("repost_last_seen")) if isinstance(v, str) and v]

@@ -234,6 +234,52 @@ def test_concurrent_release_and_reclaim(emu):
         assert a.delivery(key)["state"] == "claimed"
 
 
+def test_delivery_recovery_and_sending_mark_on_firestore(emu):
+    """Milestone 2 transitions as real Firestore compare-and-sets: an
+    abandoned claim is recovered by exactly one of several runs, only the
+    claimant can mark "sending", an abandoned "sending" becomes "uncertain"
+    (never reclaimed), and a pre-milestone claim is never sent."""
+    a = emu.for_uid(A)
+    a.ensure_profile("a@example.org")
+    t0 = time.time()
+    assert a.claim_delivery("m2-job", "dead", now=t0)
+    late = t0 + user_store.DELIVERY_CLAIM_TTL_S + 60
+    wins = []
+    threads = [threading.Thread(target=lambda i=i: wins.append(a.claim_delivery("m2-job", f"run-{i}", now=late)))
+               for i in range(8)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert wins.count(True) == 1
+    owner = a.delivery("m2-job")["claim_id"]
+    assert a.delivery("m2-job")["recovered_from"] == "dead"
+    marks = []
+    threads = [threading.Thread(target=lambda r=r: marks.append(a.mark_sending("m2-job", r, now=late)))
+               for r in [owner] + [f"run-{i}" for i in range(8) if f"run-{i}" != owner]]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert marks.count(True) == 1 and a.delivery("m2-job")["state"] == "sending"
+    stats = {}
+    later = late + user_store.DELIVERY_CLAIM_TTL_S + 60
+    assert not a.claim_delivery("m2-job", "run-x", now=later, stats=stats)
+    assert a.delivery("m2-job")["state"] == "uncertain" and stats == {"abandoned_sending_uncertain": 1}
+    assert not a.claim_delivery("m2-job", "run-y", now=later + 10 ** 6)
+
+    # a claim written by the code before this milestone (no schema marker)
+    path = a._delivery_path("legacy-job")
+    emu.backend.set(path, {"job_key": "legacy-job", "state": "claimed", "claim_id": "old",
+                           "claimed_at": "2026-01-01T00:00:00Z"})
+    assert not a.claim_delivery("legacy-job", "run-z", stats=stats)
+    assert a.delivery("legacy-job")["state"] == "uncertain"
+
+    # a definite failure backs off, then fails for good after the limit
+    assert a.claim_delivery("retry-job", "r0", now=t0) and a.mark_sending("retry-job", "r0", now=t0)
+    assert a.finalize_delivery("retry-job", "r0", "not_sent", now=t0)
+    doc = a.delivery("retry-job")
+    assert doc["state"] == "pending" and doc["attempts"] == 1
+    assert not a.claim_delivery("retry-job", "r1", now=t0 + 60)                 # inside the backoff
+    assert a.claim_delivery("retry-job", "r1", now=t0 + 16 * 60)
+
+
 # --- the notifier end to end (Auth emulator is the source of truth) -------------
 
 PASSED = {"checks": {"india": True, "experience": True}}
@@ -276,7 +322,11 @@ def test_send_failure_is_retried_and_sent_jobs_never_again(emu):
     assert stats["sent"] == 1 and stats["failed"] == 1 and flaky.sent == [("b@example.org", [job_key(seen[0])])]
     ok = Mailer()
     user_alerts.run(emu, seen, ok, run_id="r2")
-    user_alerts.run(emu, seen, ok, run_id="r3")
+    assert ok.sent == []                                  # Nov 2026: not inside the retry backoff
+    from datetime import datetime, timedelta, timezone
+    later = datetime.now(timezone.utc) + timedelta(hours=7)
+    user_alerts.run(emu, seen, ok, run_id="r3", now=later)
+    user_alerts.run(emu, seen, ok, run_id="r4", now=later + timedelta(hours=7))
     assert ok.sent == [("a@example.org", [job_key(seen[0])])]
 
 
