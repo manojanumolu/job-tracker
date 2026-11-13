@@ -43,18 +43,30 @@ jobs:
       contents: read
       actions: write   # dispatch Check Jobs and the next run of this workflow
     steps:
-      - name: Checkout schedule inputs
+      - name: Checkout the schedule code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
           sparse-checkout: |
             src/scan_schedule.py
+          sparse-checkout-cone-mode: false
+
+      # the data branch (JT_DATA_BRANCH, or this run's branch): JSON only
+      - name: Checkout schedule inputs
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ vars.JT_DATA_BRANCH || github.ref }}
+          path: jt-data
+          persist-credentials: false
+          sparse-checkout: |
             data/settings.json
             data/companies.json
           sparse-checkout-cone-mode: false
 
       - name: Work out when the next window opens
         id: wait
+        env:
+          JT_DATA_ROOT: jt-data
         run: python3 src/scan_schedule.py wait >> "$GITHUB_OUTPUT"
 
       - name: Wait until then

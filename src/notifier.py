@@ -330,7 +330,12 @@ def email_logos(jobs: list[dict], base: Path | None = None) -> tuple[dict, list[
     """({company name (lower): (cid, bytes, subtype)} for these jobs'
     companies, the tracked companies' names in order). ({}, []) if the
     files are missing or unreadable."""
-    base = base or BASE
+    if base is None:
+        from data_location import DataLocationError, data_root
+        try:
+            base = data_root()                    # the data checkout (JT_DATA_ROOT): data files only
+        except DataLocationError:
+            return {}, []
     try:
         import company_logos
         companies = [c for c in json.loads((base / "data" / "companies.json").read_text("utf-8")) if isinstance(c, dict)]

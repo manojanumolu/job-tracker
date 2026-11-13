@@ -44,7 +44,18 @@ STEP_MARK = "\n      # Personal alerts (per-user"
 # browser mandatory, extra fonts best effort, then a launch check — after an
 # Ubuntu mirror outage failed every scan over optional fonts). No other
 # command, step or permission changed; the publish steps are untouched.
-GLOBAL_SCAN_STEPS_SHA256 = "cce215dd3a683de906727fa2d939dd565b6aa4fc83bf9214d4fec762b6fc01a6"
+# Re-pinned 2026-11-12 (Milestone 3, docs/SECURITY_GITHUB.md): code and data
+# are checked out apart. The scrape job's code checkout loses "ref:" (the
+# run's own commit) and a "Checkout the data" step puts the data branch
+# (vars.JT_DATA_BRANCH || github.ref) in ./jt-data without credentials; the
+# scraper gets JT_DATA_ROOT=jt-data and the artifact paths become
+# jt-data/data/*.json. The publish job's code checkout stores no credentials;
+# "Checkout the data branch" (fetch-depth 0) holds the push credentials; the
+# hand-over and alerts.py get JT_DATA_ROOT, PUBLISH_BRANCH becomes
+# vars.JT_DATA_BRANCH || github.ref_name, and git config runs in jt-data.
+# Same commands (scraper.py, scan_handoff.py, alerts.py), same secrets and
+# permissions; the job gains "environment: production" (outside the steps).
+GLOBAL_SCAN_STEPS_SHA256 = "05d8ccd5079c6a606ca3b9d7940934cababdb0234a5216d78a33a59bdff6041d"
 
 
 def _wf() -> str:
@@ -90,18 +101,19 @@ def test_the_scan_commands_are_unchanged():
     assert scrape["Run scraper"].rstrip().endswith("run: python src/scraper.py\n        working-directory: .".rstrip())
     run = publish["Publish results and send email alerts"].split("run: |", 1)[1].strip().split("\n\n", 1)[0]
     assert [line.strip() for line in run.splitlines()] == [
-        'git config user.name  "github-actions[bot]"',
-        'git config user.email "github-actions[bot]@users.noreply.github.com"',
+        'git -C jt-data config user.name  "github-actions[bot]"',
+        'git -C jt-data config user.email "github-actions[bot]@users.noreply.github.com"',
         "python src/alerts.py"]
 
 
 def test_the_personal_step_runs_last_and_can_never_fail_the_job():
     steps = _steps(_wf())
     names = list(steps)
-    assert names == ["Checkout repo", "Set up Python", "Install dependencies", "Download the scan results",
-                     "Take over the scan results", "Publish results and send email alerts",
-                     "Send personal email alerts"]
-    assert list(_steps(_wf(), "scrape")) == ["Checkout repo", "Set up Python", "Install dependencies",
+    assert names == ["Checkout repo", "Checkout the data branch", "Set up Python", "Install dependencies",
+                     "Download the scan results", "Take over the scan results",
+                     "Publish results and send email alerts", "Send personal email alerts"]
+    assert list(_steps(_wf(), "scrape")) == ["Checkout repo", "Checkout the data", "Set up Python",
+                                             "Install dependencies",
                                              "Install Chromium and check that it launches", "Run scraper",
                                              "Hand the results to the publish job"]
     step = steps["Send personal email alerts"]
@@ -119,7 +131,8 @@ def test_the_personal_step_gets_only_the_secrets_it_needs():
     env = [line.strip() for line in step.split("env:", 1)[1].split("run:", 1)[0].splitlines() if line.strip()]
     assert env == ["FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}",
                    "GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}",
-                   "GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}"]
+                   "GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}",
+                   "JT_DATA_ROOT: jt-data"]                 # where the data is: not a secret
     wf = _wf()
     # only the two personal-alert steps (after a scan, and the 6-hourly pass) see the key
     assert wf.count("secrets.FIREBASE_SERVICE_ACCOUNT") == 2

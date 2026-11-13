@@ -56,9 +56,12 @@ from pathlib import Path
 from urllib.parse import urljoin, urlparse
 from urllib.robotparser import RobotFileParser
 
+from data_location import data_root
+
 log = logging.getLogger("company_logos")
 
 BASE = Path(__file__).resolve().parent.parent          # the repository root (this file is in src/)
+DATA_ROOT = data_root()               # the data checkout (JT_DATA_ROOT, data_location.py)
 LOGOS_FILE = "data/logos.json"            # relative to the repository root (and its GitHub path)
 USER_AGENT = "FresherJobTracker-LogoFinder/1.0 (personal job tracker; fetches a site's own icon once)"
 TIMEOUT_S, CONNECT_TIMEOUT_S = 6.0, 4.0
@@ -723,7 +726,7 @@ def email_image(entry: dict) -> tuple[bytes, str] | None:
 def load_local(path: Path | None = None) -> dict:
     """logos.json from the checkout; {} if missing or unreadable."""
     try:
-        return json.loads((path or BASE / LOGOS_FILE).read_text("utf-8"))
+        return json.loads((path or DATA_ROOT / LOGOS_FILE).read_text("utf-8"))
     except (OSError, ValueError):
         return {}
 
@@ -747,7 +750,7 @@ def main(argv=None) -> int:
         log.info("logos: %s", "published (or already up to date)" if ok else "could not publish")
         return 0 if ok else 1
     try:
-        companies = json.loads((BASE / "data" / "companies.json").read_text("utf-8"))
+        companies = json.loads((DATA_ROOT / "data" / "companies.json").read_text("utf-8"))
     except (OSError, ValueError):
         log.warning("companies.json unreadable; nothing to do")
         return 0
@@ -761,7 +764,7 @@ def main(argv=None) -> int:
         log.info("logos: %s %d entr%s", "published" if ok else "could not publish", len(changed),
                  "y" if len(changed) == 1 else "ies")
         return 0 if ok else 1
-    (BASE / LOGOS_FILE).write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
+    (DATA_ROOT / LOGOS_FILE).write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
     log.info("logos: wrote %s (%d changed)", LOGOS_FILE, len(changed))
     return 0
 

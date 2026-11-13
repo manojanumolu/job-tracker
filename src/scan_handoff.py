@@ -21,8 +21,10 @@ import json
 import sys
 from pathlib import Path
 
+from data_location import data_root
+
 BASE = Path(__file__).resolve().parent.parent          # the repository root (this file is in src/)
-DATA = BASE / "data"                 # where the handed-over files go
+DATA = data_root() / "data"          # where the handed-over files go (the data checkout, JT_DATA_ROOT)
 MAX_BYTES = 20 * 1024 * 1024
 # the only files that may be handed over, and the JSON shape each must have
 SHAPES = {

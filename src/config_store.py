@@ -6,8 +6,11 @@ import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from data_location import data_branch, data_root
+
 BASE = Path(__file__).resolve().parent.parent          # the repository root (this file is in src/)
-DATA = BASE / "data"
+# the data checkout: this one unless JT_DATA_ROOT names another (data_location.py)
+DATA = data_root() / "data"
 COMPANIES_FILE = DATA / "companies.json"
 SETTINGS_FILE = DATA / "settings.json"
 SEEN_FILE = DATA / "seen_jobs.json"
@@ -68,10 +71,10 @@ def _commit_file(local_path: Path, repo_path: str, message: str) -> None:
         repo = g.get_repo(GITHUB_REPO)
         content = local_path.read_text(encoding="utf-8")
         try:
-            existing = repo.get_contents(repo_path)
-            repo.update_file(repo_path, message, content, existing.sha)
+            existing = repo.get_contents(repo_path, **_ref())
+            repo.update_file(repo_path, message, content, existing.sha, **_branch())
         except GithubException:
-            repo.create_file(repo_path, message, content)
+            repo.create_file(repo_path, message, content, **_branch())
     except Exception as e:
         print(f"[config_store] GitHub commit failed for {repo_path}: {e}")
 
@@ -102,6 +105,18 @@ def friendly_github_error(e: Exception) -> str:
     return "GitHub couldn't be reached right now — please try again in a minute."
 
 
+def _ref() -> dict:
+    """get_contents() keyword for the data branch ({} = the default branch)."""
+    branch = data_branch()
+    return {"ref": branch} if branch else {}
+
+
+def _branch() -> dict:
+    """create_file() / update_file() keyword for the data branch."""
+    branch = data_branch()
+    return {"branch": branch} if branch else {}
+
+
 def _get_repo(token: str):
     """The repository handle, lazily: no request is made for the repository
     itself, so a read or a save starts with the request it actually needs
@@ -127,7 +142,7 @@ def fetch_remote_json(repo_paths: list[str], token: str | None = None, repo=None
     def _one(path: str, handle):
         try:
             handle = handle or _get_repo(token)
-            return json.loads(handle.get_contents(path).decoded_content.decode("utf-8"))
+            return json.loads(handle.get_contents(path, **_ref()).decoded_content.decode("utf-8"))
         except Exception as e:
             log.warning("Could not fetch %s from GitHub: %s", path, e)
             return None
@@ -168,7 +183,7 @@ def update_json(local_path: Path, repo_path: str, mutate, default, message: str,
     for _attempt in range(_MAX_CONFLICT_RETRIES):
         try:
             try:
-                existing = repo.get_contents(repo_path)
+                existing = repo.get_contents(repo_path, **_ref())
                 current = json.loads(existing.decoded_content.decode("utf-8"))
             except GithubException as ge:
                 if ge.status != 404:
@@ -177,9 +192,9 @@ def update_json(local_path: Path, repo_path: str, mutate, default, message: str,
             data = mutate(current)
             content = json.dumps(data, indent=2, ensure_ascii=False)
             if existing is None:
-                repo.create_file(repo_path, message, content)
+                repo.create_file(repo_path, message, content, **_branch())
             else:
-                repo.update_file(repo_path, message, content, existing.sha)
+                repo.update_file(repo_path, message, content, existing.sha, **_branch())
             _save(local_path, data)
             return data, True, ""
         except GithubException as ge:

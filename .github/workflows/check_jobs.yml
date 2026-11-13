@@ -28,6 +28,13 @@ on:
 # Nothing is granted by default; each job asks for exactly what it needs.
 # Third-party actions are pinned to full commit SHAs (the tag in the comment)
 # and Python packages to hashed lockfiles (requirements*.txt).
+#
+# Code and data are checked out apart (Nov 2026, docs/SECURITY_GITHUB.md):
+# the code is the commit this run was started from; the data (data/*.json)
+# is the tip of the data branch — the repository variable JT_DATA_BRANCH, or
+# this run's branch when it is unset — in ./jt-data, read as JSON only and
+# never imported or executed. Jobs that hold secrets run in the "production"
+# environment, so its branch rules decide which refs may use them.
 permissions: {}
 
 # queue overlapping runs instead of letting them race each other's git push
@@ -45,6 +52,14 @@ jobs:
       scan: ${{ steps.plan.outputs.scan }}
       deliver: ${{ steps.plan.outputs.deliver }}
     steps:
+      - name: Checkout the schedule code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            src/scan_schedule.py
+          sparse-checkout-cone-mode: false
+
       - name: Checkout schedule inputs
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -52,10 +67,10 @@ jobs:
           # waited in the check-jobs queue behind a scan must see that scan's
           # companies.json, or it plans a second scan of the same window
           # (seen 2026-11-05 18:28 UTC, run 1224)
-          ref: ${{ github.ref }}
+          ref: ${{ vars.JT_DATA_BRANCH || github.ref }}
+          path: jt-data
           persist-credentials: false
           sparse-checkout: |
-            src/scan_schedule.py
             data/settings.json
             data/companies.json
           sparse-checkout-cone-mode: false
@@ -63,6 +78,7 @@ jobs:
       - name: Decide what this run does
         id: plan
         env:
+          JT_DATA_ROOT: jt-data
           EVENT: ${{ github.event_name }}
           SCHEDULE: ${{ github.event.schedule }}
           MODE: ${{ inputs.mode }}
@@ -87,8 +103,16 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          ref: ${{ github.ref }}       # the latest data, as the plan job saw it
           persist-credentials: false
+
+      - name: Checkout the data
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ vars.JT_DATA_BRANCH || github.ref }}       # the latest data, as the plan job saw it
+          path: jt-data
+          persist-credentials: false
+          sparse-checkout: data
+          sparse-checkout-cone-mode: false
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
@@ -105,6 +129,8 @@ jobs:
         run: bash .github/scripts/install-chromium.sh
 
       - name: Run scraper
+        env:
+          JT_DATA_ROOT: jt-data
         run: python src/scraper.py
         working-directory: .
 
@@ -113,8 +139,8 @@ jobs:
         with:
           name: scan-results
           path: |
-            data/companies.json
-            data/seen_jobs.json
+            jt-data/data/companies.json
+            jt-data/data/seen_jobs.json
           if-no-files-found: error
           retention-days: 1
 
@@ -128,13 +154,23 @@ jobs:
     # git pushes + one email (~1 min) and the personal step (its own 10 min
     # cap); alerts.py claims before it sends, so a timeout never re-sends
     timeout-minutes: 30
+    environment: production
     permissions:
       contents: write
 
     steps:
+      # the code that runs here, with no stored credentials: the push below
+      # happens in the data checkout, whose files are never executed
       - name: Checkout repo
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          persist-credentials: false
+
+      - name: Checkout the data branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ vars.JT_DATA_BRANCH || github.ref_name }}
+          path: jt-data
           fetch-depth: 0   # full history so alerts.py can fetch and build on the latest branch tip
 
       - name: Set up Python
@@ -152,6 +188,8 @@ jobs:
           path: scan-results
 
       - name: Take over the scan results
+        env:
+          JT_DATA_ROOT: jt-data
         run: python src/scan_handoff.py scan-results companies.json seen_jobs.json
 
       # Publish the scrape results and email new alerts — at most once per job.
@@ -166,10 +204,11 @@ jobs:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           # the private alert address (alerts.py reads nothing else)
           ALERT_RECIPIENT: ${{ secrets.ALERT_RECIPIENT }}
-          PUBLISH_BRANCH: ${{ github.ref_name }}
+          PUBLISH_BRANCH: ${{ vars.JT_DATA_BRANCH || github.ref_name }}
+          JT_DATA_ROOT: jt-data
         run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git -C jt-data config user.name  "github-actions[bot]"
+          git -C jt-data config user.email "github-actions[bot]@users.noreply.github.com"
           python src/alerts.py
 
       # Personal alerts (per-user, Phase 3): one email per person who turned
@@ -187,6 +226,7 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          JT_DATA_ROOT: jt-data
         run: python src/user_alerts.py --send
 
   # Safety net for the scan scheduler chain (scan_scheduler.yml): if no run
@@ -222,6 +262,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     continue-on-error: true
+    environment: production
     permissions:
       contents: read
     steps:
@@ -229,6 +270,15 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
+
+      - name: Checkout the data
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ vars.JT_DATA_BRANCH || github.ref }}
+          path: jt-data
+          persist-credentials: false
+          sparse-checkout: data
+          sparse-checkout-cone-mode: false
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
@@ -243,4 +293,5 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          JT_DATA_ROOT: jt-data
         run: python src/user_alerts.py --send
