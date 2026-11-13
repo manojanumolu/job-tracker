@@ -1,5 +1,5 @@
 # Top-level dependencies (edit this file, then regenerate requirements.txt — see scripts/lock_dependencies.sh).
-streamlit>=1.65.0
+streamlit>=1.67.0
 httpx>=0.27.0
 PyGithub>=2.3.0
 python-dotenv>=1.0.1
