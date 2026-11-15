@@ -15,6 +15,7 @@ Personal (here), one tree per person:
   users/{uid}/dismissed/{id}     jobs this person dismissed (job_key inside)
   users/{uid}/deliveries/{id}    per-user email ledger: claim -> send -> finalize
   users/{uid}/applications/{id}  Application Tracker (admins only; applications.py)
+  users/{uid}/resumes/{id} ...    Résumé & Job Intelligence (admins only; resume_store.py)
 
 Isolation is structural: a UserData object is bound to ONE uid when it is
 created (by the app, from the server-side signed-in account) and every
@@ -497,10 +498,13 @@ class UserData:
     @_guard
     def delete_personal_data(self) -> int:
         """Delete everything this person owns in the store — users/{uid} and
-        its companies, dismissed, deliveries, sessions and applications — and nothing
+        its companies, dismissed, deliveries, sessions, applications and the
+        Résumé & Job Intelligence collections (resume_store.COLLECTIONS) — and nothing
         else (shared listings, catalogue and settings live in GitHub, not
         here). Returns how many documents were deleted."""
-        paths = [f"{self._root}/{sub}/{doc_id}" for sub in ("companies", "dismissed", "deliveries", "sessions", "applications")
+        from resume_store import COLLECTIONS as RESUME_COLLECTIONS     # M6: résumés, analyses, practice
+        paths = [f"{self._root}/{sub}/{doc_id}" for sub in ("companies", "dismissed", "deliveries", "sessions", "applications",
+                                                          *RESUME_COLLECTIONS)
                  for doc_id in self._backend.list(f"{self._root}/{sub}")]
         if paths:
             self._backend.delete_many(paths)
@@ -514,6 +518,14 @@ class UserData:
         operation; the app passes its admin-and-owner check."""
         from applications import ApplicationBook
         return ApplicationBook(self._backend, self.uid, authorize)
+
+    def resume_library(self, authorize):
+        """This person's Résumé & Job Intelligence library
+        (resume_store.ResumeLibrary), bound to this same uid. ``authorize``
+        is asked before every operation; the app passes its
+        admin-and-owner check (the same one as the Application Tracker)."""
+        from resume_store import ResumeLibrary
+        return ResumeLibrary(self._backend, self.uid, authorize)
 
     @_guard
     def record_activity(self, now: float | None = None) -> str:

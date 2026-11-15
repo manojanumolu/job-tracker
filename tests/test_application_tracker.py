@@ -782,7 +782,8 @@ def _add_manually(at, **values):
 
 def test_admins_see_the_tracker_right_below_jobs(app, google_env, store, two_admins):
     at = _sign_in(app, google_env, A_UID, A_MAIL)
-    assert _nav_order(at) == ["home", "jobs", "applications", "companies", "monitoring", "email", "settings"]
+    assert _nav_order(at) == ["home", "jobs", "applications", "resume_intel", "companies", "monitoring", "email",
+                              "settings"]                     # M6: Resume & Job Intelligence right below the tracker
     assert at.button(key="nav_applications").label == "Application Tracker"
     _tracker(at)
     html = _html(at)

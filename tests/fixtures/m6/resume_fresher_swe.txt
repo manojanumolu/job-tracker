@@ -1,0 +1,41 @@
+PRIYA SHARMA
+Hyderabad, Telangana | priya.sharma@example.com | +91 98765 43210 | linkedin.com/in/priya-example | github.com/priya-example
+
+SUMMARY
+Final-year Computer Science student interested in backend development. Familiar with Kubernetes.
+
+EDUCATION
+B.Tech in Computer Science and Engineering
+Example Institute of Technology, Hyderabad | 2022 – 2026 (expected)
+CGPA: 8.6/10
+Class XII (CBSE) — 2022, 92%
+
+INTERNSHIPS
+Software Engineering Intern, Example Fintech Pvt Ltd | May 2025 – Jul 2025
+• Built REST APIs in Python with Flask and PostgreSQL for a payments dashboard
+• Wrote unit tests with pytest; reduced failing builds in the CI pipeline
+• Worked on a team project
+
+PROJECTS
+Campus Placement Portal (Final-year project)
+• Developed a placement portal using Django, MySQL and Bootstrap; deployed on AWS EC2
+• Designed the database schema and wrote SQL queries for reports
+Expense Tracker — personal project (github.com/priya-example/expenses)
+• React front end with Node.js and MongoDB
+• Learning Docker to containerise the app
+
+TECHNICAL SKILLS
+Languages: Python, Java, C, SQL, JavaScript
+Frameworks: Django, Flask, React
+Tools: Git, Docker, Linux, Postman
+Databases: MySQL, PostgreSQL, MongoDB
+
+CERTIFICATIONS
+AWS Certified Cloud Practitioner (2025)
+NPTEL: Data Structures and Algorithms using Java
+
+RELEVANT COURSEWORK
+Operating Systems, DBMS, Computer Networks, Object Oriented Programming
+
+ACHIEVEMENTS
+Finalist, Smart India Hackathon 2024
