@@ -298,8 +298,9 @@ def test_no_new_heavy_dependencies():
                     if not line.startswith("#"))
     # Authlib: required by Streamlit's st.login (Google sign-in, Firebase auth spike)
     # firebase-admin: per-user data in Firestore (Phase 3), imported only once a service account is configured
-    assert set(l.split(">=")[0] for l in req.split()) == {"streamlit", "httpx", "PyGithub", "python-dotenv", "playwright",
-                                                          "Authlib", "firebase-admin"}
+    # pypdf (M6, Nov 2026): résumé PDFs, pure Python, pinned exactly; read in an isolated, limited process
+    assert set(re.split(r">=|==", l)[0] for l in req.split()) == {"streamlit", "httpx", "PyGithub", "python-dotenv",
+                                                                  "playwright", "Authlib", "firebase-admin", "pypdf"}
 
 
 # ── schedule: read from the workflow's cron (UTC), shown in IST ─────────────

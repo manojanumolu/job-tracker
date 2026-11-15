@@ -7304,15 +7304,17 @@ def _ri_review(state: dict, rid: str) -> None:
         found = list((prof.get("skills") or {}))
         ambiguous = [s for s, i in (prof.get("skills") or {}).items() if i.get("status") == "needs_verification"]
         st.multiselect("Remove skills that aren't yours", found, default=[s for s in corr.get("remove_skills") or [] if s in found],
-                       key=f"ri_c_rm_{rid}")
+                       key=f"ri_c_rm_{rid}", wrap=True, select_all=False)
         if ambiguous:
             st.multiselect("Confirm skills found in ambiguous wording", ambiguous,
                            default=[s for s in corr.get("confirm_skills") or [] if s in ambiguous], key=f"ri_c_ok_{rid}",
-                           help="e.g. “Go” or “AI” outside a skills list. Confirming marks them as yours.")
+                           help="e.g. “Go” or “AI” outside a skills list. Confirming marks them as yours.",
+                           wrap=True, select_all=False)
         others = [s for s in skill_taxonomy.SKILLS if s not in found]
         st.multiselect("Add skills the text doesn't show", others,
                        default=[s for s in corr.get("add_skills") or [] if s in others], key=f"ri_c_add_{rid}",
-                       help="They are kept as “needs manual verification”: a matcher never counts them as demonstrated.")
+                       help="They are kept as “needs manual verification”: a matcher never counts them as demonstrated.",
+                       wrap=True, select_all=False)
         a, b, c = st.columns(3)
         with a:
             st.button("Save corrections", key=f"btn_ri_corr_{rid}", on_click=_ri_save_corrections, args=(rid, False),
@@ -7528,7 +7530,8 @@ def _ri_match(state: dict) -> None:
     with st.container(key="filters_ri"):
         c = st.columns(4)
         with c[0]:
-            chosen = st.multiselect("Résumés", rids, key="ri_m_res", format_func=lambda r: _ri_name(state, r))
+            chosen = st.multiselect("Résumés", rids, key="ri_m_res", format_func=lambda r: _ri_name(state, r),
+                                    wrap=True, select_all=False)
         with c[1]:
             q = st.text_input("Job title", key="ri_m_q", placeholder="e.g. analyst")
         with c[2]:
