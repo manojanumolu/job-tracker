@@ -270,7 +270,12 @@ def test_production_data_keys_come_back_only_after_the_full_window():
     deploy_at = datetime(2026, 11, 14, 21, 2, tzinfo=UTC)
     scraper.merge_new_jobs(seen, [], now=deploy_at)                  # the deployment scan: backfill only
     keys = {scraper._repost_key(j) for j in found}
-    later = scraper.merge_new_jobs(seen, found, now=deploy_at + (WINDOW + 1) * DAY)
+    # the live file keeps gaining records first seen after deploy_at (a job first seen on 15 Nov is held
+    # until 15 Nov + 45): count the window from the newest sighting in the file, or the deployment if later
+    newest = max([deploy_at.date()] + [d for j in seen for d in (scraper._first_seen_day(j.get("first_seen")),)
+                                       if d is not None])
+    release_at = datetime(newest.year, newest.month, newest.day, 21, 2, tzinfo=UTC) + (WINDOW + 1) * DAY
+    later = scraper.merge_new_jobs(seen, found, now=release_at)
     assert {scraper._repost_key(j) for j in later} == keys          # every quiet key is free again, once each
 
 
