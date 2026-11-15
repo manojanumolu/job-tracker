@@ -6,3 +6,4 @@ python-dotenv>=1.0.1
 playwright>=1.45.0
 Authlib>=1.3.2
 firebase-admin>=6.5.0
+pypdf==6.21.4             # M6: résumé PDFs (pure Python, no dependencies on 3.11+); read with strict limits in resume_parse.py

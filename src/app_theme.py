@@ -1393,6 +1393,39 @@ body:has(.st-key-login_card) :is(.st-key-acct_bar, [data-testid="stPopoverBody"]
 .st-key-scan_pick_row button[data-variant="pills"] p { color: inherit !important; font-size: 13.5px !important; font-weight: 600 !important; }
 /* menus: the account menu's items and select lists answer the pointer the same way */
 [data-baseweb="popover"] li:hover { background: var(--accent-soft) !important; color: var(--accent-text) !important; }
+/* M6 — Resume & Job Intelligence: score, part bars, issues, evidence tables */
+.ri-score { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; margin-top: 6px; }
+.ri-score .big { font-size: 36px; line-height: 42px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); font-variant-numeric: tabular-nums; }
+.ri-score .lbl { font-size: 14px; line-height: 20px; color: var(--muted); }
+.ri-bars { display: grid; gap: 10px; margin-top: 14px; }
+.ri-bar { display: grid; grid-template-columns: minmax(0, 230px) minmax(0, 1fr) 92px; gap: 12px; align-items: center; font-size: 14px; line-height: 20px; color: var(--text-2); }
+.ri-bar .track { display: block; height: 8px; border-radius: 99px; background: var(--gray-soft); overflow: hidden; }
+.ri-bar .fill { display: block; height: 100%; border-radius: 99px; background: var(--accent); }
+.ri-bar .val { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; }
+.ri-issues { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.ri-issues li { padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface-2); font-size: 14px; line-height: 20px; color: var(--text-2); overflow-wrap: anywhere; }
+.ri-issues li.critical { border-color: color-mix(in srgb, var(--red) 35%, transparent); background: var(--red-soft); color: var(--text); }
+.ri-issues li.warning { border-color: color-mix(in srgb, var(--amber) 30%, transparent); background: var(--amber-soft); }
+.ri-issues li b { color: var(--text); }
+.ri-issues .q { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); }
+.ri-table { width: 100%; border-collapse: collapse; font-size: 13.5px; line-height: 19px; margin-top: 10px; table-layout: auto; }
+.ri-table th, .ri-table td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; color: var(--text-2); }
+.ri-table th { color: var(--muted); font-weight: 600; font-size: 12px; letter-spacing: .03em; text-transform: uppercase; }
+.ri-table td.s { font-weight: 600; color: var(--text); white-space: nowrap; }
+.ri-wrap { max-width: 100%; overflow-x: auto; }
+.ri-q { font-size: 14px; line-height: 21px; color: var(--text-2); }
+.ri-q dt { color: var(--muted); font-weight: 600; margin-top: 8px; } .ri-q dd { margin: 2px 0 0; }
+.ri-tag { display: inline-block; font-size: 12px; line-height: 18px; padding: 1px 8px; border-radius: 99px; background: var(--gray-soft); color: var(--gray); margin-right: 6px; }
+@media (max-width: 767px) {
+  .ri-table thead { display: none; }
+  .ri-table tr { display: block; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .ri-table td { display: block; border: 0; padding: 3px 0; white-space: normal; }
+  .ri-table td.s { white-space: normal; }
+  .ri-table td[data-l]::before { content: attr(data-l) ": "; color: var(--muted); font-weight: 600; }
+  .ri-bar { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; }
+  .ri-bar .track { grid-column: 1 / -1; grid-row: 2; }
+  .ri-score .big { font-size: 30px; line-height: 36px; }
+}
 """
 
 

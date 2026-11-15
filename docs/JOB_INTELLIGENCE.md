@@ -51,3 +51,11 @@ their skills.
   whose stored lines name skills.
 * The vocabulary is curated (about 70 skills with aliases) and English-only.
   A skill outside it is invisible here.
+
+## Admins: Resume & Job Intelligence (M6)
+
+Admins get a fuller version of this in its own page: a résumé library
+(PDF, DOCX, TXT), requirement-by-requirement matching with evidence,
+eligibility checks, skill gaps, interview preparation and résumé suggestions.
+See [RESUME_INTELLIGENCE.md](RESUME_INTELLIGENCE.md). Its "Copy skills to
+Settings" fills the skill list above, so there is still one list per account.

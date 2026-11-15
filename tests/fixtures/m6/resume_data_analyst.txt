@@ -1,0 +1,22 @@
+Rahul Verma
+Pune, Maharashtra · rahul.v@example.org · +91 91234 56789
+
+OBJECTIVE
+Aspiring data analyst with a statistics background.
+
+EDUCATION
+B.Sc in Statistics, Example College, Pune — 2021 – 2024, 78%
+
+PROJECTS
+Sales Dashboard (academic project)
+- Built a Power BI dashboard from a public retail dataset with DAX measures
+- Cleaned the data in Excel using pivot tables and XLOOKUP
+Customer Churn Analysis
+- Performed exploratory data analysis in Python with Pandas and Matplotlib
+- Wrote SQL queries in MySQL to segment customers by tenure
+
+SKILLS
+Excel, Power BI, SQL, Python, Pandas, Statistics, Tableau
+
+CERTIFICATIONS
+Google Data Analytics Professional Certificate

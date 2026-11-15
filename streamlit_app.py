@@ -128,9 +128,18 @@ import firebase_auth
 import job_filters
 import job_intel
 import job_page
+import job_requirements
 import scan_schedule
 import snapshot_cache
 import user_store
+# M6: Resume & Job Intelligence (logic in src/, UI below)
+import interview_prep
+import resume_improve
+import resume_match
+import resume_parse
+import resume_profile
+import resume_store
+import skill_taxonomy
 from access import (
     ACCOUNT_KEY,
     OWNER_SESSION_KEY,
@@ -171,6 +180,7 @@ PAGES = {
     "home": ("Home", ":material/home:"),
     "jobs": ("Jobs", ":material/work:"),
     "applications": ("Application Tracker", ":material/assignment_turned_in:"),   # admins only
+    "resume_intel": ("Resume & Job Intelligence", ":material/plagiarism:"),        # admins only (M6)
     "companies": ("Companies", ":material/apartment:"),
     "monitoring": ("Monitoring", ":material/monitor_heart:"),
     "email": ("Email & Notifications", ":material/mail:"),
@@ -2212,14 +2222,14 @@ OWN_SCOPE = OTHER_ADMIN and ME is not None
 # the Application Tracker: admins only, each with their own applications
 # (an account behind the sign-in gate: the records are kept by Firebase UID)
 TRACKER_NAV = bool(AUTH_GATE and IS_ADMIN)
-ADMIN_PAGES = {"monitoring", "email", "applications"}
+ADMIN_PAGES = {"monitoring", "email", "applications", "resume_intel"}
 PERSONAL_PAGES = {"alerts", "preferences", "onboarding"}
 
 # A member who opens an admin page by its address lands on Home: nothing of
 # it is drawn (the operations themselves stay admin-checked regardless).
 if MEMBER_VIEW and (st.session_state.page in ADMIN_PAGES or st.session_state.get("company_view") == "add"):
     st.session_state.page, st.session_state.company_view = "home", None
-if st.session_state.page == "applications" and not TRACKER_NAV:
+if st.session_state.page in ("applications", "resume_intel") and not TRACKER_NAV:
     st.session_state.page = "home"
 if st.session_state.page in PERSONAL_PAGES and USER is None:
     st.session_state.page = "home"
@@ -2625,7 +2635,7 @@ def nav_groups() -> list[tuple[str, list[str]]]:
         return [("Discover", ["home", "jobs", "companies"]),
                 ("Your account", (["alerts"] if USER is not None else []) + ["settings"])]
     if TRACKER_NAV:                     # right below Jobs
-        return [(group, [k for key in items for k in ((key, "applications") if key == "jobs" else (key,))])
+        return [(group, [k for key in items for k in ((key, "applications", "resume_intel") if key == "jobs" else (key,))])
                 for group, items in NAV_GROUPS]
     return NAV_GROUPS
 
@@ -3743,6 +3753,7 @@ def page_job_detail(j: dict):
                 st.html('<p class="note">The scraper reads the full posting to classify it but only keeps the evidence '
                         'above, not the full description. Open the posting on the company site for the complete details.</p>')
             job_intel_panel(j)
+            resume_match_panel(j)          # M6, admins only
     with side:
         with st.container(key="job_side"):
             src = [("Portal", escape(_host(url)) if url else "—"),
@@ -5416,6 +5427,11 @@ def skills_card() -> None:
                 '<h2 class="section-title">Skills &amp; interview prep</h2><p class="section-sub">Used only to estimate how '
                 'well jobs match you. A résumé is read on this page, in memory, and never saved or sent anywhere — '
                 'only the skill names you confirm are kept, in your own account.</p></div></div>')
+        if TRACKER_NAV:                    # M6: admins keep full résumés there; its skills can be copied here
+            st.html('<p class="note">Admins: your résumé library in <b>Resume &amp; Job Intelligence</b> extracts '
+                    'skills with their evidence — use “Copy skills to Settings” there to fill this list.</p>')
+            st.button("Open Resume & Job Intelligence", key="btn_skills_to_ri", icon=":material/plagiarism:",
+                      on_click=_ri_goto, args=("resumes",))
         with st.expander("Suggest skills from a résumé"):
             st.file_uploader("Résumé (.txt or .docx, up to 2 MB)", type=["txt", "docx"], key="skills_resume")
             st.text_area("…or paste its text", key="skills_paste", height=120)
@@ -6740,6 +6756,1117 @@ def page_applications():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# RESUME & JOB INTELLIGENCE (M6): admins only, each admin's own résumés
+# ═══════════════════════════════════════════════════════════════════════════════
+# The same who/whose checks as the Application Tracker: the library is bound
+# to the UID the sign-in gate resolved on the server (USER), and its authorize
+# hook (_tracker_allowed) re-checks admin rights against the sign-in source and
+# that this session is still that UID before EVERY read, write, export and
+# delete. Nothing from the URL, a form or the browser names whose data it is.
+# The logic lives in src/ (resume_parse, resume_profile, job_requirements,
+# resume_match, interview_prep, resume_improve, resume_store); this is the UI.
+_RI_SECTIONS = {"overview": "Overview", "resumes": "My Resumes", "match": "Job Match", "gaps": "Skill Gaps",
+                "interview": "Interview Preparation", "improve": "Resume Improvement", "history": "Analysis History"}
+_RI_TTL_S = 120
+_RI_PAGE = 20
+_RI_STATUS = {"demonstrated": "on", "mentioned": "pending-mail", "related": "new", "needs_verification": "neutral",
+              "not_found": "off"}
+_RI_ELIG = {"critical": ("off", "Eligibility issue"), "warnings": ("pending-mail", "Check warnings"),
+            "no_issue_found": ("on", "No stated requirement failed"), "unknown": ("neutral", "Not stated")}
+_RI_EXP_LEVELS = ("Any", "Fresher / 0–1 yr", "1–3 yrs", "3+ yrs", "Not stated")
+_RI_ELIG_FILTER = ("Any", "No critical issue", "Has a critical issue", "Insufficient evidence")
+
+
+def _ri_allowed() -> bool:
+    """Résumé & Job Intelligence: the Application Tracker's own check (an
+    admin, re-verified against the sign-in source, signed in as the very UID
+    the personal store is bound to)."""
+    return _tracker_allowed()
+
+
+def _ri_lib():
+    return USER.resume_library(_ri_allowed) if _ri_allowed() else None
+
+
+def _ri_forget() -> None:
+    st.session_state.pop("_ri_cache", None)
+
+
+def _ri_state() -> dict:
+    """This admin's résumés, corrections, pasted job texts, weights and
+    practice status — kept in THIS browser session for _RI_TTL_S, and handed
+    out only after the same admin-and-owner check as a read."""
+    lib = _ri_lib()
+    if lib is None:
+        raise resume_store.NotAuthorized("Only admins can use Resume & Job Intelligence.")
+    c = st.session_state.get("_ri_cache")
+    if isinstance(c, dict) and c.get("uid") == lib.uid and time.time() - c.get("at", 0) < _RI_TTL_S:
+        return c
+    metas = lib.list_resumes()
+    full = {m["id"]: lib.get(m["id"]) for m in metas}
+    c = {"uid": lib.uid, "at": time.time(), "resumes": metas, "full": full, "texts": lib.job_texts(),
+         "weights": lib.weights(), "practice": lib.practice(), "history": lib.history(50),
+         "hashes": {rid: resume_match.profile_hash(f["effective"]) for rid, f in full.items()}}
+    if st.session_state.get("_ri_uid") != lib.uid:                 # another account in this browser: drop its results
+        st.session_state.pop("_ri_results", None)
+        st.session_state.pop("_ri_reqs", None)
+        st.session_state._ri_uid = lib.uid
+    st.session_state._ri_cache = c
+    return c
+
+
+def _ri_default(state: dict) -> str | None:
+    metas = state["resumes"]
+    return next((m["id"] for m in metas if m.get("is_default")), metas[0]["id"] if metas else None)
+
+
+def _ri_name(state: dict, rid: str) -> str:
+    m = next((m for m in state["resumes"] if m["id"] == rid), None)
+    return f'{m["name"]} · v{m.get("version", 1)}' if m else "—"
+
+
+def _ri_jobs() -> list[dict]:
+    return list(_all_active_jobs)
+
+
+def _ri_job(jid: str) -> dict | None:
+    return next((j for j in all_records if _jid(j) == jid), None)
+
+
+def _ri_reqs(job: dict, texts: dict) -> tuple[dict, str]:
+    """A job's requirements (from the description this admin pasted, if any)
+    and their fingerprint — computed once per job text in this session."""
+    jk = job_key(job)
+    pasted = texts.get(jk, "")
+    ck = (jk, hashlib.sha1(pasted.encode("utf-8")).hexdigest()[:12], str(job.get("title")), len(str(job.get("evidence"))))
+    cache = st.session_state.setdefault("_ri_reqs", {})
+    if ck not in cache:
+        if len(cache) > 3000:
+            cache.clear()
+        reqs = job_requirements.requirements(job, pasted)
+        cache[ck] = (reqs, job_requirements.fingerprint(reqs))
+    return cache[ck]
+
+
+def _ri_result(state: dict, rid: str, job: dict) -> tuple[dict, dict, str]:
+    """(analysis, requirements, cache key) for one résumé × one job. An
+    unchanged pair (same profile, job text and weights) is never recomputed
+    in this session."""
+    reqs, fp = _ri_reqs(job, state["texts"])
+    key = resume_match.cache_key(state["hashes"][rid], fp, state["weights"])
+    cache = st.session_state.setdefault("_ri_results", {})
+    if key not in cache:
+        if len(cache) > 5000:
+            cache.clear()
+        cache[key] = resume_match.analyse(state["full"][rid]["effective"], reqs, state["weights"])
+    return cache[key], reqs, key
+
+
+def _ri_goto(section: str, **extra) -> None:
+    go("resume_intel")
+    st.session_state.ri_section = section
+    for k, v in extra.items():
+        st.session_state[k] = v
+
+
+def _ri_msg() -> None:
+    msg = st.session_state.pop("_ri_msg", None)
+    if msg:
+        kind, text = msg
+        st.html(f'<div class="name-msg {kind}" role="{"status" if kind == "ok" else "alert"}">'
+                f'{_ms("check_circle" if kind == "ok" else "error", "s20")}<div>{escape(text)}</div></div>')
+
+
+def _ri_fail(e: Exception) -> None:
+    """A refused or failed operation: say so (the message is safe to show)."""
+    st.session_state._ri_msg = ("err", str(e) or "That didn't work. Try again.")
+
+
+def _ri_pill(status: str) -> str:
+    return f'<span class="pill {_RI_STATUS.get(status, "neutral")}">{escape(resume_match.STATUSES[status][0])}</span>'
+
+
+def _ri_elig_pill(result: dict) -> str:
+    cls, label = _RI_ELIG[result["eligibility"]]
+    return f'<span class="pill {cls}">{escape(label)}</span>'
+
+
+def _ri_score_txt(result: dict) -> str:
+    return "Insufficient evidence" if result["overall"] is None else f'{result["overall"]}%'
+
+
+def _ri_resume_select(state: dict, key: str, label: str = "Résumé") -> str | None:
+    rids = [m["id"] for m in state["resumes"]]
+    if not rids:
+        return None
+    if st.session_state.get(key) not in rids:
+        st.session_state[key] = _ri_default(state)
+    return st.selectbox(label, rids, key=key, format_func=lambda r: _ri_name(state, r))
+
+
+def _ri_job_select(key: str, label: str = "Job", allow_none: bool = False) -> str | None:
+    jobs = _ri_jobs()
+    opts = ([""] if allow_none else []) + [_jid(j) for j in jobs]
+    names = {_jid(j): f'{j.get("title", "")} — {j.get("company", "")}' for j in jobs}
+    if not opts:
+        return None
+    if st.session_state.get(key) not in opts:
+        st.session_state[key] = opts[0]
+    return st.selectbox(label, opts, key=key, format_func=lambda o: names.get(o, "No specific job (general practice)"))
+
+
+# ── Overview ──────────────────────────────────────────────────────────────────
+def _ri_save_weights() -> None:
+    w = {k: int(st.session_state.get(f"ri_w_{k}") or 0) for k in resume_match.DEFAULT_WEIGHTS}
+    try:
+        _ri_lib().set_weights(w)
+        st.session_state._ri_msg = ("ok", "Scoring weights saved. Every estimate now uses them.")
+        _ri_forget()
+    except (user_store.InvalidInput, resume_store.NotAuthorized, user_store.UserStoreError, AttributeError) as e:
+        _ri_fail(e)
+
+
+def _ri_overview(state: dict) -> None:
+    rid = _ri_default(state)
+    if rid is None:
+        empty_state("description", "No résumés yet",
+                    "Upload a résumé (PDF, DOCX or TXT) in <b>My Resumes</b>. It is read on the server, in memory: the "
+                    "file itself is never stored — only the structured profile built from it, in your own account.",
+                    lambda: st.button("Upload a résumé", key="btn_ri_first", type="primary", icon=":material/upload:",
+                                      on_click=_ri_goto, args=("resumes",)))
+        return
+    jobs = _ri_jobs()
+    results, all_reqs = [], []
+    for j in jobs:
+        try:
+            r, reqs, _ = _ri_result(state, rid, j)
+        except Exception as e:                       # one malformed record never breaks the page
+            log.warning("resume match failed: %s", type(e).__name__)
+            continue
+        results.append(r)
+        all_reqs.append(reqs)
+    strong = sum(1 for r in results if r["overall"] is not None and r["overall"] >= 75 and not r["critical"])
+    issues = sum(1 for r in results if r["critical"])
+    insufficient = sum(1 for r in results if r["overall"] is None)
+    st.html('<div class="stats">'
+            + _stat("Résumés", len(state["resumes"]), "In your library", "description")
+            + _stat("Jobs analysed", len(results), f"Active jobs vs “{escape(_ri_name(state, rid))}”", "fact_check", "t-teal")
+            + _stat("Strong matches", strong, "Estimate ≥ 75% and no critical issue", "verified", "t-green")
+            + _stat("Potential eligibility issues", issues, "A stated requirement not met", "report", "t-amber")
+            + "</div>")
+    if insufficient:
+        st.html(f'<p class="note">{_plural(insufficient, "job")} had too little posting text to estimate — open one '
+                'in Job Match and paste its full description.</p>')
+    gaps = resume_match.global_gaps(state["full"][rid]["effective"], all_reqs, top=6)
+    with st.container(key="set_ri_overview"):
+        st.html('<div class="eyebrow">Across the job catalogue</div><h2 class="section-title">Most frequently missing skills</h2>'
+                + ('<dl class="kv">' + "".join(
+                    f'<dt>{escape(g["skill"])}</dt><dd>required by {g["mandatory"]} · named by {_plural(g["named"], "job")}'
+                    + (f' · you have the related {escape(g["related_to"])}' if g["related_to"] else "")
+                    + f'<span class="kv-note">{escape(g["next_step"])}</span></dd>' for g in gaps) + "</dl>"
+                   if gaps else '<p class="note">No skill is missing from two or more jobs.</p>'))
+        hist = state["history"][:5]
+        st.html('<div class="divider"></div><h2 class="section-title">Recent analysis activity</h2>'
+                + ('<dl class="kv">' + "".join(f'<dt class="num">{escape(_ist_stamp(_parse_iso(h["at"])) if _parse_iso(h["at"]) else h["at"])}</dt>'
+                                              f'<dd>{escape(h.get("label", ""))}</dd>' for h in hist) + "</dl>"
+                   if hist else '<p class="note">Nothing yet. Saved analyses, uploads and changes appear here.</p>'))
+    with st.expander("Scoring weights"):
+        st.html('<p class="note">How much each part counts towards the overall estimate. They must add up to 100. '
+                'The estimate is never a probability of being hired, and an eligibility issue is always shown '
+                'separately, whatever the score.</p>')
+        cols = st.columns(5)
+        for col, (k, label) in zip(cols, resume_match.WEIGHT_LABELS.items()):
+            with col:
+                st.number_input(label, 0, 100, int(state["weights"][k]), 5, key=f"ri_w_{k}")
+        total = sum(int(st.session_state.get(f"ri_w_{k}") or 0) for k in resume_match.DEFAULT_WEIGHTS)
+        st.html(f'<p class="note">Total: <b>{total}</b> / 100</p>')
+        st.button("Save weights", key="btn_ri_weights", on_click=_ri_save_weights, disabled=total != 100)
+    with st.expander("Skill dictionary (aliases, ambiguous words, related skills)"):
+        st.html('<p class="note">An alias counts as the skill itself. An ambiguous word is only trusted in a skills '
+                'list; elsewhere it needs your check. A related skill is never counted as the skill — it is shown as '
+                'transferable.</p><div class="ri-wrap"><table class="ri-table"><thead><tr><th>Skill</th><th>Category</th>'
+                '<th>Aliases</th><th>Ambiguous</th><th>Related</th></tr></thead><tbody>'
+                + "".join(f'<tr><td class="s" data-l="Skill">{escape(r["skill"])}</td><td data-l="Category">{escape(r["category"])}</td>'
+                          f'<td data-l="Aliases">{escape(r["aliases"])}</td><td data-l="Ambiguous">{escape(r["ambiguous"]) or "—"}</td>'
+                          f'<td data-l="Related">{escape(r["related"]) or "—"}</td></tr>' for r in skill_taxonomy.table())
+                + "</tbody></table></div>")
+    _ri_msg()
+
+
+# ── My Resumes ─────────────────────────────────────────────────────────────────
+def _ri_read() -> None:
+    """Read the uploaded file in memory (never written anywhere) and build its
+    profile. The text stays in this browser session until saved or discarded."""
+    up = st.session_state.get("ri_up_file")
+    lib = _ri_lib()
+    if up is None or lib is None:
+        return
+    try:
+        parsed = resume_parse.read_document(up.name, up.getvalue())
+        profile = resume_profile.build_profile(parsed.text, header_text=parsed.header_text)
+        dup = lib.find_duplicate(parsed.sha256)
+    except resume_parse.ResumeFileError as e:
+        _ri_fail(e)
+        return
+    except (resume_store.NotAuthorized, user_store.UserStoreError) as e:
+        _ri_fail(e)
+        return
+    except Exception as e:                                   # never a traceback: it could quote the file
+        log.warning("resume read failed: %s", type(e).__name__)
+        _ri_fail(ValueError("The résumé couldn't be read."))
+        return
+    stem = re.sub(r"\.(pdf|docx|txt)$", "", parsed.file_name, flags=re.I)
+    st.session_state._ri_pending = {"parsed": parsed, "profile": profile, "dup": dup}
+    st.session_state.ri_new_name = stem[:resume_store.NAME_MAX]
+    st.session_state.ri_target = "new"
+    st.session_state.ri_confirm = False
+
+
+def _ri_discard() -> None:
+    st.session_state.pop("_ri_pending", None)
+
+
+def _ri_save_pending() -> None:
+    pending = st.session_state.get("_ri_pending")
+    lib = _ri_lib()
+    if not pending or lib is None:
+        return
+    target = st.session_state.get("ri_target") or "new"
+    try:
+        if pending.get("dup") and not st.session_state.get("ri_confirm"):
+            raise user_store.InvalidInput("This file is already in your library. Tick the box to save it anyway.")
+        if target == "new":
+            meta = lib.create(st.session_state.get("ri_new_name"), pending["parsed"], pending["profile"])
+            lib.add_history(meta["id"], "upload", f"Uploaded “{meta['name']}”", {"status": meta["extraction_status"]})
+            msg = f"Saved “{meta['name']}”. Review the extracted profile, correct anything wrong and confirm it."
+        else:
+            if not st.session_state.get("ri_confirm"):
+                raise user_store.InvalidInput("Tick the box to confirm you want to replace this résumé's file.")
+            meta = lib.replace(target, pending["parsed"], pending["profile"])
+            lib.add_history(meta["id"], "replace", f"Replaced the file of “{meta['name']}” (v{meta['version']})", {})
+            msg = f"Replaced “{meta['name']}” with version {meta['version']}. Corrections were reset for the new file."
+    except (user_store.InvalidInput, resume_store.NotFound, resume_store.NotAuthorized, user_store.UserStoreError) as e:
+        _ri_fail(e)
+        return
+    st.session_state.pop("_ri_pending", None)                # the text leaves the session with it
+    st.session_state.pop("ri_up_file", None)
+    _ri_forget()
+    st.session_state._ri_msg = ("ok", msg)
+    st.session_state.ri_review = meta["id"]
+
+
+def _ri_profile_preview(profile: dict, meta_status: str = "", warnings=()) -> None:
+    """The extracted information, as the person will review it."""
+    c = profile.get("contact") or {}
+    edu = "".join(f'<dt>{escape(e.get("degree") or e.get("level") or "Education")}</dt><dd>'
+                  f'{escape(" · ".join(x for x in (e.get("specialization"), e.get("institution"), str(e.get("end_year") or ""), ("expected" if e.get("expected") else ""), e.get("score")) if x))}'
+                  f'</dd>' for e in profile.get("education") or [])
+    exp = "".join(f'<dt>{escape("Internship" if x["kind"] == "internship" else "Employment")}</dt><dd>'
+                  f'{escape(" · ".join(v for v in (x.get("title"), x.get("organisation")) if v))}'
+                  + (f' <span class="muted">({escape(x["dates"]["start"])} – {escape(x["dates"]["end"])})</span>' if x.get("dates") else "")
+                  + "</dd>" for x in profile.get("experience") or [])
+    proj = "".join(f'<dt>{escape({"academic_project": "Academic project", "personal_project": "Personal project"}.get(p["kind"], "Project"))}</dt>'
+                   f'<dd>{escape(p.get("title") or "—")}<span class="kv-note">{escape(", ".join(p.get("skills") or []))}</span></dd>'
+                   for p in profile.get("projects") or [])
+    head = ('<dl class="kv">'
+            f'<dt>Name</dt><dd>{escape(profile.get("name") or "Not found")}</dd>'
+            f'<dt>Contact</dt><dd>{escape(" · ".join(x for x in (c.get("email"), c.get("phone"), c.get("location"), ", ".join(c.get("links") or [])) if x) or "Not found")}'
+            '<span class="kv-note">Kept masked: only that they exist matters here.</span></dd>'
+            f'<dt>Sections found</dt><dd>{escape(", ".join(profile.get("sections_found") or []) or "None")}</dd>'
+            f'<dt>Graduation year</dt><dd>{escape(str(profile.get("graduation_year") or "Not found"))}</dd>'
+            f'<dt>Employment</dt><dd>{(profile.get("totals") or {}).get("employment_months", 0)} month(s) · internships '
+            f'{(profile.get("totals") or {}).get("internship_months", 0)} month(s)</dd></dl>')
+    st.html(head + (f'<div class="divider"></div><h3 class="section-title">Education</h3><dl class="kv">{edu}</dl>' if edu else "")
+            + (f'<div class="divider"></div><h3 class="section-title">Experience</h3><dl class="kv">{exp}</dl>' if exp else "")
+            + (f'<div class="divider"></div><h3 class="section-title">Projects</h3><dl class="kv">{proj}</dl>' if proj else "")
+            + ''.join(f'<p class="note">{_ms("info", "s16")} {escape(w)}</p>' for w in list(warnings) + (profile.get("warnings") or [])))
+    rows = resume_profile.skill_rows(profile)
+    if rows:
+        st.html('<div class="divider"></div><h3 class="section-title">Skills and their evidence</h3><div class="ri-wrap">'
+                '<table class="ri-table"><thead><tr><th>Skill</th><th>Status</th><th>Where</th><th>Evidence</th></tr></thead><tbody>'
+                + "".join(f'<tr><td class="s" data-l="Skill">{escape(r["skill"])}</td><td data-l="Status">{_ri_pill(r["status"])}</td>'
+                          f'<td data-l="Where">{escape(", ".join(resume_match.KIND_LABELS.get(k, k) for k in r["kinds"]))}</td>'
+                          f'<td data-l="Evidence">{escape(r["quote"])}</td></tr>' for r in rows)
+                + "</tbody></table></div>")
+    if meta_status == "no_text":
+        st.html('<p class="note">No text could be read, so nothing above is from the file.</p>')
+
+
+def _ri_pending_panel(state: dict, pending: dict) -> None:
+    parsed, profile = pending["parsed"], pending["profile"]
+    with st.container(key="set_ri_pending"):
+        status = {"ok": ("on", "Read"), "partial": ("pending-mail", "Read with warnings"),
+                  "no_text": ("off", "No text found")}[parsed.status]
+        st.html(f'<div class="eyebrow">Preview — not saved yet</div><h2 class="section-title">{escape(parsed.file_name)} '
+                f'<span class="pill {status[0]}">{status[1]}</span></h2>'
+                f'<p class="note">{escape(parsed.file_type.upper())} · {parsed.size // 1024 or 1} KB'
+                + (f" · {parsed.pages_read} of {parsed.pages} page(s) read" if parsed.pages else "") + "</p>")
+        _ri_profile_preview(profile, parsed.status, parsed.warnings)
+        if pending.get("dup"):
+            st.html(f'<p class="note">{_ms("content_copy", "s16")} The same file is already saved as '
+                    f'“{escape(pending["dup"].get("name", ""))}”.</p>')
+        targets = ["new"] + [m["id"] for m in state["resumes"]]
+        st.selectbox("Save as", targets, key="ri_target",
+                     format_func=lambda t: "A new résumé" if t == "new" else f"Replace the file of “{_ri_name(state, t)}”")
+        if (st.session_state.get("ri_target") or "new") == "new":
+            st.text_input("Résumé name", key="ri_new_name", max_chars=resume_store.NAME_MAX,
+                          placeholder="e.g. Software Engineer Resume")
+        if st.session_state.get("ri_target", "new") != "new" or pending.get("dup"):
+            st.checkbox("Yes — " + ("replace that résumé's file (its corrections are reset; the old version is listed "
+                                    "in its history)" if st.session_state.get("ri_target", "new") != "new"
+                                    else "save this duplicate file anyway"), key="ri_confirm")
+        a, b = st.columns(2)
+        with a:
+            st.button("Save", key="btn_ri_save", type="primary", icon=":material/save:", on_click=_ri_save_pending,
+                      disabled=parsed.status == "no_text", use_container_width=True)
+        with b:
+            st.button("Discard", key="btn_ri_discard", on_click=_ri_discard, use_container_width=True)
+
+
+def _ri_set_default(rid: str) -> None:
+    try:
+        _ri_lib().set_default(rid)
+        _ri_forget()
+    except (resume_store.NotFound, resume_store.NotAuthorized, user_store.UserStoreError, AttributeError) as e:
+        _ri_fail(e)
+
+
+def _ri_rename(rid: str) -> None:
+    try:
+        meta = _ri_lib().rename(rid, st.session_state.get(f"ri_ren_{rid}"))
+        st.session_state.ri_ren_open = None
+        st.session_state._ri_msg = ("ok", f"Renamed to “{meta['name']}”.")
+        _ri_forget()
+    except (user_store.InvalidInput, resume_store.NotFound, resume_store.NotAuthorized, user_store.UserStoreError, AttributeError) as e:
+        _ri_fail(e)
+
+
+def _ri_delete(rid: str) -> None:
+    try:
+        n = _ri_lib().delete(rid)
+        st.session_state.ri_del_open = None
+        st.session_state.ri_review = None
+        st.session_state._ri_msg = ("ok", f"Deleted the résumé and everything derived from it ({_plural(n, 'record')}).")
+        _ri_forget()
+    except (resume_store.NotFound, resume_store.NotAuthorized, user_store.UserStoreError, AttributeError) as e:
+        _ri_fail(e)
+
+
+def _ri_prepare_export(rid: str) -> None:
+    try:
+        data = _ri_lib().export(rid)
+        st.session_state._ri_export = {"rid": rid, "json": json.dumps(data, indent=2, ensure_ascii=False)}
+    except (resume_store.NotFound, resume_store.NotAuthorized, user_store.UserStoreError, AttributeError) as e:
+        _ri_fail(e)
+
+
+def _ri_toggle(key: str, rid: str) -> None:
+    st.session_state[key] = None if st.session_state.get(key) == rid else rid
+
+
+def _ri_card(state: dict, meta: dict) -> None:
+    rid = meta["id"]
+    eff = state["full"][rid]["effective"]
+    conf = state["full"][rid]["corrections"]
+    n_demo = sum(1 for s in (eff.get("skills") or {}).values() if s.get("status") == "demonstrated")
+    status = {"ok": ("on", "Read"), "partial": ("pending-mail", "Read with warnings"),
+              "no_text": ("off", "No text found")}.get(meta.get("extraction_status"), ("neutral", "Unknown"))
+    up = _parse_iso(meta.get("uploaded_at", ""))
+    with st.container(key=f"set_ri_card_{rid}"):
+        st.html(f'<h2 class="section-title">{_ms("description")}{escape(meta["name"])} '
+                + ('<span class="pill new">Default</span> ' if meta.get("is_default") else "")
+                + f'<span class="pill {status[0]}">{status[1]}</span></h2>'
+                f'<p class="note">{escape(meta.get("file_type", "").upper())} · {escape(meta.get("file_name", ""))} · '
+                f'version {meta.get("version", 1)} · uploaded {escape(_ist_stamp(up) if up else meta.get("uploaded_at", ""))}'
+                f' · {_plural(len(eff.get("skills") or {}), "skill")} ({n_demo} demonstrated) · '
+                f'{_plural(len(eff.get("projects") or []), "project")}'
+                + (" · corrections saved" if conf else "") + "</p>")
+        cols = st.columns(5)
+        with cols[0]:
+            st.button("Review & correct", key=f"btn_ri_rev_{rid}", icon=":material/fact_check:", use_container_width=True,
+                      on_click=lambda r=rid: st.session_state.__setitem__("ri_review", r))
+        with cols[1]:
+            st.button("Set as default", key=f"btn_ri_def_{rid}", disabled=bool(meta.get("is_default")),
+                      on_click=_ri_set_default, args=(rid,), use_container_width=True)
+        with cols[2]:
+            st.button("Rename", key=f"btn_ri_ren_{rid}", on_click=_ri_toggle, args=("ri_ren_open", rid),
+                      use_container_width=True)
+        with cols[3]:
+            st.button("Export data", key=f"btn_ri_exp_{rid}", icon=":material/download:", on_click=_ri_prepare_export,
+                      args=(rid,), use_container_width=True)
+        with cols[4]:
+            st.button("Delete", key=f"btn_ri_del_{rid}", icon=":material/delete:", on_click=_ri_toggle,
+                      args=("ri_del_open", rid), use_container_width=True)
+        if st.session_state.get("ri_ren_open") == rid:
+            st.text_input("New name", value=meta["name"], key=f"ri_ren_{rid}", max_chars=resume_store.NAME_MAX)
+            st.button("Save name", key=f"btn_ri_ren_save_{rid}", type="primary", on_click=_ri_rename, args=(rid,))
+        exp = st.session_state.get("_ri_export")
+        if isinstance(exp, dict) and exp.get("rid") == rid:
+            st.download_button("Download JSON", exp["json"], file_name=f"resume-{rid[:8]}.json", mime="application/json",
+                               key=f"dl_ri_{rid}", on_click=lambda: st.session_state.pop("_ri_export", None))
+        if st.session_state.get("ri_del_open") == rid:
+            st.html('<p class="note">This permanently deletes the résumé, its extracted profile, your corrections, its '
+                    'saved analyses and suggestion decisions. It can\'t be undone.</p>')
+            st.button("Delete permanently", key=f"btn_ri_del_yes_{rid}", type="primary", on_click=_ri_delete, args=(rid,))
+
+
+def _ri_copy_to_settings(rid: str) -> None:
+    """Settings → Skills & interview prep (M5) keeps one list of skill names
+    per account: add this résumé's shown and listed skills to it."""
+    try:
+        state = _ri_state()
+        eff = state["full"][rid]["effective"]
+        names = skill_taxonomy.to_m5([s for s, i in (eff.get("skills") or {}).items()
+                                      if i.get("status") in ("demonstrated", "mentioned")])
+        current = job_intel.clean_skills((ME or {}).get("profile", {}).get("skills") or [])
+        saved = USER.set_skills(job_intel.clean_skills(set(current) | set(names)))
+        _personal_patched(profile={"skills": saved})
+        st.session_state._ri_msg = ("ok", f"Settings → Skills & interview prep now lists {_plural(len(saved), 'skill')}.")
+    except (user_store.InvalidInput, resume_store.NotFound, resume_store.NotAuthorized, user_store.UserStoreError, AttributeError,
+            KeyError) as e:
+        _ri_fail(e)
+
+
+def _ri_save_corrections(rid: str, confirm: bool) -> None:
+    ss = st.session_state
+    try:
+        full = _ri_state()["full"][rid]
+        prof = full["profile"]
+        corr = {"name": ss.get(f"ri_c_name_{rid}", ""),
+                "remove_skills": ss.get(f"ri_c_rm_{rid}") or [], "add_skills": ss.get(f"ri_c_add_{rid}") or [],
+                "confirm_skills": ss.get(f"ri_c_ok_{rid}") or [],
+                "experience_kind": {str(i): ss.get(f"ri_c_xk_{rid}_{i}") for i in range(len(prof.get("experience") or []))
+                                    if ss.get(f"ri_c_xk_{rid}_{i}")},
+                "project_kind": {str(i): ss.get(f"ri_c_pk_{rid}_{i}") for i in range(len(prof.get("projects") or []))
+                                 if ss.get(f"ri_c_pk_{rid}_{i}")},
+                "education": {}}
+        for i in range(len(prof.get("education") or [])):
+            f = {"level": ss.get(f"ri_c_el_{rid}_{i}") or (prof["education"][i].get("level") or "bachelors"),
+                 "specialization": ss.get(f"ri_c_es_{rid}_{i}") or ""}
+            y = int(ss.get(f"ri_c_ey_{rid}_{i}") or 0)
+            if y:
+                f["end_year"] = y
+            if not prof["education"][i].get("level") and not ss.get(f"ri_c_el_{rid}_{i}"):
+                f.pop("level")
+            corr["education"][str(i)] = f
+        lib = _ri_lib()
+        lib.save_corrections(rid, corr, confirmed=confirm)
+        lib.add_history(rid, "confirm" if confirm else "correct",
+                        ("Confirmed" if confirm else "Corrected") + f" the profile of “{_ri_name(_ri_state(), rid)}”", {})
+        st.session_state._ri_msg = ("ok", "Profile confirmed." if confirm else "Corrections saved.")
+        _ri_forget()
+    except (user_store.InvalidInput, resume_store.NotFound, resume_store.NotAuthorized, user_store.UserStoreError, AttributeError,
+            KeyError, ValueError) as e:
+        _ri_fail(e)
+
+
+def _ri_review(state: dict, rid: str) -> None:
+    full = state["full"][rid]
+    prof, corr, eff = full["profile"], full["corrections"], full["effective"]
+    st.button("Back to My Resumes", key="btn_ri_back", icon=":material/arrow_back:",
+              on_click=lambda: st.session_state.__setitem__("ri_review", None))
+    with st.container(key="set_ri_review"):
+        st.html(f'<div class="eyebrow">Review &amp; correct</div><h2 class="section-title">{escape(_ri_name(state, rid))}</h2>'
+                '<p class="section-sub">The profile below was extracted automatically. Correct anything wrong, then '
+                'confirm it. The original extraction is kept, so a correction can always be undone.</p>')
+        _ri_msg()
+        _ri_profile_preview(eff)
+        st.html('<div class="divider"></div><h3 class="section-title">Corrections</h3>')
+        st.text_input("Name on the résumé", value=corr.get("name", prof.get("name", "")), key=f"ri_c_name_{rid}", max_chars=60)
+        levels = list(resume_profile.LEVELS)
+        specs = [""] + list(resume_profile.SPECIALISATIONS)
+        for i, e in enumerate(prof.get("education") or []):
+            ce = (corr.get("education") or {}).get(str(i), {})
+            st.html(f'<p class="note"><b>Education {i + 1}:</b> {escape(e.get("evidence", ""))}</p>')
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                lv = ce.get("level", e.get("level")) or "bachelors"
+                st.selectbox("Level", levels, index=levels.index(lv) if lv in levels else 2, key=f"ri_c_el_{rid}_{i}")
+            with c2:
+                sp = ce.get("specialization", e.get("specialization", ""))
+                st.selectbox("Specialisation", specs, index=specs.index(sp) if sp in specs else 0,
+                             key=f"ri_c_es_{rid}_{i}", format_func=lambda s: s or "Not stated")
+            with c3:
+                st.number_input("Graduation year (0 = unknown)", 0, 2045, int(ce.get("end_year", e.get("end_year") or 0)),
+                                key=f"ri_c_ey_{rid}_{i}")
+        for i, x in enumerate(prof.get("experience") or []):
+            kinds = ["employment", "internship"]
+            cur = (corr.get("experience_kind") or {}).get(str(i), x["kind"])
+            st.radio(f'{x.get("title") or "Entry"} {("· " + x["organisation"]) if x.get("organisation") else ""}', kinds,
+                     index=kinds.index(cur), key=f"ri_c_xk_{rid}_{i}", horizontal=True,
+                     format_func=lambda k: "Professional employment" if k == "employment" else "Internship")
+        for i, p in enumerate(prof.get("projects") or []):
+            kinds = ["academic_project", "personal_project", "project"]
+            cur = (corr.get("project_kind") or {}).get(str(i), p["kind"])
+            st.radio(p.get("title") or f"Project {i + 1}", kinds, index=kinds.index(cur), key=f"ri_c_pk_{rid}_{i}",
+                     horizontal=True, format_func=lambda k: {"academic_project": "Academic", "personal_project": "Personal",
+                                                             "project": "Not stated"}[k])
+        found = list((prof.get("skills") or {}))
+        ambiguous = [s for s, i in (prof.get("skills") or {}).items() if i.get("status") == "needs_verification"]
+        st.multiselect("Remove skills that aren't yours", found, default=[s for s in corr.get("remove_skills") or [] if s in found],
+                       key=f"ri_c_rm_{rid}")
+        if ambiguous:
+            st.multiselect("Confirm skills found in ambiguous wording", ambiguous,
+                           default=[s for s in corr.get("confirm_skills") or [] if s in ambiguous], key=f"ri_c_ok_{rid}",
+                           help="e.g. “Go” or “AI” outside a skills list. Confirming marks them as yours.")
+        others = [s for s in skill_taxonomy.SKILLS if s not in found]
+        st.multiselect("Add skills the text doesn't show", others,
+                       default=[s for s in corr.get("add_skills") or [] if s in others], key=f"ri_c_add_{rid}",
+                       help="They are kept as “needs manual verification”: a matcher never counts them as demonstrated.")
+        a, b, c = st.columns(3)
+        with a:
+            st.button("Save corrections", key=f"btn_ri_corr_{rid}", on_click=_ri_save_corrections, args=(rid, False),
+                      use_container_width=True)
+        with b:
+            st.button("Save and confirm profile", key=f"btn_ri_conf_{rid}", type="primary", on_click=_ri_save_corrections,
+                      args=(rid, True), use_container_width=True)
+        with c:
+            st.button("Copy skills to Settings", key=f"btn_ri_m5_{rid}", on_click=_ri_copy_to_settings, args=(rid,),
+                      use_container_width=True, disabled=USER is None,
+                      help="Adds this résumé's skills to Settings → Skills & interview prep (one list per account).")
+
+
+def _ri_resumes(state: dict) -> None:
+    rid = st.session_state.get("ri_review")
+    if rid and rid in state["full"]:
+        _ri_review(state, rid)
+        return
+    st.session_state.ri_review = None
+    with st.container(key="set_ri_upload"):
+        st.html(f'<div class="set-head"><span class="ic">{_ms("upload_file")}</span><div><div class="eyebrow">Upload</div>'
+                '<h2 class="section-title">Add a résumé</h2><p class="section-sub">PDF (text-based), DOCX or TXT, up to '
+                f'{resume_parse.MAX_FILE_BYTES // (1024 * 1024)} MB. The file is read on the server, in memory, and never '
+                'stored — not in the database, not on disk, not in Git. Only the profile built from it is kept, in your '
+                'own account. Scanned (image-only) PDFs can\'t be read: this app has no OCR.</p></div></div>')
+        st.file_uploader("Résumé file", type=["pdf", "docx", "txt"], key="ri_up_file", label_visibility="collapsed")
+        st.button("Read résumé", key="btn_ri_read", type="primary", icon=":material/plagiarism:", on_click=_ri_read,
+                  disabled=st.session_state.get("ri_up_file") is None)
+    _ri_msg()
+    pending = st.session_state.get("_ri_pending")
+    if pending:
+        _ri_pending_panel(state, pending)
+    if not state["resumes"] and not pending:
+        st.html('<p class="note">No résumés yet. You can keep several, e.g. a Software Engineer, a Data Analyst and '
+                'a general fresher version.</p>')
+    for meta in state["resumes"]:
+        _ri_card(state, meta)
+
+
+# ── Job Match ─────────────────────────────────────────────────────────────────
+def _ri_exp_level(reqs: dict) -> str:
+    e = reqs.get("experience")
+    if not e:
+        return "Not stated"
+    lo = e.get("min_years") or 0
+    return "Fresher / 0–1 yr" if e.get("fresher") or lo == 0 else "1–3 yrs" if lo < 3 else "3+ yrs"
+
+
+def _ri_bars(result: dict) -> str:
+    out = []
+    for p in result["explain"]:
+        v = p["score"]
+        out.append(f'<div class="ri-bar"><span>{escape(p["label"])} <span class="muted">· {p["weight"]}%</span></span>'
+                   f'<span class="track"><span class="fill" style="width:{v or 0}%"></span></span>'
+                   f'<span class="val">{"not enough data" if v is None else f"{v} / 100"}</span></div>')
+    return '<div class="ri-bars">' + "".join(out) + "</div>"
+
+
+def _ri_issues(result: dict, limit: int | None = None) -> str:
+    items = result["issues"][:limit] if limit else result["issues"]
+    if not items:
+        return '<p class="note">No eligibility conditions were stated that the résumé fails.</p>'
+    label = {"critical": "Critical", "warning": "Warning", "verify": "Check yourself", "info": "Note"}
+    return '<ul class="ri-issues">' + "".join(
+        f'<li class="{i["severity"]}"><b>{label[i["severity"]]} · {escape(i["area"])}:</b> {escape(i["text"])}'
+        + (f'<span class="q">Posting: “{escape(i["quote"])}”</span>' if i.get("quote") else "") + "</li>" for i in items) + "</ul>"
+
+
+def _ri_result_view(result: dict, reqs: dict) -> None:
+    src = {"pasted": "the full description you pasted", "stored": "the requirement lines the scanner kept",
+           "tracker": "only the title and experience lines the tracker kept"}[reqs["source"]]
+    st.html(f'<div class="ri-score"><span class="big">{escape(_ri_score_txt(result))}</span>'
+            f'<span class="lbl">overall compatibility estimate · {escape(result["band"])}</span> {_ri_elig_pill(result)}'
+            f'<span class="pill neutral">{escape(result["confidence"])} confidence · evidence {result["completeness"]}% complete</span></div>'
+            f'<p class="note">An estimate from {escape(src)} and your résumé — not a probability of being hired, and '
+            'never a verdict on eligibility. Critical issues are listed first, whatever the score.</p>'
+            + (''.join(f'<p class="note">{_ms("info", "s16")} {escape(n)}</p>' for n in result["notes"])))
+    st.html('<div class="divider"></div><h3 class="section-title">Eligibility</h3>' + _ri_issues(result))
+    mc, pc = result["mandatory"], result["preferred"]
+    st.html('<div class="divider"></div><h3 class="section-title">How the estimate is made</h3>' + _ri_bars(result)
+            + f'<dl class="kv"><dt>Mandatory skills</dt><dd>{mc["counts"].get("demonstrated", 0)} demonstrated, '
+            f'{mc["counts"].get("mentioned", 0)} mentioned only, {mc["counts"].get("related", 0)} related, '
+            f'{mc["counts"].get("not_found", 0)} not found (of {mc["count"]}'
+            + ("; the posting doesn't mark which are required, so all named skills count" if result["mandatory_basis"] == "named" else "")
+            + f')</dd><dt>Preferred skills</dt><dd>{pc["counts"].get("demonstrated", 0)} demonstrated, '
+            f'{pc["counts"].get("not_found", 0)} not found (of {pc["count"]})</dd>'
+            f'<dt>Experience</dt><dd>{escape(result["experience"]["basis"])}<span class="kv-note">{escape(result["experience"]["requirement"])}</span></dd>'
+            f'<dt>Education</dt><dd>{escape(result["education"]["candidate"] or "Not recognised")}'
+            f'<span class="kv-note">{escape(result["education"]["requirement"])}</span></dd>'
+            f'<dt>Shown in work</dt><dd>{result["evidence"]["shown"]} of the job\'s skills shown in projects, internships or jobs'
+            + (f'; relevant certifications: {escape("; ".join(result["evidence"]["certifications"]))}' if result["evidence"]["certifications"] else "")
+            + "</dd></dl>")
+    rows = result["rows"]
+    if rows:
+        imp = {"mandatory": "Mandatory", "preferred": "Preferred", "unspecified": "Not stated"}
+        st.html('<div class="divider"></div><h3 class="section-title">Evidence for each skill</h3><div class="ri-wrap">'
+                '<table class="ri-table"><thead><tr><th>Skill</th><th>Requirement</th><th>Status</th><th>Résumé evidence</th>'
+                '<th>Section</th></tr></thead><tbody>'
+                + "".join(f'<tr><td class="s" data-l="Skill">{escape(r["skill"])}<span class="kv-note">{imp[r["importance"]]}</span></td>'
+                          f'<td data-l="Requirement">“{escape(r["requirement"])}”</td>'
+                          f'<td data-l="Status">{_ri_pill(r["status"])}'
+                          + (f'<span class="kv-note">{escape(r["note"])}</span>' if r["note"] else "") + '</td>'
+                          f'<td data-l="Evidence">{escape(r["evidence"]) or "—"}</td>'
+                          f'<td data-l="Section">{escape(r["classification"]) or "—"}</td></tr>' for r in rows)
+                + "</tbody></table></div>")
+
+
+def _ri_save_one(rid: str, jid: str) -> None:
+    try:
+        state = _ri_state()
+        job = _ri_job(jid)
+        r, reqs, key = _ri_result(state, rid, job)
+        lib = _ri_lib()
+        lib.save_matches(rid, [(job_key(job), key, resume_match.summary(r))])
+        lib.add_history(rid, "match", f"{_ri_name(state, rid)} vs {job.get('title', '')} — {job.get('company', '')}: "
+                        f"{_ri_score_txt(r)} ({r['verdict']})", resume_match.summary(r))
+        st.session_state._ri_msg = ("ok", "Saved to your analysis history.")
+        _ri_forget()
+    except (resume_store.NotFound, resume_store.NotAuthorized, user_store.UserStoreError, AttributeError, TypeError) as e:
+        _ri_fail(e)
+
+
+def _ri_save_jd(jid: str) -> None:
+    job = _ri_job(jid)
+    try:
+        _ri_lib().set_job_text(job_key(job), st.session_state.get(f"ri_jd_{jid}") or "")
+        st.session_state._ri_msg = ("ok", "Job description saved — the analysis now uses it.")
+        _ri_forget()
+    except (user_store.InvalidInput, resume_store.NotAuthorized, user_store.UserStoreError, AttributeError, TypeError) as e:
+        _ri_fail(e)
+
+
+def _ri_job_detail(state: dict, jid: str) -> None:
+    job = _ri_job(jid)
+    st.button("Back to all matches", key="btn_ri_mback", icon=":material/arrow_back:",
+              on_click=lambda: st.session_state.__setitem__("ri_job", None))
+    if job is None:
+        st.html('<p class="note">That job is no longer in the tracker.</p>')
+        return
+    rids = [m["id"] for m in state["resumes"]]
+    results = {rid: _ri_result(state, rid, job)[0] for rid in rids}
+    best = resume_match.best_resume(results)
+    if st.session_state.get("ri_d_res") not in rids:
+        st.session_state.ri_d_res = best
+    with st.container(key="set_ri_detail"):
+        st.html(f'<div class="eyebrow">Job match</div><h2 class="section-title">{escape(job.get("title", ""))}</h2>'
+                f'<p class="note">{escape(job.get("company", ""))} · {escape(job.get("location", "") or "Location not captured")}'
+                + (f' · <a href="{escape(safe_url(job.get("url", "")))}" target="_blank" rel="noopener noreferrer">Open the posting</a>'
+                   if safe_url(job.get("url", "")) else "") + "</p>")
+        _ri_msg()
+        if len(rids) > 1:
+            st.html('<p class="note">Best-fitting résumé for this job: <b>' + escape(_ri_name(state, best)) + "</b> ("
+                    + escape(_ri_score_txt(results[best])) + ", " + escape(results[best]["verdict"]) + ")</p>")
+        rid = st.selectbox("Résumé", rids, key="ri_d_res", format_func=lambda r: f"{_ri_name(state, r)} — "
+                           f"{_ri_score_txt(results[r])}")
+        result, reqs, _ = _ri_result(state, rid, job)
+        with st.expander("Paste the full job description" + (" (saved)" if job_key(job) in state["texts"] else ""),
+                         expanded=reqs["quality"] == "minimal"):
+            st.html('<p class="note">The tracker keeps only part of each posting. Paste the whole description from the '
+                    'company\'s site for a complete analysis. It is kept in your own account.</p>')
+            st.text_area("Job description", value=state["texts"].get(job_key(job), ""), key=f"ri_jd_{jid}", height=180,
+                         max_chars=resume_store.JOB_TEXT_MAX, label_visibility="collapsed")
+            st.button("Save description", key=f"btn_ri_jd_{jid}", on_click=_ri_save_jd, args=(jid,))
+        _ri_result_view(result, reqs)
+        a, b, c, d = st.columns(4)
+        with a:
+            st.button("Save to history", key="btn_ri_save1", icon=":material/bookmark_add:", on_click=_ri_save_one,
+                      args=(rid, jid), use_container_width=True)
+        with b:
+            st.button("Skill gaps", key="btn_ri_to_gaps", on_click=_ri_goto, args=("gaps",),
+                      kwargs={"ri_g_res": rid, "ri_g_job": jid, "ri_g_mode": "job"}, use_container_width=True)
+        with c:
+            st.button("Interview prep", key="btn_ri_to_iv", on_click=_ri_goto, args=("interview",),
+                      kwargs={"ri_i_res": rid, "ri_i_job": jid}, use_container_width=True)
+        with d:
+            st.button("Improve résumé", key="btn_ri_to_imp", on_click=_ri_goto, args=("improve",),
+                      kwargs={"ri_v_res": rid, "ri_v_job": jid}, use_container_width=True)
+
+
+def _ri_save_batch(pairs: list[tuple[str, str]]) -> None:
+    try:
+        state = _ri_state()
+        lib = _ri_lib()
+        by_rid: dict[str, list] = {}
+        for rid, jid in pairs:
+            job = _ri_job(jid)
+            if job is None:
+                continue
+            r, _, key = _ri_result(state, rid, job)
+            by_rid.setdefault(rid, []).append((job_key(job), key, resume_match.summary(r)))
+        for rid, items in by_rid.items():
+            lib.save_matches(rid, items)
+            lib.add_history(rid, "batch", f"Saved {_plural(len(items), 'job match', 'job matches')} for {_ri_name(state, rid)}",
+                            {"jobs": len(items)})
+        st.session_state._ri_msg = ("ok", f"Saved {_plural(len(pairs), 'result')} to your analysis history.")
+        _ri_forget()
+    except (resume_store.NotFound, resume_store.NotAuthorized, user_store.UserStoreError, AttributeError) as e:
+        _ri_fail(e)
+
+
+def _ri_match(state: dict) -> None:
+    if not state["resumes"]:
+        _ri_overview(state)
+        return
+    jid = st.session_state.get("ri_job")
+    if jid:
+        _ri_job_detail(state, jid)
+        return
+    rids = [m["id"] for m in state["resumes"]]
+    jobs = _ri_jobs()
+    if not [r for r in (st.session_state.get("ri_m_res") or []) if r in rids]:
+        st.session_state.ri_m_res = [_ri_default(state)]
+    with st.container(key="filters_ri"):
+        c = st.columns(4)
+        with c[0]:
+            chosen = st.multiselect("Résumés", rids, key="ri_m_res", format_func=lambda r: _ri_name(state, r))
+        with c[1]:
+            q = st.text_input("Job title", key="ri_m_q", placeholder="e.g. analyst")
+        with c[2]:
+            cos = ["All"] + sorted({str(j.get("company", "")) for j in jobs if j.get("company")})
+            co = st.selectbox("Company", cos, key="ri_m_co")
+        with c[3]:
+            loc = st.text_input("Location", key="ri_m_loc", placeholder="e.g. Hyderabad")
+        d = st.columns(4)
+        with d[0]:
+            lvl = st.selectbox("Experience level", _RI_EXP_LEVELS, key="ri_m_exp")
+        with d[1]:
+            mn = st.slider("Minimum estimate", 0, 100, 0, 5, key="ri_m_min")
+        with d[2]:
+            el = st.selectbox("Eligibility", _RI_ELIG_FILTER, key="ri_m_el")
+        with d[3]:
+            ver = st.selectbox("Résumé version", ["All"] + chosen, key="ri_m_ver",
+                               format_func=lambda r: "All chosen" if r == "All" else _ri_name(state, r))
+    rows = []
+    failed = 0
+    for j in jobs:
+        if q and q.lower() not in str(j.get("title", "")).lower():
+            continue
+        if co != "All" and str(j.get("company", "")) != co:
+            continue
+        if loc and loc.lower() not in str(j.get("location", "")).lower():
+            continue
+        per = {}
+        for rid in chosen:
+            if ver != "All" and rid != ver:
+                continue
+            try:
+                r, reqs, _ = _ri_result(state, rid, j)
+            except Exception as e:                   # a malformed record: skipped, counted, never fatal
+                log.warning("resume match failed: %s", type(e).__name__)
+                failed += 1
+                continue
+            if lvl != "Any" and _ri_exp_level(reqs) != lvl:
+                continue
+            if mn and (r["overall"] or 0) < mn:
+                continue
+            if el == "No critical issue" and r["critical"]:
+                continue
+            if el == "Has a critical issue" and not r["critical"]:
+                continue
+            if el == "Insufficient evidence" and r["overall"] is not None:
+                continue
+            per[rid] = r
+        best = resume_match.best_resume(per)
+        for rid, r in per.items():
+            rows.append((j, rid, r, rid == best and len(per) > 1))
+    rows.sort(key=lambda t: resume_match.sort_key(t[2]))
+    _ri_msg()
+    st.html(f'<p class="note">{_plural(len(rows), "result")} · ranked by eligibility first, then the estimate'
+            + (f' · {failed} record(s) couldn\'t be analysed' if failed else "") + "</p>")
+    pages = max(1, -(-len(rows) // _RI_PAGE))
+    page_no = min(int(st.session_state.get("ri_m_page") or 1), pages)
+    for j, rid, r, best in rows[(page_no - 1) * _RI_PAGE: page_no * _RI_PAGE]:
+        jid = _jid(j)
+        mc = r["mandatory"]
+        with st.container(key=f"jr_ri_{jid}_{rid}"):
+            a, b = st.columns([5, 1], vertical_alignment="center")
+            with a:
+                st.html(f'<div class="ri-score"><b>{escape(j.get("title", ""))}</b>'
+                        f'<span class="lbl">{escape(j.get("company", ""))} · {escape(j.get("location", "") or "—")}</span></div>'
+                        f'<p class="note"><b>{escape(_ri_score_txt(r))}</b> · {escape(r["verdict"])} {_ri_elig_pill(r)} · '
+                        f'mandatory: {mc["counts"].get("demonstrated", 0)} of {mc["count"]} demonstrated · '
+                        f'{escape(r["confidence"])} confidence · {escape(_ri_name(state, rid))}'
+                        + (' <span class="pill new">Best résumé for this job</span>' if best else "") + "</p>")
+            with b:
+                st.button("Details", key=f"btn_ri_open_{jid}_{rid}", use_container_width=True,
+                          on_click=_ri_goto, args=("match",), kwargs={"ri_job": jid, "ri_d_res": rid})
+    if pages > 1:
+        p1, p2, p3 = st.columns([1, 2, 1])
+        with p1:
+            st.button("Previous", key="btn_ri_prev", disabled=page_no <= 1,
+                      on_click=lambda: st.session_state.__setitem__("ri_m_page", page_no - 1))
+        with p2:
+            st.html(f'<p class="note" style="text-align:center">Page {page_no} of {pages}</p>')
+        with p3:
+            st.button("Next", key="btn_ri_next", disabled=page_no >= pages,
+                      on_click=lambda: st.session_state.__setitem__("ri_m_page", page_no + 1))
+    if rows:
+        st.button("Save these results to history", key="btn_ri_batch", icon=":material/bookmark_add:",
+                  on_click=_ri_save_batch, args=([(rid, _jid(j)) for j, rid, _, _ in rows[:500]],))
+
+
+# ── Skill Gaps ────────────────────────────────────────────────────────────────
+def _ri_gaps(state: dict) -> None:
+    if not state["resumes"]:
+        _ri_overview(state)
+        return
+    c1, c2 = st.columns([2, 1])
+    with c1:
+        rid = _ri_resume_select(state, "ri_g_res")
+    with c2:
+        st.session_state.setdefault("ri_g_mode", "all")
+        mode = st.segmented_control("View", ["job", "all"], key="ri_g_mode",
+                                    format_func=lambda m: "One job" if m == "job" else "All jobs") or "all"
+    eff = state["full"][rid]["effective"]
+    if mode == "job":
+        jid = _ri_job_select("ri_g_job")
+        job = _ri_job(jid) if jid else None
+        if job is None:
+            st.html('<p class="note">No jobs to compare with.</p>')
+            return
+        result, reqs, _ = _ri_result(state, rid, job)
+        g = resume_match.pair_gaps(result)
+        groups = [("Skills already demonstrated", g["demonstrated"]), ("Mentioned but not demonstrated", g["mentioned"]),
+                  ("Missing mandatory skills", g["missing_mandatory"]), ("Missing preferred skills", g["missing_preferred"]),
+                  ("Related or transferable skills", g["related"]), ("Needs verification", g["verify"])]
+        with st.container(key="set_ri_gaps"):
+            st.html('<dl class="kv">' + "".join(
+                f'<dt>{label}</dt><dd>{escape(", ".join(r["skill"] + (" (via " + r["related_to"] + ")" if r.get("related_to") else "") for r in rows)) or "None"}</dd>'
+                for label, rows in groups) + "</dl>"
+                + ('<p class="note">A missing skill doesn\'t make you ineligible unless the posting says it is mandatory.</p>'))
+            if g["next_steps"]:
+                st.html('<div class="divider"></div><h3 class="section-title">Next steps, most important first</h3>'
+                        '<div class="ri-wrap"><table class="ri-table"><thead><tr><th>Skill</th><th>Priority</th><th>Why</th>'
+                        '<th>Next step</th></tr></thead><tbody>'
+                        + "".join(f'<tr><td class="s" data-l="Skill">{escape(s["skill"])}</td><td data-l="Priority">{escape(s["priority"])}</td>'
+                                  f'<td data-l="Why">{escape(s["why"])}</td><td data-l="Next step">{escape(s["step"])}</td></tr>'
+                                  for s in g["next_steps"]) + "</tbody></table></div>")
+        return
+    fams = [""] + [f for f, _ in job_requirements.ROLE_FAMILIES]
+    fam = st.selectbox("Focus on a role family", fams, key="ri_g_fam", format_func=lambda f: f or "All roles")
+    all_reqs = [_ri_reqs(j, state["texts"])[0] for j in _ri_jobs()]
+    gaps = resume_match.global_gaps(eff, all_reqs, fam, top=12)
+    with st.container(key="set_ri_gaps"):
+        st.html(f'<div class="eyebrow">Across {_plural(len(all_reqs), "active job")}</div>'
+                '<h2 class="section-title">Skill gaps worth closing</h2><p class="section-sub">Ranked by how often jobs '
+                '<b>require</b> a skill, then how often they name it, your chosen role family, and whether you already '
+                'have a related skill. Skills named by only one job are left out — not every missing skill is worth '
+                'learning.</p>'
+                + ('<div class="ri-wrap"><table class="ri-table"><thead><tr><th>Skill</th><th>Required by</th><th>Named by</th>'
+                   '<th>Your résumé</th><th>Next step</th></tr></thead><tbody>'
+                   + "".join(f'<tr><td class="s" data-l="Skill">{escape(g["skill"])}</td><td data-l="Required by">{g["mandatory"]}</td>'
+                             f'<td data-l="Named by">{g["named"]}</td><td data-l="Your résumé">{_ri_pill(g["status"])}'
+                             + (f'<span class="kv-note">related: {escape(g["related_to"])}</span>' if g["related_to"] else "")
+                             + f'</td><td data-l="Next step">{escape(g["next_step"])}</td></tr>' for g in gaps)
+                   + "</tbody></table></div>" if gaps else '<p class="note">No gaps to show for this selection.</p>'))
+
+
+# ── Interview Preparation ─────────────────────────────────────────────────────
+def _ri_set_practice(qid: str) -> None:
+    try:
+        _ri_lib().set_practice(qid, st.session_state.get(f"ri_p_{qid}"))
+        cache = st.session_state.get("_ri_cache")
+        if isinstance(cache, dict):
+            cache["practice"][qid] = st.session_state.get(f"ri_p_{qid}")
+    except (user_store.InvalidInput, resume_store.NotAuthorized, user_store.UserStoreError, AttributeError) as e:
+        _ri_fail(e)
+
+
+def _ri_interview(state: dict) -> None:
+    c1, c2, c3 = st.columns([2, 2, 1])
+    with c1:
+        rid = _ri_resume_select(state, "ri_i_res") if state["resumes"] else None
+    with c2:
+        jid = _ri_job_select("ri_i_job", allow_none=True)
+    with c3:
+        st.session_state.setdefault("ri_i_lvl", "basic")
+        level = st.segmented_control("Level", list(interview_prep.LEVELS), key="ri_i_lvl",
+                                     format_func=str.capitalize) or "basic"
+    job = _ri_job(jid) if jid else None
+    reqs = _ri_reqs(job, state["texts"])[0] if job else None
+    profile = state["full"][rid]["effective"] if rid else {}
+    qs = interview_prep.question_set(profile, reqs, level)
+    st.html(f'<p class="note">{_ms("info", "s16")} {escape(qs["disclaimer"])} Role family: '
+            f'<b>{escape(qs["family"])}</b> · {_plural(qs["count"], "question")}.</p>')
+    _ri_msg()
+    practice = state["practice"]
+    done = sum(1 for t in qs["tracks"].values() for q in t if practice.get(q["id"]) == "Confident")
+    st.html(f'<p class="note">Practice progress at this level: <b>{done}</b> of {qs["count"]} marked confident.</p>')
+    for track, items in qs["tracks"].items():
+        st.html(f'<h3 class="section-title">{escape(interview_prep.TRACKS[track])}</h3>')
+        for q in items:
+            status = practice.get(q["id"], "Not started")
+            with st.expander(f'{q["question"]}  ·  {status}'):
+                src = ("Generated from your résumé" if q["source"] == "resume" else "Curated practice question")
+                st.html(f'<span class="ri-tag">{src}</span>' + (f'<span class="ri-tag">{escape(q["skill"])}</span>' if q.get("skill") else "")
+                        + (f'<span class="ri-tag">{escape(q["reason"])}</span>' if q.get("reason") else "")
+                        + '<dl class="ri-q">'
+                        f'<dt>Why it matters</dt><dd>{escape(q["why"])}</dd>'
+                        f'<dt>Concepts to cover</dt><dd>{escape("; ".join(q["concepts"]))}</dd>'
+                        f'<dt>Suggested answer structure</dt><dd>{escape(q["structure"])}</dd>'
+                        f'<dt>Example answer (illustrative — not about you)</dt><dd>{escape(q["example"])}</dd>'
+                        + (f'<dt>Related résumé evidence</dt><dd>“{escape(q["evidence"])}”</dd>' if q.get("evidence") else "")
+                        + (f'<dt>The posting says</dt><dd>“{escape(q["requirement"])}”</dd>' if q.get("requirement") else "")
+                        + "</dl>")
+                st.selectbox("Practice status", interview_prep.PRACTICE, index=interview_prep.PRACTICE.index(status)
+                             if status in interview_prep.PRACTICE else 0, key=f"ri_p_{q['id']}",
+                             on_change=_ri_set_practice, args=(q["id"],))
+
+
+# ── Resume Improvement ────────────────────────────────────────────────────────
+def _ri_decide(rid: str, jk: str, sid: str, decision: str) -> None:
+    try:
+        _ri_lib().decide(rid, jk, sid, decision)
+    except (user_store.InvalidInput, resume_store.NotFound, resume_store.NotAuthorized, user_store.UserStoreError, AttributeError) as e:
+        _ri_fail(e)
+
+
+def _ri_improve(state: dict) -> None:
+    if not state["resumes"]:
+        _ri_overview(state)
+        return
+    c1, c2 = st.columns(2)
+    with c1:
+        rid = _ri_resume_select(state, "ri_v_res")
+    with c2:
+        jid = _ri_job_select("ri_v_job", "For a job (optional)", allow_none=True)
+    job = _ri_job(jid) if jid else None
+    reqs = _ri_reqs(job, state["texts"])[0] if job else None
+    full = state["full"][rid]
+    sugg = resume_improve.suggestions(full["effective"], reqs, (full.get("hints") or {}).get("findings"))
+    jk = job_key(job) if job else ""
+    decisions = _ri_lib().decisions(rid, jk)
+    accepted = [s for s in sugg if decisions.get(s["id"]) == "accepted"]
+    st.html('<p class="note">Suggestions only reword or restructure what your résumé already says. Nothing is invented: '
+            f'where a result would help, the text shows <b>{escape(resume_improve.PLACEHOLDER)}</b> for you to fill in '
+            'with a real figure — or remove. Your résumé and its profile are never changed here.</p>')
+    _ri_msg()
+    if accepted:
+        st.download_button(f"Download {_plural(len(accepted), 'accepted suggestion')} (.txt)",
+                           resume_improve.export_text(_ri_name(state, rid), accepted),
+                           file_name="resume-improvements.txt", mime="text/plain", key="dl_ri_improve")
+    if not sugg:
+        st.html('<p class="note">No suggestions for this résumé.</p>')
+    for s in sugg:
+        d = decisions.get(s["id"], "")
+        with st.container(key=f"set_ri_sg_{s['id']}"):
+            st.html(f'<span class="ri-tag">{escape(s["type_label"])}</span>'
+                    + (f'<span class="pill {"on" if d == "accepted" else "off"}">{d.capitalize()}</span>' if d else "")
+                    + f'<h3 class="section-title">{escape(s["title"])}</h3><dl class="kv"><dt>Before</dt><dd>{escape(s["before"])}</dd>'
+                    f'<dt>After</dt><dd>{escape(s["after"])}</dd><dt>Why</dt><dd>{escape(s["why"])}</dd></dl>')
+            a, b, _ = st.columns([1, 1, 3])
+            with a:
+                st.button("Accept" if d != "accepted" else "Undo", key=f"btn_ri_acc_{s['id']}", use_container_width=True,
+                          on_click=_ri_decide, args=(rid, jk, s["id"], "" if d == "accepted" else "accepted"))
+            with b:
+                st.button("Reject" if d != "rejected" else "Undo", key=f"btn_ri_rej_{s['id']}", use_container_width=True,
+                          on_click=_ri_decide, args=(rid, jk, s["id"], "" if d == "rejected" else "rejected"))
+
+
+# ── Analysis History ──────────────────────────────────────────────────────────
+def _ri_clear_history() -> None:
+    try:
+        n = _ri_lib().clear_history()
+        st.session_state.ri_hist_confirm = False
+        st.session_state._ri_msg = ("ok", f"Cleared {_plural(n, 'entry', 'entries')}.")
+        _ri_forget()
+    except (resume_store.NotAuthorized, user_store.UserStoreError, AttributeError) as e:
+        _ri_fail(e)
+
+
+def _ri_history(state: dict) -> None:
+    hist = _ri_lib().history(200)
+    _ri_msg()
+    if not hist:
+        st.html('<p class="note">No saved analyses yet. Use “Save to history” on a job match, or save a whole result '
+                'list in Job Match.</p>')
+        return
+    names = {m["id"]: _ri_name(state, m["id"]) for m in state["resumes"]}
+    kinds = {"upload": "Upload", "replace": "Replaced", "correct": "Corrected", "confirm": "Confirmed", "match": "Job match",
+             "batch": "Saved results"}
+    st.html('<div class="ri-wrap"><table class="ri-table"><thead><tr><th>When</th><th>Résumé</th><th>What</th><th>Details</th>'
+            '</tr></thead><tbody>'
+            + "".join(f'<tr><td data-l="When" class="num">{escape(_ist_stamp(_parse_iso(h["at"])) if _parse_iso(h["at"]) else h["at"])}</td>'
+                      f'<td data-l="Résumé">{escape(names.get(h.get("resume_id"), "Deleted résumé"))}</td>'
+                      f'<td data-l="What">{escape(kinds.get(h.get("kind"), h.get("kind", "")))}</td>'
+                      f'<td data-l="Details">{escape(h.get("label", ""))}</td></tr>' for h in hist)
+            + "</tbody></table></div>")
+    st.checkbox("I want to clear the whole analysis history", key="ri_hist_confirm")
+    st.button("Clear history", key="btn_ri_clear", on_click=_ri_clear_history,
+              disabled=not st.session_state.get("ri_hist_confirm"))
+
+
+def page_resume_intel():
+    """Resume & Job Intelligence: Overview / My Resumes / Job Match / Skill
+    Gaps / Interview Preparation / Resume Improvement / Analysis History."""
+    title = "Resume & Job Intelligence"
+    if not _ri_allowed():
+        page_header(title, eyebrow="Discover")
+        empty_state("cloud_off", f"{title} unavailable",
+                    escape(USER_PROBLEM or "It needs your personal data, which isn't available right now."))
+        return
+    try:
+        state = _ri_state()
+    except (resume_store.NotAuthorized, user_store.UserStoreError) as e:
+        page_header(title, eyebrow="Discover")
+        empty_state("cloud_off", f"{title} unavailable", escape(str(e)))
+        return
+    page_header(title, "Your résumés compared with the jobs in this tracker: evidence for every skill, eligibility "
+                "checks, gaps, interview practice and résumé suggestions · private to your account", eyebrow="Discover")
+    st.session_state.setdefault("ri_section", "overview")
+    with st.container(key="at_section_wrap"):
+        section = st.pills("Section", list(_RI_SECTIONS), key="ri_section", label_visibility="collapsed",
+                           format_func=_RI_SECTIONS.get) or "overview"
+    view = {"overview": _ri_overview, "resumes": _ri_resumes, "match": _ri_match, "gaps": _ri_gaps,
+            "interview": _ri_interview, "improve": _ri_improve, "history": _ri_history}[section]
+    try:
+        view(state)
+    except (resume_store.NotAuthorized, resume_store.NotFound, user_store.UserStoreError) as e:
+        empty_state("cloud_off", "That didn't work", escape(str(e)))
+
+
+def resume_match_panel(j: dict) -> None:
+    """Job detail (admins): analyse this job against one of your résumés."""
+    if not (TRACKER_NAV and _ri_allowed()):
+        return
+    try:
+        state = _ri_state()
+    except (resume_store.NotAuthorized, user_store.UserStoreError):
+        return
+    jid = _jid(j)
+    with st.container(key="ri_jobpanel"):
+        st.html('<div class="divider"></div><div class="eyebrow">Resume &amp; Job Intelligence</div>'
+                f'<h2 class="section-title" style="margin-top:4px;">{_ms("description")}Match with your résumé</h2>')
+        if not state["resumes"]:
+            st.html('<p class="note">Upload a résumé to compare it with this job, requirement by requirement.</p>')
+            st.button("Upload a résumé", key="btn_ri_jp_up", on_click=_ri_goto, args=("resumes",))
+            return
+        rid = _ri_resume_select(state, "ri_jp_res")
+        st.button("Analyse against résumé", key="btn_ri_jp", icon=":material/analytics:",
+                  on_click=lambda: st.session_state.__setitem__("_ri_jp", (jid, st.session_state.get("ri_jp_res"))))
+        if st.session_state.get("_ri_jp") == (jid, rid):
+            r, reqs, _ = _ri_result(state, rid, j)
+            mc = r["mandatory"]
+            st.html(f'<div class="ri-score"><span class="big">{escape(_ri_score_txt(r))}</span>'
+                    f'<span class="lbl">estimate · {escape(r["band"])}</span> {_ri_elig_pill(r)}</div>'
+                    f'<p class="note">Mandatory skills: {mc["counts"].get("demonstrated", 0)} of {mc["count"]} demonstrated · '
+                    f'{escape(r["confidence"])} confidence. Not a probability of being hired.</p>'
+                    + _ri_issues(r, limit=3))
+            st.button("Open full analysis", key="btn_ri_jp_open", on_click=_ri_goto, args=("match",),
+                      kwargs={"ri_job": jid, "ri_d_res": rid})
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # ROUTER
 # ═══════════════════════════════════════════════════════════════════════════════
 if st.query_params.get("diag") == "scope" and IS_ADMIN and is_owner():
@@ -6773,7 +7900,8 @@ else:
     # who followed nothing was shown the primary admin's whole feed
     {"home": page_member_home if MEMBER_VIEW or OWN_SCOPE else page_home, "jobs": page_jobs, "companies": page_companies,
      "monitoring": page_monitoring, "email": page_email, "settings": page_settings, "alerts": page_alerts,
-     "preferences": page_preferences, "onboarding": page_onboarding, "applications": page_applications}[page]()
+     "preferences": page_preferences, "onboarding": page_onboarding, "applications": page_applications,
+     "resume_intel": page_resume_intel}[page]()
 st.session_state.page_before = st.session_state.page
 
 # mirror the view into the URL (only when it changed, so no extra reruns)

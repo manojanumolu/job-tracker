@@ -331,6 +331,18 @@ def _posting_skills(description: str, limit: int = 15) -> dict[str, str]:
         return {}
 
 
+def _posting_requirements(description: str) -> list[dict]:
+    """The posting lines M6's matcher needs ({text, importance}: skills,
+    experience, education and other stated conditions, each marked
+    mandatory / preferred / unspecified), for a job that has already been
+    accepted. Never affects classification; a failure only leaves it out."""
+    try:
+        import job_requirements
+        return job_requirements.posting_requirement_lines(description)
+    except Exception:                      # never let a descriptive field cost a job
+        return []
+
+
 def decide(company: str, listing: Listing, detail: Detail | None) -> tuple[Classification, dict | None]:
     """Final verdict for one posting. Never accepts without the posting's own
     detail (the safety gate requires it), and every alert must pass all
@@ -360,6 +372,9 @@ def decide(company: str, listing: Listing, detail: Detail | None) -> tuple[Class
     skills = _posting_skills(description)
     if skills:                             # descriptive only: added after every gate has passed
         job["evidence"]["skills"] = skills
+    reqs = _posting_requirements(description)
+    if reqs:                               # M6: the requirement lines, also only after every gate
+        job["evidence"]["requirements"] = reqs
     if detail.posted_at:                   # only what the source states — never a guess (sources.posting_date)
         job["posted_at"] = detail.posted_at
     return result, job

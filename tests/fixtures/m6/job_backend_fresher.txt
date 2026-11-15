@@ -1,0 +1,13 @@
+Associate Software Engineer – Backend (2026 batch)
+About the role
+You will build APIs for our payments platform using Kubernetes and Kafka.
+Requirements
+• B.Tech / B.E. in Computer Science, IT or ECE (2025 or 2026 batch)
+• 0-1 years of experience; freshers welcome
+• Strong knowledge of Python or Java
+• Hands-on experience with SQL and REST APIs
+• Understanding of data structures and algorithms
+• Minimum 60% throughout academics, no active backlogs
+Nice to have
+• Experience with Docker and AWS
+• Exposure to Django or Spring Boot is a plus
