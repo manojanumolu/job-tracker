@@ -16,6 +16,7 @@ The rules under test:
 Firestore is user_store.MemoryBackend; Google, Firebase and GitHub are never
 contacted and nothing is emailed."""
 import ast
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 import json
 import re
 import threading
@@ -35,7 +36,7 @@ from test_phase3_user_data import (  # noqa: F401
 from test_profile_avatar import TRIGGER, _label, _shows, _styles
 from test_streamlit_app import CATALOGUE_FILE, NEW_RECORD, OLD_RECORD, REPO, _html, _nav, app  # noqa: F401
 
-SRC = (REPO / "streamlit_app.py").read_text("utf-8")
+SRC = app_source()
 CSS = SRC[SRC.index('_CSS = """') + len('_CSS = """'):SRC.index('"""', SRC.index('_CSS = """') + 10)]
 
 

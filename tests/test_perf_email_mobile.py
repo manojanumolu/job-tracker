@@ -16,6 +16,7 @@ is a delivery check with no jobs and no links.
 Navigation: a menu button opens/closes the desktop sidebar (?menu=hidden);
 phones get five tab slots with an admin's Monitor and Email under "More"."""
 import json
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 import re
 import time
 from datetime import datetime, timezone
@@ -156,7 +157,7 @@ def test_a_failed_test_email_can_be_retried_at_once(app, monkeypatch):
 
 def test_the_test_email_button_is_a_callback():
     from test_streamlit_app import REPO
-    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    src = app_source()
     assert 'key="btn_test", icon=":material/send:", use_container_width=True,\n                      on_click=_send_test_click)' in src
     body = src[src.index("def _send_test_click"):src.index("\ndef page_email")]
     assert "st.rerun" not in body and "_trigger_scrape" not in body and "owner_only" in body
@@ -309,7 +310,7 @@ def test_the_alert_summary_counts_the_kinds_of_role():
 
 def test_an_admins_dismissal_commits_in_the_background_and_reports_failures():
     from test_streamlit_app import REPO
-    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    src = app_source()
     soon = src[src.index("def _save_change_soon"):src.index("def _report_background_saves")]
     assert "if not is_owner():" in soon.split("def commit")[0]          # the role is checked in the click's own run
     assert 'ThreadPoolExecutor(max_workers=1' in src                   # one writer: commits never race each other
@@ -364,7 +365,7 @@ def test_the_phone_drawer_holds_every_destination_and_closes_after_a_choice(app)
 
 def test_the_phone_and_menu_css_rules():
     from test_streamlit_app import REPO
-    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    src = app_source()
     css = src[src.index('_CSS = """') + 10:src.index('"""', src.index('_CSS = """') + 10)]
     assert "<" not in css                                                # st.html would drop the stylesheet
     phone = css[css.index("@media (max-width: 767px) {\n  section[data-testid=\"stSidebar\"]"):]
@@ -381,7 +382,7 @@ def test_the_desktop_menu_button_lives_in_the_sidebar(app):
     Closed: at the window's left edge, with a gutter so it covers nothing.
     Both drawn by one sidebar fragment, so a click redraws only it."""
     from test_streamlit_app import REPO
-    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    src = app_source()
     sidebar = src[src.index("with st.sidebar:\n    sidebar_toggle()"):]
     assert sidebar.index("sidebar_toggle()") < sidebar.index("logo = _logo_data_uri()")     # first thing in the sidebar
     frag = src[src.index("def sidebar_toggle"):src.index("# the desktop navigation's open/closed state")]
@@ -409,7 +410,7 @@ def test_the_desktop_menu_button_shows_on_hover_like_movie_ticket_radar(app):
     Desktop only: every rule is inside a min-width: 768px query."""
     import re
     from test_streamlit_app import REPO
-    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    src = app_source()
     open_css = re.search(r'_NAV_OPEN_CSS = """(.*?)"""', src, re.S).group(1)
     closed_css = re.search(r'_NAV_CLOSED_CSS = """(.*?)"""', src, re.S).group(1)
     hover = open_css[open_css.index("@media (min-width: 768px) and (hover: hover)"):]

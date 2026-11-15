@@ -10,6 +10,7 @@
 
 Every path a workflow, the app or a module uses must point at a real file."""
 import re
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 import subprocess
 from pathlib import Path
 
@@ -45,7 +46,7 @@ def test_modules_data_and_config_are_grouped():
 
 
 def test_the_app_puts_src_on_the_path_and_reads_data_from_data():
-    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    src = app_source()
     assert src.index('_SRC = os.path.join(') < src.index("from config_store import")      # before any module import
     files = re.search(r"_DATA_FILES = \[([^\]]*)\]", src).group(1)
     for path in re.findall(r'"([^"]+)"', files):

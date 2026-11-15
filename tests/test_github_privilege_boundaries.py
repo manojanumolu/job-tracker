@@ -14,6 +14,7 @@ Workflows are read as text (no YAML library in CI), like the other workflow
 tests. Nothing here talks to GitHub.
 """
 import json
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 import os
 import re
 import subprocess
@@ -127,7 +128,7 @@ def test_the_app_writes_github_only_through_config_store():
     """Every GitHub contents write in the app goes through update_json (which
     follows JT_DATA_BRANCH); the only other GitHub action is starting Check
     Jobs on main."""
-    app = (REPO / "streamlit_app.py").read_text("utf-8")
+    app = app_source()
     assert not re.search(r"\.(create_file|update_file|delete_file)\(", app)
     assert re.findall(r"create_dispatch\(([^)]*)\)", app) == ['ref="main"']
 

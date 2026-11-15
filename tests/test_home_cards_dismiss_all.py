@@ -17,6 +17,7 @@ first and writes only this person's dismissed list. data/seen_jobs.json and
 every other account are untouched. Firestore is MemoryBackend; Google and
 Firebase are never contacted."""
 from pathlib import Path
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 
 import pytest
 
@@ -26,7 +27,7 @@ from test_phase3_user_data import A_MAIL, A_UID, B_MAIL, B_UID, METLIFE_JOB, PWC
 from test_phase3_user_data import _job_key
 from test_streamlit_app import _html, _key, _nav, _seen, app  # noqa: F401
 
-APP_SRC = (Path(__file__).resolve().parent.parent / "streamlit_app.py").read_text("utf-8")
+APP_SRC = app_source()
 JOBS = (PWC_JOB, METLIFE_JOB)          # Software · Pune · entry level / Data · Hyderabad · fresher
 
 

@@ -1,5 +1,6 @@
 """Regression tests for the Sep 30 bug & UI audit (rendered-app findings)."""
 import json
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 from datetime import datetime, timedelta, timezone
 
 from test_streamlit_app import _html, _key, _nav, _seen, app  # noqa: F401  (fixture re-export)
@@ -160,7 +161,7 @@ def test_phone_layout_rules():
     horizontal scroll), job cards keep their category/why line, stats wrap."""
     import re
     from pathlib import Path
-    css = (Path(__file__).resolve().parent.parent / "streamlit_app.py").read_text(encoding="utf-8")
+    css = app_source()
     phone = css[css.index("@media (max-width: 767px)"):]
     phone = phone[:phone.index('"""')]
     assert ".job-why { display: none" not in phone

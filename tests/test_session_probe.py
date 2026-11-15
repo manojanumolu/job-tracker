@@ -12,6 +12,7 @@ restoration tests below make a browser count as connected and let the probe
 report, the way it does on Streamlit Community Cloud (where the server never
 sees the cookie). Firestore and Firebase are fakes; no browser is started."""
 import importlib
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 import sys
 from pathlib import Path
 
@@ -201,5 +202,5 @@ def test_the_way_out_is_revealed_by_css_alone_after_a_delay():
     """No timer or frame is needed for it to appear, and a normal check (about
     a second) never shows it. It is a CSS rule: a browser without it still
     gets a usable button, never a hidden one."""
-    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    src = app_source()
     assert ".st-key-probe_way_out { margin-top: 14px; animation: jt-fade .25s ease-out 8s both; }" in src

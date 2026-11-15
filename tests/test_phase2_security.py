@@ -3,6 +3,7 @@ the server for every protected operation, visitors and members never see
 internal details, and one person's session never carries into another's.
 Google and Firebase are never contacted (see test_firebase_auth's fakes)."""
 import ast
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 import json
 import time
 from html import unescape
@@ -413,7 +414,7 @@ def test_shared_caches_hold_no_per_user_data():
     """Streamlit caches are shared by every session of the process. Only
     these may exist, none takes an argument (so nothing can be keyed by a
     user), and none is about accounts. A new cache must be reviewed here."""
-    tree = ast.parse((REPO / "streamlit_app.py").read_text("utf-8"))
+    tree = ast.parse(app_source())
     cached = {}
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):

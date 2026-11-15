@@ -9,6 +9,7 @@ Two causes, both reproduced here:
   called a scan missed that way "healthy" until it was 10 h old.
 """
 import json
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 import re
 import shutil
 from datetime import datetime, timedelta, timezone
@@ -95,7 +96,7 @@ def test_github_down_keeps_the_old_copy_marked_stale_and_never_fresh():
 
 
 def test_the_app_bounds_its_shared_data_cache():
-    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    src = app_source()
     m = re.search(r"SnapshotCache\(lambda: fetch_remote_json\(_DATA_FILES\), ttl_s=(\d+), max_stale_s=(\d+)\)", src)
     assert m and int(m.group(1)) == 300 and int(m.group(2)) <= 900
 
@@ -256,7 +257,7 @@ def test_a_plan_dispatch_scans_only_when_due():
 def test_run_check_without_inputs_still_scans_at_once():
     companies = [{"id": "a", "last_checked": u(12, 8, 0).isoformat()}]
     assert scan_schedule.plan("workflow_dispatch", "", {}, companies, u(12, 8, 5)) == {"scan": True, "deliver": False}
-    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    src = app_source()
     assert 'create_dispatch(ref="main")' in src                    # the app sends no mode: "scan"
 
 

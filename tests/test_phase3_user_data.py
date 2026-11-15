@@ -2,6 +2,7 @@
 Firestore is replaced by user_store.MemoryBackend (same create-if-absent and
 compare-and-set semantics); Google and Firebase are never contacted."""
 import inspect
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 import json
 import logging
 import threading
@@ -718,7 +719,7 @@ def test_the_app_binds_personal_data_in_exactly_one_place():
     gate's own account UID; nothing else in the app names a uid path."""
     import re
     from test_streamlit_app import REPO
-    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    src = app_source()
     assert re.findall(r"for_uid\((.*?)\)", src) == ['ACCOUNT["uid"]']
     assert "users/" not in src and "UserData(" not in src
 

@@ -14,6 +14,7 @@ The rules under test:
 Firestore is user_store.MemoryBackend; Google and Firebase are never
 contacted and no email is sent."""
 import base64
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 import inspect
 import xml.etree.ElementTree as ET
 
@@ -315,7 +316,7 @@ def test_no_editor_without_personal_data(app, google_env):
 
 def _app_css():
     from test_streamlit_app import REPO
-    src = (REPO / "streamlit_app.py").read_text("utf-8")
+    src = app_source()
     start = src.index('_CSS = """') + len('_CSS = """')
     return "\n".join(line for line in src[start:src.index('"""', start)].splitlines() if not line.startswith("@import"))
 
@@ -326,7 +327,7 @@ def _app_avatar():
     import hashlib
     from html import escape
     from test_streamlit_app import REPO
-    tree = ast.parse((REPO / "streamlit_app.py").read_text("utf-8"))
+    tree = ast.parse(app_source())
     keep = [n for n in tree.body if (isinstance(n, ast.FunctionDef) and n.name in ("_initial", "_avatar"))
             or (isinstance(n, ast.AnnAssign) and getattr(n.target, "id", "") in ("_FOUND_LOGOS", "_USED_LOGOS"))]
     ns = {"brand_logos": brand_logos, "hashlib": hashlib, "escape": escape, "companies": []}

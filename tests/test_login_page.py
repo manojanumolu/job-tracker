@@ -168,5 +168,6 @@ def test_the_page_uses_the_viewport_and_the_app_font(app, google_env):
     css = _html(at)
     assert "max-width: 1520px !important;" in css and "padding: 24px clamp(24px, 4.5vw, 84px) !important;" in css
     first_style = next(e.proto.body for e in at.get("html") if e.proto.body.startswith("<style>"))
-    assert first_style.startswith("<style>\n@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans")
+    # the stylesheet is sent minified since Nov 2026 (app_theme.CSS): no line break after <style>
+    assert first_style.startswith("<style>@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans")
     assert ".lp, .lp *:not(.ms), .st-key-login_card," in css                              # every login text: var(--font)

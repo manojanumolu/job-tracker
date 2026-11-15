@@ -1,5 +1,6 @@
 """Regression tests for the remaining audit items A–G (Sep 30 follow-up)."""
 import json
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 import re
 from datetime import datetime, timedelta, timezone
 
@@ -129,6 +130,6 @@ def test_icon_only_buttons_have_accessible_labels(app):
     assert [labels[k] for k in labels if k.startswith("restore_")] == ["Restore"]
     import re
     from pathlib import Path
-    css = (Path(__file__).resolve().parent.parent / "streamlit_app.py").read_text(encoding="utf-8")
+    css = app_source()
     assert '[class*="st-key-nav_"] p { display: none' not in css      # would remove the rail labels from screen readers
     assert re.search(r'st-key-dismiss_"\] \[data-testid="stMarkdownContainer"\].*clip', css)

@@ -7,10 +7,11 @@ data-test-script-state="running" for every rerun. After a 450 ms pause a
 Search fields share one premium style; other inputs, dropdowns and buttons
 keep theirs."""
 import re
+from app_source import app_source  # noqa: E402  (streamlit_app.py + the modules it was split into)
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-SRC = (REPO / "streamlit_app.py").read_text("utf-8")
+SRC = app_source()
 CSS = SRC[SRC.index('_CSS = """') + len('_CSS = """'):SRC.index('"""', SRC.index('_CSS = """') + 10)]
 SEARCH = '.stTextInput:has(input[aria-label^="Search"])'
 FIELD = f'{SEARCH} :is([data-baseweb="input"], [data-testid="stTextInputRootElement"])'
