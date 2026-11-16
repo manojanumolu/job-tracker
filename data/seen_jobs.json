@@ -5161,7 +5161,7 @@
     "first_seen": "2026-11-13T09:20:34.486416+00:00",
     "id": "Deloitte_Executive_|_GST_&_Pre_GST_Advisory_|_Del",
     "notified": false,
-    "repost_last_seen": "2026-11-13",
+    "repost_last_seen": "2026-11-16",
     "company_id": "deloitte"
   },
   {
@@ -5291,5 +5291,83 @@
     "notified": false,
     "repost_last_seen": "2026-11-15",
     "company_id": "c1793696368"
+  },
+  {
+    "title": "Applied Sciences",
+    "url": "https://apply.careers.microsoft.com/careers/job/1970393557074078",
+    "company": "Microsoft",
+    "location": "India, Multiple Locations, Multiple Locations",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'early careers programme'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Bachelor's Degree in Statistics, Econometrics, Computer Science, Electrical or Computer Engineering, or related field and relevant internship experience (e.g., ",
+        "OR equivalent experience"
+      ],
+      "fresher_evidence": "early careers programme",
+      "detail_read": true,
+      "detail_match": "eightfold position",
+      "job_id": "id:200067493",
+      "canonical_url": "https://apply.careers.microsoft.com/careers/job/1970393557074078",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      },
+      "skills": {
+        "Statistics": "You will gain an understanding of a broad area of research (e.g., Machine Learning, Natural Language Processing, Computer Vision, Statistical Modeling, Data-Dri",
+        "Machine learning": "You will gain an understanding of a broad area of research (e.g., Machine Learning, Natural Language Processing, Computer Vision, Statistical Modeling, Data-Dri"
+      },
+      "requirements": [
+        {
+          "text": "You will gain an understanding of a broad area of research (e.g., Machine Learning, Natural Language Processing, Computer Vision, Statistical Modeling, Data-Driven Insights) and the corresponding lit…",
+          "importance": "unspecified"
+        },
+        {
+          "text": "You will prepare data to be used for analysis by reviewing criteria that reflect quality and technical constraints and review data and suggests data to be included and excluded to address data qualit…",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Bachelor's Degree in Statistics, Econometrics, Computer Science, Electrical or Computer Engineering, or related field and relevant internship experience (e.g., statistics, predictive analytics, resea…",
+          "importance": "mandatory"
+        },
+        {
+          "text": "OR Master's Degree in Statistics, Econometrics, Computer Science, Electrical or Computer Engineering, or related field",
+          "importance": "mandatory"
+        },
+        {
+          "text": "Bachelor's Degree (or currently pursuing) in Statistics, Econometrics, Computer Science, Electrical or Computer Engineering, or related field",
+          "importance": "preferred"
+        },
+        {
+          "text": "OR Master's Degree (or currently pursuing) in Statistics, Econometrics, Computer Science, Electrical or Computer Engineering, or related field",
+          "importance": "preferred"
+        },
+        {
+          "text": "This position will be open for a minimum of 5 days, with applications accepted on an ongoing basis until the position is filled.",
+          "importance": "preferred"
+        },
+        {
+          "text": "Microsoft is an equal opportunity employer. All qualified applicants will receive consideration for employment without regard to age, ancestry, citizenship, color, family or medical care leave, gende…",
+          "importance": "preferred"
+        }
+      ]
+    },
+    "posted_at": "2026-11-16",
+    "uid": "microsoft|url:https://apply.careers.microsoft.com/careers/job/1970393557074078",
+    "date": "Nov 16, 06:17",
+    "first_seen": "2026-11-16T06:17:05.910427+00:00",
+    "id": "Microsoft_Applied_Sciences",
+    "notified": false,
+    "repost_last_seen": "2026-11-16",
+    "company_id": "microsoft"
   }
 ]
