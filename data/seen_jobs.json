@@ -1570,7 +1570,7 @@
     "notify_state": "sent",
     "claimed_at": "2026-10-28T09:07:37.705536+00:00",
     "notified_at": "2026-10-28T09:07:41.358016+00:00",
-    "repost_last_seen": "2026-11-12"
+    "repost_last_seen": "2026-11-16"
   },
   {
     "title": "Sales Prog & Incentive Mgmt New Assoc",
@@ -3248,7 +3248,7 @@
     "id": "Amazon_Financial_Analyst_Intern",
     "notified": false,
     "company_id": "amazon",
-    "repost_last_seen": "2026-11-12"
+    "repost_last_seen": "2026-11-16"
   },
   {
     "title": "AHS Specialist - English & German, Account Health Support",
@@ -5366,6 +5366,134 @@
     "date": "Nov 16, 06:17",
     "first_seen": "2026-11-16T06:17:05.910427+00:00",
     "id": "Microsoft_Applied_Sciences",
+    "notified": false,
+    "repost_last_seen": "2026-11-16",
+    "company_id": "microsoft"
+  },
+  {
+    "title": "Product Management",
+    "url": "https://apply.careers.microsoft.com/careers/job/1970393557074091",
+    "company": "Microsoft",
+    "location": "India, Multiple Locations, Multiple Locations",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 - 2 years'",
+    "evidence": {
+      "experience": [
+        "0 - 2 years"
+      ],
+      "experience_lines": [
+        "Bachelor's Degree and 0 - 2 years experience in product/service/program management or software development OR equivalent experience.",
+        "0 - 2 years experience improving product metrics for a product, feature, or experience in a market (e.g., growing customer base, expanding customer usage, avoid",
+        "0 - 2 years experience disrupting a market for a product, feature, or experience (e.g., competitive disruption, taking the place of an established competing pro",
+        "Understands and starts to build experiences across multiple feature areas (e.g., product, service). Starts to coach internal team to develop problem statements "
+      ],
+      "fresher_evidence": "0 - 2 years",
+      "detail_read": true,
+      "detail_match": "eightfold position",
+      "job_id": "id:200067497",
+      "canonical_url": "https://apply.careers.microsoft.com/careers/job/1970393557074091",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      },
+      "skills": {
+        "AI / LLMs": "Begins to leverage AI to identify customer needs and market opportunities. Collaborates on user research and competitive analyses. Works with others to ensure a",
+        "Teamwork": "Begins to leverage AI to identify customer needs and market opportunities. Collaborates on user research and competitive analyses. Works with others to ensure a"
+      },
+      "requirements": [
+        {
+          "text": "Begins to leverage AI to identify customer needs and market opportunities. Collaborates on user research and competitive analyses. Works with others to ensure alignment with product and customer goal…",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Developing Technical ProductsDriving the product lifecycle from conception to launch, ensuring high standards of quality, security, and efficiency. Defining product specifications and manages deliver…",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Driving Data Insights on Product ImpactLeveraging AI-powered research synthesis and market intelligence to inform product strategy and decision-making. Utilizing AI-powered insights (e.g., customer p…",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Embedding AI in Product ManagementIntegrating AI to transform product management by building and leveraging AI agents, enabling effective creation, troubleshooting, and enhancement of models. Promoti…",
+          "importance": "mandatory"
+        },
+        {
+          "text": "Making Strategic Product DecisionsShaping long-term strategic visions and translates them into executable roadmaps by executing product sense, identifying opportunities in a broad, cross-functional p…",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Managing the Product LifecycleDriving the product lifecycle from ideation to launch, utilizing AI-generated prototypes and testing environments to ensure high standards of quality, security, and effi…",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Begins to leverage AI to identify customers’ unmet or unknown needs and market opportunities for enhancements or development of group of features or feature areas (e.g., product, service) via quantit…",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Evangelizes the group of supported features/feature areas worked on, including AI-driven solutions, with internal and external stakeholders, partners, analysts, and customers in the industry via pres…",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Collaborates with Product Marketing, Business Planning, and Engineering, to identify product release criteria (including security requirements such as Security Development Lifecycle (SDL) compliance)…",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Partners with others to identify AI-informed, short-term investment opportunities, evaluate tradeoffs, and prioritize investments in consultation with cross-functional partners for a group of feature…",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Translates technical AI concepts into business value, engaging with executives and customers to build consensus and support for AI-first product strategies, with guidance. Collaborates with cross-fun…",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Demonstrates the competence to define the features or feature set and partners with Design teams to connect multiple design factors (e.g., visual design, user experience [UX], application programming…",
+          "importance": "mandatory"
+        },
+        {
+          "text": "Starts to own a portion of the roadmap for the group of features or feature areas (e.g., product, service) they own. Starts to prioritize the backlog, work with internal partners (e.g. SWE and HWE) t…",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Required/minimum qualifications",
+          "importance": "mandatory"
+        },
+        {
+          "text": "Bachelor's Degree and 0 - 2 years experience in product/service/program management or software development OR equivalent experience.",
+          "importance": "mandatory"
+        },
+        {
+          "text": "Additional or preferred qualifications",
+          "importance": "preferred"
+        },
+        {
+          "text": "0 - 2 years experience improving product metrics for a product, feature, or experience in a market (e.g., growing customer base, expanding customer usage, avoiding customer churn).",
+          "importance": "mandatory"
+        },
+        {
+          "text": "0 - 2 years experience disrupting a market for a product, feature, or experience (e.g., competitive disruption, taking the place of an established competing product).",
+          "importance": "mandatory"
+        },
+        {
+          "text": "This position will be open for a minimum of 5 days, with applications accepted on an ongoing basis until the position is filled.",
+          "importance": "mandatory"
+        },
+        {
+          "text": "Microsoft is an equal opportunity employer. All qualified applicants will receive consideration for employment without regard to age, ancestry, citizenship, color, family or medical care leave, gende…",
+          "importance": "mandatory"
+        }
+      ]
+    },
+    "posted_at": "2026-11-16",
+    "uid": "microsoft|url:https://apply.careers.microsoft.com/careers/job/1970393557074091",
+    "date": "Nov 16, 09:06",
+    "first_seen": "2026-11-16T09:06:24.915523+00:00",
+    "id": "Microsoft_Product_Management",
     "notified": false,
     "repost_last_seen": "2026-11-16",
     "company_id": "microsoft"
