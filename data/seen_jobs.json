@@ -5497,5 +5497,117 @@
     "notified": false,
     "repost_last_seen": "2026-11-16",
     "company_id": "microsoft"
+  },
+  {
+    "title": "Executive | Accounts Payable | Bengaluru Eco space | Finance Transformation | Finance Operate",
+    "url": "https://southasiacareers.deloitte.com/job/Bengaluru-Eco-space-Executive-Accounts-Payable-Bengaluru-Eco-space-Finance-Transformation-Finance-Operate/61573744/",
+    "company": "Deloitte",
+    "location": "Bengaluru Eco space, IN · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0 to 2 years'",
+    "evidence": {
+      "experience": [
+        "0 to 2 years"
+      ],
+      "experience_lines": [
+        "Total Years of Experience :  0 to 2 years in AP.",
+        "Education: Any Graduation",
+        "Hands on experience in MS Excel and Word."
+      ],
+      "fresher_evidence": "0 to 2 years",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Bengaluru-Eco-space-Executive-Accounts-Payable-Bengaluru-Eco-space-Finance-Transformation-Finance-Operate/61573744",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      },
+      "skills": {
+        "Excel": "Working knowledge of Microsoft Excel and ERP/accounting systems",
+        "Communication": "Good stakeholder and vendor communication skills",
+        "Problem solving": "Strong attention to detail and analytical/problem-solving ability",
+        "Accounting / finance": "Executive | Accounts Payable | Bengaluru Eco space | Finance Transformation | Finance Operate"
+      },
+      "requirements": [
+        {
+          "text": "Executive | Accounts Payable | Bengaluru Eco space | Finance Transformation | Finance Operate",
+          "importance": "unspecified"
+        },
+        {
+          "text": "T&T-FT-Executive | Accounts Payable | Bengaluru",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Perform vendor reconciliations and resolve exceptions, discrepancies, and invoice holds through coordination with vendors and internal stakeholders.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Manage vendor queries related to invoice status, payment processing, and account reconciliations.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Support month-end activities, including accruals, invoice tracking, reconciliations, and reporting requirements",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Good understanding of Accounts Payable / Procure-to-Pay (P2P) processes",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Vendor reconciliation and query management",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Strong attention to detail and analytical/problem-solving ability",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Good stakeholder and vendor communication skills",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Working knowledge of Microsoft Excel and ERP/accounting systems",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Education: Any Graduation",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Total Years of Experience : 0 to 2 years in AP.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Strong accounting skills.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Knowledge of intercompany accounting",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Hands on experience in MS Excel and Word.",
+          "importance": "mandatory"
+        },
+        {
+          "text": "Good Verbal and Written communication skills.",
+          "importance": "unspecified"
+        }
+      ]
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Bengaluru-Eco-space-Executive-Accounts-Payable-Bengaluru-Eco-space-Finance-Transformation-Finance-Operate/61573744",
+    "date": "Nov 16, 15:08",
+    "first_seen": "2026-11-16T15:08:28.979908+00:00",
+    "id": "Deloitte_Executive_|_Accounts_Payable_|_Bengaluru",
+    "notified": false,
+    "repost_last_seen": "2026-11-16",
+    "company_id": "deloitte"
   }
 ]
