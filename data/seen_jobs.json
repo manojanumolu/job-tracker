@@ -5789,5 +5789,41 @@
     "notified": false,
     "repost_last_seen": "2026-11-17",
     "company_id": "qualcomm"
+  },
+  {
+    "title": "Global Compliance India 172413",
+    "url": "https://jobs.adp.com/en/jobs/ind172413/global-compliance-india-172413/",
+    "company": "ADP",
+    "location": "Hyderabad, Telangana, India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-1 years'",
+    "evidence": {
+      "experience": [
+        "0-1 years"
+      ],
+      "experience_lines": [],
+      "fresher_evidence": "0-1 years",
+      "detail_read": true,
+      "detail_match": "company job feed",
+      "job_id": "id:ind172413",
+      "canonical_url": "https://jobs.adp.com/en/jobs/ind172413/global-compliance-india-172413",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "adp|url:https://jobs.adp.com/en/jobs/ind172413/global-compliance-india-172413",
+    "date": "Nov 17, 09:10",
+    "first_seen": "2026-11-17T09:10:37.395404+00:00",
+    "id": "ADP_Global_Compliance_India_172413",
+    "notified": false,
+    "repost_last_seen": "2026-11-17",
+    "company_id": "adp"
   }
 ]
