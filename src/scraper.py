@@ -1221,6 +1221,10 @@ def run_all(recovery=None) -> list[dict]:
                 unverified = unverified or any(recovery.state["hosts"].get(h, {}).get("failure_category") in
                                               ("forbidden", "authentication", "redirect") for h in hosts(sources_for(company)))
                 outcome = "needs_config" if unverified else "cooling_down" if reason == "cooldown" else "deferred"
+                last = (previous.get("recovery") or {}).get("outcome")
+                if (outcome == "deferred" and company["id"] in recovery.not_due and company.get("status") == "active"
+                        and last in ("healthy", "degraded")):
+                    outcome, reason = last, ""   # checked successfully within the revisit interval: not a deferral
                 company["scan"] = {**previous, "recovery": recovery.projection(company, outcome, reason)}
                 portals_failed += company.get("status") in ("failing", "broken", "needs_config")
                 continue  # No attempt, timestamp or failure-streak advancement.
@@ -1236,8 +1240,14 @@ def run_all(recovery=None) -> list[dict]:
             company["scan"] = {**previous, "recovery": recovery.projection(company, "deferred", category)}
             portals_failed += company.get("status") in ("failing", "broken", "needs_config")
             continue
-        if managed and (recovery.pending or recovery.last_stop) and scan.status == "active":
-            scan.fail("failing", "Incomplete Workday coverage; pending work retained")
+        # A Workday stop mid-scan (throttle, error) is a failure. Detail work left for the
+        # next visit by our own limits (request budget, cross-host circuit), a vanished
+        # posting (404) or the pagination cap is not: the listing was read and new postings
+        # went first, so - as before M7 - the scan stays active with a pending count
+        # and the projection reports it as "degraded".
+        stopped = managed and recovery.last_stop and recovery.last_stop.get("failure_category") not in ("incomplete", "not_found", "budget", "circuit")
+        if stopped and scan.status == "active":
+            scan.fail("failing", f"Workday {recovery.last_stop.get('failure_category') or 'stop'} during scan; pending work retained")
         jobs_found += len(scan.jobs)
         portals_failed += scan.status != "active"
         company["status"] = scan.status
@@ -1280,8 +1290,10 @@ def run_all(recovery=None) -> list[dict]:
     for company in scanned:
         company["scan"]["run"] = dict(run)
     if recovery:
-        from monitoring_health import report_actions
+        from monitoring_health import report_actions, report_workday
         report_actions(companies)
+        report_workday(recovery.mode, recovery.http.requests, len(recovery.selected), len(recovery.not_due),
+                       len(recovery.http.throttled), sum(recovery.http.cooling(h) for h in recovery.state["hosts"]))
 
     # commit=False: alerts.py publishes the data (merge-safe) before and
     # after emailing — see alerts.py

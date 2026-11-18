@@ -2495,9 +2495,17 @@ def portal_status(c: dict) -> tuple[str, str]:
     if monitoring_state(c):                  # no usable source yet: not scanned, so not a failure either
         return "pending", _NO_SOURCE_LABELS[monitoring_state(c)]
     recovery = (c.get("scan") if isinstance(c.get("scan"), dict) else {}).get("recovery") or {}
-    if recovery.get("outcome") in ("deferred", "cooling_down", "rate_limited", "needs_config"):
-        labels = {"deferred": "Deferred", "cooling_down": "Cooling down", "rate_limited": "Rate limited", "needs_config": "Requires configuration"}
-        return ("failing" if recovery.get("unresolved_failure") else "delayed"), labels[recovery["outcome"]]
+    if recovery.get("outcome") in ("deferred", "cooling_down", "rate_limited", "needs_config", "degraded"):
+        labels = {"deferred": "Deferred", "cooling_down": "Cooling down", "rate_limited": "Rate limited (HTTP 429)",
+                  "needs_config": "Requires configuration", "degraded": "Partial coverage"}
+        label = labels[recovery["outcome"]]
+        if recovery.get("failure_category") == "canary_gate":
+            label = "Deferred: waiting for the Workday canary"
+        elif recovery.get("outcome") == "cooling_down" and recovery.get("cooldown_until"):
+            until = _parse_iso(recovery["cooldown_until"])
+            if until:
+                label += f" until {until:%d %b %H:%M} UTC"
+        return ("failing" if recovery.get("unresolved_failure") else "delayed"), label
     checked = _parse_iso(c.get("last_checked", ""))
     if (_check_trigger and time.time() - _check_trigger < 1200 and c.get("status") not in _UNHEALTHY
             and (checked is None or checked.timestamp() < _check_trigger)):

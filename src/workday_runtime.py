@@ -21,14 +21,15 @@ def configuration():
     # Trusted code checkout only. Never read a configuration path from scraped data.
     config = json.loads((BASE / "config/workday_recovery.json").read_text("utf-8"))
     mode = os.environ.get("JT_WORKDAY_MODE", config["mode"])
-    if mode not in {"canary", "full", "paused"}:
+    if mode not in {"auto", "canary", "full", "paused"}:
         raise ValueError("invalid JT_WORKDAY_MODE")
     config["mode"] = mode
     bounds = {"batch_size": (1, 100), "global_spacing_s": (1, 300), "host_spacing_s": (1, 300),
               "company_delay_s": (1, 600), "max_retries": (0, 2), "backoff_s": (1, 120),
               "retry_wait_budget_s": (0, 120), "cooldown_hours": (1, 24), "max_cooldown_hours": (1, 168),
               "api_breaker_hosts": (1, 100), "workday_budget_s": (1, 3600), "run_budget_s": (1, 4800),
-              "max_requests": (1, 2000), "cache_ttl_hours": (1, 24), "cache_max_entries": (1, 10000), "overdue_hours": (1, 24)}
+              "max_requests": (1, 2000), "cache_ttl_hours": (1, 168), "cache_max_entries": (1, 10000), "overdue_hours": (1, 48),
+              "revisit_hours": (1, 48)}
     if set(config) != set(bounds) | {"mode", "canary_company_ids", "cache_enabled"}:
         raise ValueError("unknown Workday configuration")
     for key, (low, high) in bounds.items():
@@ -91,11 +92,13 @@ class Recovery:
         self.cache["entries"] = {key: value for key, value in self.cache["entries"].items()
                                  if signatures.get(value["company_id"]) == value["source"]}
         if not state_path.exists() and not self.state_error:
-            # Known 429s are not forgotten on first deployment. One conservative pause.
+            # Known 429s are not forgotten on first deployment: one conservative pause,
+            # counted from when the 429 was actually recorded (never from the future).
             for c in companies:
                 if "HTTP 429" in c.get("status_reason", ""):
+                    seen = min(epoch(c.get("last_checked")) or wall(), wall())
                     for host in hosts(sources_for(c)):
-                        self.state["hosts"][host] = {"observed_at": iso(wall()), "cooldown_until": iso(wall() + self.config["cooldown_hours"] * 3600),
+                        self.state["hosts"][host] = {"observed_at": iso(seen), "cooldown_until": iso(seen + self.config["cooldown_hours"] * 3600),
                             "failures": 1, "http_status": 429, "failure_category": "rate_limit", "retry_after_s": 0, "retry_after_valid": False}
         self.http = Controller(self.state, self.config, clock=clock, wall=wall, sleep=sleep)
         self.company = None
@@ -106,16 +109,57 @@ class Recovery:
         self.last_stop = {}
         self.token = None
         self.used_workday = False
+        self.mode = self.effective_mode(companies)
+        self.not_due = set()
         self.selected = self.select(companies)
 
+    def effective_mode(self, companies):
+        """"auto": the canary probes the shared Workday limit for everyone else.
+
+        Full rotation resumes only once a canary company has completed a healthy
+        scan AFTER the most recent 429 seen on any Workday host; any later 429
+        drops the run back to canary-only. If no canary company can be probed
+        (removed, or blocked by policy), the oldest eligible API company is the probe.
+        """
+        mode = self.config["mode"]
+        if mode != "auto":
+            return mode
+        throttled = [epoch(h.get("observed_at")) for h in self.state["hosts"].values() if h.get("failure_category") == "rate_limit"]
+        if not throttled:
+            return "full"
+        ids = {c["id"] for c in companies}
+        canaries = [cid for cid in self.config["canary_company_ids"] if cid in ids]
+        # last_attempt moves only when requests were really sent; observed_at moves
+        # on every projection, so it could not prove the canary was contacted.
+        healthy = [epoch(rec.get("last_attempt")) for cid, rec in self.state["companies"].items()
+                   if cid in canaries and rec.get("outcome") == "healthy"]
+        return "full" if healthy and max(healthy) > max(throttled) else "canary"
+
+    def probes(self, companies):
+        ids = [c["id"] for c in companies if is_api(self.sources_for(c))]
+        canaries = [cid for cid in self.config["canary_company_ids"] if cid in ids]
+        policy_ok = [cid for cid in canaries
+                     if not any(self.state["hosts"].get(h, {}).get("failure_category") in ("forbidden", "authentication", "redirect")
+                                for h in hosts(self.sources_for(next(c for c in companies if c["id"] == cid))))]
+        if policy_ok:
+            return set(policy_ok)
+        oldest = sorted((epoch(self.state["companies"].get(c["id"], {}).get("last_attempt") or c.get("last_checked")), c["id"])
+                        for c in companies if c["id"] in ids)
+        return {oldest[0][1]} if oldest else set()
+
     def select(self, companies):
+        self.probe_ids = self.probes(companies) if self.mode == "canary" else set()
         eligible = []
+        revisit = (self.config["revisit_hours"] - 1) * 3600   # 1 h slack absorbs late scan starts
         for c in companies:
             cfg = self.sources_for(c)
             if not is_api(cfg) or self.defer_reason(c, selection=False):
                 continue
             prev = self.state["companies"].get(c["id"], {})
             attempt = epoch(prev.get("last_attempt") or c.get("last_checked"))
+            if prev and self.wall() - attempt < revisit:
+                self.not_due.add(c["id"])   # checked recently enough: no request this window
+                continue
             # Old attempts first: a permanently failing portal cannot monopolize slots.
             eligible.append((attempt, c["id"]))
         return {cid for _, cid in sorted(eligible)[:self.config["batch_size"]]}
@@ -132,10 +176,10 @@ class Recovery:
         if any(self.state["hosts"].get(h, {}).get("failure_category") in ("forbidden", "authentication", "redirect") for h in hosts(cfg)):
             return "configuration"
         if is_api(cfg):
-            if self.config["mode"] == "paused":
+            if self.mode == "paused":
                 return "configuration"
-            if self.config["mode"] == "canary" and company["id"] not in self.config["canary_company_ids"]:
-                return "configuration"
+            if self.mode == "canary" and company["id"] not in getattr(self, "probe_ids", ()):
+                return "canary_gate"
         if any(self.http.cooling(h) or h in self.http.closed for h in hosts(cfg)):
             return "cooldown"
         if is_api(cfg) and len(self.http.throttled) >= self.config["api_breaker_hosts"]:
@@ -233,8 +277,8 @@ class Recovery:
         prev = self.state["companies"].get(company["id"], {})
         events = self.http.events[self.event_start:] if attempted else []
         last = self.last_stop if attempted and self.last_stop else (events[-1] if events else {})
-        if outcome == "healthy" and (self.pending or self.last_stop):
-            outcome, reason = "deferred", "incomplete"
+        if attempted and outcome == "healthy" and (self.pending or self.last_stop):
+            outcome, reason = "degraded", "incomplete"   # read, but some detail work is pending
         record = {"source": digest(cfg), "observed_at": iso(self.wall()),
                   "last_attempt": company.get("last_checked", "") if attempted else prev.get("last_attempt", company.get("last_checked", "")),
                   "last_success": company.get("last_success", ""), "outcome": outcome,

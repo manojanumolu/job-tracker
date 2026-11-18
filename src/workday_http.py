@@ -102,8 +102,9 @@ class Controller:
                 event = self.events[-1]
                 try:
                     # Never let httpx follow an unpaced/unapproved redirect behind the controller.
-                    headers = {**kwargs.get("headers", {}), "User-Agent": "FresherJobTracker/1.0 (automated public career monitoring)"}
-                    response = client.request(method, url, follow_redirects=False, **{**kwargs, "headers": headers})
+                    # The client's existing, honest User-Agent is kept: a throttled
+                    # caller never presents a new identity to a rate limiter.
+                    response = client.request(method, url, follow_redirects=False, **kwargs)
                 except httpx.HTTPError as exc:
                     category = "timeout" if isinstance(exc, httpx.TimeoutException) else "network"
                     event["failure_category"] = category
@@ -142,8 +143,12 @@ class Controller:
                         obs.update(observed_at=iso(self.wall()), http_status=status, failure_category=category,
                                    cooldown_until=iso(max(epoch(obs["cooldown_until"]), self.wall() + max(delay, fallback))),
                                    retry_after_s=delay, retry_after_valid=valid)
-                    sleep_for = max(delay, self.config["backoff_s"] * 2 ** attempt)
-                    if attempt < self.config["max_retries"] and retry_wait + sleep_for <= self.config["retry_wait_budget_s"] and not self._budget(self.clock() - started + sleep_for):
+                    # A 429 is never retried blind: only a valid Retry-After short enough
+                    # for this run's retry budget earns one paced retry. Otherwise the host
+                    # cools down durably and nothing else is sent to it this run.
+                    sleep_for = delay if status == 429 else max(delay, self.config["backoff_s"] * 2 ** attempt)
+                    may_retry = valid if status == 429 else True
+                    if may_retry and attempt < self.config["max_retries"] and retry_wait + sleep_for <= self.config["retry_wait_budget_s"] and not self._budget(self.clock() - started + sleep_for):
                         response.close()
                         self.sleep(sleep_for)
                         retry_wait += sleep_for

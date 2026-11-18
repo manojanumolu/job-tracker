@@ -64,7 +64,8 @@ def test_spacing_is_global_and_host_scoped_across_clients(clock, cfg):
     for url in [URL, URL, URL.replace(HOST, "pwc.wd3.myworkdayjobs.com"), URL]:
         with httpx.Client(transport=httpx.MockTransport(handler)) as client:
             c.request(client, "POST", url)
-    assert [t - times[0] for t in times] == [0, 2, 3, 4]
+    # 2 s global spacing (the 429 was shared across tenants) and 2 s per host
+    assert [t - times[0] for t in times] == [0, 2, 4, 6]
 
 
 @pytest.mark.parametrize("value,valid", [("30", True), ("-1", False), ("nonsense", False), (None, False), ("NaN", False)])
@@ -80,17 +81,55 @@ def test_retry_after_http_date(clock):
     assert retry_after(date, clock.now()) == (90, True)
 
 
-def test_backoff_is_bounded_and_circuit_blocks_subsequent_details(clock, cfg):
+def test_429_without_retry_after_is_never_retried_and_circuit_blocks_details(clock, cfg):
     c = control(clock, cfg)
     with httpx.Client(transport=httpx.MockTransport(lambda req: httpx.Response(429))) as client:
         with pytest.raises(WorkdayStop) as err:
             c.request(client, "POST", URL)
         assert err.value.diagnostic["http_status"] == 429
-        assert c.requests == 3 and clock.waits == [30, 60]
+        assert c.requests == 1 and clock.waits == []      # one request, no blind retry
         with pytest.raises(WorkdayStop, match="cooldown"):
             c.request(client, "GET", URL + "/job/1")
-        assert c.requests == 3
+        assert c.requests == 1
         assert epoch(c.state["hosts"][HOST]["cooldown_until"]) == clock.now() + 10800
+
+
+def test_429_short_retry_after_is_honoured_exactly(clock, cfg):
+    replies = iter([httpx.Response(429, headers={"Retry-After": "20"}), httpx.Response(429, headers={"Retry-After": "20"}),
+                    httpx.Response(200)])
+    c = control(clock, cfg)
+    with httpx.Client(transport=httpx.MockTransport(lambda req: next(replies))) as client:
+        c.request(client, "POST", URL)
+    assert c.requests == 3 and clock.waits == [20, 20]   # what the server asked, no more, no less
+    assert not c.cooling(HOST)
+
+
+def test_429_retry_after_beyond_run_budget_stops_at_once(clock, cfg):
+    c = control(clock, cfg)
+    with httpx.Client(transport=httpx.MockTransport(lambda req: httpx.Response(429, headers={"Retry-After": "600"}))) as client:
+        with pytest.raises(WorkdayStop):
+            c.request(client, "POST", URL)
+    assert c.requests == 1 and clock.waits == []
+    assert epoch(c.state["hosts"][HOST]["cooldown_until"]) == clock.now() + 10800   # fallback 3 h > 600 s
+
+
+def test_server_errors_keep_bounded_exponential_backoff(clock, cfg):
+    c = control(clock, cfg)
+    with httpx.Client(transport=httpx.MockTransport(lambda req: httpx.Response(503))) as client:
+        with pytest.raises(WorkdayStop):
+            c.request(client, "POST", URL)
+    assert c.requests == 3 and clock.waits == [30, 60]
+
+
+def test_existing_user_agent_is_kept_for_workday(clock, cfg):
+    seen = []
+    c = control(clock, cfg)
+    def handler(req):
+        seen.append(req.headers.get("User-Agent"))
+        return httpx.Response(200, json={})
+    with httpx.Client(headers=sources.HEADERS, transport=httpx.MockTransport(handler)) as client:
+        c.request(client, "POST", URL)
+    assert seen == [sources.HEADERS["User-Agent"]]
 
 
 def test_long_retry_after_persists_no_early_trial(tmp_path, clock, cfg):
@@ -107,9 +146,9 @@ def test_long_retry_after_persists_no_early_trial(tmp_path, clock, cfg):
 
 
 def test_successful_trial_closes_circuit(clock, cfg):
-    replies = iter([429, 200, 200])
+    replies = iter([httpx.Response(429, headers={"Retry-After": "5"}), httpx.Response(200), httpx.Response(200)])
     c = control(clock, cfg)
-    with httpx.Client(transport=httpx.MockTransport(lambda req: httpx.Response(next(replies)))) as client:
+    with httpx.Client(transport=httpx.MockTransport(lambda req: next(replies))) as client:
         c.request(client, "POST", URL)
         c.request(client, "POST", URL)
     assert c.requests == 3 and not c.cooling(HOST) and not c.closed
@@ -119,14 +158,14 @@ def test_provider_breaker_does_not_block_healthy_sitemap(clock, cfg):
     cfg["max_retries"] = 0
     c = control(clock, cfg)
     with httpx.Client(transport=httpx.MockTransport(lambda req: httpx.Response(429))) as client:
-        for i in range(3):
+        for i in range(2):   # api_breaker_hosts = 2: the limit is shared across tenants
             with pytest.raises(WorkdayStop):
                 c.request(client, "POST", URL.replace(HOST, f"tenant{i}.wd1.myworkdayjobs.com"))
         with pytest.raises(WorkdayStop, match="circuit"):
             c.request(client, "POST", URL)
     with httpx.Client(transport=httpx.MockTransport(lambda req: httpx.Response(200))) as client:
         c.request(client, "GET", "https://jiostar.wd102.myworkdayjobs.com/JioStar/siteMap.xml")
-    assert c.requests == 4
+    assert c.requests == 3
 
 
 @pytest.mark.parametrize("status,category", [(403, "forbidden"), (401, "authentication"), (404, "not_found"), (302, "redirect"), (500, "server_error")])
@@ -188,7 +227,7 @@ def test_cache_invalidation_and_changed_job_reevaluation(change, tmp_path, clock
     item = listing()
     run.begin(COMPANY)
     try:
-        if change == "expiry": clock.sleep(86401)
+        if change == "expiry": clock.sleep(cfg["cache_ttl_hours"] * 3600 + 1)
         if change == "rules": run.rules = digest("new rules")
         if change == "title": item.title += " - Data"
         if change == "location": item.location = "Pune, India"
@@ -264,24 +303,49 @@ def companies(n=26):
              "status": "active", "last_checked": iso(1700000000 + i), "last_success": iso(1700000000 + i)} for i in range(n)]
 
 
-def test_rotation_covers_26_within_three_windows(tmp_path, clock, cfg):
+def _attempt(run, cos, chosen):
+    for c in cos:
+        if c["id"] in chosen:
+            c["last_checked"] = iso(run.wall())
+            run.state["companies"][c["id"]] = {"source": digest(scraper.sources_for(c)), "observed_at": iso(run.wall()),
+                                               "last_attempt": iso(run.wall()), "last_success": iso(run.wall()),
+                                               "outcome": "healthy", "pending": {}}
+
+
+def test_rotation_covers_26_every_6_hours_with_half_per_window(tmp_path, clock, cfg):
+    """3 h scan windows; each Workday API company is visited every 6 h, 13 per window."""
     cos = companies()
-    observed = set()
-    for _ in range(3):
+    visits = {c["id"]: [] for c in cos}
+    state = None
+    for window in range(8):                        # 24 h of 3 h windows
         run = recovery(tmp_path, clock, cfg, cos)
-        assert len(run.selected) == 9
-        observed |= run.selected
-        for c in cos:
-            if c["id"] in run.selected:
-                c["last_checked"] = iso(clock.now())
-        clock.sleep(10800)
-    assert observed == {c["id"] for c in cos}
+        if state:
+            run.state["companies"] = state
+            run.not_due = set(); run.selected = run.select(cos)
+        assert len(run.selected) == 13
+        assert not run.selected & run.not_due
+        for cid in run.selected:
+            visits[cid].append(clock.now())
+        _attempt(run, cos, run.selected)
+        state = run.state["companies"]
+        clock.sleep(10800 + 120)                   # windows start a little late
+    for cid, times in visits.items():
+        assert len(times) == 4, cid                # 4 visits a day: every 6 h, never 3 h
+        assert all(6 * 3600 <= b - a <= 6.2 * 3600 for a, b in zip(times, times[1:]))
+
+
+def test_not_due_company_is_reported_healthy_not_deferred(tmp_path, clock, cfg):
+    cos = companies(2)
+    run = recovery(tmp_path, clock, cfg, cos)
+    _attempt(run, cos, {"c00"})
+    run.not_due = set(); run.selected = run.select(cos)
+    assert "c00" in run.not_due and run.defer_reason(cos[0]) == "rotation"
 
 
 def test_overdue_attempt_priority_and_cooldown_does_not_reset_success(tmp_path, clock, cfg):
-    cos = companies(11)
+    cos = companies(15)
     run = recovery(tmp_path, clock, cfg, cos)
-    assert "c00" in run.selected and "c10" not in run.selected
+    assert "c00" in run.selected and "c14" not in run.selected
     c = cos[0]
     before = copy.deepcopy(c)
     projection = run.projection(c, "cooling_down", "cooldown")
@@ -293,10 +357,11 @@ def test_canary_and_pause_keep_healthy_non_api_scanners(tmp_path, clock, cfg):
     cfg["mode"] = "canary"
     run = recovery(tmp_path, clock, cfg)
     assert run.defer_reason(COMPANY) == ""
-    assert run.defer_reason(companies(1)[0]) == "configuration"
+    assert run.defer_reason(companies(1)[0]) == "canary_gate"
     assert run.defer_reason({"id": "jiohotstar"}) == ""
     assert run.defer_reason({"id": "amazon"}) == ""
     cfg["mode"] = "paused"
+    run = recovery(tmp_path, clock, cfg)
     assert run.defer_reason(COMPANY) == "configuration"
     assert run.defer_reason({"id": "jiohotstar"}) == ""
 
@@ -573,3 +638,141 @@ def test_new_global_marker_cannot_overwrite_newer_portal_attempt():
     merged = repo_sync.merge_companies([remote], [local])[0]
     assert merged["last_checked"] == remote["last_checked"] and merged["status"] == "failing"
     assert merged["scan"]["run"] == local["scan"]["run"]
+
+
+PWC = {"id": "pwc", "name": "PwC", "url": "https://pwc.wd3.myworkdayjobs.com/Global_Experienced_Careers"}
+
+
+def throttled_fleet(clock):
+    """Production on 18 Nov 2026: every Workday API company last saw HTTP 429."""
+    seen = iso(clock.now() - 600)
+    return [{**c, "status": "failing", "status_reason": "HTTP 429", "last_checked": seen, "last_success": iso(clock.now() - 3 * 86400)}
+            for c in [COMPANY, PWC, *companies(4)]]
+
+
+def test_auto_mode_probes_only_the_canary_while_throttled(tmp_path, clock, cfg):
+    cfg["mode"] = "auto"
+    cos = throttled_fleet(clock)
+    clock.sleep(4 * 3600)                                   # bootstrap cooldown has expired
+    run = recovery(tmp_path, clock, cfg, cos)
+    assert run.mode == "canary" and run.probe_ids == {"sanofi", "pwc"}
+    assert run.selected == {"sanofi", "pwc"}
+    assert {c["id"]: run.defer_reason(c) for c in cos[2:]} == {c["id"]: "canary_gate" for c in cos[2:]}
+
+
+def test_auto_mode_promotes_after_canary_success_and_demotes_on_new_429(tmp_path, clock, cfg):
+    cfg["mode"] = "auto"
+    cos = throttled_fleet(clock)
+    clock.sleep(4 * 3600)
+    run = recovery(tmp_path, clock, cfg, cos)
+    _attempt(run, cos, {"sanofi"})                         # canary scanned healthily after the 429s
+    write(tmp_path / STATE_FILE, STATE_FILE, run.state)
+    clock.sleep(3 * 3600)
+    run = recovery(tmp_path, clock, cfg, cos)
+    assert run.mode == "full"
+    assert {"c00", "c01", "c02", "c03", "pwc"} <= run.selected   # everyone else is now due
+    # a fresh 429 anywhere puts the fleet back behind the canary
+    run.state["hosts"]["tenant0.wd1.myworkdayjobs.com"] = {**run.state["hosts"]["tenant0.wd1.myworkdayjobs.com"],
+                                                          "observed_at": iso(clock.now())}
+    write(tmp_path / STATE_FILE, STATE_FILE, run.state)
+    clock.sleep(60)
+    assert recovery(tmp_path, clock, cfg, cos).mode == "canary"
+
+
+def test_auto_mode_projection_alone_never_promotes(tmp_path, clock, cfg):
+    """A canary that was only projected (not contacted) cannot prove the limit lifted."""
+    cfg["mode"] = "auto"
+    cos = throttled_fleet(clock)
+    run = recovery(tmp_path, clock, cfg, cos)
+    run.projection(cos[0], "healthy")                       # no requests were made
+    write(tmp_path / STATE_FILE, STATE_FILE, run.state)
+    clock.sleep(4 * 3600)
+    assert recovery(tmp_path, clock, cfg, cos).mode == "canary"
+
+
+def test_auto_mode_falls_back_to_oldest_company_when_canary_is_gone(tmp_path, clock, cfg):
+    cfg["mode"] = "auto"
+    cos = throttled_fleet(clock)[2:]
+    cos[3]["last_checked"] = iso(clock.now() - 7200)
+    clock.sleep(4 * 3600)
+    run = recovery(tmp_path, clock, cfg, cos)
+    assert run.mode == "canary" and run.probe_ids == {cos[3]["id"]}
+
+
+def test_auto_mode_without_any_throttle_is_full(tmp_path, clock, cfg):
+    cfg["mode"] = "auto"
+    assert recovery(tmp_path, clock, cfg, companies(3)).mode == "full"
+
+
+def test_bootstrap_cooldown_counts_from_the_recorded_429(tmp_path, clock, cfg):
+    cos = throttled_fleet(clock)                            # 429 recorded 10 min ago
+    run = recovery(tmp_path, clock, cfg, cos)
+    until = epoch(run.state["hosts"][HOST]["cooldown_until"])
+    assert until == clock.now() - 600 + 3 * 3600
+    assert run.defer_reason(cos[0]) == "cooldown"
+
+
+def test_shipped_configuration_is_auto_6h_and_paced():
+    c = configuration()
+    assert c["mode"] == "auto" and c["revisit_hours"] == 6 and c["batch_size"] == 13
+    assert c["global_spacing_s"] >= 2 and c["host_spacing_s"] >= 2 and c["api_breaker_hosts"] == 2
+
+
+def _wire_run_all(tmp_path, clock, monkeypatch, cos, handler):
+    import config_store
+    monkeypatch.setattr(config_store, "load_companies", lambda: cos)
+    monkeypatch.setattr(config_store, "load_seen_jobs", lambda: [])
+    monkeypatch.setattr(config_store, "save_companies", lambda data, **kw: (tmp_path / "companies.json").write_text(json.dumps(data)))
+    monkeypatch.setattr(config_store, "save_seen_jobs", lambda data, **kw: (tmp_path / "seen_jobs.json").write_text(json.dumps(data)))
+    monkeypatch.setattr(scraper.time, "sleep", lambda s: None)
+    monkeypatch.setattr(scraper, "_now_iso", lambda: iso(clock.now()))
+    real_client = httpx.Client
+    monkeypatch.setattr(scraper.httpx, "Client", lambda **kw: real_client(**kw, transport=httpx.MockTransport(handler)))
+
+
+TEAMS = ["Payments", "Search", "Platform"]
+
+
+def _graduate_jobs(n):
+    def handler(req):
+        handler.calls += 1
+        if req.method == "POST":
+            return httpx.Response(200, json={"total": n, "jobPostings": [
+                {"title": f"Graduate Software Engineer {TEAMS[i]}", "locationsText": "Hyderabad, India", "externalPath": f"/job/Hyderabad/Graduate_JR{i:05}"}
+                for i in range(n)]})
+        i = int(req.url.path.rsplit("JR", 1)[1])
+        return httpx.Response(200, json={"jobPostingInfo": {"title": f"Graduate Software Engineer {TEAMS[i]}", "location": "Hyderabad", "country": "India",
+                "jobDescription": "Freshers welcome. 0-1 years of experience. Build Python software and services for our customers."}})
+    handler.calls = 0
+    return handler
+
+
+def test_second_window_within_revisit_makes_no_requests_and_stays_healthy(tmp_path, clock, cfg, monkeypatch):
+    cos = [{**COMPANY, "status": "active", "last_checked": iso(clock.now() - 7 * 3600), "last_success": iso(clock.now() - 7 * 3600)}]
+    handler = _graduate_jobs(3)
+    _wire_run_all(tmp_path, clock, monkeypatch, cos, handler)
+    scraper.run_all(recovery=recovery(tmp_path, clock, cfg, cos))
+    first = handler.calls
+    assert first > 0 and cos[0]["scan"]["recovery"]["outcome"] == "healthy"
+    checked = cos[0]["last_checked"]
+    clock.sleep(3 * 3600)                                   # next 3 h window: not due
+    scraper.run_all(recovery=recovery(tmp_path, clock, cfg, cos))
+    assert handler.calls == first                           # no Workday request at all
+    assert cos[0]["scan"]["recovery"]["outcome"] == "healthy" and cos[0]["status"] == "active"
+    assert cos[0]["scan"]["recovery"]["failure_category"] == ""
+    assert cos[0]["last_checked"] == checked
+    clock.sleep(3 * 3600)                                   # 6 h: due again, details now cached
+    scraper.run_all(recovery=recovery(tmp_path, clock, cfg, cos))
+    assert handler.calls == first + 1                       # one listing POST, zero detail GETs
+    assert cos[0]["scan"]["recovery"]["cache_hits"] == 3
+
+
+def test_budget_limited_scan_is_degraded_not_failed(tmp_path, clock, cfg, monkeypatch):
+    cfg["max_requests"] = 3                                 # listing + 2 details, 3 postings
+    cos = [{**COMPANY, "status": "active", "last_checked": iso(clock.now() - 7 * 3600), "last_success": iso(clock.now() - 7 * 3600)}]
+    _wire_run_all(tmp_path, clock, monkeypatch, cos, _graduate_jobs(3))
+    found = scraper.run_all(recovery=recovery(tmp_path, clock, cfg, cos))
+    rec = cos[0]["scan"]["recovery"]
+    assert len(found) == 2 and cos[0]["status"] == "active"
+    assert rec["outcome"] == "degraded" and rec["pending"] == 1 and not rec["unresolved_failure"]
+    assert monitoring_health.company_health(cos[0])["unavailable"]   # still shown as incomplete coverage

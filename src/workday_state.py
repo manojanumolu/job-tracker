@@ -15,10 +15,10 @@ MAX_BYTES = 16 * 1024 * 1024
 MAX_ENTRIES = 10000
 HOST = re.compile(r"[a-z0-9-]+\.wd[0-9]+\.myworkdayjobs\.com\Z")
 HEX = re.compile(r"[a-f0-9]{64}\Z")
-OUTCOMES = {"healthy", "failed", "rate_limited", "deferred", "cooling_down", "not_checked", "needs_config"}
+OUTCOMES = {"healthy", "degraded", "failed", "rate_limited", "deferred", "cooling_down", "not_checked", "needs_config"}
 CATEGORIES = {"", "rate_limit", "forbidden", "authentication", "not_found", "http_error", "server_error",
               "timeout", "network", "budget", "cooldown", "circuit", "state_unavailable", "configuration",
-              "incomplete", "invalid_response", "redirect", "rotation"}
+              "incomplete", "invalid_response", "redirect", "rotation", "canary_gate"}
 
 
 def validate_projection(rec: dict) -> None:

@@ -58,3 +58,17 @@ def report_actions(companies):
             out.write("\n### Monitoring health\n\n" + line + "\n\n| Outcome | Companies |\n|---|---:|\n")
             for key, count in sorted(result["counts"].items()):
                 out.write(f"| {key} | {count} |\n")
+
+
+def report_workday(mode, requests, selected, not_due, throttled_hosts, cooling_hosts):
+    """One safe line per run: what the Workday API rotation actually did (counts only)."""
+    line = (f"Workday API: mode {mode}; {requests} request(s) sent; {selected} company(ies) selected, "
+            f"{not_due} checked within the revisit interval; {throttled_hosts} host(s) throttled this run; "
+            f"{cooling_hosts} host(s) cooling down.")
+    print(line)
+    if throttled_hosts:
+        print("::warning title=Workday throttling::" + line)
+    path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if path:
+        with open(path, "a", encoding="utf-8") as out:
+            out.write("\n### Workday API\n\n" + line + "\n")

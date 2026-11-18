@@ -1,8 +1,9 @@
 {
-  "mode": "canary",
+  "mode": "auto",
   "canary_company_ids": ["sanofi", "pwc"],
-  "batch_size": 9,
-  "global_spacing_s": 1,
+  "batch_size": 13,
+  "revisit_hours": 6,
+  "global_spacing_s": 2,
   "host_spacing_s": 2,
   "company_delay_s": 10,
   "max_retries": 2,
@@ -10,12 +11,12 @@
   "retry_wait_budget_s": 120,
   "cooldown_hours": 3,
   "max_cooldown_hours": 24,
-  "api_breaker_hosts": 3,
+  "api_breaker_hosts": 2,
   "workday_budget_s": 1800,
   "run_budget_s": 4800,
   "max_requests": 900,
   "cache_enabled": true,
-  "cache_ttl_hours": 24,
+  "cache_ttl_hours": 72,
   "cache_max_entries": 10000,
   "overdue_hours": 24
 }
