@@ -5825,5 +5825,41 @@
     "notified": false,
     "repost_last_seen": "2026-11-18",
     "company_id": "adp"
+  },
+  {
+    "title": "Global Compliance India 172364",
+    "url": "https://jobs.adp.com/en/jobs/ind172364/global-compliance-india-172364/",
+    "company": "ADP",
+    "location": "Hyderabad, Telangana, India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-1 years'",
+    "evidence": {
+      "experience": [
+        "0-1 years"
+      ],
+      "experience_lines": [],
+      "fresher_evidence": "0-1 years",
+      "detail_read": true,
+      "detail_match": "company job feed",
+      "job_id": "id:ind172364",
+      "canonical_url": "https://jobs.adp.com/en/jobs/ind172364/global-compliance-india-172364",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      }
+    },
+    "uid": "adp|url:https://jobs.adp.com/en/jobs/ind172364/global-compliance-india-172364",
+    "date": "Nov 18, 09:09",
+    "first_seen": "2026-11-18T09:09:28.407571+00:00",
+    "id": "ADP_Global_Compliance_India_172364",
+    "notified": false,
+    "repost_last_seen": "2026-11-18",
+    "company_id": "adp"
   }
 ]
