@@ -23,6 +23,7 @@ from typing import Callable
 from urllib.parse import urlparse
 
 import httpx
+from workday_http import CURRENT, WorkdayStop, request as workday_request
 
 from job_classifier import normalize_title
 from locations import is_india
@@ -99,6 +100,7 @@ class Detail:
     reason: str = ""               # why it is not ok
     matched: str = ""              # how the detail was tied to this listing
     posted_at: str = ""            # the posting date the source states (YYYY-MM-DD), "" when it gives none
+    diagnostic: dict = field(default_factory=dict)
 
     @classmethod
     def unreadable(cls, reason: str) -> "Detail":
@@ -133,7 +135,8 @@ class SourceResult:
 
 def _get_json(client: httpx.Client, method: str, url: str, **kw):
     try:
-        r = client.request(method, url, **kw)
+        r = (workday_request(client, method, url, **kw) if urlparse(url).hostname and
+             urlparse(url).hostname.endswith(".myworkdayjobs.com") else client.request(method, url, **kw))
     except httpx.TimeoutException as e:
         raise SourceError(f"timeout reading {urlparse(url).netloc}", "failing") from e
     except httpx.HTTPError as e:
@@ -213,7 +216,9 @@ def _india_facets(facets: list) -> dict[str, list[str]]:
 
 def workday_detail(client: httpx.Client, url: str, title: str) -> Detail:
     try:
-        r = client.get(url)
+        r = workday_request(client, "GET", url)
+    except WorkdayStop as e:
+        return Detail(ok=False, reason=str(e), diagnostic=e.diagnostic)
     except httpx.HTTPError as e:
         return Detail.unreadable(f"{type(e).__name__}")
     if r.status_code != 200:
@@ -282,6 +287,10 @@ def workday_listings(client: httpx.Client, api: str) -> SourceResult:
             fetch_detail=lambda u=detail_url, t=title: workday_detail(client, u, t),
         ))
     note = f"India facet {sorted(applied)}" if applied else "no India facet; filtered by location text"
+    if offset >= MAX_WORKDAY_POSTINGS and (not isinstance(total, int) or total > len(postings)):
+        note += "; pagination cap: incomplete coverage"
+        if CURRENT.get():
+            CURRENT.get().last_stop = {"failure_category": "incomplete", "http_status": 200, "host": urlparse(api).hostname}
     return SourceResult(listings, seen=len(postings), note=note)
 
 
@@ -1136,7 +1145,9 @@ def _slug_title(slug: str) -> str:
 
 def workday_sitemap_detail(client: httpx.Client, listing: Listing) -> Detail:
     try:
-        r = client.get(listing.url, headers={"Accept": "text/html"})
+        r = workday_request(client, "GET", listing.url, headers={"Accept": "text/html"})
+    except WorkdayStop as e:
+        return Detail(ok=False, reason=str(e), diagnostic=e.diagnostic)
     except httpx.HTTPError as e:
         return Detail.unreadable(f"network error reading job page: {type(e).__name__}")
     if r.status_code >= 400:
@@ -1160,12 +1171,27 @@ def workday_sitemap_detail(client: httpx.Client, listing: Listing) -> Detail:
                   matched="JobPosting on the job page", posted_at=posting_date(posting.get("datePosted")))
 
 
-def workday_sitemap_listings(client: httpx.Client, cfg: dict) -> SourceResult:
-    """The jobs a Workday career site lists in its own sitemap, each read
-    from its public job page (workday_sitemap_detail)."""
-    site = cfg["site"].rstrip("/")                  # https://{tenant}.{wdN}.myworkdayjobs.com/{Site}
+def _workday_sitemap_urls(client, cfg, url, visited=None):
+    """Bounded same-site official sitemap indexes; no DTDs or arbitrary URLs."""
+    from xml.etree import ElementTree as ET
+    from urllib.robotparser import RobotFileParser
+    site = cfg["site"].rstrip("/")
+    visited = visited if visited is not None else set()
+    parsed, origin = urlparse(url), urlparse(site)
+    if (parsed.scheme != "https" or parsed.netloc != origin.netloc or parsed.query or parsed.fragment
+            or not parsed.path.startswith(origin.path.rstrip("/") + "/") or "/../" in parsed.path or "%" in parsed.path):
+        raise SourceError("sitemap outside approved career site")
+    if url in visited or len(visited) >= 10:
+        raise SourceError("sitemap index cycle or document limit; incomplete coverage")
+    policy = cfg.get("access_policy")
+    if policy:
+        robots = RobotFileParser()
+        robots.parse(policy.get("robots_text", "").splitlines())
+        if not robots.can_fetch("FresherJobTracker", url):
+            raise SourceError("sitemap path requires access-policy review")
+    visited.add(url)
     try:
-        r = client.get(f"{site}/siteMap.xml", headers={"Accept": "application/xml"})
+        r = workday_request(client, "GET", url, headers={"Accept": "application/xml"})
     except httpx.TimeoutException as e:
         raise SourceError("timeout reading the career-site sitemap", "failing") from e
     except httpx.HTTPError as e:
@@ -1174,12 +1200,43 @@ def workday_sitemap_listings(client: httpx.Client, cfg: dict) -> SourceResult:
         raise SourceError(f"HTTP {r.status_code} from the career-site sitemap", "failing")
     if r.status_code >= 400:
         raise SourceError(f"HTTP {r.status_code} from the career-site sitemap")
-    if "<urlset" not in r.text[:2000] or not r.text.rstrip().endswith("</urlset>"):
-        raise SourceError("the career-site sitemap is incomplete or not a sitemap")
+    if len(r.content) > 2 * 1024 * 1024 or re.search(r"<!\s*(?:DOCTYPE|ENTITY)", r.text, re.I):
+        raise SourceError("unsafe or oversized sitemap")
+    try:
+        root = ET.fromstring(r.content)
+    except ET.ParseError:
+        raise SourceError("the career-site sitemap is incomplete or not a sitemap") from None
+    kind = root.tag.rsplit("}", 1)[-1]
+    if kind not in ("urlset", "sitemapindex"):
+        raise SourceError("response is not a sitemap")
+    urls = []
+    for item in root:
+        expected = "sitemap" if kind == "sitemapindex" else "url"
+        if item.tag.rsplit("}", 1)[-1] != expected:
+            continue
+        loc = next((node.text for node in item if node.tag.rsplit("}", 1)[-1] == "loc"), None)
+        if not loc:
+            raise SourceError("sitemap entry missing location")
+        if kind == "sitemapindex":
+            urls.extend(_workday_sitemap_urls(client, cfg, loc.strip(), visited))
+        else:
+            p = urlparse(loc.strip())
+            if p.scheme != "https" or p.netloc != origin.netloc or p.query or p.fragment or "%" in p.path or "/../" in p.path:
+                raise SourceError("job URL outside approved career site")
+            urls.append(loc.strip())
+        if len(urls) > 20000:
+            raise SourceError("sitemap posting limit; incomplete coverage")
+    return urls
+
+
+def workday_sitemap_listings(client: httpx.Client, cfg: dict) -> SourceResult:
+    """Official sitemap/job pages; a permitted alternative, never a blocked-API fallback."""
+    site = cfg["site"].rstrip("/")
+    urls = _workday_sitemap_urls(client, cfg, f"{site}/siteMap.xml")
     base, site_name = site.rsplit("/", 1)
     locale = cfg.get("locale", "en-US")
     listings, seen = [], 0
-    for loc in dict.fromkeys(_SITEMAP_LOC_RE.findall(r.text)):
+    for loc in dict.fromkeys(urls):
         loc = html_lib.unescape(loc)
         if f"/{site_name}/job/" not in loc:
             continue

@@ -164,10 +164,26 @@ def merge_companies(remote: list, local: list) -> list:
             continue
         c = dict(r)
         mine = local_by_id.get(c.get("id"))
+        local_run = ((mine or {}).get("scan") or {}).get("run", {})
+        if mine:
+            from workday_state import epoch
+            def observed(value):
+                scan = value.get("scan") or {}
+                return max(epoch(value.get("last_checked")), epoch((scan.get("recovery") or {}).get("observed_at")),
+                           epoch((scan.get("run") or {}).get("finished_at")))
+            # Remote configuration is authoritative; results from an old source are stale.
+            changed = any(mine.get(k) != r.get(k) for k in ("url", "sources", "name"))
+            if changed or observed(mine) < observed(r) or epoch(mine.get("last_checked")) < epoch(r.get("last_checked")):
+                mine = None
         if mine:
             for f in SCAN_FIELDS:
                 if f in mine:
                     c[f] = mine[f]
+        if local_run.get("recovery_version") == 1:
+            from workday_state import epoch
+            old_run = (c.get("scan") or {}).get("run", {})
+            if epoch(local_run.get("finished_at")) > epoch(old_run.get("finished_at")):
+                c["scan"] = {**(c.get("scan") or {}), "run": dict(local_run)}
         out.append(c)
     return out
 
@@ -200,6 +216,8 @@ def _remote_json(ref: str, name: str, cwd: Path):
     try:
         return json.loads(r.stdout)
     except ValueError:
+        if Path(name).name in ("workday_scan_state.json", "workday_verdict_cache.json"):
+            raise ValueError("remote M7 safety data is not valid JSON") from None
         return None
 
 
@@ -233,6 +251,9 @@ def publish(message: str, local: dict[str, object], *, cwd: Path | None = None, 
                     merged[name] = merge_companies(rem, data) if rem is not None else data
                 elif kind == "logos.json":
                     merged[name] = merge_logos(rem, data)
+                elif kind in ("workday_scan_state.json", "workday_verdict_cache.json"):
+                    from workday_state import merge
+                    merged[name] = merge(kind, rem, data)
                 else:
                     merged[name] = data
             # start from the remote tip, then write the merged data
@@ -251,4 +272,7 @@ def publish(message: str, local: dict[str, object], *, cwd: Path | None = None, 
             log.warning("publish attempt %d rejected: %s", attempt, push.stderr.strip()[:200])
         except subprocess.CalledProcessError as e:
             log.warning("publish attempt %d failed: %s %s", attempt, e, (e.stderr or "").strip()[:200])
+        except (ValueError, KeyError, TypeError):
+            log.error("publish refused invalid recovery state; nothing sent")
+            return False
     return False

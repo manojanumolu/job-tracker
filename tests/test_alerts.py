@@ -210,7 +210,7 @@ def test_merge_companies_respects_app_changes():
     merged = repo_sync.merge_companies(remote, local)
     assert [c["id"] for c in merged] == ["sanofi", "c9"]            # removal respected, addition kept
     assert merged[0]["url"] == "new-url"                             # app config wins
-    assert merged[0]["status"] == "failing" and merged[0]["status_reason"] == "HTTP 500"   # scan results from the run
+    assert merged[0]["status"] == "active" and "status_reason" not in merged[0]  # stale old-source result refused
 
 
 # ---------------------------------------------------------------------------

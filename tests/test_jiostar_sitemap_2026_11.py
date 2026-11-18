@@ -23,7 +23,7 @@ DESC = ("<p>Join the viewer experience team. Freshers and recent graduates welco
 def _sitemap(*paths):
     urls = "".join(f'<url><loc>{SITE}/job/{p}</loc><xhtml:link rel="alternate" hreflang="en-US" '
                    f'href="https://jiostar.wd102.myworkdayjobs.com/en-US/JioStar/job/{p}"/></url>' for p in paths)
-    return f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>'
+    return f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">{urls}</urlset>'
 
 
 def _page(title, job_id, locality="Bengaluru- We Work", description=DESC, posted="2026-11-05"):

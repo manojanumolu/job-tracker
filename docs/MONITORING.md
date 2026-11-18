@@ -1,5 +1,29 @@
 # Company monitoring and alert rules (Nov 2026)
 
+## M7 Workday recovery (feature implementation)
+
+See [M7 implementation and rollout](M7_IMPLEMENTATION_AND_ROLLOUT.md) for the
+configuration, canary instructions, validation and company evidence table.
+The scraper CLI now enables paced Workday requests, persistent cooldowns,
+bounded Retry-After/backoff, verdict caching and API company rotation. The
+checked-in mode is a Sanofi/PwC API canary; other Workday APIs are explicitly
+deferred until full rollout is approved. JioStar and non-Workday integrations
+retain their normal cadence and run ahead of the API budget.
+
+The older descriptions below of retrying every Workday company each scan are
+historical behavior. M7 never advances a deferred company's attempt/success
+timestamps. The completed `scan.run` marker advances scheduling independently.
+The normal full-mode target is nine API companies per three-hour window,
+approximately nine hours per rotation; cooldowns/budgets can extend it. A
+24-hour successful-coverage breach stays visible. Critical means at least
+50% failing; degraded means at least 25% or five failing companies. Cooling
+or deferred failures remain in the failure numerator.
+
+No live recovery has been verified by this implementation. Unknown alternative
+source permission is a configuration requirement, not a healthy result. No
+alert preferences, eligibility rules, recipient scopes or delivery transitions
+are changed.
+
 ## The catalogue lists only companies the scan reads automatically
 
 Every company in `data/companies.json` must have a configured official

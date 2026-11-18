@@ -1,0 +1,21 @@
+{
+  "mode": "canary",
+  "canary_company_ids": ["sanofi", "pwc"],
+  "batch_size": 9,
+  "global_spacing_s": 1,
+  "host_spacing_s": 2,
+  "company_delay_s": 10,
+  "max_retries": 2,
+  "backoff_s": 30,
+  "retry_wait_budget_s": 120,
+  "cooldown_hours": 3,
+  "max_cooldown_hours": 24,
+  "api_breaker_hosts": 3,
+  "workday_budget_s": 1800,
+  "run_budget_s": 4800,
+  "max_requests": 900,
+  "cache_enabled": true,
+  "cache_ttl_hours": 24,
+  "cache_max_entries": 10000,
+  "overdue_hours": 24
+}

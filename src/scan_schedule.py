@@ -130,6 +130,14 @@ def last_scan(companies) -> datetime | None:
     (a company added since has no stamp yet). Using the start, a scan that a
     late tick began just before a boundary and finished after it still counts
     for the window it began in, so the next window gets its own scan."""
+    # M7 publishes a completed orchestration marker even when individual portals
+    # are deferred. Keep this projection in companies so sparse schedulers and
+    # the UI read the SAME committed snapshot, without another data dependency.
+    runs = [(c.get("scan") or {}).get("run", {}) for c in companies or [] if isinstance(c, dict) and isinstance(c.get("scan"), dict)]
+    completed = [r for r in runs if isinstance(r, dict) and r.get("recovery_version") == 1 and _parse(r.get("started_at"))
+                 and _parse(r.get("finished_at")) and _parse(r["finished_at"]) >= _parse(r["started_at"])]
+    if completed:
+        return _parse(max(completed, key=lambda r: _parse(r["finished_at"]))["started_at"])
     stamps = [_parse(c.get("last_checked")) for c in companies or [] if isinstance(c, dict)]
     stamps = [s for s in stamps if s]
     return min(stamps) if stamps else None

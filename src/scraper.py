@@ -10,6 +10,7 @@ from datetime import date, datetime, timezone
 from urllib.parse import urldefrag, urljoin, urlparse
 
 import httpx
+from workday_http import CURRENT, WorkdayStop
 
 from config_store import monitoring_state
 from identity import ats_job_id, canonical_url, job_uid, same_page
@@ -381,19 +382,30 @@ def decide(company: str, listing: Listing, detail: Detail | None) -> tuple[Class
 
 
 def _evaluate(scan: Scan, listing: Listing, budget: list[int]) -> None:
+    recovery = CURRENT.get()
+    fingerprint = recovery.fingerprint(listing) if recovery else ""
     scan.candidates += 1
     # judged as a posting here only to avoid dropping programme titles before
     # their JobPosting evidence has been read; the final verdict uses the real evidence
     pre = classify_job(listing.title, listing.card_text, url=listing.url, posting_evidence=True)
     if pre.category in _HARD_REJECT:
+        if recovery:
+            recovery.pending.pop(recovery.key(listing), None)
         scan.rejected += 1
         scan.reasons[_reason_kind(pre.reason)] += 1
         _log_decision(scan.name, listing.title, pre)
         return
     detail = listing.detail
+    hit = recovery.lookup(listing) if recovery else None
+    if hit:
+        detail = Detail(**hit["detail"])
+        listing.title = hit["title"]
+        recovery.stats["cache_hits"] += 1
     if detail is None and listing.fetch_detail is not None:
         if budget[0] > 0:
             budget[0] -= 1
+            if recovery:
+                recovery.stats["cache_misses"] += 1
             try:
                 detail = listing.fetch_detail()
             except Exception as e:  # one broken posting never aborts the company
@@ -402,7 +414,27 @@ def _evaluate(scan: Scan, listing: Listing, budget: list[int]) -> None:
         else:
             detail = Detail.unreadable("detail budget reached this run")
             scan.pending += 1
+    if recovery and detail and not detail.ok:
+        diagnostic = detail.diagnostic
+        category = diagnostic.get("failure_category", "incomplete")
+        recovery.defer_listing(listing, category)
+        if diagnostic:
+            # Keep the actual throttle, not subsequent no-request cooldown outcomes.
+            if not recovery.last_stop or diagnostic.get("attempted"):
+                recovery.last_stop = diagnostic
+            if diagnostic.get("attempted") and category not in ("not_found",):
+                scan.fail("failing", f"Workday {category}")
     result, job = decide(scan.name, listing, detail)
+    if recovery:
+        if result.category == Category.UNKNOWN:
+            if not detail or not detail.ok:
+                recovery.defer_listing(listing)
+            else:
+                recovery.pending.pop(recovery.key(listing), None)
+        elif hit:
+            recovery.pending.pop(recovery.key(listing), None)  # hits never extend TTL
+        else:
+            recovery.cache_detail(listing, detail, "accepted" if job else "rejected", fingerprint)
     _log_decision(scan.name, listing.title, result)
     if job:
         scan.jobs.append(job)
@@ -479,8 +511,15 @@ def _scan_sources(company: dict, sources: list[dict]) -> Scan:
         for cfg in sources:
             try:
                 result = read_source(client, cfg)
+            except WorkdayStop as e:
+                CURRENT.get().last_stop = e.diagnostic
+                scan.fail("failing", str(e))
+                continue
             except SourceError as e:
                 scan.fail(e.status, str(e))
+                if CURRENT.get():
+                    CURRENT.get().last_stop = {"failure_category": "invalid_response", "http_status": None,
+                                               "host": urlparse(cfg.get("api") or cfg.get("site") or "").hostname or ""}
                 if isinstance(cfg.get("size_guard"), dict) and isinstance(previous_feed, dict):
                     scan.feed = dict(previous_feed)       # an unreadable feed keeps the last good size too
                 continue
@@ -520,7 +559,12 @@ def _scan_sources(company: dict, sources: list[dict]) -> Scan:
             listings += result.listings
         # more detail pages than the budget: vary the order between runs so
         # the same postings are never the ones left pending every time
-        if sum(1 for x in listings if x.detail is None and x.fetch_detail) > budget[0]:
+        if CURRENT.get():
+            if not scan.errors and not CURRENT.get().last_stop:
+                keys = {CURRENT.get().key(item) for item in listings}
+                CURRENT.get().pending = {k: v for k, v in CURRENT.get().pending.items() if k in keys}
+            listings = CURRENT.get().order(listings)
+        elif sum(1 for x in listings if x.detail is None and x.fetch_detail) > budget[0]:
             random.shuffle(listings)
         for listing in listings:
             try:
@@ -1145,21 +1189,55 @@ def _streak_label(iso: str) -> str:
     return f"{dt.day} {dt:%b} {dt:%H:%M} UTC"
 
 
-def run_all() -> list[dict]:
+def run_all(recovery=None) -> list[dict]:
     from config_store import load_companies, save_companies, load_seen_jobs, save_seen_jobs
 
     companies = load_companies()
+    if recovery is True:
+        from config_store import DATA
+        from workday_runtime import Recovery
+        recovery = Recovery(DATA, companies, sources_for)
     seen = load_seen_jobs()
     new_jobs: list[dict] = []
     started_at = _now_iso()
     jobs_found = portals_failed = 0
     merge_stats: Counter = Counter()
     scanned = [c for c in companies if not monitoring_state(c)]   # the others have no usable source yet: left as they are
+    if recovery:
+        from workday_runtime import is_api
+        # Healthy independent sources (including JioStar) precede the API budget.
+        scanned.sort(key=lambda c: is_api(sources_for(c)))
 
     for company in scanned:
         previous = company.get("scan") if isinstance(company.get("scan"), dict) else {}
+        from workday_runtime import is_workday
+        managed = recovery and is_workday(sources_for(company))
+        if managed:
+            reason = recovery.defer_reason(company)
+            if reason:
+                from workday_alternatives import permitted
+                unverified = any(c.get("type") == "workday_sitemap" and not permitted(c) for c in sources_for(company))
+                from workday_runtime import hosts
+                unverified = unverified or any(recovery.state["hosts"].get(h, {}).get("failure_category") in
+                                              ("forbidden", "authentication", "redirect") for h in hosts(sources_for(company)))
+                outcome = "needs_config" if unverified else "cooling_down" if reason == "cooldown" else "deferred"
+                company["scan"] = {**previous, "recovery": recovery.projection(company, outcome, reason)}
+                portals_failed += company.get("status") in ("failing", "broken", "needs_config")
+                continue  # No attempt, timestamp or failure-streak advancement.
+            recovery.begin(company)
         was_failing = company.get("status") not in (None, "", "active", "unknown")
-        scan = scan_company(company)
+        try:
+            scan = scan_company(company)
+        finally:
+            if managed:
+                recovery.end()
+        if managed and len(recovery.http.events) == recovery.event_start:
+            category = recovery.last_stop.get("failure_category", "budget")
+            company["scan"] = {**previous, "recovery": recovery.projection(company, "deferred", category)}
+            portals_failed += company.get("status") in ("failing", "broken", "needs_config")
+            continue
+        if managed and (recovery.pending or recovery.last_stop) and scan.status == "active":
+            scan.fail("failing", "Incomplete Workday coverage; pending work retained")
         jobs_found += len(scan.jobs)
         portals_failed += scan.status != "active"
         company["status"] = scan.status
@@ -1173,6 +1251,9 @@ def run_all() -> list[dict]:
         if scan.status == "active":
             company["last_success"] = company["last_checked"]   # a failed scan keeps the older one
         company["scan"] = {**scan.summary(), **(streak or {})}
+        if managed:
+            outcome = "healthy" if scan.status == "active" else ("rate_limited" if recovery.last_stop.get("http_status") == 429 else "failed")
+            company["scan"]["recovery"] = recovery.projection(company, outcome, attempted=True)
         company["source"] = source_label(company)
         # reflect what this scrape actually sees — a failed scan saw nothing, so it keeps the last one
         if scan.status == "active":
@@ -1193,8 +1274,14 @@ def run_all() -> list[dict]:
            "reposts_suppressed": merge_stats["reposts_suppressed"],
            "reposts_window_realerted": merge_stats["reposts_window_realerted"],
            "repost_dates_backfilled": merge_stats["repost_dates_backfilled"]}
+    if recovery:
+        run.update(recovery_version=1, run_id=recovery.run_id)
+        recovery.save(started_at, run["finished_at"])
     for company in scanned:
         company["scan"]["run"] = dict(run)
+    if recovery:
+        from monitoring_health import report_actions
+        report_actions(companies)
 
     # commit=False: alerts.py publishes the data (merge-safe) before and
     # after emailing — see alerts.py
@@ -1207,7 +1294,7 @@ def run_all() -> list[dict]:
 
 
 if __name__ == "__main__":
-    new = run_all()
+    new = run_all(recovery=True)
     print(f"[scraper] {len(new)} new job(s) found")
     if new:
         for j in new:

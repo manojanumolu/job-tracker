@@ -2494,6 +2494,10 @@ def portal_status(c: dict) -> tuple[str, str]:
     no suitable jobs today is never a status."""
     if monitoring_state(c):                  # no usable source yet: not scanned, so not a failure either
         return "pending", _NO_SOURCE_LABELS[monitoring_state(c)]
+    recovery = (c.get("scan") if isinstance(c.get("scan"), dict) else {}).get("recovery") or {}
+    if recovery.get("outcome") in ("deferred", "cooling_down", "rate_limited", "needs_config"):
+        labels = {"deferred": "Deferred", "cooling_down": "Cooling down", "rate_limited": "Rate limited", "needs_config": "Requires configuration"}
+        return ("failing" if recovery.get("unresolved_failure") else "delayed"), labels[recovery["outcome"]]
     checked = _parse_iso(c.get("last_checked", ""))
     if (_check_trigger and time.time() - _check_trigger < 1200 and c.get("status") not in _UNHEALTHY
             and (checked is None or checked.timestamp() < _check_trigger)):
@@ -2516,6 +2520,10 @@ def _health(cos: list[dict]) -> tuple[dict, tuple[str, str]]:
               for k in ("healthy", "delayed", "failing", "pending", "checking")}
     if not cos:
         return counts, ("pending", "No portals yet")
+    from monitoring_health import health
+    recovery_health = health(cos, NOW)
+    if recovery_health["severity"] in ("degraded", "critical"):
+        return counts, ("failing", f"{recovery_health['severity'].title()}: {_plural(recovery_health['failures'], 'portal')} failing")
     if counts["failing"] == len(cos):
         return counts, ("failing", "All portals failing")
     if counts["failing"]:
@@ -2528,6 +2536,8 @@ def _health(cos: list[dict]) -> tuple[dict, tuple[str, str]]:
         return counts, ("delayed", "Scans delayed")
     if SCAN_OVERDUE:
         return counts, ("delayed", "Scan overdue")
+    if any(counts[k] for k in ("delayed", "pending", "checking")):
+        return counts, ("delayed", "Monitoring coverage incomplete")
     return counts, ("healthy", "All portals healthy")
 
 
@@ -4836,6 +4846,22 @@ def tracker_status_card() -> None:
     times — what the sidebar's status card used to show, kept in one place.
     The same numbers as Home's chips and metrics (nothing is fetched)."""
     # this viewer's own monitoring (MONITORED): a second admin's follows, else the catalogue
+    from monitoring_health import health
+    recovery_health = health(MONITORED, NOW)
+    if recovery_health["severity"] in ("critical", "degraded") or recovery_health["coverage"] in ("critical", "degraded"):
+        st.warning(f"Monitoring {recovery_health['severity']}: {recovery_health['failures']}/{recovery_health['total']} companies failing. "
+                   f"Coverage {recovery_health['coverage']}: {recovery_health['unavailable']} unavailable or overdue.")
+    recovery_rows = []
+    for company in MONITORED:
+        rec = (company.get("scan") if isinstance(company.get("scan"), dict) else {}).get("recovery")
+        if rec:
+            recovery_rows.append({"Company": company["name"], "State": rec.get("outcome"), "Method": rec.get("discovery_method"),
+                                  "HTTP": rec.get("http_status"), "Failure": rec.get("failure_category"), "Host": rec.get("host"),
+                                  "Last attempt": rec.get("last_attempt"), "Last success": rec.get("last_success"),
+                                  "Cooldown until": rec.get("cooldown_until"), "Pending": rec.get("pending", 0)})
+    if recovery_rows:
+        with st.expander("Workday monitoring diagnostics"):
+            st.dataframe(recovery_rows, hide_index=True, use_container_width=True)
     breakdown = " · ".join(f"{mon_by_status[k]} {_STATUS_WORDS[k]}" for k in _STATUS_WORDS if mon_by_status[k]) or "No portals yet"
     tiles = [
         ("Portal health", f'<span class="pill {mon_overall[0]}"><i></i>{escape(mon_overall[1])}</span>',

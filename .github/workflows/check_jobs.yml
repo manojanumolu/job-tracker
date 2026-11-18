@@ -141,6 +141,8 @@ jobs:
           path: |
             jt-data/data/companies.json
             jt-data/data/seen_jobs.json
+            jt-data/data/workday_scan_state.json
+            jt-data/data/workday_verdict_cache.json
           if-no-files-found: error
           retention-days: 1
 
@@ -190,7 +192,7 @@ jobs:
       - name: Take over the scan results
         env:
           JT_DATA_ROOT: jt-data
-        run: python src/scan_handoff.py scan-results companies.json seen_jobs.json
+        run: python src/scan_handoff.py scan-results companies.json seen_jobs.json workday_scan_state.json workday_verdict_cache.json
 
       # Publish the scrape results and email new alerts — at most once per job.
       # alerts.py pushes the data (merged record-by-record with any change the
