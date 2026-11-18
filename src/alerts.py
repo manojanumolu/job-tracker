@@ -179,9 +179,19 @@ def run(send=None, publisher=publish, now: datetime | None = None, run_id: str |
     if not recipient:
         log.info("No recipient email configured (the ALERT_RECIPIENT secret) — publishing data only")
 
-    if not publisher(DATA_MESSAGE, {"data/seen_jobs.json": seen, "data/companies.json": companies}):
+    from config_store import DATA
+    from workday_state import publication_payload
+    try:
+        recovery_data = publication_payload(DATA)
+    except (OSError, ValueError):
+        log.error("Invalid M7 state; nothing published or emailed")
+        return 1
+    if not publisher(DATA_MESSAGE, {"data/seen_jobs.json": seen, "data/companies.json": companies, **recovery_data}):
         log.error("Could not publish the scrape results — no email sent (the jobs will be found again next run)")
         return 1
+    if recovery_data:
+        from scan_schedule import _summary
+        _summary("Validated scan, cooldown and cache data published. Portal recovery is reported separately.", "Scan publication")
     if not keys:
         _report(stats, load_seen_jobs(), now)
         log.info("No new alerts")

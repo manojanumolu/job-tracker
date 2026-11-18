@@ -55,7 +55,7 @@ STEP_MARK = "\n      # Personal alerts (per-user"
 # vars.JT_DATA_BRANCH || github.ref_name, and git config runs in jt-data.
 # Same commands (scraper.py, scan_handoff.py, alerts.py), same secrets and
 # permissions; the job gains "environment: production" (outside the steps).
-GLOBAL_SCAN_STEPS_SHA256 = "05d8ccd5079c6a606ca3b9d7940934cababdb0234a5216d78a33a59bdff6041d"
+GLOBAL_SCAN_STEPS_SHA256 = "2aa36a8074265ee54abc0d3f84acea7601543cac8ca595e6005f561e359c112f"
 
 
 def _wf() -> str:

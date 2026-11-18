@@ -183,6 +183,27 @@ With stages D–G done, that token can write only data, on `data`. It can't
 change `main` (pull requests only) or any workflow, and a workflow it starts
 on another branch gets no secrets.
 
+## M7 scan state and cache handoff
+
+The M7 scraper generates `workday_scan_state.json` and
+`workday_verdict_cache.json` alongside the two existing scan data files. The
+`scan-results` artifact explicitly includes all four. `scan_handoff.py`
+checks closed recovery schemas, bounded values, Workday hosts, typed monitoring
+projections and matching run generations before adoption. Only JSON data crosses
+this boundary; the read-only scraper still receives no secrets.
+
+`alerts.run` loads both new files before its first publication resets the data
+checkout. Their explicit merge handlers preserve newer host observations and
+cache evaluations, while company merges reject stale source results. Later
+delivery transitions publish only the existing seen-job ledger. Recovery data
+never chooses recipients or changes delivery state. Artifact retention is
+transport only: the data branch supplies persistence across runs.
+
+An unreadable safety state is not silently reset. Restore a validated safety
+file before resuming publication. Rollback must retain the latest delivery
+ledger and cooldowns, never reset the whole data branch to an earlier commit.
+See [M7 rollout and rollback](M7_IMPLEMENTATION_AND_ROLLOUT.md).
+
 ## What remains
 
 * **Repository admins** can still change anything, rulesets included. Keep

@@ -1,5 +1,38 @@
 # Company monitoring and alert rules (Nov 2026)
 
+## M7 Workday recovery (deployed)
+
+See [M7 implementation and rollout](M7_IMPLEMENTATION_AND_ROLLOUT.md) for the
+root cause, request budget, configuration, verification and company status.
+
+* Non-Workday scanners and JioStar's sitemap keep the admin's 3 h scan
+  interval and run ahead of the Workday API budget.
+* Workday API companies (`/wday/cxs/`) are revisited every **6 h**: 13 of the
+  26 per 3 h window, oldest attempt first. A company checked within the
+  revisit interval sends no request and keeps its healthy state.
+* Mode `auto` (the shipped default): while the newest HTTP 429 on any Workday
+  host is newer than the canary's (Sanofi, PwC) last real healthy scan, only
+  the canary is contacted; everyone else shows "waiting for the Workday
+  canary". A healthy canary scan restores full rotation automatically; any new
+  429 puts the fleet back behind the canary.
+* A 429 is retried only when it carries a valid Retry-After short enough for
+  the run's 120 s retry budget. Otherwise: one request, then a durable host
+  cooldown (3 h, doubling per repeat to 24 h; a longer Retry-After wins). Two
+  throttled hosts in one run stop all further API requests in that run.
+* Requests keep the tracker's existing User-Agent; nothing is sent to a host
+  that is cooling down, and 401/403/redirects need configuration review.
+
+Run states shown on the dashboard and in each run's Actions summary: healthy,
+degraded (read, detail work pending), rate limited (HTTP 429), cooling down
+(with the time), deferred / waiting for the canary, requires configuration,
+failed. Critical means at least 50% of companies failing; degraded at least
+25% or five. Cooling or deferred failures stay in the failure count until a
+real successful scan. M7 never advances a deferred company's attempt/success
+timestamps; a 24 h success gap stays visible as overdue.
+
+The older descriptions below of retrying every Workday company each scan are
+historical behavior.
+
 ## The catalogue lists only companies the scan reads automatically
 
 Every company in `data/companies.json` must have a configured official

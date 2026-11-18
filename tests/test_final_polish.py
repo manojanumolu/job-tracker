@@ -111,7 +111,7 @@ def test_settings_status_follows_portal_health(app):
                          "last_checked": NOW.isoformat()}])
     _nav(at, "settings")
     status = re.search(r'<dl class="status-grid" role="status">(.*?)</dl>', _html(at), re.S).group(1)
-    assert '<span class="pill failing"><i></i>1 portal failing</span>' in status
+    assert '<span class="pill failing"><i></i>Critical: 1 portal failing</span>' in status
     assert "1 healthy · 1 failing" in status
 
 
