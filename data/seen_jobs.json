@@ -5861,5 +5861,111 @@
     "notified": false,
     "repost_last_seen": "2026-11-18",
     "company_id": "adp"
+  },
+  {
+    "title": "T&T | Customer | S&S | Analyst | SFDC QA | Delhi",
+    "url": "https://southasiacareers.deloitte.com/job/Delhi-T&T-Customer-S&S-Analyst-SFDC-QA-Delhi/61648844/",
+    "company": "Deloitte",
+    "location": "Delhi, IN · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-3 years'",
+    "evidence": {
+      "experience": [
+        "0-3 years"
+      ],
+      "experience_lines": [
+        "0–3 years of experience in Software QA / Salesforce Testing."
+      ],
+      "fresher_evidence": "0-3 years",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Delhi-T&T-Customer-S&S-Analyst-SFDC-QA-Delhi/61648844",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      },
+      "skills": {
+        "SQL": "Basic knowledge of SQL or API testing would be an advantage.",
+        "Azure": "Exposure to Jira, Azure DevOps, or similar defect-tracking tools.",
+        "CI/CD": "Exposure to Jira, Azure DevOps, or similar defect-tracking tools.",
+        "Testing / QA": "T&T | Customer | S&S | Analyst | SFDC QA | Delhi",
+        "Jira": "Exposure to Jira, Azure DevOps, or similar defect-tracking tools.",
+        "Salesforce": "Perform functional, regression, integration, and end-to-end testing of Salesforce CPQ.",
+        "Communication": "Good analytical, problem-solving, and communication skills.",
+        "Problem solving": "Good analytical, problem-solving, and communication skills."
+      },
+      "requirements": [
+        {
+          "text": "T&T | Customer | S&S | Analyst | SFDC QA | Delhi",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Understand business requirements and assist in preparing test scenarios and test cases.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Perform functional, regression, integration, and end-to-end testing of Salesforce CPQ.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Execute test cases, document results, and identify and report defects.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "0–3 years of experience in Software QA / Salesforce Testing.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Basic understanding of Salesforce CRM and Salesforce CPQ concepts.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Knowledge of SDLC, STLC, and software testing methodologies.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Understanding of test case preparation, execution, and defect management.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Exposure to Jira, Azure DevOps, or similar defect-tracking tools.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Good analytical, problem-solving, and communication skills.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Salesforce CPQ training or certification.",
+          "importance": "preferred"
+        },
+        {
+          "text": "Exposure to Salesforce Sales Cloud and CPQ testing.",
+          "importance": "preferred"
+        },
+        {
+          "text": "Basic knowledge of SQL or API testing would be an advantage.",
+          "importance": "preferred"
+        },
+        {
+          "text": "Bachelor's degree in Engineering, Computer Science, IT, or a related discipline.",
+          "importance": "preferred"
+        }
+      ]
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Delhi-T&T-Customer-S&S-Analyst-SFDC-QA-Delhi/61648844",
+    "date": "Nov 18, 18:08",
+    "first_seen": "2026-11-18T18:08:06.493809+00:00",
+    "id": "Deloitte_T&T_|_Customer_|_S&S_|_Analyst_|_SFDC_QA",
+    "notified": false,
+    "repost_last_seen": "2026-11-18",
+    "company_id": "deloitte"
   }
 ]
