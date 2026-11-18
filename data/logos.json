@@ -53,7 +53,7 @@
       "status": "none",
       "reason": "pwc.com: HTTP 403",
       "hint": "01e065396c8f7597",
-      "checked_at": "2026-11-04T09:48:04+00:00",
+      "checked_at": "2026-11-18T10:40:19+00:00",
       "finder": 2
     },
     "accenture": {
@@ -189,7 +189,7 @@
       "status": "none",
       "reason": "carrier.com: no usable icon",
       "hint": "498636bc0e9de3fc",
-      "checked_at": "2026-11-04T09:48:13+00:00",
+      "checked_at": "2026-11-18T10:40:24+00:00",
       "finder": 2
     },
     "c1793696374": {
@@ -225,17 +225,27 @@
       "checked_at": "2026-11-03T09:00:22+00:00"
     },
     "c1793696376": {
-      "status": "none",
-      "reason": "invesco.com: HTTP 403",
+      "status": "ok",
+      "domain": "invesco.com",
+      "page": "https://www.invesco.com/us/en/country-splash.html",
+      "web": {
+        "mime": "image/png",
+        "data": "iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAMAAAAKE/YAAAAAAXNSR0IArs4c6QAAAHtQTFRF////3+D5v8Hzz9H2n6PtcHXmQEfdEBrVAArScHXl3+H5UFfgEBnVn6PuICnYgIXo7/D8YGbjEBrUX2bjMDjar7Lxn6Pvj5Tsv8Lzf4TpICnXgIToz9H3kJTroKPuv8L0cHbmkJPrYGbir7Pxv8H0j5Trf4XpQEjd7+/8tu09VwAAA8hJREFUeJzt22tzmkAYhmEwUVcFFWJsa9KQNhX9/7+wCwb29IKrILvMPPeHzhTBXNkuJ7FBgBBCCCGEEEIIIYQQQgghhBBCCCGEUFU44T25VtgXPk9nc1Y0c02xSnjHg14wtTGgl2yE6JWOjpauSVeLdTNja+/VaxPtvXpDmH1XG3thpd66lrWUmN706YX/ufNXTeyF7DUI/FYTe+G+WO6zmtgL95dX/FUv54b5R/Vaofby1EjshWH12nbHDyEucQ1Rh7saXah9RBMDLaH5yx6iyfOKhF77iKYGWkL/9HFO0ydwgU58RJMDLaHXHqIbrpRqNJ8d/qHpgRbohYdo+jKa/apXCA/8r28OhWZXzUHwHnmmtjB7p24wv2ireaVuMO+MFT1S/6bNFG9DLx6+jyYzxdv5oW4xE7z3hl9m2FrNBG/jg7rdTPB2HqivoQ1e1vDLDNlVtMH7dK++jtZ524NztQWa/VE3yRr+CQbrr4X5EGobfU8Qlrj5KPUucz1B2PpjNGYxQVwMtv4Uy9YsJsiggz0pBqjh4k7ti9x+K92cDTTYk1nxOMLKzKJ3+j1CwR5isDm5+Ek2c6NNLbMfPdgX8i01qiX2Qwf7djJrfbIl2A8b7LvI7WrxkGaeTDwi26r5an27O5Dt1XzFV1/It6h7eyzTmczkJ7bLZ57ynEtWR/08AeuDzPtXvV954aFelsrqPg5+PZEldFBc42kDehTr9TE/eiLL6PJcqt0B5PV6fcyPB6AzyibU9CXWUOhVzIsIS7lMv9mq1bvu58YO6LjYvrpJkedqOT+MaSDGuvMpvQP6SUHr88O8r83Fuh3Z95ujQEVLQ10e4og9Lkvq1Tux70fPNLQ01Bc1+RFCNq226MBWHMnqlFqjF+X2YXyqFkjPtjb6byFVnWnS+79XK5PLe9Rzdpxa0evDRRhfPnQUJ7vvOzX69iDubBaPBxPltvqcHXSknvxDw0ge6vruklTHnc3VzUVifBJwDR0pay+koZbuiCl13N1csk2yiU4u1ScT9RricpRbFxd4b8pW5htnxds86HviGnqvL9aODREzO+TZY2yW6L2xWLuEMB6dp9OhxYGG3puLGz7fdSgOVPSeWKxdF28j5+JAQUvmpbBpO++RWHvwDpRZPpw1XHu6NAefKWFeSt81Ne6bcudm3leS6grlk1Tj0iJnqWtz0VeiKLbKl3rNq7jcy/9bdJJmh7NDxK2F3wePNBkNOaiudvKza8dtrdjsODIy3xfHNC8QQgghhBBCCCGEEEIIIYQQQgghhBBC6K7+A170gBfFBelGAAAAAElFTkSuQmCC",
+        "w": 180,
+        "h": 180,
+        "src": "https://www.invesco.com/etc.clientlibs/invesco/clientlibs/main/resources/images/apple-touch-icon.png",
+        "kind": "apple-touch-icon"
+      },
+      "email": "web",
       "hint": "11e4ffc73667f73d",
-      "checked_at": "2026-11-04T09:48:15+00:00",
+      "checked_at": "2026-11-18T10:40:27+00:00",
       "finder": 2
     },
     "c1793696377": {
       "status": "none",
       "reason": "wbd.com: page doesn't name the company; warnerbrosdiscovery.com: HTTP 403",
       "hint": "50b99dbc5126c875",
-      "checked_at": "2026-11-04T09:48:24+00:00",
+      "checked_at": "2026-11-18T10:40:38+00:00",
       "finder": 2
     },
     "c1793696378": {
@@ -259,14 +269,14 @@
       "status": "none",
       "reason": "amgen.com: no usable icon",
       "hint": "c0694041551ec6d4",
-      "checked_at": "2026-11-04T09:48:31+00:00",
+      "checked_at": "2026-11-18T10:40:43+00:00",
       "finder": 2
     },
     "c1793696380": {
       "status": "none",
       "reason": "evernorth.com: no usable icon; evernorthcigna.com: blocked address",
       "hint": "c58c38cd7a271131",
-      "checked_at": "2026-11-04T09:48:35+00:00",
+      "checked_at": "2026-11-18T10:40:48+00:00",
       "finder": 2
     },
     "c1793696381": {
