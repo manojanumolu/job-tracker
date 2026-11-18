@@ -14,7 +14,7 @@
   "api_breaker_hosts": 2,
   "workday_budget_s": 1800,
   "run_budget_s": 4800,
-  "max_requests": 900,
+  "max_requests": 600,
   "cache_enabled": true,
   "cache_ttl_hours": 72,
   "cache_max_entries": 10000,

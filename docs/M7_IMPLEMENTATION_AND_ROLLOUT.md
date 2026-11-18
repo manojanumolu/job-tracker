@@ -1,145 +1,193 @@
-# M7 implementation and controlled rollout
+# M7 Workday recovery: root cause, fix, rollout and status
 
-Implementation branch: `feature/m7-workday-recovery-plan`. This is uncommitted local implementation, not a deployed recovery. The planning document remains the historical specification; the decisions below describe the implemented behavior.
+Branch `feature/m7-workday-recovery-plan`: `da87859` (original M7) + the
+recovery commits listed in [Deployment](#deployment-and-workflow-status).
+`docs/M7_WORKDAY_MONITORING_RECOVERY_PLAN.md` is the historical
+specification; this document is the record of what was actually found,
+changed, tested and verified.
 
-## Implemented behavior
+## Actual root cause
 
-* The production scraper entry point enables a single run-scoped Workday controller. Global/host spacing covers API listings, details, sitemap and job pages. Requests identify the tracker explicitly and never follow redirects automatically. Other source adapters retain their own request policies.
-* HTTP 429 and retryable server/network failures have bounded backoff. Retry-After accepts seconds or HTTP-date; valid long waits become durable cooldowns. A host circuit stops later requests and repeated source sites (including both PwC sites). Three distinct throttled API hosts stop further API attempts in that run; JioStar sitemap traffic is not part of that aggregate breaker.
-* Forbidden, authentication and unexpected redirects require configuration review even after the timestamped cooldown expires. There is no automatic browser fallback or alternate identity.
-* Known recorded 429s receive a conservative three-hour cooldown on first deployment. Cooldown survives subsequent runs. Expired cooldown admits one controlled trial; repeated failure increases the fallback pause to 6/12/24 hours.
-* The persistent cache stores definitive verdicts with bounded public posting evidence. Warm hits avoid detail requests but rerun the current classifier/safety gates, preserving skills and M6 requirements. Fingerprints, source configuration, code-derived rule/extraction version and 24-hour TTL invalidate stale entries. Hits do not extend TTL. Unknown/unreadable results are not negative cached.
-* New and visibly changed postings receive priority, with one aged pending/revalidation item per three new items to prevent starvation. Pending identity hashes and first-deferred times persist. A complete later listing may remove pending entries for postings no longer present; failed/partial listings cannot do so. Schema/size bounds can evict cached evidence, never seen-job or delivery history.
-* Full mode selects up to nine Workday API companies by oldest actual attempt, excluding cooldown/policy blocks. JioStar and the other existing non-API sources run first on every window, outside API rotation. Twenty-four-hour success breaches are flagged; old attempts receive scheduling priority without allowing permanently failing portals to monopolize every slot.
-* No-request deferrals preserve `last_checked`, `last_success` and failure streaks. Partial/rate-limited scans cannot advance success. A completed orchestration marker is projected into `scan.run` so the scheduler and UI share the same existing company snapshot, including all-cooling windows. This deliberately avoids a second scheduler/app snapshot dependency; the authoritative safety state also records the run.
-* Structured company diagnostics include method, HTTP status, host, failure category, parsed Retry-After, last attempt/success, cooldown, pending age and cache counts. Health severity counts unresolved failures even while deferred/cooling; 25% or five companies is degraded, 50% is critical. Coverage age/unknowns are reported separately. Account-specific monitoring scopes remain intact.
-* GitHub Actions receives safe aggregate summaries and warnings. Portal failure does not stop valid job publication or existing alerts. Workflow success does not claim recovered portal coverage.
+Established from the production data branch history (`data/companies.json`
+on `main`, every scan since October) and the GitHub Actions run list. These
+are recorded facts, not estimates:
 
-## Files and security boundary
+| Period | Workday API companies | Workday requests per 3 h scan | Result |
+|---|---:|---:|---|
+| up to 2 Nov | 3 | ~290 | healthy |
+| 3 Nov → 15 Nov | 25–27 | ~1,650–1,830 | healthy for ~12 days |
+| 16 Nov 00:06 UTC | 26 | ~1,750 | first 429 (Salesforce, `wd12`) |
+| 16 Nov 09:05 UTC onwards | 26 | 26–52 (first POST each, all 429) | **all 26 tenants HTTP 429, every scan** |
 
-New implementation files:
+Per-scan volume = listing POSTs (`ceil(postings/20)` + 1–2 facet requests)
++ detail GETs (`details_read`), taken from each company's saved `scan`
+counters. For example, the last fully successful scan (16 Nov 06:02–06:23)
+read 4,510 postings with 289 listing POSTs and 1,463 detail GETs in ~20
+minutes, unpaced.
 
-* `config/workday_recovery.json`
-* `src/workday_http.py`, `src/workday_runtime.py`, `src/workday_state.py`
-* `src/workday_alternatives.py`, `src/monitoring_health.py`
-* `tests/test_workday_recovery.py`
+1. **Request volume.** Every 3 h scan re-downloaded the detail page of every
+   India candidate posting of every Workday tenant (~1,460), whether or not
+   it had changed: ~14,000 Workday CXS requests per day from GitHub-hosted
+   runners for ~12 days. No code or schedule change preceded the trip
+   (interval 3 h since 4 Nov; no Workday request-path change since 13 Nov).
+   The 429s began on one Workday data centre and within nine hours covered
+   all 26 tenants on `wd1/wd3/wd5/wd12` simultaneously. That points to a limit
+   shared across tenants (per client network/identity), not per company.
+2. **No backoff, so the block was perpetuated.** The pre-M7 scanner called
+   every tenant again every 3 h, with no cooldown, no memory of the 429 and
+   no Retry-After handling.
+3. **The failure was visible but did not alert.** Each company showed
+   `failing — HTTP 429` on the dashboard, and the run summary said
+   `portals_failed: 26`. Every Check Jobs run still concluded `success`,
+   because portal failures deliberately do not fail the workflow. So 26 of 44
+   companies (59%) had no successful discovery from 16 Nov 06:16 UTC until
+   this recovery.
+4. **The fix was never deployed.** M7 (`da87859`) was pushed to a feature
+   branch with no pull request. Production ran the pre-M7 scanner throughout.
+   The "35 failed" full-suite result was from an incomplete local
+   environment (missing Bash/PDF/browser dependencies). CI's full suite on
+   `da87859` passed (run 44384045885).
 
-Updated files:
+Things that were **not** the cause, checked directly:
 
-* `src/sources.py`, `src/scraper.py`
-* `src/scan_schedule.py`, `src/scan_handoff.py`, `src/repo_sync.py`
-* `src/alerts.py` (initial publication payload only)
-* `streamlit_app.py`
-* `.github/workflows/check_jobs.yml`
-* `tests/test_alerts.py` (old-source scan results must no longer replace current health)
+* Scheduling: Check Jobs ran every 3 h window on time (00:02, 03:02, …
+  18:02 UTC), ~9 min each. The Scan scheduler chain was alive. There were
+  no duplicate scans per window.
+* Publication: every scan's artifact was uploaded, handed over and
+  published (data commits every 3 h, `[skip ci]`).
+* Non-Workday sources: all 18 (including JioStar's Workday sitemap on the
+  same `myworkdayjobs.com` infrastructure) succeeded on every run. The limit
+  applies to the CXS API path.
 
-Documentation: this report, `docs/M7_WORKDAY_MONITORING_RECOVERY_PLAN.md`, and operational monitoring/security notes. No existing production JSON files are edited. The following files are generated by an approved scanner execution in its separate data checkout:
+## Defects fixed in M7 before deployment
 
-* `data/workday_scan_state.json`: host cooldowns, company/source scheduling observations and pending references.
-* `data/workday_verdict_cache.json`: derived, bounded verdict/evidence cache.
+`da87859` already provided pacing, persistent cooldowns, verdict caching,
+rotation, validated four-file handoff and health diagnostics. Measured
+against the recovery requirements, it still had these defects, all fixed:
 
-The scrape artifact explicitly includes both alongside companies and seen jobs. Handoff validates closed schemas, bounds, safe host identities and a matching run generation before copying. The company run marker must match the state/cache generation. All four are included in the initial merge-safe publication before any alert can send; subsequent sending/finalization publications remain ledger-only. New files are never imported or executed.
+| Defect in `da87859` | Effect | Fix |
+|---|---|---|
+| A 429 was retried twice (30 s, 60 s) even without Retry-After | 3 requests into an active throttle per host per run | A 429 is retried only with a valid Retry-After that fits the 120 s retry budget, waiting exactly that long. Otherwise one request, then a durable cooldown. (5xx/network errors keep bounded 30 s/60 s backoff.) |
+| `canary` mode had no exit | The other 24 throttled companies deferred indefinitely until someone hand-edited config | New default mode `auto` (below): canary-gated automatic promotion and demotion |
+| Workday requests sent a new User-Agent | A throttled client presenting a different identity | The tracker's existing User-Agent is kept |
+| Bootstrap cooldown counted from deploy time | Cooldown later than the evidence warrants | Counted from the recorded 429 (`last_checked`) |
+| Rotation of 9 companies per window with no revisit floor; 24 h cache TTL | ~1,460 detail re-reads/day of unchanged postings | 6 h per-company revisit; 72 h verdict TTL (fingerprint, rules and source changes still invalidate at once) |
+| Global spacing 1 s; cross-host breaker at 3 hosts | Up to 1 req/s into a limit shared across tenants | 2 s global and per-host spacing (≤0.5 req/s); stop all API requests after 2 throttled hosts in a run |
+| Partial scans (own request budget, cross-host circuit, 404'd posting, pagination cap) marked `failing` | Healthy-but-partial companies inflated failure counts | Stay `active` with a pending count; reported as **degraded**. A real throttle or error mid-scan is still `failing`. |
+| A not-yet-due company would be reported as "Deferred" | Healthy companies shown as incomplete every other window | Reported `healthy` with the date of its real last success |
+| No per-run record of Workday activity | Couldn't tell from Actions whether Workday was contacted | Run summary line: mode, requests sent, selected, not-due, throttled and cooling hosts |
 
-Remote state merges per host/company/evaluated entry. Older observations cannot clear newer cooldowns or overwrite newer cache entries. Pruning uses the merged generation. Company merges preserve remote membership/configuration and reject old-source/stale scan results. Existing shared ledger CAS, uncertain delivery handling and personal Firestore delivery code are unchanged.
+Files: `src/workday_http.py`, `src/workday_runtime.py`,
+`src/workday_state.py`, `src/scraper.py`, `src/monitoring_health.py`,
+`streamlit_app.py`, `config/workday_recovery.json`,
+`tests/test_workday_recovery.py`, `docs/MONITORING.md`, this document.
 
-Missing cache is a cold start; corrupt cache rebuild is reported internally. Missing safety state after an M7 run or corrupt safety state stops Workday requests and refuses publication rather than erasing an unknown cooldown. Restore the last valid safety file before resuming publication. Unsupported/corrupt remote schemas are likewise refused, not overwritten. This failure intentionally prioritizes safe publication over availability and requires operator attention. No automatic production data reset is included.
+## Monitoring interval: 6 h for Workday API, 3 h for everything else
 
-## Selected settings
+Steady-state Workday CXS requests, from the measured per-company counters
+(289 listing POSTs and ~1,460 detail candidates per full pass over the 26
+companies):
 
-The checked-in trusted configuration is the source of defaults. It is not loaded from a career site or data artifact.
+| Option | Listing POSTs/day | Detail GETs/day | Total/day | vs. what tripped the limit |
+|---|---:|---:|---:|---:|
+| Old: 3 h, all companies, no cache | 2,312 | 11,700 | **~14,000** | 1× (tripped) |
+| 3 h revisit + 72 h cache | 2,312 | ~560 | ~2,900 | 21% |
+| **6 h revisit + 72 h cache (chosen)** | 1,156 | ~560 | **~1,700** | **12%** |
+| 12 h revisit + 72 h cache | 578 | ~560 | ~1,150 | 8% |
 
-| Setting | Value |
+Detail GETs/day = 1,460 cached verdicts revalidated once per 72 h (~490)
+plus new or visibly changed postings. That second figure is an *estimate*
+(~5% of candidates a day, ~70), because the data branch does not keep
+per-posting history for rejected Workday postings. The run summary's
+request count will replace the estimate with real numbers. Peak rate is
+capped at 0.5 req/s (it was ~1.5 req/s unpaced).
+
+Decision:
+
+* **6 h, not 3 h.** At a 3 h revisit, listing pages alone would be 80% of
+  the old listing volume, and the cache cannot reduce listing reads. A 6 h
+  revisit halves them, for ~88% less traffic in total.
+* **6 h, not 12 h.** 12 h saves only another ~550 requests/day (the cached
+  detail traffic doesn't scale with interval) and halves freshness. It would
+  only be justified if the limit trips again at ~1,700/day: the auto-demotion
+  and escalating cooldowns would make that visible.
+* **Non-Workday stays at 3 h.** The 18 non-Workday sources have no throttling
+  evidence (healthy on every run, including through the outage). Moving the
+  global interval would sacrifice their freshness for nothing. The admin
+  setting `scan_interval_hours` stays 3.
+
+Each 3 h window: non-Workday sources and JioStar first, then up to 13 Workday
+API companies (oldest attempt first, sequential, 10 s between companies),
+~210 requests (~7 min) in steady state. Companies attempted within the last
+5 h (6 h minus 1 h slack for late scan starts) send no request. A company in
+cooldown is not selected; when its cooldown ends it is the oldest attempt,
+so it goes first. Per-run hard limits are 600 Workday requests and 30 min of
+Workday time, so the cold-cache first sweep after recovery (~870 requests for
+13 companies) spreads over ~3 windows. Pending details persist and new
+postings go first. Tested in
+`test_rotation_covers_26_every_6_hours_with_half_per_window`: over 24 h of
+late-starting 3 h windows, each of 26 companies is visited exactly 4 times,
+6.0–6.2 h apart.
+
+## Rate-limit behaviour (as deployed)
+
+| Situation | Behaviour |
 |---|---|
-| Default rollout | `canary` |
-| API canary IDs | `sanofi`, `pwc` (existing configured API integrations; no new access claim) |
-| Full rotation batch | 9 API companies |
-| Global / host spacing | 1 / 2 seconds, no bursts |
-| Delay between Workday companies | 10 seconds |
-| Retries | 2 retries after initial request |
-| Backoff / total retry waiting | 30s, 60s / maximum 120s |
-| Fallback cooldown | 3h, 6h, 12h, maximum 24h; longer valid Retry-After wins |
-| API aggregate breaker | 3 distinct hosts throttled in the run |
-| Workday request/time ceilings | 900 requests / 1,800 seconds |
-| Whole-run Workday start deadline | 4,800 seconds from orchestration start, leaving margin before the 90-minute job timeout |
-| Cache TTL / entry limit / file bound | 24h / 10,000 / 16 MiB |
-| Overdue success safeguard | 24h |
-| Existing scan and alert schedules | Unchanged |
+| 429 without Retry-After, or Retry-After > remaining 120 s retry budget | 1 request; host cooldown 3 h (×2 per consecutive failure, max 24 h; a longer valid Retry-After wins); host closed for the rest of the run |
+| 429 with Retry-After ≤ budget | Waits exactly Retry-After, then retries (at most 2 retries) |
+| 5xx / timeout / network | 30 s then 60 s backoff within the 120 s budget, then cooldown |
+| 2 distinct hosts throttled in one run | No further Workday API requests that run (sitemaps unaffected) |
+| 401 / 403 / redirect | Host needs configuration review; never retried automatically, even after cooldown |
+| Host cooling down | No request; company shown "Cooling down until …" |
+| Mode `auto`, newest 429 newer than the canary's last real healthy scan | Only Sanofi and PwC (or, if neither can be probed, the single oldest company) are contacted; the rest show "waiting for the Workday canary" |
+| Canary scans healthy | Next run returns to full rotation automatically |
+| Any new 429 in full rotation | Next run is canary-only again |
 
-`JT_WORKDAY_MODE=canary|full|paused` is the sole runtime mode override. Unknown modes fail instead of widening scope. Default canary mode deliberately defers the other 24 failing APIs. Full mode's nominal revisit is `ceil(26/9) × 3h = 9h`; cooldowns, request budgets and delayed workflow starts can exceed it. Invisible detail changes are detected on TTL revalidation, not instantly. Cache/pacing limits remain enabled when rotation mode changes.
+Cooldowns, per-company attempts, pending postings and verdicts are stored in
+`data/workday_scan_state.json` and `data/workday_verdict_cache.json` on the
+data branch. They are handed from the scan job to the publish job as
+schema-validated JSON with a matching run generation, and merged per host,
+company and entry on publish, so the newer record wins. Corrupt or missing
+safety state after an M7 run stops Workday requests and refuses publication
+rather than forgetting a cooldown. No robots.txt, access restriction or rate
+limit is bypassed: there is no alternate identity, browser fallback, proxy
+or unofficial endpoint.
 
-## Alternative sources: honest evidence status
+`JT_WORKDAY_MODE=paused` (or `"mode": "paused"` in the config) is the
+emergency stop for the Workday API. Other scanners continue and state is
+kept.
 
-JioStar's existing sitemap adapter and canonical identities are retained. New Workday sitemap mappings require explicit recent policy evidence (terms permission, robots content publishing the sitemap and allowing required paths). This is an offline gate, not a verifier of assertions: an operator must independently establish the policy. No live probes were performed.
+## Test results
 
-Sanofi and PwC are the two assessment candidates because the repository already has an explicit Sanofi source and two distinct PwC career sites. **Neither has a newly verified permitted alternative.** Their alternative-source status is “requires configuration/policy verification”; their existing API integrations form the canary. Existing public-feed support for ADP/ServiceNow is preserved; it is not evidence of a Workday employer feed. No invented sitemap or feed endpoints were activated. A newly configured sitemap without sufficient evidence is deferred as `needs_config`, not shown as recovered.
+(Filled in at verification; see [Verification record](#verification-record).)
 
-## Company-by-company recovery evidence
+## Canary results
 
-Source: committed snapshot `8e33074`, latest saved run 18 November 2026, 12:03–12:10 UTC. This is NOT a fresh scan. “Unverified” means no recovery claim can be made from local code/tests. The canary column describes code selection after deployment approval, not a scan performed here.
+(Filled in at verification.)
 
-| Company | Saved status | M7 rollout disposition | Genuine new recovery |
-|---|---|---|---|
-| MetLife | Active | Existing scanner retained | Not tested live |
-| Avalara | Active | Existing scanner retained | Not tested live |
-| PokerStars | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Sanofi | HTTP 429 | API canary after bootstrap cooldown; alternative needs verification | Unverified |
-| PwC | HTTP 429 | API canary, both sites share host policy; alternative needs verification | Unverified |
-| Accenture | Active | Existing scanner retained | Not tested live |
-| NPCI | Active | Existing scanner retained | Not tested live |
-| Salesforce | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Micron | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| NVIDIA | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Wells Fargo | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Novartis | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Carrier | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Synchrony | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Broadridge | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Invesco | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Warner Bros. Discovery | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Bristol Myers Squibb | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Amgen | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Evernorth (Cigna) | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| State Street | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Mastercard | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Hitachi | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Medtronic | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| S&P Global | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Silicon Labs | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Analog Devices | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Marvell | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Thermo Fisher Scientific | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| Amazon | Active | Existing scanner retained | Not tested live |
-| Microsoft | Active | Existing scanner retained | Not tested live |
-| Google | Active | Existing scanner retained | Not tested live |
-| Infosys | Active | Existing scanner retained | Not tested live |
-| Deloitte | Active | Existing scanner retained | Not tested live |
-| Qualcomm | Active | Existing scanner retained | Not tested live |
-| Cisco | HTTP 429 | Deferred in canary; rotation/cooldown in full | Unverified |
-| JioHotstar (JioStar) | Active | Existing sitemap first, outside API rotation | Not tested live |
-| AMD | Active | Existing scanner retained | Not tested live |
-| Netflix | Active | Existing scanner retained | Not tested live |
-| Oracle | Active | Existing scanner retained | Not tested live |
-| IBM | Active | Existing scanner retained | Not tested live |
-| ADP | Active | Existing feed-size guard retained | Not tested live |
-| ServiceNow | Active | Existing official feed retained | Not tested live |
-| Swiggy | Active | Existing scanner retained | Not tested live |
+## Deployment and workflow status
 
-## Canary, approvals and rollback
+(Filled in at verification.)
 
-1. Review the local diff and validation results. Explicitly approve committing/pushing this branch and opening an implementation PR. No commit/push/PR has been performed in this task.
-2. Review the PR's security changes, runtime limits and pending-work behavior. CI must pass before merge. Confirm the actual production environment branch rules and `JT_DATA_BRANCH` setting; these live settings were not queried or changed.
-3. Separately approve merge/deployment and the first production canary scan. Merging scanner code can affect the next scheduled run, so schedule this approval before merge; do not assume merge is isolated from production. Keep default canary mode. Existing source selection and all shared/personal alert settings remain unchanged.
-4. The first approved scan bootstraps cooldown from saved 429 evidence and may attempt no failing APIs. It should still scan the 18 previously active sources and publish the two new state files through the normal trusted boundary. Validate published generation, truthful health, no leaked headers and unchanged alert ledgers.
-5. After cooldown, observe Sanofi/PwC outcomes, request count, last_success, cache misses/hits, pending age and run duration. Do not infer success from workflow exit status. Observe at least 48 hours/two TTLs and verify healthy-source behavior and recipient isolation. If access is forbidden or needs review, do not clear the block to force requests.
-6. Obtain explicit approval to change trusted rollout mode to `full`; nine-company batches then apply. No scheduler or alert cadence changes are needed. Observe a complete rotation and report each company's actual last successful discovery. If the common limit persists, keep the health critical and assess permitted alternatives under separate live-policy authorization.
-7. Emergency rollback: approve `JT_WORKDAY_MODE=paused` in the scraper environment or set trusted config mode to `paused` in a reviewed code change. This pauses API selection while JioStar/other existing scanners continue; it does not erase state. The workflow presently uses the checked-in mode, so an environment override requires an explicit workflow/environment change.
-8. Cache rollback: set trusted `cache_enabled=false`; retain pacing/cooldowns. For a code rollback, revert producer, handoff and initial-publication changes together. Never restore old `seen_jobs.json` or Firestore delivery data. Preserve or restore only a validated safety-state file from data history; any policy-block reset requires new permission evidence.
+## Company-level recovery status
 
-No source recovery is claimed until those approved observations occur. Remaining external blockers are live rate-limit behavior, current access policies for two alternative sources, and actual production branch/environment configuration. The implementation cannot guarantee a provider permits requests merely because mocked tests pass.
+(Filled in at verification.)
 
-## Validation results
+## Remaining blocked companies and operational limitations
 
-Validation on 19 November: full-suite run completed with 3,579 passed, 35 failed, 8 skipped (54m08s). This run preceded final fixes. Targeted recovery/source suite: 165 passed. Targeted publishing/scheduling/security suite: 318 passed, 1 skipped. Latest broader targeted suite: 510 passed, 2 failed in existing M6 matching assertions involving bullet/text encoding. The full-suite failures include missing Bash, PDF dependencies, encoding assertions and changed UI/workflow expectations. M7 malformed-scan handling and UI/workflow expectations were corrected afterward; the full suite has not been repeated. This branch is for review, not certified deployment. All new tests use fake clocks, MockTransport and temporary data; they do not contact career sites or send email.
+* The Workday limit is external and undocumented. This change makes the
+  tracker send ~88% fewer requests, never retry a 429 blind, and stop on
+  repeated throttling. It cannot force Workday to lift a limit. If the canary
+  keeps getting 429, the 24 others stay deferred (visibly) and the canary
+  cooldown escalates 3 → 6 → 12 → 24 h.
+* Sanofi and PwC have no verified permitted alternative feed. No sitemap or
+  feed endpoints were invented or activated; JioStar's existing sitemap is
+  unchanged.
+* Changes to a posting's detail page that don't change its title, location,
+  URL or card text are picked up on the 72 h revalidation, not instantly.
+* GitHub cron is best-effort; the self-dispatching Scan scheduler chain
+  (unchanged) is what keeps the 3 h windows on time.
 
-User subsequently authorized committing and pushing the feature branch. Merge, deployment, production scans and email delivery remain unapproved.
-`Final focused verification: 93 passed in 18.68s (recovery, malformed company data, health UI and personal-alert workflow).`
+## Verification record
+
+(Filled in at verification.)

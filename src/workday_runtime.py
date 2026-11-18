@@ -124,7 +124,10 @@ class Recovery:
         mode = self.config["mode"]
         if mode != "auto":
             return mode
-        throttled = [epoch(h.get("observed_at")) for h in self.state["hosts"].values() if h.get("failure_category") == "rate_limit"]
+        # API hosts only: the shared limit is on the CXS API; JioStar's sitemap is separate.
+        api_hosts = {h for c in companies if is_api(self.sources_for(c)) for h in hosts(self.sources_for(c))}
+        throttled = [epoch(h.get("observed_at")) for name, h in self.state["hosts"].items()
+                     if name in api_hosts and h.get("failure_category") == "rate_limit"]
         if not throttled:
             return "full"
         ids = {c["id"] for c in companies}

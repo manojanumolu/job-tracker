@@ -776,3 +776,12 @@ def test_budget_limited_scan_is_degraded_not_failed(tmp_path, clock, cfg, monkey
     assert len(found) == 2 and cos[0]["status"] == "active"
     assert rec["outcome"] == "degraded" and rec["pending"] == 1 and not rec["unresolved_failure"]
     assert monitoring_health.company_health(cos[0])["unavailable"]   # still shown as incomplete coverage
+
+
+def test_sitemap_throttle_does_not_gate_the_api_fleet(tmp_path, clock, cfg):
+    cfg["mode"] = "auto"
+    run = recovery(tmp_path, clock, cfg, companies(2))
+    run.state["hosts"]["jiostar.wd102.myworkdayjobs.com"] = {"observed_at": iso(clock.now()), "cooldown_until": iso(clock.now() + 3600),
+        "failures": 1, "http_status": 429, "failure_category": "rate_limit", "retry_after_s": 0, "retry_after_valid": False}
+    write(tmp_path / STATE_FILE, STATE_FILE, run.state)
+    assert recovery(tmp_path, clock, cfg, companies(2)).mode == "full"
