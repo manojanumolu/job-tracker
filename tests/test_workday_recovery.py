@@ -781,6 +781,20 @@ def _graduate_jobs(n):
     return handler
 
 
+def test_unusable_workday_200_keeps_the_previous_success(tmp_path, clock, cfg, monkeypatch):
+    last_success = iso(clock.now() - 7 * 3600)
+    cos = [{**COMPANY, "status": "failing", "last_checked": last_success, "last_success": last_success}]
+    _wire_run_all(tmp_path, clock, monkeypatch, cos,
+                  lambda req: httpx.Response(200, json={"message": "try again later"}))
+
+    assert scraper.run_all(recovery=recovery(tmp_path, clock, cfg, cos)) == []
+    published = json.loads((tmp_path / "companies.json").read_text(encoding="utf-8"))[0]
+    assert published["status"] == "broken"
+    assert published["last_success"] == last_success
+    assert published["scan"]["recovery"]["outcome"] == "failed"
+    assert published["scan"]["recovery"]["failure_category"] == "invalid_response"
+
+
 def test_second_window_within_revisit_makes_no_requests_and_stays_healthy(tmp_path, clock, cfg, monkeypatch):
     cos = [{**COMPANY, "status": "active", "last_checked": iso(clock.now() - 7 * 3600), "last_success": iso(clock.now() - 7 * 3600)}]
     handler = _graduate_jobs(3)

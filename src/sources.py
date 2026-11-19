@@ -247,34 +247,56 @@ def workday_detail(client: httpx.Client, url: str, title: str) -> Detail:
                   posted_at=posting_date(info.get("startDate")))
 
 
+def _workday_page(payload, offset: int, previous_total: int | None = None) -> tuple[list, int | None]:
+    rows = payload.get("jobPostings") if isinstance(payload, dict) else None
+    if not isinstance(rows, list):
+        raise SourceError("Workday response has no jobPostings list")
+    total = payload.get("total", previous_total)
+    if total is not None and (type(total) is not int or total < 0):
+        raise SourceError("Workday response has an invalid posting count")
+    if total is not None and len(rows) < WORKDAY_PAGE and offset + len(rows) < total:
+        raise SourceError("Workday listing ended before its reported posting count", "failing")
+    if total == 0 and rows:
+        raise SourceError("Workday response reports zero postings but contains job rows")
+    return rows, total
+
+
+def _workday_posting(row) -> bool:
+    if not isinstance(row, dict):
+        return False
+    title, path = row.get("title"), row.get("externalPath")
+    return (isinstance(title, str) and bool(title.strip()) and isinstance(path, str)
+            and path.startswith("/job/") and len(path) > len("/job/"))
+
+
 def workday_listings(client: httpx.Client, api: str) -> SourceResult:
     base, cxs_base = workday_urls(api)
     first = _get_json(client, "POST", api, json={"limit": WORKDAY_PAGE, "offset": 0, "searchText": "", "appliedFacets": {}})
-    if not isinstance(first, dict):
-        raise SourceError("unexpected Workday response")
+    rows, total = _workday_page(first, 0)
     applied = _india_facets(first.get("facets") or [])
     if applied:
         page = _get_json(client, "POST", api, json={"limit": WORKDAY_PAGE, "offset": 0, "searchText": "", "appliedFacets": applied})
-    else:
-        page = first
-    total = page.get("total")
+        rows, total = _workday_page(page, 0)
     postings: list = []
     offset = 0
     while True:
-        batch = [p for p in (page.get("jobPostings") or []) if isinstance(p, dict)]
+        batch = [row for row in rows if _workday_posting(row)]
+        if rows and not batch:
+            raise SourceError("Workday response contains no readable job rows")
         postings += batch
         offset += WORKDAY_PAGE
-        if len(batch) < WORKDAY_PAGE or offset >= MAX_WORKDAY_POSTINGS or (isinstance(total, int) and offset >= total):
+        if len(rows) < WORKDAY_PAGE or offset >= MAX_WORKDAY_POSTINGS or (total is not None and offset >= total):
             break
         page = _get_json(client, "POST", api, json={"limit": WORKDAY_PAGE, "offset": offset, "searchText": "",
                                                      "appliedFacets": applied})
+        rows, total = _workday_page(page, offset, total)
     listings = []
     paths: set[str] = set()
     for p in postings:
-        title = str(p.get("title") or "").strip()
-        ext = str(p.get("externalPath") or "")
+        title = p["title"].strip()
+        ext = p["externalPath"]
         loc = str(p.get("locationsText") or "")
-        if not title or not ext or ext in paths:   # a posting repeated across pages is read once
+        if ext in paths:   # a posting repeated across pages is read once
             continue
         paths.add(ext)
         multi = bool(_WORKDAY_MULTI_LOC_RE.match(loc))
