@@ -283,14 +283,14 @@
       "status": "none",
       "reason": "statestreet.com: page doesn't name the company",
       "hint": "4f74b88ff20a13a0",
-      "checked_at": "2026-11-04T18:19:16+00:00",
+      "checked_at": "2026-11-19T10:44:02+00:00",
       "finder": 2
     },
     "c1793696382": {
       "status": "none",
       "reason": "mastercard.com: HTTP 403",
       "hint": "b1c5b5721a9b4bdd",
-      "checked_at": "2026-11-04T18:19:17+00:00",
+      "checked_at": "2026-11-19T10:44:03+00:00",
       "finder": 2
     },
     "c1793696383": {
@@ -330,21 +330,21 @@
       "status": "none",
       "reason": "spglobal.com: HTTP 403; sandpglobal.com: blocked address",
       "hint": "20f5fa59916921cd",
-      "checked_at": "2026-11-04T18:19:31+00:00",
+      "checked_at": "2026-11-19T10:44:14+00:00",
       "finder": 2
     },
     "c1793696386": {
       "status": "none",
       "reason": "silabs.com: HTTP 403; siliconlabs.com: ConnectError",
       "hint": "257a0ec9345a14a1",
-      "checked_at": "2026-11-04T18:19:34+00:00",
+      "checked_at": "2026-11-19T10:44:17+00:00",
       "finder": 2
     },
     "c1793696387": {
       "status": "none",
       "reason": "analog.com: ReadTimeout; analogdevices.com: ConnectTimeout",
       "hint": "4f9a7310dc3e434b",
-      "checked_at": "2026-11-04T18:19:57+00:00",
+      "checked_at": "2026-11-19T10:44:40+00:00",
       "finder": 2
     },
     "c1793696388": {
@@ -368,7 +368,7 @@
       "status": "none",
       "reason": "thermofisher.com: ReadTimeout; thermofisherscientific.com: ConnectError",
       "hint": "eefd62f471be8b43",
-      "checked_at": "2026-11-04T18:20:13+00:00",
+      "checked_at": "2026-11-19T10:44:54+00:00",
       "finder": 2
     },
     "amazon": {
@@ -409,14 +409,14 @@
       "status": "none",
       "reason": "google.com: robots.txt",
       "hint": "4f69bb5e02d8edef",
-      "checked_at": "2026-11-05T09:49:00+00:00",
+      "checked_at": "2026-11-19T10:44:55+00:00",
       "finder": 2
     },
     "infosys": {
       "status": "none",
       "reason": "infosys.com: HTTP 403",
       "hint": "086d3b86912e1836",
-      "checked_at": "2026-11-05T09:49:01+00:00",
+      "checked_at": "2026-11-19T10:44:56+00:00",
       "finder": 2
     },
     "deloitte": {
