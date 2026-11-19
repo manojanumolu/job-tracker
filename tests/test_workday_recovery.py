@@ -855,3 +855,20 @@ def test_failure_projection_on_an_active_company_is_a_leftover_but_needs_config_
     assert monitoring_health.current_recovery(c)["outcome"] == "needs_config"
     c["status"], c["scan"]["recovery"]["outcome"] = "failing", "cooling_down"
     assert monitoring_health.current_recovery(c)["outcome"] == "cooling_down"
+
+
+def test_second_site_cooldown_does_not_mask_the_first_sites_429(tmp_path, clock, cfg, monkeypatch):
+    """19 Nov 01:39: PwC's first site got HTTP 429, its second site (same host) was
+    correctly not requested, but the projection said failed/cooldown, not 429."""
+    pwc = {**PWC, "status": "failing", "status_reason": "HTTP 429", "last_checked": iso(clock.now() - 7 * 3600),
+           "last_success": iso(clock.now() - 3 * 86400)}
+    assert len(scraper.sources_for(pwc)) >= 1
+    calls = []
+    def handler(req):
+        calls.append(req)
+        return httpx.Response(429)
+    _wire_run_all(tmp_path, clock, monkeypatch, [pwc], handler)
+    scraper.run_all(recovery=recovery(tmp_path, clock, cfg, [pwc]))
+    rec = pwc["scan"]["recovery"]
+    assert len(calls) == 1                                  # one request for the whole host
+    assert rec["outcome"] == "rate_limited" and rec["http_status"] == 429

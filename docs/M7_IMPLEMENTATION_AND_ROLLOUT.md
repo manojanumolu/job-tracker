@@ -183,20 +183,88 @@ visited every 6 h over 24 h, a not-due window making zero requests, a cached
 revisit making one listing request and zero detail requests, and budget-limited
 scans counting as degraded.
 
-## Canary results
+## Canary results (production, GitHub Actions, real Workday)
 
-(Filled in at verification.)
+The canary ran through the production scanner and workflow handoff in GitHub
+Actions. This sandbox cannot reach Workday (proxy-denied), so no local live
+call was made.
+
+| When (UTC, 19 Nov) | Run | Sanofi | PwC | Other 24 API cos | Notes |
+|---|---|---|---|---|---|
+| 18 Nov 21:19 | 1523 (first M7 run) | cooling (bootstrap from 21:04 429) | cooling | 0 requests, waiting for canary | state + cache published (`c4bda05`) |
+| 00:02 | scheduled | not probed | not probed | 0 requests | defect 1 below |
+| 00:14 | 1526 (controlled) | not probed | not probed | 0 requests | defect 2 below |
+| **01:30** | **controlled, `94e1059`** | **1 request → HTTP 429**, no Retry-After | **1 request → HTTP 429**; second site not requested | **0 requests** | cooldown escalated to 6 h, until 07:39 |
+
+**Result: the Workday limit is still in force.** As of 19 Nov 01:39 UTC it
+had lasted ~2.5 days, and ~4.5 h had passed since the old scanner's last
+poke. Verified in production: one request per throttled host, no blind
+retry, a durable escalating cooldown (`failures: 2` → 6 h), the other 24
+held back with no requests, and JioStar and the 17 non-Workday sources
+unaffected. No canary company has recovered, and none is reported as
+recovered.
+
+Defects found by the canary and fixed (each with a regression test that
+fails on the old code):
+
+1. Selection was a snapshot at run start: the 00:02 scan selected 76 s
+   before the cooldown ended. Cooldown-expired companies are now admitted
+   mid-run (PR 22).
+2. The 6 h revisit also held back *failed* companies, measured from the
+   pre-M7 429, so the canary would have waited until 02:04 instead of 00:04.
+   Retry after failure is now governed only by the cooldown (PR 22).
+3. A stale failure projection could keep a recovered company "failing" on
+   the dashboard (PR 22).
+4. PwC's second-site cooldown stop masked its first site's real 429 in the
+   diagnostics (`failed/cooldown` instead of `rate_limited/429`) (PR 23).
+
+What happens next, automatically. The 06:02 scan's selection runs before
+07:39, so the next canary probe is the **09:02 UTC** scan.
+
+* A healthy canary → the next run is full rotation: 13 per window, oldest
+  first, all 26 covered every 6 h, the cold first sweep spread over ~3
+  windows by the 600-request cap.
+* 429 again → 1 request per host, cooldown 12 h, then 24 h (maximum). The
+  others stay gated and visible.
 
 ## Deployment and workflow status
 
-(Filled in at verification.)
+| Item | Status |
+|---|---|
+| PR 21 (M7 + recovery fixes) | merged into `main` as `3fdc1ec`, 18 Nov 21:19 UTC; CI 3,647 passed / 0 failed / 39 skipped |
+| PR 22 (canary timing, retry-after-failure, stale projections) | merged as `94e1059`, 19 Nov 01:29 UTC; CI **3,653 passed / 0 failed / 39 skipped** |
+| PR 23 (PwC diagnostic masking, this record) | see the PR |
+| Deployment mechanism | Check Jobs checks out `main` on every run; there is no separate deploy step. The Streamlit app reads `main`. |
+| Check Jobs workflow | `active`; cron `17,47 * * * *` (plan tick) and `20 */6 * * *` (personal alerts) |
+| Scan scheduler chain | `active`, self-dispatching; dispatches plan at each 3 h window (00:02, 03:02, …) |
+| Scan interval | 3 h for all scanners (`scan_interval_hours: 3`, unchanged); Workday API companies revisited every 6 h within it |
+| M7 state persistence | verified across 4 consecutive M7 runs (18 Nov 21:19; 19 Nov 00:02, 00:14, 01:30): each read the previous state, carried cooldowns forward, published a matching generation, and never reset state |
+| Emails | none sent by any verification run ("No new alerts"; shared ledger unchanged at 42 sent, 0 uncertain; personal alerts `off_jobs: 0`) |
 
-## Company-level recovery status
+## Company-level recovery status (19 Nov 01:39 UTC, after the canary)
 
-(Filled in at verification.)
+| State | Count | Companies |
+|---|---:|---|
+| Healthy | 18 | MetLife, Avalara, Accenture, NPCI (Zoho), Amazon, Microsoft, Google, Infosys, Deloitte, Qualcomm, JioStar (Workday sitemap), AMD, Netflix, Oracle, IBM, ADP, ServiceNow, Swiggy |
+| Degraded (partial) | 0 | — |
+| Throttled (HTTP 429, cooling until 07:39) | 2 | Sanofi, PwC (canary) |
+| Deferred, waiting for the canary | 24 | PokerStars, Salesforce, Micron, NVIDIA, Wells Fargo, Novartis, Carrier, Synchrony, Broadridge, Invesco, Warner Bros. Discovery, Bristol Myers Squibb, Amgen, Evernorth, State Street, Mastercard, Hitachi, Medtronic, S&P Global, Silicon Labs, Analog Devices, Marvell, Thermo Fisher, Cisco |
+| Failed (other errors) | 0 | — |
+
+All 26 Workday API companies have had no successful discovery since 16 Nov
+06:04–06:21 UTC. The dashboard shows them as failing (Critical, 26/44).
+That is accurate, and they stay in the failure count until a real
+successful scan.
 
 ## Remaining blocked companies and operational limitations
 
+* **The 26 Workday API companies are still not being monitored
+  successfully.** Workday continues to return HTTP 429 to the canary. This
+  is an external restriction that the tracker respects; it is not bypassed.
+  If it persists past the 24 h cooldown ceiling, the remaining permitted
+  options are an operator decision: ask the employers or Workday about API
+  access, or verify an officially permitted alternative feed per company.
+  Neither is automated here.
 * The Workday limit is external and undocumented. This change makes the
   tracker send ~88% fewer requests, never retry a 429 blind, and stop on
   repeated throttling. It cannot force Workday to lift a limit. If the canary
@@ -212,4 +280,21 @@ scans counting as degraded.
 
 ## Verification record
 
-(Filled in at verification.)
+* Root cause: measured from data branch history (per-company scan counters
+  for every scan since 26 Oct) and the Actions run list. See the table at
+  the top.
+* Code: CI full suite green on both merged heads (`3ff3987`: 3,647 / 0 / 39;
+  `52370f7`: 3,653 / 0 / 39). The local full suite matched on `52370f7`. Two
+  earlier PR 22 CI runs failed (4 dashboard tests) and were fixed before
+  merge; see defect 3.
+* Production behaviour: data commits `c4bda05` (first M7 run), `2559299`
+  (00:02), `833ea57` (00:14) and `d17aae1` (01:30 canary). Each was read
+  back from `main` and checked for request counts, outcomes, cooldowns,
+  generation match and alert-ledger stability.
+* Not verified, because it cannot be until Workday lifts the limit: a
+  successful canary scan, automatic promotion to full rotation, the cold
+  sweep under the 600-request cap, and steady-state request volume. These
+  are covered by tests (`test_auto_mode_promotes_after_canary_success_and_demotes_on_new_429`,
+  `test_rotation_covers_26_every_6_hours_with_half_per_window`,
+  `test_second_window_within_revisit_makes_no_requests_and_stays_healthy`)
+  but not observed live.
