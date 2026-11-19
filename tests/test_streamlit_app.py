@@ -428,7 +428,7 @@ def test_statuses_come_from_scraper_data(app):
          "status_reason": "career page shows a bot challenge (e.g. Cloudflare)"},
         {"id": "c", "name": "Gamma", "url": "https://c.example", "status": "unknown", "last_checked": ""},
         {"id": "d", "name": "Delta", "url": "https://d.example", "status": "active",
-         "last_checked": (now - timedelta(hours=12)).isoformat()},
+         "last_checked": (now - timedelta(hours=14)).isoformat()},     # past the 13 h stale mark of 6 h scans
         {"id": "e", "name": "Epsilon", "url": "https://e.example", "status": "failing", "last_checked": now.isoformat(),
          "status_reason": "5 of 6 job pages could not be read (last: HTTP 429)"},
         {"id": "f", "name": "Zeta", "url": "https://f.example", "status": "needs_config", "last_checked": now.isoformat(),

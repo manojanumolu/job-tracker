@@ -502,7 +502,7 @@ def test_admin_sees_last_next_and_jobs_found(app, google_env, admins, tmp_path):
     assert section, "the Scan details section is missing"
     assert "Last scan" in section and ist_full(end) in section
     assert "Jobs found" in section and '<span class="num">24</span>' in section
-    state, when = scan_schedule.next_scan_state(datetime.now(timezone.utc), 3, start)
+    state, when = scan_schedule.next_scan_state(datetime.now(timezone.utc), 6, start)
     assert state == "scheduled" and ist_full(when) in section and "IST" in section
 
 
