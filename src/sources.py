@@ -1174,18 +1174,31 @@ def workday_sitemap_detail(client: httpx.Client, listing: Listing) -> Detail:
         return Detail.unreadable(f"network error reading job page: {type(e).__name__}")
     if r.status_code >= 400:
         return Detail.unreadable(f"HTTP {r.status_code} from job page")
+    return jsonld_page_detail(r.text, listing)
+
+
+def jsonld_page_detail(page_html: str, listing: Listing) -> Detail:
+    """The job's own schema.org JobPosting on its official page (shared by the
+    Workday sitemap and Phenom career-site sources)."""
     from scraper import _pick_posting
-    posting = _pick_posting(jsonld_postings(r.text), listing.title, listing.job_id)
+    posting = _pick_posting(jsonld_postings(page_html), listing.title, listing.job_id)
     if posting is None:
         return Detail.unreadable("job page has no JobPosting for this job")
     title = str(posting.get("title") or "").strip()
     if title:
         listing.title = title                       # the page's own title, not the URL slug
-    place = posting.get("jobLocation")
-    place = place[0] if isinstance(place, list) and place else place
-    addr = place.get("address") if isinstance(place, dict) else None
-    location = ", ".join(str(addr.get(k)) for k in ("addressLocality", "addressRegion", "addressCountry")
-                         if isinstance(addr, dict) and addr.get(k)) or listing.location
+    places = posting.get("jobLocation")
+    places = [p for p in (places if isinstance(places, list) else [places]) if isinstance(p, dict)]
+
+    def place_text(place):
+        addr = place.get("address")
+        return ", ".join(str(addr.get(k)) for k in ("addressLocality", "addressRegion", "addressCountry")
+                         if isinstance(addr, dict) and addr.get(k))
+    texts = [t for t in map(place_text, places) if t]
+    # a multi-location posting: the India location when it has one (the listing came from an India search)
+    location = (next((t for t in texts if is_india(t)), "")
+                or (listing.location if listing.location and is_india(listing.location) else "")
+                or (texts[0] if texts else "") or listing.location)
     description = html_to_text(html_lib.unescape(str(posting.get("description") or "")))
     if len(description) < _MIN_DESCRIPTION_CHARS:
         return Detail.unreadable("posting has no description")
@@ -1276,6 +1289,86 @@ def workday_sitemap_listings(client: httpx.Client, cfg: dict) -> SourceResult:
     return SourceResult(listings, seen=seen)
 
 
+# ---------------------------------------------------------------------------
+# Phenom career sites (Nov 2026): Cisco, Mastercard, State Street, Evernorth,
+# Thermo Fisher and Warner Bros. Discovery run their official careers sites on
+# Phenom, outside the Cloudflare-blocked myworkdayjobs.com. The public search
+# page (allowed by each robots.txt) is server-rendered with its results as JSON
+# (phApp.ddo): filtered to a country with qcountry, 10 per page via "from".
+# Each job page carries a schema.org JobPosting. reqId is the employer's
+# requisition id, so jobs already recorded from Workday are not re-alerted.
+# ---------------------------------------------------------------------------
+PHENOM_MAX_PAGES = 80          # 800 postings per country: well above any India count seen (318)
+PHENOM_PAUSE_S = 1.0
+_PHENOM_DDO_RE = re.compile(r"phApp\.ddo\s*=\s*(\{.*?\});\s*phApp", re.S)
+
+
+def _phenom_search(client: httpx.Client, base: str, country: str, start: int) -> tuple[list, int]:
+    params = {"qcountry": country}
+    if start:
+        params["from"] = start
+    try:
+        r = client.get(f"{base}/search-results", params=params, headers={"Accept": "text/html"})
+    except httpx.TimeoutException as e:
+        raise SourceError("timeout reading the career-site search", "failing") from e
+    except httpx.HTTPError as e:
+        raise SourceError(f"network error reading the career-site search: {type(e).__name__}", "failing") from e
+    if r.status_code in (429, 500, 502, 503, 504):
+        raise SourceError(f"HTTP {r.status_code} from the career-site search", "failing")
+    if r.status_code >= 400:
+        raise SourceError(f"HTTP {r.status_code} from the career-site search")
+    m = _PHENOM_DDO_RE.search(r.text)
+    try:
+        search = json.loads(m.group(1))["eagerLoadRefineSearch"] if m else None
+        jobs, total = search["data"]["jobs"], int(search["totalHits"])
+    except (ValueError, KeyError, TypeError):
+        raise SourceError("the career-site search page has no readable results (unexpected format)") from None
+    if not isinstance(jobs, list):
+        raise SourceError("the career-site search page has no readable results (unexpected format)")
+    return jobs, total
+
+
+def phenom_listings(client: httpx.Client, cfg: dict) -> SourceResult:
+    base, country = cfg["base"].rstrip("/"), cfg.get("country", "India")
+    listings, seen_ids, start, total = [], set(), 0, None
+    for page in range(PHENOM_MAX_PAGES):
+        if page:
+            time.sleep(PHENOM_PAUSE_S)
+        jobs, total = _phenom_search(client, base, country, start)
+        for j in jobs:
+            jid = str(j.get("jobId") or "").strip()
+            title = str(j.get("title") or "").strip()
+            if not jid or not title or jid in seen_ids:
+                continue
+            seen_ids.add(jid)
+            location = str(j.get("location") or j.get("cityStateCountry") or "").strip()
+            # the search itself is filtered to the country (qcountry); a city-only
+            # location ("Coimbatore") is still that country's job
+            listing = Listing(title=title, url=f"{base}/job/{jid}", location=location,
+                              card_text=str(j.get("descriptionTeaser") or "")[:500],
+                              job_id=str(j.get("reqId") or jid), posting_evidence=True)
+            listing.fetch_detail = lambda lst=listing: phenom_detail(client, lst)
+            listings.append(listing)
+        start += len(jobs)
+        if not jobs or start >= total:
+            break
+    else:
+        raise SourceError("career-site search page limit reached; incomplete coverage")
+    if total and len(seen_ids) < total * 0.9:
+        raise SourceError(f"career-site search returned {len(seen_ids)} of {total} postings; incomplete coverage", "failing")
+    return SourceResult(listings, seen=len(seen_ids))
+
+
+def phenom_detail(client: httpx.Client, listing: Listing) -> Detail:
+    try:
+        r = client.get(listing.url, headers={"Accept": "text/html"})
+    except httpx.HTTPError as e:
+        return Detail.unreadable(f"network error reading job page: {type(e).__name__}")
+    if r.status_code >= 400:
+        return Detail.unreadable(f"HTTP {r.status_code} from job page")
+    return jsonld_page_detail(r.text, listing)
+
+
 def read_source(client: httpx.Client, cfg: dict) -> SourceResult:
     kind = cfg.get("type")
     if kind == "workday":
@@ -1310,4 +1403,6 @@ def read_source(client: httpx.Client, cfg: dict) -> SourceResult:
         return workday_sitemap_listings(client, cfg)
     if kind == "swiggy":
         return swiggy_listings(client, cfg)
+    if kind == "phenom":
+        return phenom_listings(client, cfg)
     raise SourceError(f"unknown source type {kind!r}", "needs_config")
