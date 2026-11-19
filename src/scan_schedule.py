@@ -80,6 +80,11 @@ ALERTS_CRON = "20 */6 * * *"
 CHAIN_OFFSET = timedelta(minutes=2)
 CHAIN_RETRY = timedelta(minutes=30)
 CHAIN_MAX_WAIT = timedelta(hours=5)
+# Targeted Workday recovery (PR C): dispatch this long after a data centre's
+# cooldown ends, and only when that lands this far ahead of the next window
+# (otherwise the window's own scan probes it).
+RECOVERY_OFFSET = timedelta(minutes=2)
+RECOVERY_LEAD = timedelta(minutes=20)
 
 BASE = Path(__file__).resolve().parent.parent          # the repository root (this file is in src/)
 
@@ -200,6 +205,23 @@ def chain_wait(now: datetime, hours: int, last: datetime | None) -> timedelta:
         return CHAIN_RETRY
     target = latest_boundary(now, hours) + timedelta(hours=hours) + CHAIN_OFFSET
     return min(max(target - now, timedelta(0)), CHAIN_MAX_WAIT)
+
+
+def chain_next(now: datetime, hours: int, last: datetime | None, companies=None, state=None) -> tuple[timedelta, str]:
+    """(wait, scope) for the scheduler run: the next full-scan window as before,
+    unless a Workday data-centre probe becomes due well before it - then a
+    targeted scope="workday" plan run at that cooldown's end (+RECOVERY_OFFSET)."""
+    now = now.astimezone(timezone.utc)
+    wait = chain_wait(now, hours, last)
+    if scan_due(now, hours, last):
+        return wait, "all"            # a full scan is pending: it probes everything due
+    at = recovery_due_at(companies, state, now)
+    if at is None:
+        return wait, "all"
+    rec_wait = max(at + RECOVERY_OFFSET - now, timedelta(0))
+    if rec_wait + RECOVERY_LEAD <= wait:
+        return min(rec_wait, CHAIN_MAX_WAIT), "workday"
+    return wait, "all"
 
 
 def latest_run(companies) -> dict | None:
@@ -372,17 +394,20 @@ def wait_main() -> int:
     now = datetime.now(timezone.utc)
     try:
         settings, companies = _load("settings.json", {}), _load("companies.json", [])
+        state = _load("workday_scan_state.json", None)
         hours, last = interval_from(settings), last_scan(companies)
-        wait = chain_wait(now, hours, last)
+        wait, scope = chain_next(now, hours, last, companies, state)
         line = (f"interval {hours} h · last scan {last} · due={scan_due(now, hours, last)} · "
-                f"dispatch a plan run at {(now + wait).isoformat(timespec='minutes')}")
+                f"Workday recovery due {recovery_due_at(companies, state, now)} · "
+                f"dispatch a plan run (scope {scope}) at {(now + wait).isoformat(timespec='minutes')}")
     except Exception as e:
-        wait = CHAIN_RETRY
+        wait, scope = CHAIN_RETRY, "all"
         line = f"wait failed ({type(e).__name__}); retrying in {CHAIN_RETRY}"
     print(line, file=sys.stderr)
     _summary(line, "Scan scheduler")
     print(f"seconds={int(wait.total_seconds())}")
     print(f"at={(now + wait).isoformat(timespec='minutes')}")
+    print(f"scope={scope}")
     return 0
 
 

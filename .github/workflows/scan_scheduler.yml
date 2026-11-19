@@ -61,6 +61,7 @@ jobs:
           sparse-checkout: |
             data/settings.json
             data/companies.json
+            data/workday_scan_state.json
           sparse-checkout-cone-mode: false
 
       - name: Work out when the next window opens
@@ -75,10 +76,14 @@ jobs:
           WAIT_SECONDS: ${{ steps.wait.outputs.seconds }}
         run: sleep "$WAIT_SECONDS"
 
+      # scope "workday" when a Workday data-centre recovery probe falls due before
+      # the next window (scan_schedule.chain_next); the plan run re-checks it, so
+      # a late or duplicate dispatch never sends a second probe for one cooldown
       - name: Ask Check Jobs to plan (it scans only if one is due)
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run check_jobs.yml --repo "$GITHUB_REPOSITORY" --ref main -f mode=plan
+          SCOPE: ${{ steps.wait.outputs.scope || 'all' }}
+        run: gh workflow run check_jobs.yml --repo "$GITHUB_REPOSITORY" --ref main -f mode=plan -f scope="$SCOPE"
 
       # Even when the dispatch above failed (GitHub hiccup), keep the chain:
       # the next run retries. A run someone cancelled ends the chain.
