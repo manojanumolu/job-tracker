@@ -237,3 +237,26 @@ def test_wait_cli_reports_scope(tmp_path, monkeypatch, capsys):
 def test_scheduler_workflow_reads_state_and_forwards_scope():
     assert "data/workday_scan_state.json" in CHAIN
     assert '-f mode=plan -f scope="$SCOPE"' in CHAIN and "steps.wait.outputs.scope" in CHAIN
+
+
+def test_an_already_due_recovery_waits_for_the_dispatched_run_to_publish():
+    """07:41: the chain run after the dispatch still reads pre-run data (recovery due
+    since 07:39). It must not re-dispatch every few seconds until the data lands."""
+    cos = [_wd("sanofi", "sanofi.wd3.myworkdayjobs.com", "2026-11-19T07:01:55+00:00"), _full_marker("2026-11-19T07:01:55+00:00")]
+    now = datetime(2026, 11, 19, 7, 41, 30, tzinfo=timezone.utc)
+    wait, scope = scan_schedule.chain_next(now, 3, scan_schedule.last_scan(cos), cos, _state())
+    assert scope == "workday" and wait == scan_schedule.RECOVERY_RETRY
+
+
+def test_a_data_centre_skipped_by_the_safety_stop_stays_due_once_more():
+    """19 Nov 07:09: wd12 and wd1 got 429, the two-host stop held wd5 back. wd5's
+    cooldown ended before that run started, but it was never probed: still due."""
+    state = {"hosts": {"nvidia.wd5.myworkdayjobs.com": {"failure_category": "rate_limit", "observed_at": "2026-11-18T21:04:36+00:00",
+                                                         "cooldown_until": "2026-11-19T00:04:36+00:00"}}, "companies": {}}
+    nvidia = _wd("nvidia", "nvidia.wd5.myworkdayjobs.com", "2026-11-19T07:01:55+00:00")
+    now = datetime(2026, 11, 19, 7, 20, tzinfo=timezone.utc)
+    assert scan_schedule.recovery_due_at([nvidia], state, now) is None          # run started after expiry
+    nvidia["scan"]["recovery"]["failure_category"] = "circuit"                    # ... but the stop skipped it
+    assert scan_schedule.recovery_due_at([nvidia], state, now) == datetime(2026, 11, 19, 0, 4, 36, tzinfo=timezone.utc)
+    nvidia["scan"]["recovery"]["failure_category"] = "rate_limit"                # probed next run: settled
+    assert scan_schedule.recovery_due_at([nvidia], state, now) is None
