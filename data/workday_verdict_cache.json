@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
-  "run_id": "d3f9674419b54a0dae316ec73808d22d",
-  "updated_at": "2026-11-19T07:42:37.903727+00:00",
+  "run_id": "44fd7384cfbf45ecb4c930b92ea0ec34",
+  "updated_at": "2026-11-19T09:10:29.340663+00:00",
   "entries": {
     "85c2d48b4beb3e280cf7236e7c6af774fafb3d85aa6d0a74fdc4622f001dfe17": {
       "company_id": "jiohotstar",
       "source": "fe566b637b6b43d4f0d863aa620c0b7bbfc67273cbd89fec78fcc8b32e8da2d0",
       "fingerprint": "7f2c94f795adc52d9c7c55029d2a4904febda6b5b7d656356b81517ae7667df3",
-      "rules": "3d879ab5be82b84f7cacd26210cfd8fae38fdcb2641ac01439a1f7d5fbb1ea51",
-      "evaluated_at": "2026-11-19T07:07:31.423563+00:00",
-      "expires_at": "2026-11-22T07:07:31.423574+00:00",
+      "rules": "16f10301381ea1701a947ef62cf67649cc0bab263dcc196d7d943c2269aacd90",
+      "evaluated_at": "2026-11-19T09:09:11.834759+00:00",
+      "expires_at": "2026-11-22T09:09:11.834765+00:00",
       "title": "Intern- On Platform Storefront Merchandising",
       "detail": {
         "ok": true,
@@ -27,9 +27,9 @@
       "company_id": "jiohotstar",
       "source": "fe566b637b6b43d4f0d863aa620c0b7bbfc67273cbd89fec78fcc8b32e8da2d0",
       "fingerprint": "9cf181c395f9d3e9610ba49454c3a496cd5af30094fd4278e77c2a2ca88fe071",
-      "rules": "3d879ab5be82b84f7cacd26210cfd8fae38fdcb2641ac01439a1f7d5fbb1ea51",
-      "evaluated_at": "2026-11-19T07:07:29.388827+00:00",
-      "expires_at": "2026-11-22T07:07:29.388832+00:00",
+      "rules": "16f10301381ea1701a947ef62cf67649cc0bab263dcc196d7d943c2269aacd90",
+      "evaluated_at": "2026-11-19T09:09:09.830667+00:00",
+      "expires_at": "2026-11-22T09:09:09.830673+00:00",
       "title": "VP - Consumer Value &amp; Partnerships",
       "detail": {
         "ok": true,
@@ -47,9 +47,9 @@
       "company_id": "jiohotstar",
       "source": "fe566b637b6b43d4f0d863aa620c0b7bbfc67273cbd89fec78fcc8b32e8da2d0",
       "fingerprint": "a8d6c42d766686f7b25328148094b19c928db41e9ced53bee1ec752ec2b7c614",
-      "rules": "3d879ab5be82b84f7cacd26210cfd8fae38fdcb2641ac01439a1f7d5fbb1ea51",
-      "evaluated_at": "2026-11-19T07:07:27.355653+00:00",
-      "expires_at": "2026-11-22T07:07:27.355659+00:00",
+      "rules": "16f10301381ea1701a947ef62cf67649cc0bab263dcc196d7d943c2269aacd90",
+      "evaluated_at": "2026-11-19T09:09:07.857254+00:00",
+      "expires_at": "2026-11-22T09:09:07.857259+00:00",
       "title": "Executive Producer – Creative Communications (Promos), Hindi Movies",
       "detail": {
         "ok": true,
