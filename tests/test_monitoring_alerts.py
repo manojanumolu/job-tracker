@@ -102,3 +102,42 @@ def test_publish_step_wires_it_without_touching_job_alerts(monkeypatch, tmp_path
     # a broken ledger file never stops the run
     (tmp_path / "monitoring_incidents.json").write_text("{not json")
     alerts._monitoring([co("marvell")], "a@example.com", lambda m, f: True, NOW, send=mail)
+
+
+# ── end to end through the real publish step (alerts.run), SMTP stubbed ──
+
+def test_end_to_end_three_scheduled_failures_one_warning_then_recovery_and_job_alerts_unaffected(tmp_path, monkeypatch):
+    import json
+    import config_store
+    import notifier
+    from test_alerts import FakeRemote, Mailer, _rec
+    monkeypatch.setenv("ALERT_RECIPIENT", "me@example.com")
+    for name, attr in (("seen_jobs.json", "SEEN_FILE"), ("companies.json", "COMPANIES_FILE"), ("settings.json", "SETTINGS_FILE")):
+        monkeypatch.setattr(config_store, attr, tmp_path / name)
+    monkeypatch.setattr(config_store, "DATA", tmp_path)
+    monitor_mail = Mail()
+    monkeypatch.setattr(notifier, "_send", monitor_mail)
+
+    class Remote(FakeRemote):                     # also keeps the incident ledger, as repo_sync.publish does
+        def __call__(self, message, local):
+            if alerts.MONITORING_MESSAGE == message:
+                self.calls.append(message)
+                (tmp_path / "monitoring_incidents.json").write_text(json.dumps(local[ma.LEDGER]))
+                return True
+            return super().__call__(message, local)
+
+    remote, job_mail = Remote(), Mailer()
+    (tmp_path / "settings.json").write_text("{}")
+    job = _rec("Graduate Engineer Trainee", "https://ok.example/job/1")
+    (tmp_path / "seen_jobs.json").write_text(json.dumps([job]))
+    for n in (1, 2, 3, 4, 5):                       # five scheduled scans of a blocked company
+        (tmp_path / "companies.json").write_text(json.dumps([co("nvidia", blocked=n)]))
+        assert alerts.run(send=job_mail, publisher=remote) == 0
+        assert len(monitor_mail.sent) == (0 if n < 3 else 1), n      # nothing at 1-2, one at 3, no repeat at 4-5
+    assert job_mail.sent == [["Graduate Engineer Trainee"]]        # the job alert went out once, unchanged
+    (tmp_path / "companies.json").write_text(json.dumps([co("nvidia", status="active")]))
+    assert alerts.run(send=job_mail, publisher=remote) == 0
+    assert len(monitor_mail.sent) == 2 and "recovered" in monitor_mail.sent[1][1].lower()
+    assert json.loads((tmp_path / "monitoring_incidents.json").read_text()) == {"open": {}}
+    assert alerts.run(send=job_mail, publisher=remote) == 0
+    assert len(monitor_mail.sent) == 2 and job_mail.sent == [["Graduate Engineer Trainee"]]
