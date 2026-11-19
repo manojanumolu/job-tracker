@@ -78,11 +78,12 @@ def report_actions(companies):
                 out.write(f"| {key} | {count} |\n")
 
 
-def report_workday(mode, requests, selected, not_due, throttled_hosts, cooling_hosts):
-    """One safe line per run: what the Workday API rotation actually did (counts only)."""
+def report_workday(mode, requests, selected, not_due, throttled_hosts, cooling_hosts, clusters=""):
+    """One safe line per run: what the Workday API rotation actually did (counts and
+    data-centre names only)."""
     line = (f"Workday API: mode {mode}; {requests} request(s) sent; {selected} company(ies) selected, "
             f"{not_due} checked within the revisit interval; {throttled_hosts} host(s) throttled this run; "
-            f"{cooling_hosts} host(s) cooling down.")
+            f"{cooling_hosts} host(s) cooling down." + (f" Data centres: {clusters}." if clusters else ""))
     print(line)
     if throttled_hosts:
         print("::warning title=Workday throttling::" + line)

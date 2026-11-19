@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from workday_state import HOST, epoch, iso
+from workday_state import HOST, epoch, iso, safe_headers
 
 CURRENT = ContextVar("workday_run", default=None)
 
@@ -59,7 +59,7 @@ class Controller:
         return (self.requests >= c["max_requests"] or self.spent + wait >= c["workday_budget_s"]
                 or self.clock() - self.started + wait >= c["run_budget_s"])
 
-    def _observation(self, host, status, category, delay=0, valid=False):
+    def _observation(self, host, status, category, delay=0, valid=False, headers=None):
         previous = self.state["hosts"].get(host, {})
         failures = min(10000, previous.get("failures", 0) + 1) if category else 0
         fallback = min(self.config["max_cooldown_hours"], self.config["cooldown_hours"] * 2 ** min(failures - 1, 10)) * 3600 if category else 0
@@ -68,6 +68,9 @@ class Controller:
             "failures": failures, "http_status": status, "failure_category": category,
             "retry_after_s": delay, "retry_after_valid": valid,
         }
+        evidence = safe_headers(headers) if category else {}
+        if evidence:
+            self.state["hosts"][host]["headers"] = evidence
 
     def request(self, client, method, url, **kwargs):
         host = urlsplit(url).hostname or ""
@@ -135,7 +138,7 @@ class Controller:
                     # Circuit opens immediately; only this synchronous designated trial may retry.
                     self.closed.add(host)
                     if not recorded:
-                        self._observation(host, status, category, delay, valid)
+                        self._observation(host, status, category, delay, valid, response.headers)
                         recorded = True
                     else:
                         obs = self.state["hosts"][host]
@@ -143,6 +146,8 @@ class Controller:
                         obs.update(observed_at=iso(self.wall()), http_status=status, failure_category=category,
                                    cooldown_until=iso(max(epoch(obs["cooldown_until"]), self.wall() + max(delay, fallback))),
                                    retry_after_s=delay, retry_after_valid=valid)
+                        if safe_headers(response.headers):
+                            obs["headers"] = safe_headers(response.headers)
                     # A 429 is never retried blind: only a valid Retry-After short enough
                     # for this run's retry budget earns one paced retry. Otherwise the host
                     # cools down durably and nothing else is sent to it this run.
@@ -157,7 +162,7 @@ class Controller:
                 if status != 404:
                     self.closed.add(host)
                     if not recorded:
-                        self._observation(host, status, category, delay, valid)
+                        self._observation(host, status, category, delay, valid, response.headers)
                 response.close()
                 raise WorkdayStop(category, host, status, attempted=True, retry_after_s=delay, retry_after_valid=valid)
             raise AssertionError("unreachable")

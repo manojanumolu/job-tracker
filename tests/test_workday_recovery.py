@@ -650,44 +650,77 @@ def throttled_fleet(clock):
             for c in [COMPANY, PWC, *companies(4)]]
 
 
-def test_auto_mode_probes_only_the_canary_while_throttled(tmp_path, clock, cfg):
+def test_each_throttled_data_centre_gets_exactly_one_probe(tmp_path, clock, cfg):
+    """wd3 (Sanofi, PwC) and wd1 (tenant0-3) are gated independently: one probe each,
+    the configured canary preferred in wd3, the oldest attempt in wd1."""
     cfg["mode"] = "auto"
     cos = throttled_fleet(clock)
-    clock.sleep(4 * 3600)                                   # bootstrap cooldown has expired
+    clock.sleep(4 * 3600)                                   # all cooldowns have ended
     run = recovery(tmp_path, clock, cfg, cos)
-    assert run.mode == "canary" and run.probe_ids == {"sanofi", "pwc"}
-    assert run.selected == {"sanofi", "pwc"}
-    assert {c["id"]: run.defer_reason(c) for c in cos[2:]} == {c["id"]: "canary_gate" for c in cos[2:]}
+    assert run.mode == "partial" and run.gated_clusters() == {"wd1", "wd3"}
+    assert run.probe_ids == {"sanofi", "c00"} and run.selected == {"sanofi", "c00"}
+    assert run.defer_reason(PWC) == "cluster_gate"
+    assert {c["id"]: run.defer_reason(c) for c in cos[3:]} == {c["id"]: "cluster_gate" for c in cos[3:]}
 
 
-def test_auto_mode_promotes_after_canary_success_and_demotes_on_new_429(tmp_path, clock, cfg):
+def test_a_wd3_throttle_never_blocks_other_data_centres(tmp_path, clock, cfg):
+    """Production 19 Nov: Sanofi/PwC (wd3) cooling until 07:39 after a fresh 429; the
+    wd1 tenants' own cooldowns ended at 00:04. wd1 must be probed now, wd3 must wait."""
     cfg["mode"] = "auto"
     cos = throttled_fleet(clock)
     clock.sleep(4 * 3600)
     run = recovery(tmp_path, clock, cfg, cos)
-    _attempt(run, cos, {"sanofi"})                         # canary scanned healthily after the 429s
+    for host in ("sanofi.wd3.myworkdayjobs.com", "pwc.wd3.myworkdayjobs.com"):   # fresh wd3 429
+        run.state["hosts"][host].update(observed_at=iso(clock.now()), cooldown_until=iso(clock.now() + 6 * 3600), failures=2)
+    write(tmp_path / STATE_FILE, STATE_FILE, run.state)
+    clock.sleep(60)
+    run = recovery(tmp_path, clock, cfg, cos)
+    assert run.probe_ids == {"c00"}                         # wd1 probed, no wd3 probe yet
+    assert run.defer_reason(cos[0]) == "cooldown" and run.defer_reason(cos[2]) == ""
+    assert run.defer_reason(cos[3]) == "cluster_gate"
+
+
+def test_healthy_probe_releases_only_its_own_data_centre(tmp_path, clock, cfg):
+    cfg["mode"] = "auto"
+    cos = throttled_fleet(clock)
+    clock.sleep(4 * 3600)
+    run = recovery(tmp_path, clock, cfg, cos)
+    _attempt(run, cos, {"c00"})                            # wd1 probe scanned healthily
+    assert "wd1" not in run.gated_clusters() and "wd3" in run.gated_clusters()
+    assert run.defer_reason(cos[3]) == ""                  # released in the same run
+    assert run.defer_reason(PWC) == "cluster_gate"         # wd3 still waits for its own probe
     write(tmp_path / STATE_FILE, STATE_FILE, run.state)
     clock.sleep(3 * 3600)
     run = recovery(tmp_path, clock, cfg, cos)
-    assert run.mode == "full"
-    assert {"c00", "c01", "c02", "c03", "pwc"} <= run.selected   # everyone else is now due
-    # a fresh 429 anywhere puts the fleet back behind the canary
-    run.state["hosts"]["tenant0.wd1.myworkdayjobs.com"] = {**run.state["hosts"]["tenant0.wd1.myworkdayjobs.com"],
-                                                          "observed_at": iso(clock.now())}
+    assert {"c01", "c02", "c03"} <= run.selected and "pwc" not in run.selected
+    # a fresh 429 in wd1 re-gates wd1 only
+    run.state["hosts"]["tenant1.wd1.myworkdayjobs.com"].update(observed_at=iso(clock.now()), failure_category="rate_limit")
     write(tmp_path / STATE_FILE, STATE_FILE, run.state)
     clock.sleep(60)
-    assert recovery(tmp_path, clock, cfg, cos).mode == "canary"
+    run = recovery(tmp_path, clock, cfg, cos)
+    assert "wd1" in run.gated_clusters()
+
+
+def test_a_429_in_a_data_centre_closes_it_for_the_rest_of_the_run(tmp_path, clock, cfg):
+    cfg["mode"] = "auto"
+    cos = throttled_fleet(clock)
+    clock.sleep(4 * 3600)
+    run = recovery(tmp_path, clock, cfg, cos)
+    _attempt(run, cos, {"c00"})                            # wd1 released ...
+    run.http.throttled.add("tenant0.wd1.myworkdayjobs.com")   # ... then a 429 in this run
+    assert run.defer_reason(cos[3]) == "cluster_gate"      # rest of wd1 waits this run
+    assert run.gate_reason(cos[0]) == ""                    # wd3 is unaffected by wd1's 429
 
 
 def test_auto_mode_projection_alone_never_promotes(tmp_path, clock, cfg):
-    """A canary that was only projected (not contacted) cannot prove the limit lifted."""
+    """A probe that was only projected (not contacted) cannot prove the limit lifted."""
     cfg["mode"] = "auto"
     cos = throttled_fleet(clock)
     run = recovery(tmp_path, clock, cfg, cos)
     run.projection(cos[0], "healthy")                       # no requests were made
     write(tmp_path / STATE_FILE, STATE_FILE, run.state)
     clock.sleep(4 * 3600)
-    assert recovery(tmp_path, clock, cfg, cos).mode == "canary"
+    assert "wd3" in recovery(tmp_path, clock, cfg, cos).gated_clusters()
 
 
 def test_auto_mode_falls_back_to_oldest_company_when_canary_is_gone(tmp_path, clock, cfg):
@@ -696,7 +729,7 @@ def test_auto_mode_falls_back_to_oldest_company_when_canary_is_gone(tmp_path, cl
     cos[3]["last_checked"] = iso(clock.now() - 7200)
     clock.sleep(4 * 3600)
     run = recovery(tmp_path, clock, cfg, cos)
-    assert run.mode == "canary" and run.probe_ids == {cos[3]["id"]}
+    assert run.mode == "partial" and run.probe_ids == {cos[3]["id"]}
 
 
 def test_auto_mode_without_any_throttle_is_full(tmp_path, clock, cfg):
@@ -715,6 +748,7 @@ def test_bootstrap_cooldown_counts_from_the_recorded_429(tmp_path, clock, cfg):
 def test_shipped_configuration_is_auto_6h_and_paced():
     c = configuration()
     assert c["mode"] == "auto" and c["revisit_hours"] == 6 and c["batch_size"] == 13
+    assert c["max_requests"] == 600
     assert c["global_spacing_s"] >= 2 and c["host_spacing_s"] >= 2 and c["api_breaker_hosts"] == 2
 
 
@@ -794,10 +828,10 @@ def test_cooldown_expiring_mid_run_is_admitted_not_lost_to_rotation(tmp_path, cl
     cos = throttled_fleet(clock)                       # 429s recorded 10 min ago
     clock.sleep(3 * 3600 - 600 - 76)                   # 76 s before cooldown ends
     run = recovery(tmp_path, clock, cfg, cos)
-    assert run.selected == set() and run.defer_reason(cos[0]) == "cooldown"
+    assert not run.selected & {"sanofi", "pwc"} and run.defer_reason(cos[0]) == "cooldown"
     clock.sleep(300)                                   # loop reaches Sanofi after expiry
     assert run.defer_reason(cos[0]) == "" and "sanofi" in run.selected
-    assert run.defer_reason(cos[2]) == "canary_gate"   # non-canary still waits
+    assert run.defer_reason(PWC) == "cluster_gate"     # one probe per data centre
 
 
 def test_mid_run_admission_respects_batch_size(tmp_path, clock, cfg):
@@ -820,7 +854,7 @@ def test_failed_company_retry_is_governed_by_cooldown_not_revisit(tmp_path, cloc
     write(tmp_path / STATE_FILE, STATE_FILE, run.state)
     clock.sleep(3 * 3600 - 600 + 660)                  # 11 min after the cooldown ended
     run = recovery(tmp_path, clock, cfg, cos)
-    assert run.mode == "canary" and run.selected == {"sanofi", "pwc"}
+    assert run.mode == "partial" and run.selected == {"sanofi", "c00"}   # one probe per data centre
     assert not run.not_due
 
 
@@ -872,3 +906,58 @@ def test_second_site_cooldown_does_not_mask_the_first_sites_429(tmp_path, clock,
     rec = pwc["scan"]["recovery"]
     assert len(calls) == 1                                  # one request for the whole host
     assert rec["outcome"] == "rate_limited" and rec["http_status"] == 429
+
+
+def test_rate_limit_headers_are_captured_allow_listed_and_bounded(clock, cfg):
+    headers = {"Retry-After": "600", "X-RateLimit-Remaining": "0", "RateLimit-Reset": "120",
+               "Set-Cookie": "secret=1", "Authorization": "Bearer x", "Server": "cloud" + "x" * 500}
+    c = control(clock, cfg)
+    with httpx.Client(transport=httpx.MockTransport(lambda req: httpx.Response(429, headers=headers))) as client:
+        with pytest.raises(WorkdayStop):
+            c.request(client, "POST", URL)
+    kept = c.state["hosts"][HOST]["headers"]
+    assert kept["retry-after"] == "600" and kept["x-ratelimit-remaining"] == "0" and kept["ratelimit-reset"] == "120"
+    assert len(kept["server"]) == 200 and "set-cookie" not in kept and "authorization" not in kept
+    validate(STATE_FILE, {**empty(STATE_FILE), "hosts": c.state["hosts"]})     # schema accepts it
+    assert "secret" not in json.dumps(c.state)
+    with pytest.raises(ValueError):                                              # but nothing else
+        bad = copy.deepcopy(c.state["hosts"]); bad[HOST]["headers"]["set-cookie"] = "x"
+        validate(STATE_FILE, {**empty(STATE_FILE), "hosts": bad})
+
+
+def test_healthy_probe_releases_its_data_centre_within_the_same_run(tmp_path, clock, cfg, monkeypatch):
+    """End to end: wd1 gated by stale 429s; the probe scans healthily, then the other
+    wd1 tenants are admitted in the same run instead of waiting another window."""
+    cfg["mode"] = "auto"
+    seen = iso(clock.now() - 600)
+    cos = [{**c, "status": "failing", "status_reason": "HTTP 429", "last_checked": seen,
+            "last_success": iso(clock.now() - 3 * 86400)} for c in companies(4)]
+    handler = _graduate_jobs(1)
+    _wire_run_all(tmp_path, clock, monkeypatch, cos, handler)
+    clock.sleep(4 * 3600)
+    run = recovery(tmp_path, clock, cfg, cos)
+    assert run.probe_ids == {"c00"} and run.selected == {"c00"}
+    scraper.run_all(recovery=run)
+    assert [c["status"] for c in cos] == ["active"] * 4
+    assert {c["scan"]["recovery"]["outcome"] for c in cos} == {"healthy"}
+    assert "wd1" not in run.gated_clusters()
+
+
+def test_probe_429_escalates_only_its_host_and_keeps_the_data_centre_gated(tmp_path, clock, cfg, monkeypatch):
+    cfg["mode"] = "auto"
+    seen = iso(clock.now() - 600)
+    cos = [{**c, "status": "failing", "status_reason": "HTTP 429", "last_checked": seen,
+            "last_success": iso(clock.now() - 3 * 86400)} for c in companies(3)]
+    calls = []
+    def handler(req):
+        calls.append(req.url.host)
+        return httpx.Response(429, headers={"Retry-After": "86400"})
+    _wire_run_all(tmp_path, clock, monkeypatch, cos, handler)
+    clock.sleep(4 * 3600)
+    run = recovery(tmp_path, clock, cfg, cos)
+    scraper.run_all(recovery=run)
+    assert calls == ["tenant0.wd1.myworkdayjobs.com"]                # one request, others held
+    probe = run.state["hosts"]["tenant0.wd1.myworkdayjobs.com"]
+    assert probe["failures"] == 2 and epoch(probe["cooldown_until"]) >= clock.now() + 86400 - 120   # Retry-After wins
+    assert run.state["hosts"]["tenant1.wd1.myworkdayjobs.com"]["failures"] == 1                     # untouched
+    assert cos[1]["scan"]["recovery"]["failure_category"] == "cluster_gate"
