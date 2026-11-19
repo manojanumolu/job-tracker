@@ -85,6 +85,9 @@ CHAIN_MAX_WAIT = timedelta(hours=5)
 # (otherwise the window's own scan probes it).
 RECOVERY_OFFSET = timedelta(minutes=2)
 RECOVERY_LEAD = timedelta(minutes=20)
+# A recovery already due when the chain looks means one was just dispatched and
+# has not published yet: re-evaluate after this, never re-dispatch at once.
+RECOVERY_RETRY = timedelta(minutes=15)
 
 BASE = Path(__file__).resolve().parent.parent          # the repository root (this file is in src/)
 
@@ -218,7 +221,11 @@ def chain_next(now: datetime, hours: int, last: datetime | None, companies=None,
     at = recovery_due_at(companies, state, now)
     if at is None:
         return wait, "all"
-    rec_wait = max(at + RECOVERY_OFFSET - now, timedelta(0))
+    rec_wait = at + RECOVERY_OFFSET - now
+    if rec_wait <= timedelta(0):
+        # Already due: the previous chain run has just dispatched it (or is about
+        # to see it run). Give that run time to publish before looking again.
+        rec_wait = RECOVERY_RETRY
     if rec_wait + RECOVERY_LEAD <= wait:
         return min(rec_wait, CHAIN_MAX_WAIT), "workday"
     return wait, "all"
@@ -310,6 +317,7 @@ def recovery_due_at(companies, state, now: datetime | None = None) -> datetime |
         return None
     hosts, records = state["hosts"], state.get("companies") if isinstance(state.get("companies"), dict) else {}
     members: dict[str, set] = {}
+    skipped: set = set()     # data centres a run's own safety limits held back
     for c in companies or []:
         rec = (c.get("scan") or {}).get("recovery") if isinstance(c, dict) and isinstance(c.get("scan"), dict) else None
         if not isinstance(rec, dict) or {m.strip() for m in str(rec.get("discovery_method", "")).split(",")} != {"workday"}:
@@ -317,6 +325,8 @@ def recovery_due_at(companies, state, now: datetime | None = None) -> datetime |
         for h in str(rec.get("host", "")).split(", "):
             if _cluster(h):
                 members.setdefault(_cluster(h), set()).add((c.get("id"), h))
+                if rec.get("failure_category") in ("circuit", "budget"):
+                    skipped.add(_cluster(h))
     runs = [((c.get("scan") or {}).get("run") or {}) for c in companies or [] if isinstance(c, dict) and isinstance(c.get("scan"), dict)]
     last_run = max([_epoch(r.get("started_at")) for r in runs if isinstance(r, dict)] + [0.0])
     due = []
@@ -331,7 +341,10 @@ def recovery_due_at(companies, state, now: datetime | None = None) -> datetime |
         if healthy and max(healthy) > throttled_at:
             continue   # released by a real healthy scan
         until = max(_epoch(o.get("cooldown_until")) for o in limited)
-        if until > last_run:
+        # Due once per cooldown expiry - or again when the last run's own safety
+        # stop (two throttled hosts) or request budget skipped this data centre.
+        # Bounded: every such run escalates at least one throttled host's cooldown.
+        if until > last_run or name in skipped:
             due.append(until)
     return datetime.fromtimestamp(min(due), timezone.utc) if due else None
 
