@@ -512,7 +512,11 @@ def _scan_sources(company: dict, sources: list[dict]) -> Scan:
             try:
                 result = read_source(client, cfg)
             except WorkdayStop as e:
-                CURRENT.get().last_stop = e.diagnostic
+                # Keep the real throttle: a later no-request stop on the same host
+                # (PwC's second site after its first site's 429) must not replace it.
+                run = CURRENT.get()
+                if not run.last_stop.get("attempted") or e.diagnostic.get("attempted"):
+                    run.last_stop = e.diagnostic
                 scan.fail("failing", str(e))
                 continue
             except SourceError as e:
