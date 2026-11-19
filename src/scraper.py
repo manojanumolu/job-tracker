@@ -48,7 +48,7 @@ _FAILING_DETAIL_RATIO = 0.5    # more unreadable job pages than this -> "failing
 # URLs are recognised automatically, anything else is read with Playwright).
 # ---------------------------------------------------------------------------
 COMPANY_SOURCES: dict[str, list[dict]] = {
-    "sanofi": [{"type": "workday", "api": "https://sanofi.wd3.myworkdayjobs.com/wday/cxs/sanofi/SanofiCareers/jobs"}],
+    # Sanofi: see "sanofi" below (official Radancy sitemap since Nov 2026; Workday CXS is blocked)
     "pwc": [
         {"type": "workday", "api": "https://pwc.wd3.myworkdayjobs.com/wday/cxs/pwc/Global_Experienced_Careers/jobs"},
         {"type": "workday", "api": "https://pwc.wd3.myworkdayjobs.com/wday/cxs/pwc/Global_Campus_Careers/jobs"},
@@ -95,6 +95,23 @@ COMPANY_SOURCES: dict[str, list[dict]] = {
     # match the Workday ones, so jobs already recorded from Workday are not re-alerted.
     "c1793696369": [{"type": "eightfold", "host": "https://careers.micron.com", "domain": "micron.com", "location": "India"}],
     "c1793696370": [{"type": "eightfold", "host": "https://jobs.nvidia.com", "domain": "nvidia.com", "location": "India"}],
+    # Official Phenom career sites (sources.phenom_listings), checked live 19-20 Nov 2026: India
+    # postings via the public search (robots.txt allows it), job pages with a schema.org JobPosting,
+    # reqId = the Workday requisition id (no re-alerts of jobs already recorded from Workday).
+    "cisco": [{"type": "phenom", "base": "https://careers.cisco.com/global/en", "country": "India"}],              # 313
+    "c1793696382": [{"type": "phenom", "base": "https://careers.mastercard.com/us/en", "country": "India"}],      # 156
+    "c1793696381": [{"type": "phenom", "base": "https://careers.statestreet.com/global/en", "country": "India"}],  # 225
+    "c1793696380": [{"type": "phenom", "base": "https://jobs.thecignagroup.com/us/en", "country": "India"}],      # 106 (Evernorth)
+    "c1793696389": [{"type": "phenom", "base": "https://jobs.thermofisher.com/global/en", "country": "India"}],   # 318
+    "c1793696377": [{"type": "phenom", "base": "https://careers.wbd.com/global/en", "country": "India"}],         # 7
+    # Official Radancy career sites (sources.career_sitemap_listings): robots.txt disallows only
+    # /search-jobs/; the published sitemap lists every job page by city; each page's JobPosting
+    # identifier is the Workday requisition id. Checked live 20 Nov 2026.
+    "sanofi": [{"type": "career_sitemap", "sitemap": "https://jobs.sanofi.com/sitemap.xml"}],                    # 82 of 1,451
+    "c1793696374": [{"type": "career_sitemap", "sitemap": "https://www.synchronycareers.com/sitemap.xml"}],      # 14 of 29 (Synchrony)
+    "c1793696379": [{"type": "career_sitemap", "sitemap": "https://careers.amgen.com/sitemap.xml"}],            # 592 of 1,670 (Amgen)
+    # S&P Global's official careers site runs on Jibe/iCIMS (the existing adapter): 57 India of 359
+    "c1793696385": [{"type": "jibe", "host": "https://careers.spglobal.com"}],
 }
 # kept for callers that only need "which companies use an API"
 COMPANY_API = {cid: {"type": cfgs[0]["type"], **cfgs[0]} for cid, cfgs in COMPANY_SOURCES.items()}
@@ -104,7 +121,8 @@ _SOURCE_LABELS = {"workday": "Workday API", "accenture": "Accenture job-search A
                   "eightfold": "Eightfold API", "successfactors": "SuccessFactors career site", "infosys": "Infosys jobs API",
                   "google": "Google Careers site", "eightfold_v2": "Eightfold API", "oracle": "Oracle Recruiting API",
                   "ibm": "IBM careers API", "job_feed": "Official job feed", "swiggy": "Swiggy careers site",
-                  "workday_sitemap": "Workday sitemap + job pages"}
+                  "workday_sitemap": "Workday sitemap + job pages", "phenom": "Phenom career site",
+                  "career_sitemap": "Career-site sitemap + job pages"}
 
 
 def sources_for(company: dict) -> list[dict]:
@@ -1104,15 +1122,30 @@ def _posting_key(url: str) -> str:
     return f"{urlparse(url).netloc.lower().removeprefix('www.')}|{ident}" if ident else ""
 
 
+_WD_REQ_RE = re.compile(r"_((?:JR|R)-?\d{4,}(?:-\d{1,2})?|\d{6,}(?:-\d{1,2})?)/?$", re.IGNORECASE)
+_REQ_RE = re.compile(r"(?:JR|R)-?\d{4,}|\d{6,}")
+
+
 def _requisition(job: dict) -> str:
-    """The employer's requisition id ("JR112672"), whichever career site the
-    posting was read from: a Workday URL ends with it, and the official
-    Eightfold sites that replaced blocked Workday tenants (Nov 2026) report the
-    same id. "" when there is none."""
-    for value in (((job.get("evidence") or {}).get("job_id") or ""), ats_job_id(job.get("url", ""))):
-        ident = value.split(":", 1)[-1].strip().upper()
-        if re.fullmatch(r"(?:JR|R)-?\d{4,}(?:-\d+)?", ident):
-            return ident
+    """The employer's requisition id ("JR112672", "R-01372949", "2023748"),
+    whichever official career site the posting was read from: a Workday URL
+    ends with "_<id>" (sometimes "-1" for a posting copy), and the Eightfold
+    and Phenom sites that replaced blocked Workday tenants (Nov 2026) report
+    the same id, which the record keeps as "id:<id>". "" when there is none."""
+    values = []
+    ident = str((job.get("evidence") or {}).get("job_id") or "")
+    if ident.split(":", 1)[0] in ("id", "workday", "jr"):
+        values.append(ident.split(":", 1)[-1])
+    url = job.get("url", "") or ""
+    if "myworkdayjobs.com" in url:
+        m = _WD_REQ_RE.search(url.split("?", 1)[0])
+        if m:
+            values.append(m.group(1))
+    for value in values:
+        value = value.strip().upper()
+        base = re.sub(r"-\d{1,2}$", "", value) if re.fullmatch(r"(?:(?:JR|R)-?\d{4,}|\d{6,})-\d{1,2}", value) else value
+        if _REQ_RE.fullmatch(base):
+            return base
     return ""
 
 
