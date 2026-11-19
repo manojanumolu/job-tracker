@@ -149,6 +149,43 @@ def test_workday_list_failure_does_not_fall_back_either(monkeypatch):
     assert jobs == [] and status == "failing" and no_browser == []
 
 
+@pytest.mark.parametrize("payload, message", [
+    ({"message": "try again later"}, "no jobPostings list"),
+    ({"jobPostings": None, "total": 0}, "no jobPostings list"),
+    ({"jobPostings": [{}], "total": 1}, "no readable job rows"),
+    ({"jobPostings": [], "total": 3}, "before its reported posting count"),
+])
+def test_workday_http_200_with_bad_listing_data_is_unhealthy(monkeypatch, payload, message):
+    _mock(monkeypatch, lambda r: httpx.Response(200, json=payload))
+    no_browser = _no_browser(monkeypatch)
+    scan = scraper.scan_company({"id": "sanofi", "name": "Sanofi", "url": "x"})
+    assert scan.status in {"broken", "failing"} and message in scan.reason
+    assert scan.jobs == [] and no_browser == []
+
+
+def test_workday_explicit_empty_listing_is_healthy(monkeypatch):
+    _mock(monkeypatch, lambda r: httpx.Response(200, json={"jobPostings": [], "total": 0}))
+    no_browser = _no_browser(monkeypatch)
+    scan = scraper.scan_company({"id": "sanofi", "name": "Sanofi", "url": "x"})
+    assert scan.status == "active" and scan.seen == 0 and no_browser == []
+
+
+def test_workday_rejects_a_truncated_later_page(monkeypatch):
+    offsets = []
+
+    def handler(request):
+        offset = json.loads(request.content)["offset"]
+        offsets.append(offset)
+        rows = [{"title": "Engineer", "externalPath": f"/job/Engineer_R{i}"}
+                for i in range(sources.WORKDAY_PAGE)] if offset == 0 else []
+        return httpx.Response(200, json={"jobPostings": rows, "total": sources.WORKDAY_PAGE + 1})
+
+    _mock(monkeypatch, handler)
+    scan = scraper.scan_company({"id": "sanofi", "name": "Sanofi", "url": "x"})
+    assert scan.status == "failing" and "before its reported posting count" in scan.reason
+    assert offsets == [0, sources.WORKDAY_PAGE]
+
+
 def test_many_unreadable_details_mark_company_failing(monkeypatch):
     postings = [{"title": f"Graduate Trainee {i}", "locationsText": "Pune", "externalPath": f"/job/g{i}_R{i}"} for i in range(5)]
     _mock(monkeypatch, lambda r: httpx.Response(200, json={"jobPostings": postings}) if r.method == "POST"
