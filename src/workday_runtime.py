@@ -170,8 +170,15 @@ class Recovery:
         return epoch(prev.get("last_attempt") or company.get("last_checked"))
 
     def due(self, company):
+        """The revisit interval spaces out SUCCESSFUL scans. After a failure, throttle
+        or deferral, retry timing belongs to the host cooldown and its escalation
+        (3/6/12/24 h): an old failed attempt must not also push the next try back by
+        the revisit interval (seen 19 Nov: canary held 5 h after a 21:04 429)."""
+        prev = self.state["companies"].get(company["id"])
+        if not prev or prev.get("outcome") not in ("healthy", "degraded"):
+            return True
         revisit = (self.config["revisit_hours"] - 1) * 3600   # 1 h slack absorbs late scan starts
-        return not self.state["companies"].get(company["id"]) or self.wall() - self.attempt(company) >= revisit
+        return self.wall() - self.attempt(company) >= revisit
 
     def defer_reason(self, company, selection=True):
         cfg = self.sources_for(company)

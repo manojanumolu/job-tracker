@@ -807,3 +807,27 @@ def test_mid_run_admission_respects_batch_size(tmp_path, clock, cfg):
     assert len(run.selected) == 1
     late = next(c for c in cos if c["id"] not in run.selected)
     assert run.defer_reason(late) == "rotation"
+
+
+def test_failed_company_retry_is_governed_by_cooldown_not_revisit(tmp_path, clock, cfg):
+    """19 Nov 00:15: Sanofi/PwC 429'd at 21:04 (old scanner), cooldown ended 00:04,
+    but a deferred projection record made the 6 h revisit hold them until 02:04."""
+    cfg["mode"] = "auto"
+    cos = throttled_fleet(clock)                       # 429 recorded 10 min ago
+    run = recovery(tmp_path, clock, cfg, cos)
+    for c in cos:                                      # first M7 run: projected, not contacted
+        run.projection(c, "cooling_down" if c["id"] in ("sanofi", "pwc") else "deferred", "cooldown")
+    write(tmp_path / STATE_FILE, STATE_FILE, run.state)
+    clock.sleep(3 * 3600 - 600 + 660)                  # 11 min after the cooldown ended
+    run = recovery(tmp_path, clock, cfg, cos)
+    assert run.mode == "canary" and run.selected == {"sanofi", "pwc"}
+    assert not run.not_due
+
+
+def test_healthy_company_still_waits_for_revisit(tmp_path, clock, cfg):
+    cos = companies(1)
+    run = recovery(tmp_path, clock, cfg, cos)
+    _attempt(run, cos, {"c00"})                        # outcome healthy now
+    clock.sleep(3 * 3600)
+    run.not_due = set(); run.selected = run.select(cos)
+    assert run.not_due == {"c00"} and not run.selected
