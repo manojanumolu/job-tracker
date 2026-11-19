@@ -62,6 +62,7 @@ def test_a_job_already_recorded_from_workday_is_not_re_alerted():
 def test_sanofi_synchrony_and_sp_global_use_their_official_sites():
     for cid, kind, key, value in (("sanofi", "career_sitemap", "sitemap", "https://jobs.sanofi.com/sitemap.xml"),
                                   ("c1793696374", "career_sitemap", "sitemap", "https://www.synchronycareers.com/sitemap.xml"),
+                                  ("c1793696379", "career_sitemap", "sitemap", "https://careers.amgen.com/sitemap.xml"),
                                   ("c1793696385", "jibe", "host", "https://careers.spglobal.com")):
         src = scraper.sources_for({"id": cid, "url": "https://x.wd3.myworkdayjobs.com/External"})
         assert src[0]["type"] == kind and src[0][key] == value

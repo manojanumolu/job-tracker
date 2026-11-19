@@ -109,6 +109,7 @@ COMPANY_SOURCES: dict[str, list[dict]] = {
     # identifier is the Workday requisition id. Checked live 20 Nov 2026.
     "sanofi": [{"type": "career_sitemap", "sitemap": "https://jobs.sanofi.com/sitemap.xml"}],                    # 82 of 1,451
     "c1793696374": [{"type": "career_sitemap", "sitemap": "https://www.synchronycareers.com/sitemap.xml"}],      # 14 of 29 (Synchrony)
+    "c1793696379": [{"type": "career_sitemap", "sitemap": "https://careers.amgen.com/sitemap.xml"}],            # 592 of 1,670 (Amgen)
     # S&P Global's official careers site runs on Jibe/iCIMS (the existing adapter): 57 India of 359
     "c1793696385": [{"type": "jibe", "host": "https://careers.spglobal.com"}],
 }
