@@ -6,11 +6,11 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-18T21:21:24.308777+00:00",
+    "last_checked": "2026-11-19T00:04:23.510852+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 399,
+      "postings_seen": 400,
       "candidates": 66,
       "details_read": 16,
       "details_unreadable": 0,
@@ -25,8 +25,8 @@
         "no fresher/entry-level evidence": 4
       },
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -35,11 +35,11 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       }
     },
     "source": "Avature job search",
-    "last_success": "2026-11-18T21:21:24.308777+00:00",
+    "last_success": "2026-11-19T00:04:23.510852+00:00",
     "shared_alerts": false
   },
   {
@@ -49,27 +49,27 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-18T21:21:29.557597+00:00",
+    "last_checked": "2026-11-19T00:04:28.273432+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 130,
-      "candidates": 21,
+      "postings_seen": 129,
+      "candidates": 20,
       "details_read": 0,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
-      "rejected": 20,
+      "rejected": 19,
       "unknown": 1,
       "rejections": {
         "seniority in title": 11,
-        "explicit requirement": 7,
+        "explicit requirement": 6,
         "levelled title above entry": 2,
         "no fresher/entry-level evidence": 1
       },
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -78,11 +78,11 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       }
     },
     "source": "Jibe/iCIMS API",
-    "last_success": "2026-11-18T21:21:29.557597+00:00",
+    "last_success": "2026-11-19T00:04:28.273432+00:00",
     "shared_alerts": false
   },
   {
@@ -108,8 +108,8 @@
       "failing_since": "2026-11-16T09:04:45.827571+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -118,7 +118,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -133,7 +133,7 @@
         "cooldown_until": "2026-11-19T00:04:19.789091+00:00",
         "last_attempt": "2026-11-18T21:04:19.789091+00:00",
         "last_success": "2026-11-16T06:04:24.837165+00:00",
-        "observed_at": "2026-11-18T21:27:13.562531+00:00",
+        "observed_at": "2026-11-19T00:10:49.532774+00:00",
         "source": "1e659416da76036f124254ee411c1405d15334c6ac5b2863a904dd06228bbb9b",
         "unresolved_failure": true,
         "pending": 0,
@@ -169,8 +169,8 @@
       "failing_since": "2026-11-16T09:04:47.150154+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -179,14 +179,14 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
         "company_id": "sanofi",
         "discovery_method": "workday",
-        "outcome": "cooling_down",
-        "failure_category": "cooldown",
+        "outcome": "deferred",
+        "failure_category": "rotation",
         "http_status": null,
         "host": "sanofi.wd3.myworkdayjobs.com",
         "retry_after_s": 0,
@@ -194,7 +194,7 @@
         "cooldown_until": "2026-11-19T00:04:21.350160+00:00",
         "last_attempt": "2026-11-18T21:04:21.350160+00:00",
         "last_success": "2026-11-16T06:04:41.546666+00:00",
-        "observed_at": "2026-11-18T21:27:13.562624+00:00",
+        "observed_at": "2026-11-19T00:10:49.532915+00:00",
         "source": "2810d1708ba8c3ac895c7756ad4314d277b680e787befad8f87dfcecca41177a",
         "unresolved_failure": true,
         "pending": 0,
@@ -230,8 +230,8 @@
       "failing_since": "2026-11-16T09:04:49.564643+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -240,14 +240,14 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
         "company_id": "pwc",
         "discovery_method": "workday, workday",
-        "outcome": "cooling_down",
-        "failure_category": "cooldown",
+        "outcome": "deferred",
+        "failure_category": "rotation",
         "http_status": null,
         "host": "pwc.wd3.myworkdayjobs.com",
         "retry_after_s": 0,
@@ -255,7 +255,7 @@
         "cooldown_until": "2026-11-19T00:04:23.476179+00:00",
         "last_attempt": "2026-11-18T21:04:23.476179+00:00",
         "last_success": "2026-11-16T06:06:35.730344+00:00",
-        "observed_at": "2026-11-18T21:27:13.562680+00:00",
+        "observed_at": "2026-11-19T00:10:49.533020+00:00",
         "source": "6ab46f928d378f7252d40c48de0c18502a47c70df5f63840a049f0c847a3d881",
         "unresolved_failure": true,
         "pending": 0,
@@ -275,7 +275,7 @@
     "locked": true,
     "status": "active",
     "last_job": "Order to Cash Operations New Associate",
-    "last_checked": "2026-11-18T21:21:33.281663+00:00",
+    "last_checked": "2026-11-19T00:04:32.376838+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -285,16 +285,16 @@
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 29,
-      "rejected": 251,
-      "unknown": 20,
+      "rejected": 250,
+      "unknown": 21,
       "rejections": {
-        "explicit requirement": 250,
-        "no fresher/entry-level evidence": 20,
+        "explicit requirement": 249,
+        "no fresher/entry-level evidence": 21,
         "seniority in title": 1
       },
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -303,11 +303,11 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       }
     },
     "source": "Accenture job-search API",
-    "last_success": "2026-11-18T21:21:33.281663+00:00"
+    "last_success": "2026-11-19T00:04:32.376838+00:00"
   },
   {
     "id": "c1783687965",
@@ -316,7 +316,7 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-18T21:21:37.085632+00:00",
+    "last_checked": "2026-11-19T00:04:36.235391+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -335,8 +335,8 @@
         "alone is not evidence of an entry-level role": 6
       },
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -345,11 +345,11 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       }
     },
     "source": "Zoho Recruit career site",
-    "last_success": "2026-11-18T21:21:37.085632+00:00"
+    "last_success": "2026-11-19T00:04:36.235391+00:00"
   },
   {
     "id": "c1793696368",
@@ -375,8 +375,8 @@
       "failing_since": "2026-11-16T00:06:58.720358+00:00",
       "failed_scans": 25,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -385,7 +385,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -400,7 +400,7 @@
         "cooldown_until": "2026-11-19T00:04:34.057185+00:00",
         "last_attempt": "2026-11-18T21:04:34.057185+00:00",
         "last_success": "2026-11-15T21:07:15.068478+00:00",
-        "observed_at": "2026-11-18T21:27:13.562776+00:00",
+        "observed_at": "2026-11-19T00:10:49.533164+00:00",
         "source": "f805ccc56ab0650da15be6671aae5e2a650e467ce95821085708a01ca4bbae3d",
         "unresolved_failure": true,
         "pending": 0,
@@ -435,8 +435,8 @@
       "failing_since": "2026-11-16T09:04:59.573538+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -445,7 +445,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -460,7 +460,7 @@
         "cooldown_until": "2026-11-19T00:04:35.103000+00:00",
         "last_attempt": "2026-11-18T21:04:35.103000+00:00",
         "last_success": "2026-11-16T06:07:17.271152+00:00",
-        "observed_at": "2026-11-18T21:27:13.562832+00:00",
+        "observed_at": "2026-11-19T00:10:49.533250+00:00",
         "source": "84558f608760e77951efe8a87ead0b06c2842a27d3e69e4604524dba00a444e4",
         "unresolved_failure": true,
         "pending": 0,
@@ -495,8 +495,8 @@
       "failing_since": "2026-11-16T09:05:00.602340+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -505,7 +505,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -520,7 +520,7 @@
         "cooldown_until": "2026-11-19T00:04:36.165976+00:00",
         "last_attempt": "2026-11-18T21:04:36.165976+00:00",
         "last_success": "2026-11-16T06:07:52.801790+00:00",
-        "observed_at": "2026-11-18T21:27:13.562881+00:00",
+        "observed_at": "2026-11-19T00:10:49.533331+00:00",
         "source": "26fa51d1ac4bca3f5c68403fd6c20f343f8cc5de0317d886e50897024c727595",
         "unresolved_failure": true,
         "pending": 0,
@@ -555,8 +555,8 @@
       "failing_since": "2026-11-16T09:05:01.633914+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -565,7 +565,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -580,7 +580,7 @@
         "cooldown_until": "2026-11-19T00:04:37.230681+00:00",
         "last_attempt": "2026-11-18T21:04:37.230681+00:00",
         "last_success": "2026-11-16T06:08:00.141265+00:00",
-        "observed_at": "2026-11-18T21:27:13.562927+00:00",
+        "observed_at": "2026-11-19T00:10:49.533409+00:00",
         "source": "b677ada9e116dafbbf55ce61e344427248f6568f9de8555d4b17c4541671ac97",
         "unresolved_failure": true,
         "pending": 0,
@@ -615,8 +615,8 @@
       "failing_since": "2026-11-16T09:05:02.978763+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -625,7 +625,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -640,7 +640,7 @@
         "cooldown_until": "2026-11-19T00:04:38.781798+00:00",
         "last_attempt": "2026-11-18T21:04:38.781798+00:00",
         "last_success": "2026-11-16T06:08:27.703786+00:00",
-        "observed_at": "2026-11-18T21:27:13.562973+00:00",
+        "observed_at": "2026-11-19T00:10:49.533485+00:00",
         "source": "84128d1bd76e13f894812c70cbc05b89e968225eb1d5a8707b4593e027ba5ca4",
         "unresolved_failure": true,
         "pending": 0,
@@ -675,8 +675,8 @@
       "failing_since": "2026-11-16T09:05:04.009419+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -685,7 +685,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -700,7 +700,7 @@
         "cooldown_until": "2026-11-19T00:04:39.860634+00:00",
         "last_attempt": "2026-11-18T21:04:39.860634+00:00",
         "last_success": "2026-11-16T06:08:40.463356+00:00",
-        "observed_at": "2026-11-18T21:27:13.563021+00:00",
+        "observed_at": "2026-11-19T00:10:49.533604+00:00",
         "source": "68e7e37a71942d8a2a6318d624c5bf475089eab68f1ce3bfedbfdf5b126352c3",
         "unresolved_failure": true,
         "pending": 0,
@@ -735,8 +735,8 @@
       "failing_since": "2026-11-16T09:05:05.043971+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -745,7 +745,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -760,7 +760,7 @@
         "cooldown_until": "2026-11-19T00:04:40.943785+00:00",
         "last_attempt": "2026-11-18T21:04:40.943785+00:00",
         "last_success": "2026-11-16T06:08:42.824159+00:00",
-        "observed_at": "2026-11-18T21:27:13.563070+00:00",
+        "observed_at": "2026-11-19T00:10:49.533687+00:00",
         "source": "dff4c6a8983c3d5ebe5d4d4f2cb7040e514c766ed8e128bf8d443d6036a6a366",
         "unresolved_failure": true,
         "pending": 0,
@@ -795,8 +795,8 @@
       "failing_since": "2026-11-16T09:05:06.081546+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -805,7 +805,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -820,7 +820,7 @@
         "cooldown_until": "2026-11-19T00:04:42.016469+00:00",
         "last_attempt": "2026-11-18T21:04:42.016469+00:00",
         "last_success": "2026-11-16T06:08:48.420508+00:00",
-        "observed_at": "2026-11-18T21:27:13.563117+00:00",
+        "observed_at": "2026-11-19T00:10:49.533761+00:00",
         "source": "eaf495412b2ede6a59559287cfcbe4a3841a16beb31ca44d37d2d0eb333d1c0e",
         "unresolved_failure": true,
         "pending": 0,
@@ -855,8 +855,8 @@
       "failing_since": "2026-11-16T09:05:07.118215+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -865,7 +865,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -880,7 +880,7 @@
         "cooldown_until": "2026-11-19T00:04:43.073022+00:00",
         "last_attempt": "2026-11-18T21:04:43.073022+00:00",
         "last_success": "2026-11-16T06:08:53.488039+00:00",
-        "observed_at": "2026-11-18T21:27:13.563165+00:00",
+        "observed_at": "2026-11-19T00:10:49.533837+00:00",
         "source": "9cf0f853324007c78e8d0efe87adbdca271c9ddb5e8ca82186b866615d7c8b26",
         "unresolved_failure": true,
         "pending": 0,
@@ -915,8 +915,8 @@
       "failing_since": "2026-11-16T09:05:08.148299+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -925,7 +925,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -940,7 +940,7 @@
         "cooldown_until": "2026-11-19T00:04:44.121467+00:00",
         "last_attempt": "2026-11-18T21:04:44.121467+00:00",
         "last_success": "2026-11-16T06:08:56.569243+00:00",
-        "observed_at": "2026-11-18T21:27:13.563212+00:00",
+        "observed_at": "2026-11-19T00:10:49.533913+00:00",
         "source": "0098c67f409e8fbe8d935ec34b1b4fd2dc8e280fa8aab47e8bb9cdf2db93ad20",
         "unresolved_failure": true,
         "pending": 0,
@@ -975,8 +975,8 @@
       "failing_since": "2026-11-16T09:05:09.177569+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -985,7 +985,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -1000,7 +1000,7 @@
         "cooldown_until": "2026-11-19T00:04:45.196174+00:00",
         "last_attempt": "2026-11-18T21:04:45.196174+00:00",
         "last_success": "2026-11-16T06:09:03.899952+00:00",
-        "observed_at": "2026-11-18T21:27:13.563258+00:00",
+        "observed_at": "2026-11-19T00:10:49.533990+00:00",
         "source": "86651d07669cad3f8cddbb66439195b8382280736b44245f0113dd468b0d2d80",
         "unresolved_failure": true,
         "pending": 0,
@@ -1035,8 +1035,8 @@
       "failing_since": "2026-11-16T09:05:10.213659+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -1045,7 +1045,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -1060,7 +1060,7 @@
         "cooldown_until": "2026-11-19T00:04:46.243584+00:00",
         "last_attempt": "2026-11-18T21:04:46.243584+00:00",
         "last_success": "2026-11-16T06:10:36.605622+00:00",
-        "observed_at": "2026-11-18T21:27:13.563304+00:00",
+        "observed_at": "2026-11-19T00:10:49.534065+00:00",
         "source": "0e82d73af8e5feabea98c9c97653e0829fa3e16c1c3719dece0b89d3f66b2dc8",
         "unresolved_failure": true,
         "pending": 0,
@@ -1095,8 +1095,8 @@
       "failing_since": "2026-11-16T09:05:11.255599+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -1105,7 +1105,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -1120,7 +1120,7 @@
         "cooldown_until": "2026-11-19T00:04:50.176656+00:00",
         "last_attempt": "2026-11-18T21:04:50.176656+00:00",
         "last_success": "2026-11-16T06:10:53.894001+00:00",
-        "observed_at": "2026-11-18T21:27:13.563350+00:00",
+        "observed_at": "2026-11-19T00:10:49.534141+00:00",
         "source": "97d56f44c0d275c639f6966b8fcd06dd1503433021b35057b0d07cc4994494a1",
         "unresolved_failure": true,
         "pending": 0,
@@ -1155,8 +1155,8 @@
       "failing_since": "2026-11-16T09:05:12.284501+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -1165,7 +1165,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -1180,7 +1180,7 @@
         "cooldown_until": "2026-11-19T00:04:51.229681+00:00",
         "last_attempt": "2026-11-18T21:04:51.229681+00:00",
         "last_success": "2026-11-16T06:11:10.721032+00:00",
-        "observed_at": "2026-11-18T21:27:13.563406+00:00",
+        "observed_at": "2026-11-19T00:10:49.534217+00:00",
         "source": "1c727a984f573eae98e9d4c195a82ad7260fa3e2939b50264ac2236ac81de737",
         "unresolved_failure": true,
         "pending": 0,
@@ -1215,8 +1215,8 @@
       "failing_since": "2026-11-16T09:05:13.312596+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -1225,7 +1225,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -1240,7 +1240,7 @@
         "cooldown_until": "2026-11-19T00:04:52.287597+00:00",
         "last_attempt": "2026-11-18T21:04:52.287597+00:00",
         "last_success": "2026-11-16T06:11:26.522684+00:00",
-        "observed_at": "2026-11-18T21:27:13.563452+00:00",
+        "observed_at": "2026-11-19T00:10:49.534292+00:00",
         "source": "0d2c5515537909098b978d5de6bd80d42ac6eee739d0ea39d2e0ec5f6094ba82",
         "unresolved_failure": true,
         "pending": 0,
@@ -1275,8 +1275,8 @@
       "failing_since": "2026-11-16T09:05:14.340886+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -1285,7 +1285,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -1300,7 +1300,7 @@
         "cooldown_until": "2026-11-19T00:04:53.337106+00:00",
         "last_attempt": "2026-11-18T21:04:53.337106+00:00",
         "last_success": "2026-11-16T06:14:57.792147+00:00",
-        "observed_at": "2026-11-18T21:27:13.563498+00:00",
+        "observed_at": "2026-11-19T00:10:49.534367+00:00",
         "source": "94db83524b5745791c940c42e49aa24a30e8dd3023656690b211d28491e6ad1e",
         "unresolved_failure": true,
         "pending": 0,
@@ -1335,8 +1335,8 @@
       "failing_since": "2026-11-16T09:05:15.528135+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -1345,7 +1345,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -1360,7 +1360,7 @@
         "cooldown_until": "2026-11-19T00:04:54.390359+00:00",
         "last_attempt": "2026-11-18T21:04:54.390359+00:00",
         "last_success": "2026-11-16T06:15:12.768149+00:00",
-        "observed_at": "2026-11-18T21:27:13.563541+00:00",
+        "observed_at": "2026-11-19T00:10:49.534441+00:00",
         "source": "8334abb041d8933ab3a698e9d65d6ba6d89023f15bb8091f9ccc3f25435d0c0a",
         "unresolved_failure": true,
         "pending": 0,
@@ -1395,8 +1395,8 @@
       "failing_since": "2026-11-16T09:05:16.558424+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -1405,7 +1405,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -1420,7 +1420,7 @@
         "cooldown_until": "2026-11-19T00:04:55.433825+00:00",
         "last_attempt": "2026-11-18T21:04:55.433825+00:00",
         "last_success": "2026-11-16T06:15:23.248591+00:00",
-        "observed_at": "2026-11-18T21:27:13.563585+00:00",
+        "observed_at": "2026-11-19T00:10:49.534516+00:00",
         "source": "863e927d522d4d71639f25962043e2e0bbda79b4850f3ad519c0c347887a575e",
         "unresolved_failure": true,
         "pending": 0,
@@ -1455,8 +1455,8 @@
       "failing_since": "2026-11-16T09:05:17.587493+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -1465,7 +1465,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -1480,7 +1480,7 @@
         "cooldown_until": "2026-11-19T00:04:56.506865+00:00",
         "last_attempt": "2026-11-18T21:04:56.506865+00:00",
         "last_success": "2026-11-16T06:15:26.053321+00:00",
-        "observed_at": "2026-11-18T21:27:13.563632+00:00",
+        "observed_at": "2026-11-19T00:10:49.534615+00:00",
         "source": "51f41ecd356197a78a8928f4a19ba5862c6d5cf2e8826fb80457b4b8cce6fff0",
         "unresolved_failure": true,
         "pending": 0,
@@ -1515,8 +1515,8 @@
       "failing_since": "2026-11-16T09:05:18.620659+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -1525,7 +1525,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -1540,7 +1540,7 @@
         "cooldown_until": "2026-11-19T00:04:57.552890+00:00",
         "last_attempt": "2026-11-18T21:04:57.552890+00:00",
         "last_success": "2026-11-16T06:15:39.229508+00:00",
-        "observed_at": "2026-11-18T21:27:13.563679+00:00",
+        "observed_at": "2026-11-19T00:10:49.534692+00:00",
         "source": "e54ca40ad4ef66f9051d0b9f3bf57d55411715903e4027dc58d0182be8c46cea",
         "unresolved_failure": true,
         "pending": 0,
@@ -1575,8 +1575,8 @@
       "failing_since": "2026-11-16T09:05:19.649746+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -1585,7 +1585,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -1600,7 +1600,7 @@
         "cooldown_until": "2026-11-19T00:04:58.624890+00:00",
         "last_attempt": "2026-11-18T21:04:58.624890+00:00",
         "last_success": "2026-11-16T06:15:45.233084+00:00",
-        "observed_at": "2026-11-18T21:27:13.563726+00:00",
+        "observed_at": "2026-11-19T00:10:49.534768+00:00",
         "source": "c9860503dd452fe98be3f25a244fc83eeb96c3fafde63bc3b5c885a0f583540b",
         "unresolved_failure": true,
         "pending": 0,
@@ -1635,8 +1635,8 @@
       "failing_since": "2026-11-16T09:05:20.677416+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -1645,7 +1645,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -1660,7 +1660,7 @@
         "cooldown_until": "2026-11-19T00:04:59.713232+00:00",
         "last_attempt": "2026-11-18T21:04:59.713232+00:00",
         "last_success": "2026-11-16T06:16:20.229256+00:00",
-        "observed_at": "2026-11-18T21:27:13.563772+00:00",
+        "observed_at": "2026-11-19T00:10:49.534841+00:00",
         "source": "eb97a67da811ff12cea8ff809ee7591219704b4ebe487d2de9bd033f0a472aa4",
         "unresolved_failure": true,
         "pending": 0,
@@ -1678,10 +1678,10 @@
     "locked": false,
     "status": "active",
     "last_job": "She Builds 1:1 Resume & Interview Coaching, India",
-    "last_checked": "2026-11-18T21:21:53.185318+00:00",
+    "last_checked": "2026-11-19T00:04:52.290679+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-18T21:21:53.185318+00:00",
+    "last_success": "2026-11-19T00:04:52.290679+00:00",
     "scan": {
       "postings_seen": 2081,
       "candidates": 2081,
@@ -1700,8 +1700,8 @@
         "not a job posting": 6
       },
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -1710,7 +1710,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       }
     },
     "source": "Amazon jobs API"
@@ -1722,29 +1722,29 @@
     "locked": false,
     "status": "active",
     "last_job": "Product Management",
-    "last_checked": "2026-11-18T21:22:24.710958+00:00",
+    "last_checked": "2026-11-19T00:05:45.594950+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-18T21:22:24.710958+00:00",
+    "last_success": "2026-11-19T00:05:45.594950+00:00",
     "scan": {
       "postings_seen": 217,
-      "candidates": 217,
-      "details_read": 63,
+      "candidates": 216,
+      "details_read": 62,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 3,
-      "rejected": 204,
+      "rejected": 203,
       "unknown": 10,
       "rejections": {
         "seniority in title": 137,
-        "explicit requirement": 50,
+        "explicit requirement": 49,
         "levelled title above entry": 17,
         "no fresher/entry-level evidence": 7,
         "alone is not evidence of an entry-level role": 3
       },
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -1753,7 +1753,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       }
     },
     "source": "Eightfold API"
@@ -1765,29 +1765,29 @@
     "locked": false,
     "status": "active",
     "last_job": "Software Engineer, PhD, Early Career, 2026",
-    "last_checked": "2026-11-18T21:22:31.575063+00:00",
+    "last_checked": "2026-11-19T00:05:52.692680+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-18T21:22:31.575063+00:00",
+    "last_success": "2026-11-19T00:05:52.692680+00:00",
     "scan": {
-      "postings_seen": 74,
-      "candidates": 74,
+      "postings_seen": 72,
+      "candidates": 72,
       "details_read": 20,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 2,
-      "rejected": 68,
+      "rejected": 66,
       "unknown": 4,
       "rejections": {
-        "seniority in title": 52,
+        "seniority in title": 50,
         "explicit requirement": 14,
         "levelled title above entry": 2,
         "alone is not evidence of an entry-level role": 2,
         "no fresher/entry-level evidence": 2
       },
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -1796,7 +1796,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       }
     },
     "source": "Google Careers site"
@@ -1808,10 +1808,10 @@
     "locked": false,
     "status": "active",
     "last_job": "SAP/EWM consultant",
-    "last_checked": "2026-11-18T21:22:35.989464+00:00",
+    "last_checked": "2026-11-19T00:05:57.919884+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-18T21:22:35.989464+00:00",
+    "last_success": "2026-11-19T00:05:57.919884+00:00",
     "scan": {
       "postings_seen": 1554,
       "candidates": 1554,
@@ -1828,8 +1828,8 @@
         "broad experience range and no independent fresher/entry-leve": 1
       },
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -1838,7 +1838,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       }
     },
     "source": "Infosys jobs API"
@@ -1849,11 +1849,11 @@
     "url": "https://southasiacareers.deloitte.com/search/?locationsearch=Hyderabad",
     "locked": false,
     "status": "active",
-    "last_job": "Analyst | FT: Strategy & Ops | Bengaluru | Finance Transformation | Finance Strategy",
-    "last_checked": "2026-11-18T21:24:43.718589+00:00",
+    "last_job": "Executive | Accounts Payable | Bengaluru Eco space | Finance Transformation | Finance Operate",
+    "last_checked": "2026-11-19T00:08:16.776878+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-18T21:24:43.718589+00:00",
+    "last_success": "2026-11-19T00:08:16.776878+00:00",
     "scan": {
       "postings_seen": 2164,
       "candidates": 2164,
@@ -1872,8 +1872,8 @@
         "levelled title above entry": 1
       },
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -1882,7 +1882,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       }
     },
     "source": "SuccessFactors career site"
@@ -1893,11 +1893,11 @@
     "url": "https://careers.qualcomm.com/careers?domain=qualcomm.com&location=Hyderabad",
     "locked": false,
     "status": "active",
-    "last_job": "Associate Engineer – CAD AI/ML",
-    "last_checked": "2026-11-18T21:25:45.499092+00:00",
+    "last_job": "2027 Campus Hire_ Associate Engineer_ HW",
+    "last_checked": "2026-11-19T00:09:28.910785+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-18T21:25:45.499092+00:00",
+    "last_success": "2026-11-19T00:09:28.910785+00:00",
     "scan": {
       "postings_seen": 543,
       "candidates": 543,
@@ -1914,8 +1914,8 @@
         "alone is not evidence of an entry-level role": 4
       },
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -1924,7 +1924,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       }
     },
     "source": "Eightfold API"
@@ -1953,8 +1953,8 @@
       "failing_since": "2026-11-16T09:10:06.050192+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -1963,7 +1963,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       },
       "recovery": {
         "version": 1,
@@ -1978,7 +1978,7 @@
         "cooldown_until": "2026-11-19T00:08:47.311341+00:00",
         "last_attempt": "2026-11-18T21:08:47.311341+00:00",
         "last_success": "2026-11-16T06:21:29.237008+00:00",
-        "observed_at": "2026-11-18T21:27:13.563818+00:00",
+        "observed_at": "2026-11-19T00:10:49.534915+00:00",
         "source": "463b83cace35f8db1fe2138ba032ba0041d722d0227d19121f66c9e0542bb944",
         "unresolved_failure": true,
         "pending": 0,
@@ -1996,14 +1996,14 @@
     "locked": false,
     "status": "active",
     "last_job": "Intern- On Platform Storefront Merchandising",
-    "last_checked": "2026-11-18T21:26:02.996644+00:00",
+    "last_checked": "2026-11-19T00:09:40.350095+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-18T21:26:02.996644+00:00",
+    "last_success": "2026-11-19T00:09:40.350095+00:00",
     "scan": {
       "postings_seen": 100,
       "candidates": 100,
-      "details_read": 8,
+      "details_read": 5,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 1,
@@ -2013,8 +2013,8 @@
         "seniority in title": 84,
         "levelled title above entry": 9,
         "no fresher/entry-level evidence": 4,
-        "explicit requirement": 1,
-        "alone is not evidence of an entry-level role": 1
+        "alone is not evidence of an entry-level role": 1,
+        "explicit requirement": 1
       },
       "recovery": {
         "version": 1,
@@ -2027,21 +2027,21 @@
         "retry_after_s": 0,
         "retry_after_valid": false,
         "cooldown_until": "",
-        "last_attempt": "2026-11-18T21:26:02.996696+00:00",
-        "last_success": "2026-11-18T21:26:02.996644+00:00",
-        "observed_at": "2026-11-18T21:26:02.996691+00:00",
+        "last_attempt": "2026-11-19T00:09:40.350171+00:00",
+        "last_success": "2026-11-19T00:09:40.350095+00:00",
+        "observed_at": "2026-11-19T00:09:40.350161+00:00",
         "source": "fe566b637b6b43d4f0d863aa620c0b7bbfc67273cbd89fec78fcc8b32e8da2d0",
         "unresolved_failure": false,
         "pending": 0,
         "oldest_pending": "",
         "overdue": false,
-        "requests": 9,
-        "cache_hits": 0,
-        "cache_misses": 8
+        "requests": 6,
+        "cache_hits": 3,
+        "cache_misses": 5
       },
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -2050,7 +2050,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       }
     },
     "source": "Workday sitemap + job pages"
@@ -2062,10 +2062,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-18T21:26:13.640672+00:00",
+    "last_checked": "2026-11-19T00:09:49.883397+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-18T21:26:13.640672+00:00",
+    "last_success": "2026-11-19T00:09:49.883397+00:00",
     "scan": {
       "postings_seen": 600,
       "candidates": 80,
@@ -2081,8 +2081,8 @@
         "explicit requirement": 3
       },
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -2091,7 +2091,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       }
     },
     "source": "Jibe/iCIMS API"
@@ -2103,10 +2103,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-18T21:26:16.349786+00:00",
+    "last_checked": "2026-11-19T00:09:52.204623+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-18T21:26:16.349786+00:00",
+    "last_success": "2026-11-19T00:09:52.204623+00:00",
     "scan": {
       "postings_seen": 10,
       "candidates": 10,
@@ -2122,8 +2122,8 @@
         "no fresher/entry-level evidence": 2
       },
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -2132,7 +2132,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       }
     },
     "source": "Eightfold API"
@@ -2144,29 +2144,29 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-18T21:26:33.677496+00:00",
+    "last_checked": "2026-11-19T00:10:08.397758+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-18T21:26:33.677496+00:00",
+    "last_success": "2026-11-19T00:10:08.397758+00:00",
     "scan": {
-      "postings_seen": 324,
-      "candidates": 324,
+      "postings_seen": 326,
+      "candidates": 326,
       "details_read": 25,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
-      "rejected": 312,
+      "rejected": 314,
       "unknown": 12,
       "rejections": {
-        "seniority in title": 271,
-        "levelled title above entry": 28,
+        "seniority in title": 272,
+        "levelled title above entry": 29,
         "explicit requirement": 13,
         "no fresher/entry-level evidence": 10,
         "alone is not evidence of an entry-level role": 2
       },
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -2175,7 +2175,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       }
     },
     "source": "Oracle Recruiting API"
@@ -2187,10 +2187,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Process Associate Order Management - Health Care (Voice)",
-    "last_checked": "2026-11-18T21:26:52.642977+00:00",
+    "last_checked": "2026-11-19T00:10:29.466032+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-18T21:26:52.642977+00:00",
+    "last_success": "2026-11-19T00:10:29.466032+00:00",
     "scan": {
       "postings_seen": 2518,
       "candidates": 2518,
@@ -2198,18 +2198,18 @@
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 10,
-      "rejected": 381,
-      "unknown": 2127,
+      "rejected": 379,
+      "unknown": 2129,
       "rejections": {
-        "no fresher/entry-level evidence": 2126,
-        "explicit requirement": 226,
-        "seniority in title": 152,
+        "no fresher/entry-level evidence": 2128,
+        "explicit requirement": 227,
+        "seniority in title": 149,
         "levelled title above entry": 3,
         "alone is not evidence of an entry-level role": 1
       },
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -2218,7 +2218,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       }
     },
     "source": "IBM careers API"
@@ -2230,12 +2230,12 @@
     "locked": false,
     "status": "active",
     "last_job": "Global Compliance India 172364",
-    "last_checked": "2026-11-18T21:26:54.995968+00:00",
+    "last_checked": "2026-11-19T00:10:31.664261+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-18T21:26:54.995968+00:00",
+    "last_success": "2026-11-19T00:10:31.664261+00:00",
     "scan": {
-      "postings_seen": 1502,
+      "postings_seen": 1514,
       "candidates": 46,
       "details_read": 0,
       "details_unreadable": 0,
@@ -2249,13 +2249,13 @@
       },
       "feed": {
         "baseline": {
-          "postings": 1502,
-          "at": "2026-11-18T21:26:54.825367+00:00"
+          "postings": 1514,
+          "at": "2026-11-19T00:10:31.451892+00:00"
         }
       },
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -2264,7 +2264,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       }
     },
     "source": "Official job feed"
@@ -2276,12 +2276,12 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-18T21:26:56.535504+00:00",
+    "last_checked": "2026-11-19T00:10:33.292777+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-18T21:26:56.535504+00:00",
+    "last_success": "2026-11-19T00:10:33.292777+00:00",
     "scan": {
-      "postings_seen": 829,
+      "postings_seen": 826,
       "candidates": 86,
       "details_read": 0,
       "details_unreadable": 0,
@@ -2295,8 +2295,8 @@
         "no fresher/entry-level evidence": 1
       },
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -2305,7 +2305,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       }
     },
     "source": "Official job feed"
@@ -2317,10 +2317,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-18T21:27:12.560298+00:00",
+    "last_checked": "2026-11-19T00:10:48.530035+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-18T21:27:12.560298+00:00",
+    "last_success": "2026-11-19T00:10:48.530035+00:00",
     "scan": {
       "postings_seen": 179,
       "candidates": 178,
@@ -2336,8 +2336,8 @@
         "explicit requirement": 8
       },
       "run": {
-        "started_at": "2026-11-18T21:20:10.617897+00:00",
-        "finished_at": "2026-11-18T21:27:13.563827+00:00",
+        "started_at": "2026-11-19T00:03:05.223691+00:00",
+        "finished_at": "2026-11-19T00:10:49.534931+00:00",
         "jobs_found": 79,
         "new_jobs": 0,
         "portals": 44,
@@ -2346,7 +2346,7 @@
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "26ab1b5f6c44466bb3300c00f918d17a"
+        "run_id": "78a199a0aa674bd5b547f2cf26949afa"
       }
     },
     "source": "Swiggy careers site"
