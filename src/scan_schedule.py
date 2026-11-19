@@ -133,7 +133,9 @@ def last_scan(companies) -> datetime | None:
     # M7 publishes a completed orchestration marker even when individual portals
     # are deferred. Keep this projection in companies so sparse schedulers and
     # the UI read the SAME committed snapshot, without another data dependency.
+    # A Workday-only recovery run (scope "workday") never counts as the window's scan.
     runs = [(c.get("scan") or {}).get("run", {}) for c in companies or [] if isinstance(c, dict) and isinstance(c.get("scan"), dict)]
+    runs = [r for r in runs if isinstance(r, dict) and r.get("scope", "all") == "all"]
     completed = [r for r in runs if isinstance(r, dict) and r.get("recovery_version") == 1 and _parse(r.get("started_at"))
                  and _parse(r.get("finished_at")) and _parse(r["finished_at"]) >= _parse(r["started_at"])]
     if completed:
@@ -212,8 +214,8 @@ def latest_run(companies) -> dict | None:
     for c in companies or []:
         scan = c.get("scan") if isinstance(c, dict) else None
         run = scan.get("run") if isinstance(scan, dict) else None
-        if not isinstance(run, dict):
-            continue
+        if not isinstance(run, dict) or run.get("scope", "all") != "all":
+            continue   # a Workday-only recovery run is not "the latest scan"
         started, finished = _parse(run.get("started_at")), _parse(run.get("finished_at"))
         counts = {k: run.get(k, 0) for k in ("jobs_found", "new_jobs", "portals", "portals_failed")}
         if (started is None or finished is None or finished < started
@@ -225,7 +227,9 @@ def latest_run(companies) -> dict | None:
         return None
     # every company a scan checks is stamped before that scan's record is
     # written: a later stamp means a later scan that left no record
-    checked = [_parse(c.get("last_checked")) for c in companies if isinstance(c, dict)]
+    # (companies last stamped by a Workday-only recovery run don't count here)
+    checked = [_parse(c.get("last_checked")) for c in companies if isinstance(c, dict)
+               and ((c.get("scan") or {}).get("run") or {}).get("scope", "all") == "all"]
     if any(t and t > best["finished_at"] for t in checked):
         return None
     return best
@@ -261,8 +265,57 @@ def alert_due(now: datetime, last_sent: datetime | None) -> bool:
     return last_sent is None or now - last_sent >= timedelta(hours=MEMBER_ALERT_HOURS) - ALERT_GRACE
 
 
+def _cluster(host: str) -> str:
+    part = (host or "").split(".")
+    return part[1] if len(part) > 2 and part[1].startswith("wd") and part[1][2:].isdigit() else ""
+
+
+def _epoch(value) -> float:
+    dt = _parse(value) if isinstance(value, str) else None
+    return dt.timestamp() if dt else 0.0
+
+
+def recovery_due_at(companies, state, now: datetime | None = None) -> datetime | None:
+    """When a targeted Workday recovery run is next worth dispatching, or None.
+
+    Mirrors the scanner's per-data-centre gating from published data only (the
+    scanner re-checks everything itself). A data centre is gated while its newest
+    API 429 is newer than its newest real healthy scan; its probe becomes eligible
+    when the latest cooldown among its throttled hosts ends. A data centre is only
+    due if NO run (full or targeted) has started since that moment - so every
+    cooldown expiry earns at most one targeted run: no dispatch loops, no repeats."""
+    if not isinstance(state, dict) or not isinstance(state.get("hosts"), dict):
+        return None
+    hosts, records = state["hosts"], state.get("companies") if isinstance(state.get("companies"), dict) else {}
+    members: dict[str, set] = {}
+    for c in companies or []:
+        rec = (c.get("scan") or {}).get("recovery") if isinstance(c, dict) and isinstance(c.get("scan"), dict) else None
+        if not isinstance(rec, dict) or {m.strip() for m in str(rec.get("discovery_method", "")).split(",")} != {"workday"}:
+            continue   # Workday API companies only (sitemaps are not gated)
+        for h in str(rec.get("host", "")).split(", "):
+            if _cluster(h):
+                members.setdefault(_cluster(h), set()).add((c.get("id"), h))
+    runs = [((c.get("scan") or {}).get("run") or {}) for c in companies or [] if isinstance(c, dict) and isinstance(c.get("scan"), dict)]
+    last_run = max([_epoch(r.get("started_at")) for r in runs if isinstance(r, dict)] + [0.0])
+    due = []
+    for name, pairs in members.items():
+        api_hosts = {h for _, h in pairs}
+        limited = [o for h, o in hosts.items() if h in api_hosts and isinstance(o, dict) and o.get("failure_category") == "rate_limit"]
+        if not limited:
+            continue
+        throttled_at = max(_epoch(o.get("observed_at")) for o in limited)
+        healthy = [_epoch((records.get(cid) or {}).get("last_attempt")) for cid, _ in pairs
+                   if (records.get(cid) or {}).get("outcome") in ("healthy", "degraded")]
+        if healthy and max(healthy) > throttled_at:
+            continue   # released by a real healthy scan
+        until = max(_epoch(o.get("cooldown_until")) for o in limited)
+        if until > last_run:
+            due.append(until)
+    return datetime.fromtimestamp(min(due), timezone.utc) if due else None
+
+
 def plan(event: str, schedule: str, settings, companies, now: datetime | None = None,
-         mode: str = "scan") -> dict:
+         mode: str = "scan", scope: str = "all", state=None) -> dict:
     """What one workflow run should do: {"scan": bool, "deliver": bool}.
     * workflow_dispatch with mode "plan" (the scan scheduler chain): like
       the plan tick — scan only if due
@@ -271,6 +324,14 @@ def plan(event: str, schedule: str, settings, companies, now: datetime | None = 
     * the 6-hourly alerts tick: no scan, only the personal alert pass
     Anything else does nothing."""
     now = now or datetime.now(timezone.utc)
+    if scope == "workday":
+        # Targeted Workday recovery: never a full scan, never the personal pass.
+        if event != "workflow_dispatch":
+            return {"scan": False, "deliver": False}
+        if mode == "plan":   # the scheduler's dispatch: only while a data-centre probe is really due
+            at = recovery_due_at(companies, state, now)
+            return {"scan": at is not None and at <= now, "deliver": False}
+        return {"scan": True, "deliver": False}   # an operator's explicit recovery run
     if event == "workflow_dispatch" and mode == "plan":
         return {"scan": scan_due(now, interval_from(settings), last_scan(companies)), "deliver": False}
     if event == "workflow_dispatch":
@@ -340,11 +401,15 @@ def main(argv=None) -> int:
         settings, companies = _load("settings.json", {}), _load("companies.json", [])
         event, schedule = os.environ.get("EVENT", ""), os.environ.get("SCHEDULE", "")
         mode = os.environ.get("MODE", "") or "scan"
-        decision = plan(event, schedule, settings, companies, mode=mode)
+        scope = os.environ.get("SCOPE", "") or "all"
+        state = _load("workday_scan_state.json", None)
+        decision = plan(event, schedule, settings, companies, mode=mode, scope=scope, state=state)
         hours, last = interval_from(settings), last_scan(companies)
         now = datetime.now(timezone.utc)
         trigger = (f"schedule {schedule}" if event == "schedule"
-                   else f"{event} mode={mode}" if event == "workflow_dispatch" else event or "unknown")
+                   else f"{event} mode={mode} scope={scope}" if event == "workflow_dispatch" else event or "unknown")
+        if scope == "workday":
+            trigger += f" · Workday recovery due at {recovery_due_at(companies, state, now)}"
         # the log says what fired this run and why it did or didn't scan
         # (a plan-only run is not a scan); counts and times only, no personal data
         line = (f"trigger {trigger} · interval {hours} h · last scan {last} · window opened "

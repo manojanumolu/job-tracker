@@ -24,6 +24,13 @@ on:
         type: choice
         options: [scan, plan]
         default: scan
+      scope:
+        # "workday": a targeted Workday recovery run - only the Workday API
+        # companies, never counted as the window's full scan (scan_schedule.py)
+        description: "all = the regular scan; workday = Workday recovery only"
+        type: choice
+        options: [all, workday]
+        default: all
 
 # Nothing is granted by default; each job asks for exactly what it needs.
 # Third-party actions are pinned to full commit SHAs (the tag in the comment)
@@ -73,6 +80,7 @@ jobs:
           sparse-checkout: |
             data/settings.json
             data/companies.json
+            data/workday_scan_state.json
           sparse-checkout-cone-mode: false
 
       - name: Decide what this run does
@@ -82,6 +90,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           SCHEDULE: ${{ github.event.schedule }}
           MODE: ${{ inputs.mode }}
+          SCOPE: ${{ inputs.scope || 'all' }}
         run: python3 src/scan_schedule.py plan >> "$GITHUB_OUTPUT"
 
   # The scan reads external career sites (a headless browser and HTTP clients
@@ -131,6 +140,7 @@ jobs:
       - name: Run scraper
         env:
           JT_DATA_ROOT: jt-data
+          JT_SCAN_SCOPE: ${{ inputs.scope || 'all' }}
         run: python src/scraper.py
         working-directory: .
 

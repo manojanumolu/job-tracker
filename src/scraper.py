@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import random
 import re
 import time
@@ -1193,7 +1194,16 @@ def _streak_label(iso: str) -> str:
     return f"{dt.day} {dt:%b} {dt:%H:%M} UTC"
 
 
-def run_all(recovery=None) -> list[dict]:
+SCOPES = ("all", "workday")
+
+
+def run_all(recovery=None, scope: str = "all") -> list[dict]:
+    """scope "all": the regular scan. scope "workday": a targeted Workday recovery
+    run - only Workday API companies are scanned; every other company is left
+    exactly as it is, and the run marker carries scope="workday" so it never
+    counts as the window's full scan (scan_schedule.last_scan ignores it)."""
+    if scope not in SCOPES:
+        raise ValueError(f"unknown scan scope {scope!r}")
     from config_store import load_companies, save_companies, load_seen_jobs, save_seen_jobs
 
     companies = load_companies()
@@ -1207,6 +1217,11 @@ def run_all(recovery=None) -> list[dict]:
     jobs_found = portals_failed = 0
     merge_stats: Counter = Counter()
     scanned = [c for c in companies if not monitoring_state(c)]   # the others have no usable source yet: left as they are
+    if scope == "workday":
+        if not recovery:
+            raise ValueError("a Workday-only run needs the M7 recovery controller")
+        from workday_runtime import is_api
+        scanned = [c for c in scanned if is_api(sources_for(c))]
     if recovery:
         from workday_runtime import is_api
         # Healthy independent sources (including JioStar) precede the API budget.
@@ -1292,6 +1307,8 @@ def run_all(recovery=None) -> list[dict]:
            "repost_dates_backfilled": merge_stats["repost_dates_backfilled"]}
     if recovery:
         run.update(recovery_version=1, run_id=recovery.run_id)
+        if scope != "all":
+            run["scope"] = scope
         recovery.save(started_at, run["finished_at"])
     for company in scanned:
         company["scan"]["run"] = dict(run)
@@ -1313,7 +1330,7 @@ def run_all(recovery=None) -> list[dict]:
 
 
 if __name__ == "__main__":
-    new = run_all(recovery=True)
+    new = run_all(recovery=True, scope=os.environ.get("JT_SCAN_SCOPE", "").strip() or "all")
     print(f"[scraper] {len(new)} new job(s) found")
     if new:
         for j in new:

@@ -961,3 +961,124 @@ def test_probe_429_escalates_only_its_host_and_keeps_the_data_centre_gated(tmp_p
     assert probe["failures"] == 2 and epoch(probe["cooldown_until"]) >= clock.now() + 86400 - 120   # Retry-After wins
     assert run.state["hosts"]["tenant1.wd1.myworkdayjobs.com"]["failures"] == 1                     # untouched
     assert cos[1]["scan"]["recovery"]["failure_category"] == "cluster_gate"
+
+
+# ── PR B: Workday-only targeted recovery runs ─────────────────────────────────
+
+NON_API = {"id": "plainco", "name": "Plain Co", "url": "https://careers.example.org/jobs", "status": "active",
+           "last_checked": "2026-11-19T06:05:00+00:00", "last_success": "2026-11-19T06:05:00+00:00",
+           "scan": {"run": {"recovery_version": 1, "run_id": "full-0603", "started_at": "2026-11-19T06:03:14+00:00",
+                            "finished_at": "2026-11-19T06:09:31+00:00", "jobs_found": 1, "new_jobs": 0,
+                            "portals": 44, "portals_failed": 0}}}
+
+
+def test_workday_only_run_scans_only_workday_api_companies(tmp_path, clock, cfg, monkeypatch):
+    cos = [{**c, "status": "active", "last_checked": iso(clock.now() - 7 * 3600), "last_success": iso(clock.now() - 7 * 3600)}
+           for c in companies(2)] + [copy.deepcopy(NON_API)]
+    before = copy.deepcopy(cos[2])
+    handler = _graduate_jobs(1)
+    _wire_run_all(tmp_path, clock, monkeypatch, cos, handler)
+    monkeypatch.setattr(scraper, "scan_company", lambda c, _real=scraper.scan_company:
+                        pytest.fail("non-Workday company scanned") if c["id"] == "plainco" else _real(c))
+    scraper.run_all(recovery=recovery(tmp_path, clock, cfg, cos), scope="workday")
+    assert cos[2] == before                                          # untouched, marker included
+    assert all(c["scan"]["run"]["scope"] == "workday" for c in cos[:2])
+    assert cos[0]["scan"]["run"]["portals"] == 2
+
+
+def test_workday_only_run_never_counts_as_the_windows_full_scan():
+    wd = {"id": "w", "last_checked": "2026-11-19T07:45:00+00:00",
+          "scan": {"run": {"recovery_version": 1, "run_id": "wd-0745", "scope": "workday", "started_at": "2026-11-19T07:44:00+00:00",
+                           "finished_at": "2026-11-19T07:46:00+00:00", "jobs_found": 0, "new_jobs": 0, "portals": 1, "portals_failed": 0}}}
+    cos = [copy.deepcopy(NON_API), wd]
+    assert scan_schedule.last_scan(cos) == datetime(2026, 11, 19, 6, 3, 14, tzinfo=timezone.utc)
+    nine = datetime(2026, 11, 19, 9, 2, tzinfo=timezone.utc)
+    assert scan_schedule.plan("workflow_dispatch", "", {}, cos, nine, mode="plan")["scan"]   # 09:00 window still scans
+    latest = scan_schedule.latest_run(cos)
+    assert latest and latest["portals"] == 44                          # dashboard summary not blanked
+
+
+def test_handoff_accepts_targeted_generation_and_refuses_a_stale_artifact(tmp_path):
+    def files(newest):
+        cos = [copy.deepcopy(NON_API), {"id": "w", "scan": {"run": {"recovery_version": 1, "run_id": "wd-gen",
+               "scope": "workday", "started_at": "2026-11-19T07:44:00+00:00", "finished_at": newest}}}]
+        src = tmp_path / newest.replace(":", "")
+        src.mkdir()
+        (src / "companies.json").write_text(json.dumps(cos))
+        for name in (STATE_FILE, CACHE_FILE):
+            data = empty(name); data.update(run_id="wd-gen", updated_at="2026-11-19T07:46:00+00:00")
+            (src / name).write_text(json.dumps(data))
+        return src
+    dest = tmp_path / "dest"; dest.mkdir()
+    scan_handoff.take_over(files("2026-11-19T07:46:00+00:00"), ["companies.json", STATE_FILE, CACHE_FILE], dest)
+    with pytest.raises(scan_handoff.HandoffError, match="generation"):
+        scan_handoff.take_over(files("2026-11-19T05:00:00+00:00"), ["companies.json", STATE_FILE, CACHE_FILE], dest)
+
+
+def _published(cos, hosts, records):
+    return cos, {"schema_version": 1, "run_id": "x", "updated_at": "", "hosts": hosts, "companies": records, "last_completed_run": {}}
+
+
+def _wd_company(cid, host, started):
+    return {"id": cid, "scan": {"recovery": {"discovery_method": "workday", "host": host},
+                                "run": {"started_at": started, "finished_at": started}}}
+
+
+def test_recovery_planner_is_due_once_per_cooldown_expiry_and_never_loops():
+    t = lambda h, m: datetime(2026, 11, 19, h, m, tzinfo=timezone.utc)
+    hosts = {"micron.wd1.myworkdayjobs.com": {"failure_category": "rate_limit", "observed_at": "2026-11-19T06:00:00+00:00",
+                                               "cooldown_until": "2026-11-19T07:00:00+00:00"},
+             "sanofi.wd3.myworkdayjobs.com": {"failure_category": "rate_limit", "observed_at": "2026-11-19T01:39:00+00:00",
+                                               "cooldown_until": "2026-11-19T07:39:00+00:00"}}
+    cos, state = _published([_wd_company("micron", "micron.wd1.myworkdayjobs.com", "2026-11-19T06:03:00+00:00"),
+                             _wd_company("sanofi", "sanofi.wd3.myworkdayjobs.com", "2026-11-19T06:03:00+00:00")], hosts, {})
+    assert scan_schedule.recovery_due_at(cos, state, t(6, 30)) == t(7, 0)            # earliest expiry
+    assert not scan_schedule.plan("workflow_dispatch", "", {}, cos, t(6, 30), mode="plan", scope="workday", state=state)["scan"]
+    assert scan_schedule.plan("workflow_dispatch", "", {}, cos, t(7, 1), mode="plan", scope="workday", state=state)["scan"]
+    # a run started after wd1's expiry: wd1 has had its chance; wd3 is next
+    cos[0]["scan"]["run"]["started_at"] = "2026-11-19T07:02:00+00:00"
+    assert scan_schedule.recovery_due_at(cos, state, t(7, 10)) == t(7, 39)
+    cos[1]["scan"]["run"]["started_at"] = "2026-11-19T07:40:00+00:00"
+    assert scan_schedule.recovery_due_at(cos, state, t(7, 45)) is None                # nothing left: no loop
+    assert not scan_schedule.plan("workflow_dispatch", "", {}, cos, t(7, 45), mode="plan", scope="workday", state=state)["scan"]
+
+
+def test_recovery_planner_ignores_released_data_centres_and_sitemaps():
+    hosts = {"micron.wd1.myworkdayjobs.com": {"failure_category": "rate_limit", "observed_at": "2026-11-19T06:00:00+00:00",
+                                               "cooldown_until": "2026-11-19T07:00:00+00:00"},
+             "jiostar.wd102.myworkdayjobs.com": {"failure_category": "rate_limit", "observed_at": "2026-11-19T06:00:00+00:00",
+                                                  "cooldown_until": "2026-11-19T07:00:00+00:00"}}
+    site = {"id": "jio", "scan": {"recovery": {"discovery_method": "workday_sitemap", "host": "jiostar.wd102.myworkdayjobs.com"}}}
+    records = {"micron": {"outcome": "healthy", "last_attempt": "2026-11-19T06:30:00+00:00"}}
+    cos, state = _published([_wd_company("micron", "micron.wd1.myworkdayjobs.com", "2026-11-19T06:03:00+00:00"), site], hosts, records)
+    assert scan_schedule.recovery_due_at(cos, state, datetime(2026, 11, 19, 8, tzinfo=timezone.utc)) is None
+
+
+def test_targeted_scope_only_from_dispatch_and_manual_runs_always_scan():
+    assert not scan_schedule.plan("schedule", "17,47 * * * *", {}, [], scope="workday")["scan"]
+    assert scan_schedule.plan("workflow_dispatch", "", {}, [], mode="scan", scope="workday") == {"scan": True, "deliver": False}
+    assert not scan_schedule.plan("workflow_dispatch", "", {}, [], mode="plan", scope="workday", state=None)["scan"]
+    with pytest.raises(ValueError):
+        scraper.run_all(scope="everything")
+
+
+def test_repeated_targeted_runs_create_no_duplicate_jobs(tmp_path, clock, cfg, monkeypatch):
+    cos = [{**c, "status": "active", "last_checked": iso(clock.now() - 7 * 3600), "last_success": iso(clock.now() - 7 * 3600)}
+           for c in companies(1)]
+    store = {"seen": []}
+    import config_store
+    _wire_run_all(tmp_path, clock, monkeypatch, cos, _graduate_jobs(2))
+    monkeypatch.setattr(config_store, "load_seen_jobs", lambda: store["seen"])
+    monkeypatch.setattr(config_store, "save_seen_jobs", lambda data, **kw: store.update(seen=list(data)))
+    first = scraper.run_all(recovery=recovery(tmp_path, clock, cfg, cos), scope="workday")
+    clock.sleep(7 * 3600)
+    second = scraper.run_all(recovery=recovery(tmp_path, clock, cfg, cos), scope="workday")
+    assert len(first) == 2 and second == []
+    assert len({j["url"] for j in store["seen"]}) == len(store["seen"]) == 2
+
+
+def test_workflow_passes_scope_to_plan_and_scraper():
+    text = (Path(__file__).parents[1] / ".github/workflows/check_jobs.yml").read_text("utf-8")
+    assert "options: [all, workday]" in text
+    assert "SCOPE: ${{ inputs.scope || 'all' }}" in text and "JT_SCAN_SCOPE: ${{ inputs.scope || 'all' }}" in text
+    assert "data/workday_scan_state.json" in text.split("Decide what this run does")[0]

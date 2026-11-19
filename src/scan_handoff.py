@@ -93,9 +93,13 @@ def take_over(src_dir: Path, names: list[str], dest_dir: Path = DATA) -> None:
         if not generations[0] or len(set(generations)) != 1:
             raise HandoffError("mixed recovery generations")
         if "companies.json" in blobs:
-            runs = {(c.get("scan") or {}).get("run", {}).get("run_id") for c in json.loads(blobs["companies.json"])
-                    if (c.get("scan") or {}).get("run", {}).get("recovery_version") == 1}
-            if runs != {generations[0]}:
+            # The NEWEST run marker must be this generation. A Workday-only recovery run
+            # stamps only the Workday companies, so older full-scan markers legitimately
+            # remain on the others; a stale artifact (older newest marker) is refused.
+            markers = [(c.get("scan") or {}).get("run", {}) for c in json.loads(blobs["companies.json"])]
+            markers = [m for m in markers if isinstance(m, dict) and m.get("recovery_version") == 1]
+            newest = max(markers, key=lambda m: str(m.get("finished_at", "")), default={})
+            if not markers or newest.get("run_id") != generations[0]:
                 raise HandoffError("company/recovery generation mismatch")
             ids = {c["id"] for c in json.loads(blobs["companies.json"])}
             state = json.loads(blobs["workday_scan_state.json"])
