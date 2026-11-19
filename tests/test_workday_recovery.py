@@ -831,3 +831,27 @@ def test_healthy_company_still_waits_for_revisit(tmp_path, clock, cfg):
     clock.sleep(3 * 3600)
     run.not_due = set(); run.selected = run.select(cos)
     assert run.not_due == {"c00"} and not run.selected
+
+
+def test_stale_projection_never_hides_a_newer_real_result():
+    c = {"id": "x", "status": "active", "last_checked": "2026-11-19T03:05:00+00:00",
+         "last_success": "2026-11-19T03:05:00+00:00",
+         "scan": {"recovery": {"outcome": "rate_limited", "unresolved_failure": True,
+                               "observed_at": "2026-11-19T00:15:00+00:00"}}}
+    h = monitoring_health.company_health(c)
+    assert not h["failed"] and h["outcome"] == "healthy"
+    # a current projection (deferral after the last, failed scan) is still honoured
+    c["status"] = "failing"
+    c["scan"]["recovery"]["observed_at"] = "2026-11-19T03:20:00+00:00"
+    assert monitoring_health.company_health(c)["failed"]
+
+
+def test_failure_projection_on_an_active_company_is_a_leftover_but_needs_config_is_not():
+    c = {"id": "x", "status": "active", "last_checked": "2026-11-18T19:00:00+00:00",
+         "scan": {"recovery": {"outcome": "deferred", "unresolved_failure": True,
+                               "observed_at": "2026-11-19T00:15:00+00:00"}}}
+    assert monitoring_health.current_recovery(c) == {}
+    c["scan"]["recovery"]["outcome"] = "needs_config"
+    assert monitoring_health.current_recovery(c)["outcome"] == "needs_config"
+    c["status"], c["scan"]["recovery"]["outcome"] = "failing", "cooling_down"
+    assert monitoring_health.current_recovery(c)["outcome"] == "cooling_down"

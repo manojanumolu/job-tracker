@@ -192,6 +192,12 @@ def _stamp(tmp_path, ago: timedelta, status="active"):
     for i, c in enumerate(_scanned(companies)):
         c["status"] = status
         c["last_checked"] = (now - ago - timedelta(seconds=10 * i)).isoformat()
+        # M7: the completed-run marker is the authoritative last-scan time
+        # (scan_schedule.last_scan), so the scan being "ago" old ages it too.
+        run = (c.get("scan") or {}).get("run")
+        if isinstance(run, dict) and run.get("recovery_version") == 1:
+            run["started_at"] = (now - ago - timedelta(minutes=10)).isoformat()
+            run["finished_at"] = (now - ago).isoformat()
     (tmp_path / "data" / "companies.json").write_text(json.dumps(companies))
     return len(_own(companies))
 

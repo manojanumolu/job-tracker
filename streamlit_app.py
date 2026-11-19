@@ -2494,7 +2494,8 @@ def portal_status(c: dict) -> tuple[str, str]:
     no suitable jobs today is never a status."""
     if monitoring_state(c):                  # no usable source yet: not scanned, so not a failure either
         return "pending", _NO_SOURCE_LABELS[monitoring_state(c)]
-    recovery = (c.get("scan") if isinstance(c.get("scan"), dict) else {}).get("recovery") or {}
+    from monitoring_health import current_recovery
+    recovery = current_recovery(c)
     if recovery.get("outcome") in ("deferred", "cooling_down", "rate_limited", "needs_config", "degraded"):
         labels = {"deferred": "Deferred", "cooling_down": "Cooling down", "rate_limited": "Rate limited (HTTP 429)",
                   "needs_config": "Requires configuration", "degraded": "Partial coverage"}
