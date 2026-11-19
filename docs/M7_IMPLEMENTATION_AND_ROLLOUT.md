@@ -241,7 +241,7 @@ What happens next, automatically. The 06:02 scan's selection runs before
 | M7 state persistence | verified across 4 consecutive M7 runs (18 Nov 21:19; 19 Nov 00:02, 00:14, 01:30): each read the previous state, carried cooldowns forward, published a matching generation, and never reset state |
 | Emails | none sent by any verification run ("No new alerts"; shared ledger unchanged at 42 sent, 0 uncertain; personal alerts `off_jobs: 0`) |
 
-## Company-level recovery status (19 Nov 01:39 UTC, after the canary)
+## Company-level recovery status (19 Nov 01:39 UTC, after the canary; superseded by the per-DC section below)
 
 | State | Count | Companies |
 |---|---:|---|
@@ -255,6 +255,81 @@ All 26 Workday API companies have had no successful discovery since 16 Nov
 06:04–06:21 UTC. The dashboard shows them as failing (Critical, 26/44).
 That is accurate, and they stay in the failure count until a real
 successful scan.
+
+## Per-data-centre recovery (PRs 24–27, 19 Nov)
+
+The canary rollout above had one weakness. A single global canary (Sanofi and
+PwC, both on wd3) held all 24 other Workday companies, across four
+independent Workday data centres. A 429 on wd3 said nothing about wd1, wd5
+or wd12, yet it blocked them all. Each further 429 also pushed the next try
+3 → 6 → 12 h out.
+
+### What changed
+
+| PR | Merged | What it does |
+|---|---|---|
+| [#24](https://github.com/manojanumolu/job-tracker/pull/24) (A) | `a68a057` | Gating is per data centre (`wdN` in the host), not global. A DC is gated while its newest API 429 is newer than its newest real healthy scan. Each gated DC gets exactly one probe once its throttled hosts' cooldowns have passed; canaries are preferred in config order. Probes run first, and a healthy probe releases only its own DC, within the same run. A 429 closes that DC for the rest of the run (`cluster_gate`). Allow-listed response headers (`retry-after`, `ratelimit*`, `x-ratelimit-*`, `server`, `via`) are stored on throttled hosts. |
+| [#25](https://github.com/manojanumolu/job-tracker/pull/25) (B) | `8a94da1` | `check_jobs.yml` takes `scope: all \| workday`. A Workday-only run scans only the Workday API companies, never consumes the 3 h full-scan window (`last_scan` counts only `scope == all` runs), and keeps every other company's data untouched. |
+| [#26](https://github.com/manojanumolu/job-tracker/pull/26) (C) | `21b55e7` | The Scan scheduler chain dispatches a Workday-only plan run 2 min after a gated DC's cooldown expires, when that is at least 20 min before the next full window. Each expiry earns at most one targeted run. |
+| [#27](https://github.com/manojanumolu/job-tracker/pull/27) (D) | `6d6b92f` | Fixes two issues seen live. (1) While a dispatched recovery run had not yet published, each new chain run saw the recovery as still due and dispatched again: 7 Check Jobs runs at 07:41–07:43. Only one scanned (2 Workday requests); the rest were cancelled by the `check-jobs` group or planned no scan. The chain now waits 15 min instead. (2) A DC whose members the run's own two-host safety stop or request budget deferred (wd5 at 07:09) stays due for its probe. |
+
+Unchanged: the two-throttled-hosts safety stop, the 600-request cap, 2 s
+global and per-host spacing, 3/6/12/24 h cooldown escalation, the 72 h
+verdict cache, and the 6 h revisit. No Retry-After was ever received, so
+none could be bypassed.
+
+CI, full suite: PR A 3,659 passed / 0 failed / 39 skipped; B + C 3,673 / 0 /
+39; D 3,675 / 0 / 39. All skips are Firestore-emulator tests.
+
+### Production results (real Workday, GitHub Actions)
+
+| Time (UTC) | Run | DC probed | Result |
+|---|---|---|---|
+| 01:30 | [Check Jobs 1529](https://github.com/manojanumolu/job-tracker/actions/runs/44437522154) (old global canary) | wd3 Sanofi, PwC | 429, 429 |
+| 07:01 | [Check Jobs 1534](https://github.com/manojanumolu/job-tracker/actions/runs/44476337123) (PR A, full scan) | wd12 Salesforce, wd1 Micron | 429 `server: cloudflare`, 429 `server: cloudflare`. wd5 was then held by the two-host safety stop; wd3 was still cooling. |
+| 07:42 | [Check Jobs 1536](https://github.com/manojanumolu/job-tracker/actions/runs/44481571798) (PR C auto-dispatch, `scope=workday`) | wd3 Sanofi, wd5 NVIDIA | 429 `server: cloudflare`, 429 `server: cloudflare`. 2 requests in total. |
+
+Every Workday CXS data centre the tracker uses (wd1, wd3, wd5, wd12) has now
+answered its single probe with HTTP 429. No 429 carried `Retry-After` or any
+`RateLimit` header; every one carried `server: cloudflare`. Requests were
+spaced at least 2 s apart, one per DC, after cooldowns of 3 h or more. This
+is not a per-tenant request counter. It is an edge (Cloudflare) rule applied
+to this client, the GitHub Actions runners, and it has been in force since
+16 Nov 09:04 UTC. JioStar (wd102), read from its public sitemap rather than
+the CXS API, is healthy.
+
+### Company status after the 07:42 run (data commit `4f74f45`)
+
+| State | Count | Companies |
+|---|---:|---|
+| Healthy (real successful scan) | 18 | 17 non-Workday portals + JioStar (sitemap) |
+| Recovered Workday API companies | **0** | — |
+| HTTP 429 this run | 2 | Sanofi (wd3, cooling to 19:42, failure 3), NVIDIA (wd5, cooling to 13:42, failure 2) |
+| Cooling down after a 429 at 07:09 | 2 | Salesforce (wd12, to 13:09), Micron (wd1, to 13:09) |
+| Deferred: waiting for their DC's probe | 22 | wd1: Wells Fargo, Invesco, Amgen, State Street, Mastercard, Hitachi, Medtronic, Silicon Labs, Analog Devices, Marvell; wd3: PokerStars, PwC, Novartis; wd5: Carrier, Synchrony, Broadridge, Warner Bros. Discovery, Bristol Myers Squibb, Evernorth, S&P Global, Thermo Fisher, Cisco |
+
+No company was marked healthy by being released from a gate. All 26
+Workday API companies remain in the dashboard's failure count until a real
+successful scan.
+
+The next probes happen automatically: wd1 and wd12 after 13:09, wd5 after
+13:42 (targeted runs, if 20 min clear of a full window, otherwise inside the
+full scan), and wd3 after 19:42. Each costs one request per DC. A further
+429 escalates that DC's cooldown, capped at 24 h, so the request load while
+blocked stays at most 4 requests per cooldown period.
+
+### Remaining blocker and permitted options
+
+The Cloudflare block on the Workday CXS API for this client is outside the
+tracker's control. Changing IP, user agent or headers to get around it
+would be evasion and is not done. The permitted options are operator
+decisions:
+
+1. Keep the automatic per-DC probes running. They are cheap and will detect
+   a lift within one cooldown.
+2. Ask Workday or the employers for permitted API access for this client.
+3. Per company, verify an officially offered alternative feed (as with
+   JioStar's sitemap) before adding it.
 
 ## Remaining blocked companies and operational limitations
 
