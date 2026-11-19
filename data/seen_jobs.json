@@ -6038,5 +6038,99 @@
     "notified": false,
     "repost_last_seen": "2026-11-19",
     "company_id": "deloitte"
+  },
+  {
+    "title": "VRMO Seller Onboard Asc - ES,  In-Person Verification - VAR",
+    "url": "https://www.amazon.jobs/en/jobs/10609358/vrmo-seller-onboard-asc-es-in-person-verification-var",
+    "company": "Amazon",
+    "location": "Bengaluru, Karnataka, IND · India",
+    "category": "ENTRY_LEVEL",
+    "reason": "entry-level signal: 'ideal for recent graduates'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "These positions are ideal for recent graduates or people with customer service backgrounds.",
+        "Previous work experience in a customer service / retail environment supporting Chinese & English-speak customers. Knowledge of or experience in a fraud/risk man",
+        "Experience in insurance, finance, data analysis, research, translation or training with Chinese & English as the language is a distinct advantage."
+      ],
+      "fresher_evidence": "ideal for recent graduates",
+      "detail_read": true,
+      "detail_match": "amazon.jobs record",
+      "job_id": "id:10609358",
+      "canonical_url": "https://amazon.jobs/en/jobs/10609358/vrmo-seller-onboard-asc-es-in-person-verification-var",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      },
+      "skills": {
+        "Excel": "Intermediate skill with Microsoft Office including Outlook, Word and Excel.",
+        "Data analysis": "Experience in insurance, finance, data analysis, research, translation or training with Chinese & English as the language is a distinct advantage.",
+        "Communication": "Communicate effectively via live video call with our customer base – third party sellers who want to sell on Amazon in its various marketplaces.",
+        "Problem solving": "Excellent problem-solving skills.",
+        "Teamwork": "Team player – capable of learning and sharing knowledge in global team environment."
+      },
+      "requirements": [
+        {
+          "text": "Our overall mission is simple: We want Amazon to be the place where our customers can find, discover and buy anything online. Whatever our customers want, we will find the means to deliver it. With y…",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Amazon is seeking for individuals who are dedicated, hardworking, analytical and results-oriented. Candidates will be responsible for a wide range of duties related to the investigation and eliminati…",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Communicate effectively via live video call with our customer base – third party sellers who want to sell on Amazon in its various marketplaces.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Flexibility to be trained for additional business-related skills and/or work types",
+          "importance": "unspecified"
+        },
+        {
+          "text": "These positions are ideal for recent graduates or people with customer service backgrounds.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Proficient in Spanish & English (speak, reading and writing) with an ability to compose grammatically correct, concise and accurate verbal and written responses",
+          "importance": "mandatory"
+        },
+        {
+          "text": "Intermediate skill with Microsoft Office including Outlook, Word and Excel.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Team player – capable of learning and sharing knowledge in global team environment.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Experience in insurance, finance, data analysis, research, translation or training with Chinese & English as the language is a distinct advantage.",
+          "importance": "preferred"
+        },
+        {
+          "text": "Excellent problem-solving skills.",
+          "importance": "preferred"
+        },
+        {
+          "text": "Self-disciplined, diligent, proactive and detail oriented.",
+          "importance": "preferred"
+        }
+      ]
+    },
+    "posted_at": "2026-11-19",
+    "uid": "amazon|url:https://amazon.jobs/en/jobs/10609358/vrmo-seller-onboard-asc-es-in-person-verification-var",
+    "date": "Nov 19, 18:08",
+    "first_seen": "2026-11-19T18:08:47.639946+00:00",
+    "id": "Amazon_VRMO_Seller_Onboard_Asc_-_ES,__In-Person",
+    "notified": false,
+    "repost_last_seen": "2026-11-19",
+    "company_id": "amazon"
   }
 ]
