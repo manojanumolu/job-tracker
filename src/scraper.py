@@ -48,7 +48,7 @@ _FAILING_DETAIL_RATIO = 0.5    # more unreadable job pages than this -> "failing
 # URLs are recognised automatically, anything else is read with Playwright).
 # ---------------------------------------------------------------------------
 COMPANY_SOURCES: dict[str, list[dict]] = {
-    "sanofi": [{"type": "workday", "api": "https://sanofi.wd3.myworkdayjobs.com/wday/cxs/sanofi/SanofiCareers/jobs"}],
+    # Sanofi: see "sanofi" below (official Radancy sitemap since Nov 2026; Workday CXS is blocked)
     "pwc": [
         {"type": "workday", "api": "https://pwc.wd3.myworkdayjobs.com/wday/cxs/pwc/Global_Experienced_Careers/jobs"},
         {"type": "workday", "api": "https://pwc.wd3.myworkdayjobs.com/wday/cxs/pwc/Global_Campus_Careers/jobs"},
