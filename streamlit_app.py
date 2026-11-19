@@ -2467,7 +2467,11 @@ def go(page: str, **extra):
 
 # ── derived state ─────────────────────────────────────────────────────────────
 _check_trigger = st.session_state.get("last_check_trigger", 0)
-last_scan = max((d for d in (_parse_iso(c.get("last_checked", "")) for c in companies) if d), default=None)
+# the latest FULL scan (scope "all"): a targeted Workday-only recovery run also
+# stamps last_checked on the few companies it probed, but is not "the last scan"
+_full_run = scan_schedule.latest_run(companies)
+last_scan = (_full_run["finished_at"] if _full_run else
+             max((d for d in (_parse_iso(c.get("last_checked", "")) for c in companies) if d), default=None))
 scan_stale = last_scan is None or NOW - last_scan > timedelta(hours=_STALE_H)
 NEXT_SCAN = scan_schedule.next_scan(NOW, SCAN_HOURS, scan_schedule.last_scan(companies))   # UTC; shown in IST
 # a scan is already overdue (none since the latest interval boundary): it
