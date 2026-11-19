@@ -8,10 +8,28 @@ from datetime import datetime, timezone
 from workday_state import epoch
 
 
-def company_health(company, now=None):
-    now = now or datetime.now(timezone.utc)
+def current_recovery(company):
+    """The company's M7 projection, or {} when it predates the company's latest
+    real result. Every scan stamps last_checked before writing the projection,
+    and a deferral writes a projection without touching last_checked, so a
+    last_checked newer than the projection means a newer scan superseded it: a
+    stale "failing" projection must never hide a real recovery."""
     scan = company.get("scan") if isinstance(company.get("scan"), dict) else {}
     rec = scan.get("recovery") if isinstance(scan.get("recovery"), dict) else {}
+    if rec and epoch(company.get("last_checked")) > epoch(rec.get("observed_at")):
+        return {}
+    # run_all sets status before it writes a projection, and status changes only
+    # on a real scan; so an unresolved failure on a company that is now active is
+    # a leftover. needs_config is the one state that may sit on an active company.
+    if (rec.get("unresolved_failure") and rec.get("outcome") != "needs_config"
+            and company.get("status") not in ("failing", "broken", "needs_config")):
+        return {}
+    return rec
+
+
+def company_health(company, now=None):
+    now = now or datetime.now(timezone.utc)
+    rec = current_recovery(company)
     failed = company.get("status") in ("failing", "broken", "needs_config") or bool(rec.get("unresolved_failure"))
     last_success = rec.get("last_success") or company.get("last_success")
     success = epoch(last_success)

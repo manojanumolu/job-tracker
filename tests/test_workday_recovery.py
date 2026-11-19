@@ -785,3 +785,73 @@ def test_sitemap_throttle_does_not_gate_the_api_fleet(tmp_path, clock, cfg):
         "failures": 1, "http_status": 429, "failure_category": "rate_limit", "retry_after_s": 0, "retry_after_valid": False}
     write(tmp_path / STATE_FILE, STATE_FILE, run.state)
     assert recovery(tmp_path, clock, cfg, companies(2)).mode == "full"
+
+
+def test_cooldown_expiring_mid_run_is_admitted_not_lost_to_rotation(tmp_path, clock, cfg):
+    """19 Nov 00:03: selection ran 76 s before the canary cooldown ended; the
+    canary must be probed when the loop reaches it, not deferred for 3 h."""
+    cfg["mode"] = "auto"
+    cos = throttled_fleet(clock)                       # 429s recorded 10 min ago
+    clock.sleep(3 * 3600 - 600 - 76)                   # 76 s before cooldown ends
+    run = recovery(tmp_path, clock, cfg, cos)
+    assert run.selected == set() and run.defer_reason(cos[0]) == "cooldown"
+    clock.sleep(300)                                   # loop reaches Sanofi after expiry
+    assert run.defer_reason(cos[0]) == "" and "sanofi" in run.selected
+    assert run.defer_reason(cos[2]) == "canary_gate"   # non-canary still waits
+
+
+def test_mid_run_admission_respects_batch_size(tmp_path, clock, cfg):
+    cfg.update(mode="full", batch_size=1)
+    cos = companies(3)
+    run = recovery(tmp_path, clock, cfg, cos)
+    assert len(run.selected) == 1
+    late = next(c for c in cos if c["id"] not in run.selected)
+    assert run.defer_reason(late) == "rotation"
+
+
+def test_failed_company_retry_is_governed_by_cooldown_not_revisit(tmp_path, clock, cfg):
+    """19 Nov 00:15: Sanofi/PwC 429'd at 21:04 (old scanner), cooldown ended 00:04,
+    but a deferred projection record made the 6 h revisit hold them until 02:04."""
+    cfg["mode"] = "auto"
+    cos = throttled_fleet(clock)                       # 429 recorded 10 min ago
+    run = recovery(tmp_path, clock, cfg, cos)
+    for c in cos:                                      # first M7 run: projected, not contacted
+        run.projection(c, "cooling_down" if c["id"] in ("sanofi", "pwc") else "deferred", "cooldown")
+    write(tmp_path / STATE_FILE, STATE_FILE, run.state)
+    clock.sleep(3 * 3600 - 600 + 660)                  # 11 min after the cooldown ended
+    run = recovery(tmp_path, clock, cfg, cos)
+    assert run.mode == "canary" and run.selected == {"sanofi", "pwc"}
+    assert not run.not_due
+
+
+def test_healthy_company_still_waits_for_revisit(tmp_path, clock, cfg):
+    cos = companies(1)
+    run = recovery(tmp_path, clock, cfg, cos)
+    _attempt(run, cos, {"c00"})                        # outcome healthy now
+    clock.sleep(3 * 3600)
+    run.not_due = set(); run.selected = run.select(cos)
+    assert run.not_due == {"c00"} and not run.selected
+
+
+def test_stale_projection_never_hides_a_newer_real_result():
+    c = {"id": "x", "status": "active", "last_checked": "2026-11-19T03:05:00+00:00",
+         "last_success": "2026-11-19T03:05:00+00:00",
+         "scan": {"recovery": {"outcome": "rate_limited", "unresolved_failure": True,
+                               "observed_at": "2026-11-19T00:15:00+00:00"}}}
+    h = monitoring_health.company_health(c)
+    assert not h["failed"] and h["outcome"] == "healthy"
+    # a current projection (deferral after the last, failed scan) is still honoured
+    c["status"] = "failing"
+    c["scan"]["recovery"]["observed_at"] = "2026-11-19T03:20:00+00:00"
+    assert monitoring_health.company_health(c)["failed"]
+
+
+def test_failure_projection_on_an_active_company_is_a_leftover_but_needs_config_is_not():
+    c = {"id": "x", "status": "active", "last_checked": "2026-11-18T19:00:00+00:00",
+         "scan": {"recovery": {"outcome": "deferred", "unresolved_failure": True,
+                               "observed_at": "2026-11-19T00:15:00+00:00"}}}
+    assert monitoring_health.current_recovery(c) == {}
+    c["scan"]["recovery"]["outcome"] = "needs_config"
+    assert monitoring_health.current_recovery(c)["outcome"] == "needs_config"
+    c["status"], c["scan"]["recovery"]["outcome"] = "failing", "cooling_down"
+    assert monitoring_health.current_recovery(c)["outcome"] == "cooling_down"

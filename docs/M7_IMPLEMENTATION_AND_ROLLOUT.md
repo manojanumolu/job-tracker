@@ -159,7 +159,29 @@ kept.
 
 ## Test results
 
-(Filled in at verification; see [Verification record](#verification-record).)
+| Run | Code | Passed | Failed | Skipped |
+|---|---|---:|---:|---:|
+| CI full suite (authoritative, Python 3.12 + Chromium), run 44394841652 | `3ff3987` (merged head) | **3,647** | **0** | 39 |
+| CI full suite, run 44394415492 | `858de08` | pass | 0 | — |
+| Local full suite (Python 3.12, hashed lockfile) | `858de08` + WIP | 3,646 | 0 | 39 |
+| Focused M7 (`tests/test_workday_recovery.py`) | `3ff3987` | 81 | 0 | 0 |
+| Focused alerts / workflow / JioStar / polish | `3ff3987` | 168 (incl. M7) | 0 | 0 |
+
+All 39 skips are Firestore/Auth-emulator tests (`test_firestore_emulator.py`,
+`test_ledger_dryrun.py`) that need emulators not present on CI runners. They
+are unrelated to M7 and not a deployment blocker. The earlier "3,579 passed,
+35 failed" came from an incomplete local environment (no Bash, PDF libraries
+or browser), not from the code: CI's suite on `da87859` already passed. No
+test was skipped, weakened or deleted. Eight M7 tests that pinned the old
+behaviour (blind 429 retries, 9-company batches, 1 s spacing, 24 h TTL,
+`configuration` as the canary reason) were updated to assert the new
+behaviour exactly. Fifteen new tests cover: no blind 429 retry, a long Retry-After stopping at once, an exact
+Retry-After honoured, 5xx backoff, the User-Agent kept, auto promotion and
+demotion, projection-only never promoting, the oldest-company fallback probe,
+sitemap 429s not gating the API fleet, no throttle meaning full rotation, the shipped configuration, the bootstrap anchor, 26 companies
+visited every 6 h over 24 h, a not-due window making zero requests, a cached
+revisit making one listing request and zero detail requests, and budget-limited
+scans counting as degraded.
 
 ## Canary results
 
