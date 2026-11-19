@@ -1210,7 +1210,9 @@ def run_all(recovery=None) -> list[dict]:
     if recovery:
         from workday_runtime import is_api
         # Healthy independent sources (including JioStar) precede the API budget.
-        scanned.sort(key=lambda c: is_api(sources_for(c)))
+        # ... and each data centre's recovery probe goes first among the API companies,
+        # so a healthy probe releases the rest of its data centre in the same run.
+        scanned.sort(key=lambda c: (is_api(sources_for(c)), recovery.order_key(c)))
 
     for company in scanned:
         previous = company.get("scan") if isinstance(company.get("scan"), dict) else {}
@@ -1297,7 +1299,8 @@ def run_all(recovery=None) -> list[dict]:
         from monitoring_health import report_actions, report_workday
         report_actions(companies)
         report_workday(recovery.mode, recovery.http.requests, len(recovery.selected), len(recovery.not_due),
-                       len(recovery.http.throttled), sum(recovery.http.cooling(h) for h in recovery.state["hosts"]))
+                       len(recovery.http.throttled), sum(recovery.http.cooling(h) for h in recovery.state["hosts"]),
+                       recovery.cluster_summary())
 
     # commit=False: alerts.py publishes the data (merge-safe) before and
     # after emailing — see alerts.py

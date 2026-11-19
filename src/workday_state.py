@@ -18,7 +18,23 @@ HEX = re.compile(r"[a-f0-9]{64}\Z")
 OUTCOMES = {"healthy", "degraded", "failed", "rate_limited", "deferred", "cooling_down", "not_checked", "needs_config"}
 CATEGORIES = {"", "rate_limit", "forbidden", "authentication", "not_found", "http_error", "server_error",
               "timeout", "network", "budget", "cooldown", "circuit", "state_unavailable", "configuration",
-              "incomplete", "invalid_response", "redirect", "rotation", "canary_gate"}
+              "incomplete", "invalid_response", "redirect", "rotation", "canary_gate", "cluster_gate"}
+# Rate-limit response headers worth keeping as evidence (values are bounded text).
+HEADER_ALLOW = ("retry-after", "ratelimit", "ratelimit-policy", "ratelimit-limit", "ratelimit-remaining",
+                "ratelimit-reset", "x-ratelimit-limit", "x-ratelimit-remaining", "x-ratelimit-reset",
+                "x-rate-limit-limit", "x-rate-limit-remaining", "x-rate-limit-reset", "server", "via")
+
+
+def safe_headers(headers) -> dict:
+    """Allow-listed, bounded, printable header values; never cookies or auth."""
+    out = {}
+    for name in HEADER_ALLOW:
+        value = headers.get(name) if headers is not None else None
+        if isinstance(value, str) and value:
+            value = "".join(ch for ch in value if 32 <= ord(ch) < 127)[:200]
+            if value:
+                out[name] = value
+    return out
 
 
 def validate_projection(rec: dict) -> None:
@@ -111,7 +127,11 @@ def validate(name: str, data: object) -> None:
     require(isinstance(data["hosts"], dict) and len(data["hosts"]) <= 1000)
     for host, obs in data["hosts"].items():
         require(bool(HOST.fullmatch(host)) and isinstance(obs, dict))
-        require(set(obs) == {"observed_at", "cooldown_until", "failures", "http_status", "failure_category", "retry_after_s", "retry_after_valid"})
+        base = {"observed_at", "cooldown_until", "failures", "http_status", "failure_category", "retry_after_s", "retry_after_valid"}
+        require(set(obs) in (base, base | {"headers"}))
+        if "headers" in obs:
+            require(isinstance(obs["headers"], dict) and len(obs["headers"]) <= len(HEADER_ALLOW))
+            require(all(k in HEADER_ALLOW and _text(v, 200) for k, v in obs["headers"].items()))
         require(_time(obs["observed_at"]) and _time(obs["cooldown_until"]))
         require(type(obs["failures"]) is int and 0 <= obs["failures"] <= 10000)
         require(obs["http_status"] is None or type(obs["http_status"]) is int and 100 <= obs["http_status"] <= 599)

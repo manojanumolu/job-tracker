@@ -10,11 +10,19 @@ root cause, request budget, configuration, verification and company status.
 * Workday API companies (`/wday/cxs/`) are revisited every **6 h**: 13 of the
   26 per 3 h window, oldest attempt first. A company checked within the
   revisit interval sends no request and keeps its healthy state.
-* Mode `auto` (the shipped default): while the newest HTTP 429 on any Workday
-  host is newer than the canary's (Sanofi, PwC) last real healthy scan, only
-  the canary is contacted; everyone else shows "waiting for the Workday
-  canary". A healthy canary scan restores full rotation automatically; any new
-  429 puts the fleet back behind the canary.
+* Mode `auto` (the shipped default) gates recovery **per Workday data centre**
+  (the `wdN` in the host: wd1, wd3, wd5, wd12). A data centre is gated while
+  the newest HTTP 429 on any of its API hosts is newer than its newest real
+  healthy scan. A gated data centre gets exactly one probe (configured
+  canaries Sanofi/PwC preferred in wd3, otherwise the oldest attempt) once
+  the latest cooldown among its throttled hosts has ended; one healthy probe
+  releases the whole data centre in the same run. A 429 anywhere in a data
+  centre closes it for the rest of that run. A throttle in one data centre
+  never holds back another (evidence: 15 Nov wd1-only and 16 Nov wd12-only
+  429 events). Gated companies show "waiting for the wdN recovery probe".
+* On a 429 the allow-listed rate-limit headers (Retry-After, RateLimit-*,
+  X-RateLimit-*, Server, Via; bounded text) are kept with the host's state
+  as evidence.
 * A 429 is retried only when it carries a valid Retry-After short enough for
   the run's 120 s retry budget. Otherwise: one request, then a durable host
   cooldown (3 h, doubling per repeat to 24 h; a longer Retry-After wins). Two

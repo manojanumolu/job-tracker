@@ -54,6 +54,12 @@ def is_workday(configs):
     return any(c.get("type") in ("workday", "workday_sitemap") for c in configs)
 
 
+def cluster(host):
+    """The Workday data centre of a host: "wd5" for tenant.wd5.myworkdayjobs.com."""
+    part = (host or "").split(".")
+    return part[1] if len(part) > 2 and part[1].startswith("wd") and part[1][2:].isdigit() else ""
+
+
 def hosts(configs):
     return sorted({urlsplit(c.get("api") or c.get("site") or "").hostname or "" for c in configs
                    if c.get("type") in ("workday", "workday_sitemap")})
@@ -114,44 +120,123 @@ class Recovery:
         self.selected = self.select(companies)
 
     def effective_mode(self, companies):
-        """"auto": the canary probes the shared Workday limit for everyone else.
+        """Recovery gating, decided per Workday data centre (the ``wdN`` in the host).
 
-        Full rotation resumes only once a canary company has completed a healthy
-        scan AFTER the most recent 429 seen on any Workday host; any later 429
-        drops the run back to canary-only. If no canary company can be probed
-        (removed, or blocked by policy), the oldest eligible API company is the probe.
+        "auto" (default): each data centre is gated independently. A data centre is
+        gated while the newest HTTP 429 on any of its API hosts is newer than the
+        newest REAL healthy scan of any company in it. A gated data centre gets
+        exactly one probe (configured canaries preferred) once the latest cooldown
+        among its throttled hosts has ended; one healthy probe releases the whole
+        data centre, even within the same run. A throttle in wd3 no longer holds
+        back wd1, wd5 or wd12 (history: 15 Nov wd1-only and 16 Nov wd12-only 429s).
+        "canary": legacy global gate (only configured canaries may probe).
+        Returns "full" when nothing is gated, else "canary"/"partial" for summaries.
         """
         mode = self.config["mode"]
+        self.api_companies = [c for c in companies if is_api(self.sources_for(c))]
         if mode != "auto":
             return mode
-        # API hosts only: the shared limit is on the CXS API; JioStar's sitemap is separate.
-        api_hosts = {h for c in companies if is_api(self.sources_for(c)) for h in hosts(self.sources_for(c))}
-        throttled = [epoch(h.get("observed_at")) for name, h in self.state["hosts"].items()
-                     if name in api_hosts and h.get("failure_category") == "rate_limit"]
-        if not throttled:
-            return "full"
-        ids = {c["id"] for c in companies}
-        canaries = [cid for cid in self.config["canary_company_ids"] if cid in ids]
-        # last_attempt moves only when requests were really sent; observed_at moves
-        # on every projection, so it could not prove the canary was contacted.
-        healthy = [epoch(rec.get("last_attempt")) for cid, rec in self.state["companies"].items()
-                   if cid in canaries and rec.get("outcome") == "healthy"]
-        return "full" if healthy and max(healthy) > max(throttled) else "canary"
+        return "partial" if self.gated_clusters() else "full"
+
+    def cluster_of(self, company):
+        names = sorted({cluster(h) for h in hosts(self.sources_for(company))} - {""})
+        return names[0] if names else ""
+
+    def cluster_status(self, name):
+        """(gated, throttled_at, cooldown_until) for one data centre, from durable state."""
+        members = [c for c in getattr(self, "api_companies", []) if self.cluster_of(c) == name]
+        api_hosts = {h for c in members for h in hosts(self.sources_for(c))}
+        limited = [o for h, o in self.state["hosts"].items() if h in api_hosts and o.get("failure_category") == "rate_limit"]
+        if not limited:
+            return False, 0, 0
+        throttled_at = max(epoch(o.get("observed_at")) for o in limited)
+        until = max(epoch(o.get("cooldown_until")) for o in limited)
+        # last_attempt moves only when requests were really sent (never on a projection)
+        healthy = [epoch(self.state["companies"].get(c["id"], {}).get("last_attempt")) for c in members
+                   if self.state["companies"].get(c["id"], {}).get("outcome") in ("healthy", "degraded")]
+        return not (healthy and max(healthy) > throttled_at), throttled_at, until
+
+    def gated_clusters(self):
+        names = {self.cluster_of(c) for c in getattr(self, "api_companies", [])} - {""}
+        return {n for n in names if self.cluster_status(n)[0]}
+
+    def _policy_blocked(self, company):
+        return any(self.state["hosts"].get(h, {}).get("failure_category") in ("forbidden", "authentication", "redirect")
+                   for h in hosts(self.sources_for(company)))
 
     def probes(self, companies):
-        ids = [c["id"] for c in companies if is_api(self.sources_for(c))]
-        canaries = [cid for cid in self.config["canary_company_ids"] if cid in ids]
-        policy_ok = [cid for cid in canaries
-                     if not any(self.state["hosts"].get(h, {}).get("failure_category") in ("forbidden", "authentication", "redirect")
-                                for h in hosts(self.sources_for(next(c for c in companies if c["id"] == cid))))]
-        if policy_ok:
-            return set(policy_ok)
-        oldest = sorted((epoch(self.state["companies"].get(c["id"], {}).get("last_attempt") or c.get("last_checked")), c["id"])
-                        for c in companies if c["id"] in ids)
-        return {oldest[0][1]} if oldest else set()
+        api = [c for c in companies if is_api(self.sources_for(c)) and not self._policy_blocked(c)]
+        canaries = self.config["canary_company_ids"]
+        if self.mode == "canary":   # legacy global gate
+            preferred = [c["id"] for c in api if c["id"] in canaries]
+            if preferred:
+                return set(preferred)
+            oldest = sorted((self.attempt(c), c["id"]) for c in api)
+            return {oldest[0][1]} if oldest else set()
+        self.probe_clusters = {}
+        for name in sorted(self.gated_clusters()):
+            self._probe_for(name)
+        return set(self.probe_clusters.values())
+
+    def _probe_for(self, name):
+        """Pick (once per run) the single probe for a gated data centre, or None while
+        its newest throttle still cools down. Configured canaries are preferred."""
+        if name in self.probe_clusters:
+            return self.probe_clusters[name]
+        _, _, until = self.cluster_status(name)
+        if until > self.wall():
+            return None
+        canaries = self.config["canary_company_ids"]
+        members = [c for c in getattr(self, "api_companies", []) if self.cluster_of(c) == name
+                   and not self._policy_blocked(c)
+                   and not any(self.http.cooling(h) for h in hosts(self.sources_for(c)))]
+        if not members:
+            return None
+        rank = {cid: i for i, cid in enumerate(canaries)}     # configured order: sanofi before pwc
+        members.sort(key=lambda c: (rank.get(c["id"], len(rank)), self.attempt(c), c["id"]))
+        self.probe_clusters[name] = members[0]["id"]
+        return members[0]["id"]
+
+    def gate_reason(self, company):
+        """"" when the company may be contacted as far as recovery gating goes."""
+        if self.mode == "canary":
+            return "" if company["id"] in getattr(self, "probe_ids", ()) else "canary_gate"
+        name = self.cluster_of(company)
+        # A 429 anywhere in a data centre during THIS run closes that data centre for
+        # the rest of the run (15 Nov: one wd1 429 was followed by four more).
+        if name and any(cluster(h) == name for h in self.http.throttled):
+            return "cluster_gate"
+        if self.config["mode"] != "auto" or not name or not self.cluster_status(name)[0]:
+            return ""          # data centre not gated (never throttled, or released by a healthy scan)
+        if company["id"] in getattr(self, "probe_ids", ()):
+            return ""
+        # A data centre whose cooldown ended after this run started gets its one probe now.
+        if not hasattr(self, "probe_clusters"):
+            self.probe_clusters = {}
+        if name not in self.probe_clusters and self._probe_for(name) == company["id"]:
+            self.probe_ids = set(getattr(self, "probe_ids", ())) | {company["id"]}
+            return ""
+        return "cluster_gate"
+
+    def cluster_summary(self):
+        """e.g. "wd1 released, wd3 gated (probe none, cooling), wd5 gated (probe probed)" - ids are not printed."""
+        names = sorted({self.cluster_of(c) for c in getattr(self, "api_companies", [])} - {""})
+        parts = []
+        for n in names:
+            gated, _, until = self.cluster_status(n)
+            if not gated:
+                parts.append(f"{n} open")
+            else:
+                probe = getattr(self, "probe_clusters", {}).get(n)
+                parts.append(f"{n} gated ({'probe sent' if probe else 'cooling' if until > self.wall() else 'no probe'})")
+        return ", ".join(parts)
+
+    def order_key(self, company):
+        """Probes first, so one healthy probe can release its data centre in the same run."""
+        return 0 if company["id"] in getattr(self, "probe_ids", ()) else 1
 
     def select(self, companies):
-        self.probe_ids = self.probes(companies) if self.mode == "canary" else set()
+        self.probe_ids = self.probes(companies) if self.mode in ("canary", "partial") else set()
         eligible = []
         for c in companies:
             cfg = self.sources_for(c)
@@ -161,9 +246,9 @@ class Recovery:
             if not self.due(c):
                 self.not_due.add(c["id"])   # checked recently enough: no request this window
                 continue
-            # Old attempts first: a permanently failing portal cannot monopolize slots.
-            eligible.append((attempt, c["id"]))
-        return {cid for _, cid in sorted(eligible)[:self.config["batch_size"]]}
+            # Probes first, then oldest attempts: a permanently failing portal cannot monopolize slots.
+            eligible.append((self.order_key(c), attempt, c["id"]))
+        return {cid for _, _, cid in sorted(eligible)[:self.config["batch_size"]]}
 
     def attempt(self, company):
         prev = self.state["companies"].get(company["id"], {})
@@ -194,10 +279,12 @@ class Recovery:
         if is_api(cfg):
             if self.mode == "paused":
                 return "configuration"
-            if self.mode == "canary" and company["id"] not in getattr(self, "probe_ids", ()):
-                return "canary_gate"
         if any(self.http.cooling(h) or h in self.http.closed for h in hosts(cfg)):
-            return "cooldown"
+            return "cooldown"       # a host's own cooldown is reported first ("cooling down until ...")
+        if is_api(cfg):
+            gate = self.gate_reason(company)
+            if gate:
+                return gate
         if is_api(cfg) and len(self.http.throttled) >= self.config["api_breaker_hosts"]:
             return "circuit"
         if is_api(cfg) and selection and company["id"] not in self.selected:
@@ -205,8 +292,7 @@ class Recovery:
             # (checked above, strictly) is admitted while the batch still has room,
             # instead of losing a whole 3 h window by seconds (seen 19 Nov 00:03).
             if (company["id"] not in self.not_due and self.due(company)
-                    and len(self.selected) < self.config["batch_size"]
-                    and (self.mode != "canary" or company["id"] in self.probe_ids)):
+                    and len(self.selected) < self.config["batch_size"]):
                 self.selected.add(company["id"])
                 return ""
             return "rotation"

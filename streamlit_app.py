@@ -2502,6 +2502,9 @@ def portal_status(c: dict) -> tuple[str, str]:
         label = labels[recovery["outcome"]]
         if recovery.get("failure_category") == "canary_gate":
             label = "Deferred: waiting for the Workday canary"
+        elif recovery.get("failure_category") == "cluster_gate":
+            dc = next((p.split(".")[1] for p in str(recovery.get("host", "")).split(", ") if p.count(".") > 2), "")
+            label = f"Deferred: waiting for the {dc} recovery probe" if dc else "Deferred: waiting for a recovery probe"
         elif recovery.get("outcome") == "cooling_down" and recovery.get("cooldown_until"):
             until = _parse_iso(recovery["cooldown_until"])
             if until:
