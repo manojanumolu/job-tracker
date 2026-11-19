@@ -381,3 +381,20 @@ def test_monitoring_shows_when_a_failing_portal_last_succeeded(app, tmp_path):
     (tmp_path / "data" / "companies.json").write_text(json.dumps(companies))
     html = _html(app([], page="monitoring"))
     assert "listing page timed out · last succeeded 2 days ago" in html
+
+
+def test_a_targeted_workday_run_never_shows_as_the_last_scan(app, tmp_path):
+    """The Last scan card is the latest FULL scan: a Workday-only recovery run
+    stamps last_checked on the companies it probed, but is not the last scan."""
+    _stamp(tmp_path, timedelta(hours=4))
+    path = tmp_path / "data" / "companies.json"
+    companies = json.loads(path.read_text("utf-8"))
+    now = datetime.now(timezone.utc)
+    probed = next(c for c in companies if "myworkdayjobs.com/" in c.get("url", "") and ".wd102." not in c["url"])
+    probed["last_checked"] = (now - timedelta(minutes=8)).isoformat()
+    probed["scan"] = {**(probed.get("scan") or {}), "run": {
+        "recovery_version": 1, "run_id": "wd-1", "scope": "workday", "started_at": (now - timedelta(minutes=9)).isoformat(),
+        "finished_at": (now - timedelta(minutes=8)).isoformat(), "jobs_found": 0, "new_jobs": 0, "portals": 1, "portals_failed": 1}}
+    path.write_text(json.dumps(companies))
+    html = _html(app([]))
+    assert "Last scan 4h ago" in html and "Last scan 8 min ago" not in html

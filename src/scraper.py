@@ -88,6 +88,13 @@ COMPANY_SOURCES: dict[str, list[dict]] = {
              "size_guard": {"min_ratio": 0.75, "first_scan_min": 1000, "settle_scans": 8, "reread_wait_s": 30}}],
     "servicenow": [{"type": "job_feed", "url": "https://careers.servicenow.com/jobs/xml/"}],
     "swiggy": [{"type": "swiggy"}],
+    # Workday CXS is blocked for the GitHub runners by Cloudflare (HTTP 429 on every
+    # myworkdayjobs.com host since 16 Nov 2026). These employers' own career sites run
+    # on Eightfold; checked live 19 Nov 2026 (Micron 315, NVIDIA 243 India listings; job
+    # pages readable; robots.txt allows /careers and /api/apply). Their requisition ids
+    # match the Workday ones, so jobs already recorded from Workday are not re-alerted.
+    "c1793696369": [{"type": "eightfold", "host": "https://careers.micron.com", "domain": "micron.com", "location": "India"}],
+    "c1793696370": [{"type": "eightfold", "host": "https://jobs.nvidia.com", "domain": "nvidia.com", "location": "India"}],
 }
 # kept for callers that only need "which companies use an API"
 COMPANY_API = {cid: {"type": cfgs[0]["type"], **cfgs[0]} for cid, cfgs in COMPANY_SOURCES.items()}
@@ -1097,6 +1104,18 @@ def _posting_key(url: str) -> str:
     return f"{urlparse(url).netloc.lower().removeprefix('www.')}|{ident}" if ident else ""
 
 
+def _requisition(job: dict) -> str:
+    """The employer's requisition id ("JR112672"), whichever career site the
+    posting was read from: a Workday URL ends with it, and the official
+    Eightfold sites that replaced blocked Workday tenants (Nov 2026) report the
+    same id. "" when there is none."""
+    for value in (((job.get("evidence") or {}).get("job_id") or ""), ats_job_id(job.get("url", ""))):
+        ident = value.split(":", 1)[-1].strip().upper()
+        if re.fullmatch(r"(?:JR|R)-?\d{4,}(?:-\d+)?", ident):
+            return ident
+    return ""
+
+
 def merge_new_jobs(seen: list[dict], found: list[dict], now: datetime | None = None,
                    company_id: str | None = None, stats: Counter | None = None) -> list[dict]:
     """New records for ``found`` jobs that aren't already known. Identity is
@@ -1117,6 +1136,9 @@ def merge_new_jobs(seen: list[dict], found: list[dict], now: datetime | None = N
     known = {record_uid(j) for j in seen if isinstance(j, dict)}
     by_uid = {record_uid(j): j for j in seen if isinstance(j, dict)}
     known_postings = {k for k in (_posting_key(j.get("url", "")) for j in seen if isinstance(j, dict)) if k}
+    # the same requisition read from another official site of the same company is not a new job
+    known_reqs = {((j.get("company") or "").strip().lower(), _requisition(j)) for j in seen
+                  if isinstance(j, dict) and _requisition(j)}
     by_repost_key: dict[tuple, list[dict]] = {}
     for j in seen:
         if isinstance(j, dict):
@@ -1138,6 +1160,11 @@ def merge_new_jobs(seen: list[dict], found: list[dict], now: datetime | None = N
         rp = _repost_key(job)
         pk = _posting_key(job["url"])
         if uid in known or (pk and pk in known_postings):
+            continue
+        req = _requisition(job)
+        if req and ((job.get("company") or "").strip().lower(), req) in known_reqs:
+            log.info("  %s: %s — requisition %s already recorded from another official site",
+                     job["company"], job["title"], req)
             continue
         if rp and rp in reposts:
             last = _last_sighting_day(by_repost_key.get(rp, []), today)
