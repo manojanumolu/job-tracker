@@ -1,8 +1,28 @@
 {
   "schema_version": 1,
-  "run_id": "44fd7384cfbf45ecb4c930b92ea0ec34",
-  "updated_at": "2026-11-19T09:10:29.340663+00:00",
+  "run_id": "7456b88642384ae296238ef10600a806",
+  "updated_at": "2026-11-19T12:10:13.955866+00:00",
   "entries": {
+    "ce297d4fb5544a43fd406732b9f060df17c7693d471f0614288d67a812cab9c4": {
+      "company_id": "jiohotstar",
+      "source": "fe566b637b6b43d4f0d863aa620c0b7bbfc67273cbd89fec78fcc8b32e8da2d0",
+      "fingerprint": "00500b1bd547441960d4def40f92f3de45fc523bc6d06c6310b3cf777b70e969",
+      "rules": "16f10301381ea1701a947ef62cf67649cc0bab263dcc196d7d943c2269aacd90",
+      "evaluated_at": "2026-11-19T12:08:56.664779+00:00",
+      "expires_at": "2026-11-22T12:08:56.664785+00:00",
+      "title": "SOC Analyst",
+      "detail": {
+        "ok": true,
+        "description": "The Role We’re looking for a sharp, self-driven SOC L2 Analyst to investigate complex threats, lead incident response, and strengthen detection across JioStar’s large-scale media and streaming infrastructure. Key Responsibilities ● Investigate and lead response for escalated / high-severity security incidents end-to-end. ● Perform threat hunting, log analysis, and forensics across endpoints, network, and cloud. ● Conduct malware analysis and extract actionable IoCs and TTPs. ● Tune SIEM rules, IDS signatures, DLP and XDR policies to reduce noise and improve ● coverage. ● Monitor cloud environments (AWS / Azure / GCP) for misconfigurations and active ● threats. ● Write incident reports and post-mortems; mentor L1 analysts. ● Recommend countermeasures to protect against malware attacks ● Collaborating with necessary teams to identify and mitigate malware attacks ● Follow up on timely closure of the tickets (within SLA) ● Liaise with RCA and provide future recommendations. ● Monitor for attacks, intrusions and unusual, unauthorized, or illegal activity Required Experience and Skillsets ● 4+ years of hands-on incident handling and SOC operations experience. ● Bachelor’s degree in computer science, information systems, or a related technical ● discipline or equivalent professional experience directly related to information ● security, cyber, or computer network defense. ● Strong proficiency with SIEM, IDS/IPS, XDR/EDR, DLP, IAM/ SSO, Active ● Directory. ● Deep knowledge of MITRE ATT&CK and common attacker TTPs and tools. ● Solid understanding of networking (TCP/IP, DNS, TLS), OS internals, and web ● concepts (APIs, Cookies, Proxies, Firewalls, VPNs, Load Balancers). ● Comfortable in fast-paced environments with rapid context-switching. ● Analytical mindset, strong problem-solving skills, and a genuine curiosity for new ● threats and techniques. Good to Have ● Cloud security experience — AWS, Azure, or GCP native security services. ● Python scripting for automation, log parsing, or detection workflows. ● Certifications: CEH, or equivalent cloud security certs. Perched firmly at the nucleus of spellbinding content and innovative technology, JioStar is a leading global media & entertainment company that is reimagining the way audiences consume entertainment and sports. Its television network and streaming service together reach more than 750 million viewers every week, igniting the dreams and aspirations of hundreds of million people across geographies. JioStar India Private Limited (formerly known as Star India Private Limited) is an equal opportunity employer. The company values diversity and its mission is to create a workplace where everyone can bring their authentic selves to work. The company ensures that the work environment is free from any discrimination against persons with disabilities, gender, gender identity and any other characteristics or status that is legally protected.",
+        "location": "Mumbai - Urmi, India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "",
+        "matched": "JobPosting on the job page",
+        "posted_at": "2026-11-19"
+      },
+      "verdict": "rejected"
+    },
     "85c2d48b4beb3e280cf7236e7c6af774fafb3d85aa6d0a74fdc4622f001dfe17": {
       "company_id": "jiohotstar",
       "source": "fe566b637b6b43d4f0d863aa620c0b7bbfc67273cbd89fec78fcc8b32e8da2d0",
