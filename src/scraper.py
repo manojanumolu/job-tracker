@@ -104,6 +104,13 @@ COMPANY_SOURCES: dict[str, list[dict]] = {
     "c1793696380": [{"type": "phenom", "base": "https://jobs.thecignagroup.com/us/en", "country": "India"}],      # 106 (Evernorth)
     "c1793696389": [{"type": "phenom", "base": "https://jobs.thermofisher.com/global/en", "country": "India"}],   # 318
     "c1793696377": [{"type": "phenom", "base": "https://careers.wbd.com/global/en", "country": "India"}],         # 7
+    # Official Radancy career sites (sources.career_sitemap_listings): robots.txt disallows only
+    # /search-jobs/; the published sitemap lists every job page by city; each page's JobPosting
+    # identifier is the Workday requisition id. Checked live 20 Nov 2026.
+    "sanofi": [{"type": "career_sitemap", "sitemap": "https://jobs.sanofi.com/sitemap.xml"}],                    # 82 of 1,451
+    "c1793696374": [{"type": "career_sitemap", "sitemap": "https://www.synchronycareers.com/sitemap.xml"}],      # 14 of 29 (Synchrony)
+    # S&P Global's official careers site runs on Jibe/iCIMS (the existing adapter): 57 India of 359
+    "c1793696385": [{"type": "jibe", "host": "https://careers.spglobal.com"}],
 }
 # kept for callers that only need "which companies use an API"
 COMPANY_API = {cid: {"type": cfgs[0]["type"], **cfgs[0]} for cid, cfgs in COMPANY_SOURCES.items()}
@@ -113,7 +120,8 @@ _SOURCE_LABELS = {"workday": "Workday API", "accenture": "Accenture job-search A
                   "eightfold": "Eightfold API", "successfactors": "SuccessFactors career site", "infosys": "Infosys jobs API",
                   "google": "Google Careers site", "eightfold_v2": "Eightfold API", "oracle": "Oracle Recruiting API",
                   "ibm": "IBM careers API", "job_feed": "Official job feed", "swiggy": "Swiggy careers site",
-                  "workday_sitemap": "Workday sitemap + job pages", "phenom": "Phenom career site"}
+                  "workday_sitemap": "Workday sitemap + job pages", "phenom": "Phenom career site",
+                  "career_sitemap": "Career-site sitemap + job pages"}
 
 
 def sources_for(company: dict) -> list[dict]:

@@ -20,7 +20,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from typing import Callable
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 import httpx
 from workday_http import CURRENT, WorkdayStop, request as workday_request
@@ -1187,6 +1187,10 @@ def jsonld_page_detail(page_html: str, listing: Listing) -> Detail:
     title = str(posting.get("title") or "").strip()
     if title:
         listing.title = title                       # the page's own title, not the URL slug
+    ident = posting.get("identifier")
+    ident = ident.get("value") if isinstance(ident, dict) else ident
+    if isinstance(ident, (str, int)) and str(ident).strip() and not listing.job_id:
+        listing.job_id = str(ident).strip()         # the employer's requisition id (Radancy sites)
     places = posting.get("jobLocation")
     places = [p for p in (places if isinstance(places, list) else [places]) if isinstance(p, dict)]
 
@@ -1369,6 +1373,70 @@ def phenom_detail(client: httpx.Client, listing: Listing) -> Detail:
     return jsonld_page_detail(r.text, listing)
 
 
+# ---------------------------------------------------------------------------
+# Official career-site sitemaps (Nov 2026): Sanofi and Synchrony run their
+# careers sites on Radancy, outside the Cloudflare-blocked myworkdayjobs.com.
+# robots.txt disallows only /search-jobs/; the published sitemap.xml lists
+# every job page as .../job/<city>/<title>/<org>/<id>, and each job page has
+# a schema.org JobPosting whose identifier is the Workday requisition id.
+# ---------------------------------------------------------------------------
+CAREER_SITEMAP_MAX_BYTES = 8 * 1024 * 1024
+
+
+def career_sitemap_listings(client: httpx.Client, cfg: dict) -> SourceResult:
+    url = cfg["sitemap"]
+    host = urlparse(url).netloc
+    try:
+        r = client.get(url, headers={"Accept": "application/xml"})
+    except httpx.TimeoutException as e:
+        raise SourceError("timeout reading the career-site sitemap", "failing") from e
+    except httpx.HTTPError as e:
+        raise SourceError(f"network error reading the career-site sitemap: {type(e).__name__}", "failing") from e
+    if r.status_code in (429, 500, 502, 503, 504):
+        raise SourceError(f"HTTP {r.status_code} from the career-site sitemap", "failing")
+    if r.status_code >= 400:
+        raise SourceError(f"HTTP {r.status_code} from the career-site sitemap")
+    if len(r.content) > CAREER_SITEMAP_MAX_BYTES or re.search(r"<!\s*(?:DOCTYPE|ENTITY)", r.text, re.I):
+        raise SourceError("unsafe or oversized sitemap")
+    if "<urlset" not in r.text[:2000]:
+        raise SourceError("the career-site sitemap is incomplete or not a sitemap")
+    listings, seen = [], 0
+    for loc in dict.fromkeys(html_lib.unescape(u) for u in _SITEMAP_LOC_RE.findall(r.text)):
+        p = urlparse(loc)
+        if p.scheme != "https" or p.netloc != host or "/job/" not in p.path:
+            continue
+        seen += 1
+        parts = [unquote(x) for x in p.path.split("/job/", 1)[1].strip("/").split("/")]
+        if len(parts) < 3:
+            continue
+        city, slug = parts[0].replace("-", " "), parts[1]
+        if not is_india(city):
+            continue
+        listing = Listing(title=_slug_title(slug).title(), url=loc, location=city.title(), posting_evidence=True)
+        listing.fetch_detail = lambda lst=listing: career_sitemap_detail(client, lst)
+        listings.append(listing)
+    if not seen:
+        raise SourceError("the career-site sitemap lists no job pages (unexpected format)")
+    return SourceResult(listings, seen=seen)
+
+
+def career_sitemap_detail(client: httpx.Client, listing: Listing) -> Detail:
+    """The listing's title comes from the URL slug, so the page's JobPosting is
+    identified by its own url (this page) and its real title is used."""
+    try:
+        r = client.get(listing.url, headers={"Accept": "text/html"})
+    except httpx.HTTPError as e:
+        return Detail.unreadable(f"network error reading job page: {type(e).__name__}")
+    if r.status_code >= 400:
+        return Detail.unreadable(f"HTTP {r.status_code} from job page")
+    want = {listing.url.rstrip("/"), str(r.url).rstrip("/")}
+    for posting in jsonld_postings(r.text):
+        if isinstance(posting, dict) and str(posting.get("url") or "").rstrip("/") in want and posting.get("title"):
+            listing.title = str(posting["title"]).strip()
+            break
+    return jsonld_page_detail(r.text, listing)
+
+
 def read_source(client: httpx.Client, cfg: dict) -> SourceResult:
     kind = cfg.get("type")
     if kind == "workday":
@@ -1405,4 +1473,6 @@ def read_source(client: httpx.Client, cfg: dict) -> SourceResult:
         return swiggy_listings(client, cfg)
     if kind == "phenom":
         return phenom_listings(client, cfg)
+    if kind == "career_sitemap":
+        return career_sitemap_listings(client, cfg)
     raise SourceError(f"unknown source type {kind!r}", "needs_config")
