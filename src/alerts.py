@@ -153,6 +153,27 @@ def _usable_recipient(addr: str) -> bool:
     return bool(addr) and "@" in addr and bool(email_domain(addr))
 
 
+MONITORING_MESSAGE = "chore: record monitoring incidents [skip ci]"
+
+
+def _monitoring(companies, recipient, publisher, now, send=None) -> None:
+    """The monitoring-failure / recovery email (monitoring_alerts.py). Never
+    blocks the job alerts: any problem here is logged and skipped."""
+    import json
+    import monitoring_alerts
+    from config_store import DATA
+    try:
+        path = DATA / "monitoring_incidents.json"
+        ledger = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"open": {}}
+        if send is None:
+            from notifier import _send as send
+        new = monitoring_alerts.run(companies, ledger, recipient, send, now)
+        if new is not None and publisher(MONITORING_MESSAGE, {monitoring_alerts.LEDGER: new}):
+            log.info("Monitoring incidents recorded (%d open)", len(new.get("open", {})))
+    except Exception as e:      # the type only: never the address
+        log.error("Monitoring-failure email skipped (%s)", type(e).__name__)
+
+
 def run(send=None, publisher=publish, now: datetime | None = None, run_id: str | None = None) -> int:
     if send is None:
         from notifier import send_alerts as send
@@ -192,6 +213,7 @@ def run(send=None, publisher=publish, now: datetime | None = None, run_id: str |
     if recovery_data:
         from scan_schedule import _summary
         _summary("Validated scan, cooldown and cache data published. Portal recovery is reported separately.", "Scan publication")
+    _monitoring(companies, recipient, publisher, now)
     if not keys:
         _report(stats, load_seen_jobs(), now)
         log.info("No new alerts")

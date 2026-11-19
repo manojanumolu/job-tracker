@@ -18,6 +18,8 @@ from pathlib import Path
 import pytest
 
 import scan_schedule
+
+THREE_H = {"scan_interval_hours": 3}     # these cases were written for 3 h windows; still a supported setting
 import user_alerts  # noqa: F401  (the personal alert pass still imports cleanly)
 from snapshot_cache import SnapshotCache
 from test_streamlit_app import _html, app  # noqa: F401  (fixture re-export)
@@ -119,8 +121,8 @@ def test_personal_alert_cadence_is_unchanged():
 @pytest.mark.parametrize("minute", [17, 47])
 def test_both_plan_minutes_scan_when_due(minute):
     companies = [{"id": "a", "last_checked": u(12, 6, 58).isoformat()}]
-    assert scan_schedule.plan("schedule", scan_schedule.PLAN_CRON, {}, companies, u(12, 9, minute))["scan"] is True
-    assert scan_schedule.plan("schedule", scan_schedule.PLAN_CRON, {}, companies, u(12, 8, minute))["scan"] is False
+    assert scan_schedule.plan("schedule", scan_schedule.PLAN_CRON, THREE_H, companies, u(12, 9, minute))["scan"] is True
+    assert scan_schedule.plan("schedule", scan_schedule.PLAN_CRON, THREE_H, companies, u(12, 8, minute))["scan"] is False
 
 
 def test_the_incident_scan_is_overdue_and_the_next_slot_is_the_next_tick():
@@ -155,7 +157,7 @@ def test_a_scan_that_overran_a_boundary_counts_for_the_window_it_started_in():
     companies = [{"id": "a", "last_checked": u(12, 8, 58).isoformat()},
                  {"id": "b", "last_checked": u(12, 9, 3).isoformat()}]
     assert scan_schedule.last_scan(companies) == u(12, 8, 58)
-    assert scan_schedule.plan("schedule", scan_schedule.PLAN_CRON, {}, companies, u(12, 9, 17))["scan"] is True
+    assert scan_schedule.plan("schedule", scan_schedule.PLAN_CRON, THREE_H, companies, u(12, 9, 17))["scan"] is True
 
 
 def test_the_plan_step_never_records_a_scan():
@@ -166,7 +168,7 @@ def test_the_plan_step_never_records_a_scan():
     assert "scraper.py" not in plan_job and "alerts.py" not in plan_job
     companies = [{"id": "a", "last_checked": u(12, 6, 58).isoformat()}]
     before = json.dumps(companies)
-    scan_schedule.plan("schedule", scan_schedule.PLAN_CRON, {}, companies, u(12, 13, 17))
+    scan_schedule.plan("schedule", scan_schedule.PLAN_CRON, THREE_H, companies, u(12, 13, 17))
     assert json.dumps(companies) == before
 
 
@@ -218,12 +220,12 @@ def _overall(html):
     return re.search(r'<span class="chip live (\w+)"><span class="dot \w+"></span>([^<]+)</span>', html).groups()
 
 
-def test_a_six_hour_old_scan_is_overdue_not_healthy(app, tmp_path):
-    n = _stamp(tmp_path, timedelta(hours=6))
+def test_a_twelve_hour_old_scan_is_overdue_not_healthy(app, tmp_path):
+    n = _stamp(tmp_path, timedelta(hours=12))          # 6 h windows: at least one whole window missed
     html = _html(app([]))
     assert _overall(html) == ("delayed", "Scan overdue")
     assert f"{n} healthy" in html                      # the portals themselves answered fine
-    assert "Last scan 6h ago" in html
+    assert "Last scan 12h ago" in html
 
 
 def test_a_day_old_scan_is_delayed(app, tmp_path):
@@ -277,7 +279,7 @@ def test_duplicate_triggers_in_one_window_scan_once():
                                    ("workflow_dispatch", "", "plan", u(12, 9, 12)),
                                    ("schedule", scan_schedule.PLAN_CRON, "", u(12, 9, 17)),
                                    ("schedule", scan_schedule.PLAN_CRON, "", u(12, 10, 47))]:
-        if scan_schedule.plan(event, sched, {}, companies, at, mode=mode or "scan")["scan"]:
+        if scan_schedule.plan(event, sched, THREE_H, companies, at, mode=mode or "scan")["scan"]:
             scans += 1
             companies = [{"id": "a", "last_checked": (at + timedelta(minutes=1)).isoformat()}]
     assert scans == 1

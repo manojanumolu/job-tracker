@@ -312,25 +312,25 @@ def _attempt(run, cos, chosen):
                                                "outcome": "healthy", "pending": {}}
 
 
-def test_rotation_covers_26_every_6_hours_with_half_per_window(tmp_path, clock, cfg):
-    """3 h scan windows; each Workday API company is visited every 6 h, 13 per window."""
+def test_rotation_covers_26_every_6_hours_in_every_window(tmp_path, clock, cfg):
+    """6 h scan windows (Nov 2026); all 26 Workday API companies are visited in every window."""
     cos = companies()
     visits = {c["id"]: [] for c in cos}
     state = None
-    for window in range(8):                        # 24 h of 3 h windows
+    for window in range(4):                        # 24 h of 6 h windows
         run = recovery(tmp_path, clock, cfg, cos)
         if state:
             run.state["companies"] = state
             run.not_due = set(); run.selected = run.select(cos)
-        assert len(run.selected) == 13
+        assert len(run.selected) == 26
         assert not run.selected & run.not_due
         for cid in run.selected:
             visits[cid].append(clock.now())
         _attempt(run, cos, run.selected)
         state = run.state["companies"]
-        clock.sleep(10800 + 120)                   # windows start a little late
+        clock.sleep(21600 + 120)                   # windows start a little late
     for cid, times in visits.items():
-        assert len(times) == 4, cid                # 4 visits a day: every 6 h, never 3 h
+        assert len(times) == 4, cid                # 4 visits a day: every 6 h
         assert all(6 * 3600 <= b - a <= 6.2 * 3600 for a, b in zip(times, times[1:]))
 
 
@@ -343,9 +343,9 @@ def test_not_due_company_is_reported_healthy_not_deferred(tmp_path, clock, cfg):
 
 
 def test_overdue_attempt_priority_and_cooldown_does_not_reset_success(tmp_path, clock, cfg):
-    cos = companies(15)
+    cos = companies(28)
     run = recovery(tmp_path, clock, cfg, cos)
-    assert "c00" in run.selected and "c14" not in run.selected
+    assert "c00" in run.selected and "c27" not in run.selected      # batch 26: the 27th and 28th wait
     c = cos[0]
     before = copy.deepcopy(c)
     projection = run.projection(c, "cooling_down", "cooldown")
@@ -747,7 +747,7 @@ def test_bootstrap_cooldown_counts_from_the_recorded_429(tmp_path, clock, cfg):
 
 def test_shipped_configuration_is_auto_6h_and_paced():
     c = configuration()
-    assert c["mode"] == "auto" and c["revisit_hours"] == 6 and c["batch_size"] == 13
+    assert c["mode"] == "auto" and c["revisit_hours"] == 6 and c["batch_size"] == 26
     assert c["max_requests"] == 600
     assert c["global_spacing_s"] >= 2 and c["host_spacing_s"] >= 2 and c["api_breaker_hosts"] == 2
 
@@ -1006,8 +1006,8 @@ def test_workday_only_run_never_counts_as_the_windows_full_scan():
                            "finished_at": "2026-11-19T07:46:00+00:00", "jobs_found": 0, "new_jobs": 0, "portals": 1, "portals_failed": 0}}}
     cos = [copy.deepcopy(NON_API), wd]
     assert scan_schedule.last_scan(cos) == datetime(2026, 11, 19, 6, 3, 14, tzinfo=timezone.utc)
-    nine = datetime(2026, 11, 19, 9, 2, tzinfo=timezone.utc)
-    assert scan_schedule.plan("workflow_dispatch", "", {}, cos, nine, mode="plan")["scan"]   # 09:00 window still scans
+    noon = datetime(2026, 11, 19, 12, 2, tzinfo=timezone.utc)
+    assert scan_schedule.plan("workflow_dispatch", "", {}, cos, noon, mode="plan")["scan"]   # 12:00 window still scans
     latest = scan_schedule.latest_run(cos)
     assert latest and latest["portals"] == 44                          # dashboard summary not blanked
 
@@ -1096,3 +1096,30 @@ def test_workflow_passes_scope_to_plan_and_scraper():
     assert "options: [all, workday]" in text
     assert "SCOPE: ${{ inputs.scope || 'all' }}" in text and "JT_SCAN_SCOPE: ${{ inputs.scope || 'all' }}" in text
     assert "data/workday_scan_state.json" in text.split("Decide what this run does")[0]
+
+
+@pytest.mark.parametrize("n,batch", [(100, 100), (150, 75)])
+def test_load_simulation_for_100_and_150_workday_companies(tmp_path, clock, cfg, n, batch):
+    """Scaling (Nov 2026): with batch_size raised to the Workday company count
+    (bound 100), every company is covered within ceil(n / batch) windows,
+    oldest attempt first, none skipped, and the per-window selection never
+    exceeds the batch. The 600-request cap still bounds each run: at ~3
+    requests per healthy company (listing page + new details; known
+    postings come from the 72 h verdict cache) 150 companies need ~450."""
+    cfg.update(batch_size=batch)
+    cos = companies(n)
+    visits = {c["id"]: 0 for c in cos}
+    state, windows = None, -(-n // batch)
+    for _ in range(windows):
+        run = recovery(tmp_path, clock, cfg, cos)
+        if state:
+            run.state["companies"] = state
+            run.not_due = set(); run.selected = run.select(cos)
+        assert len(run.selected) <= batch
+        for cid in run.selected:
+            visits[cid] += 1
+        _attempt(run, cos, run.selected)
+        state = run.state["companies"]
+        clock.sleep(21600 + 120)
+    assert all(v == 1 for v in visits.values())                # everyone exactly once, none skipped
+    assert 3 * min(n, batch) <= run.config["max_requests"]     # the estimated load fits the unchanged cap

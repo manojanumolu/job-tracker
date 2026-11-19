@@ -5,11 +5,18 @@
 See [M7 implementation and rollout](M7_IMPLEMENTATION_AND_ROLLOUT.md) for the
 root cause, request budget, configuration, verification and company status.
 
-* Non-Workday scanners and JioStar's sitemap keep the admin's 3 h scan
-  interval and run ahead of the Workday API budget.
-* Workday API companies (`/wday/cxs/`) are revisited every **6 h**: 13 of the
-  26 per 3 h window, oldest attempt first. A company checked within the
-  revisit interval sends no request and keeps its healthy state.
+* **Full-scan interval: 6 h** (Nov 2026; `scan_interval_hours` in
+  `data/settings.json`, default 6). Every company is scanned once per 6 h
+  window by the existing Scan scheduler chain; the 17/47-minute plan tick
+  only scans when a window is due, so there are no duplicate scans.
+  Non-Workday scanners and JioStar's sitemap run ahead of the Workday API
+  budget.
+* Workday API companies (`/wday/cxs/`) are visited once per 6 h window (batch
+  26 = the whole current Workday set; revisit 6 h with 1 h slack), oldest
+  attempt first, inside the unchanged 600-request cap. A company deferred by
+  the cap goes first in the next window. Targeted Workday-only recovery runs
+  stay bounded (one probe per gated data centre per cooldown expiry) and
+  never count as a full scan.
 * Mode `auto` (the shipped default) gates recovery **per Workday data centre**
   (the `wdN` in the host: wd1, wd3, wd5, wd12). A data centre is gated while
   the newest HTTP 429 on any of its API hosts is newer than its newest real
@@ -313,3 +320,24 @@ suppression (same company, title and location), the cutoffs and recipients.
 Unchanged on purpose: every eligibility rule — years of experience,
 seniority and level titles, "Associate", "Intern" or "Engineer I" alone —
 and the cutoffs and recipients.
+
+## Monitoring-failure email (Nov 2026)
+
+* Each company's `scan.blocked_scans` counts consecutive **scheduled full
+  scans** (scope `all`) that ended without a healthy scan: attempted and
+  failed, or held back while still failing (for example a rate-limited
+  Workday data centre). HTTP retries and targeted Workday-only runs never
+  advance it; a healthy scan, including a valid empty result, clears it.
+  `blocked_since` and `last_failed_at` record the first and latest failure.
+* After **3** such scans the publish step emails one warning to the
+  `ALERT_RECIPIENT` secret (the primary admin's existing alert address):
+  company, source, problem (rate-limited / inaccessible / returning invalid
+  data / failing to parse / needs configuration), error, first and latest
+  failure, last successful scan. Several companies share one digest.
+* The incident is recorded in `data/monitoring_incidents.json` and is never
+  re-sent while it stays open. When the company next scans healthy, one
+  recovery email is sent and the incident closes. A failed send is retried
+  by the next scan; job-alert emails are unaffected.
+* Only companies in the shared alerts are reported. Companies another admin
+  keeps outside them (`shared_alerts: false`) are that admin's own
+  monitoring and are never emailed to anyone else.

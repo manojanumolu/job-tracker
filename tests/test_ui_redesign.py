@@ -343,7 +343,7 @@ def test_settings_schedule_is_plain_language(app):
     at = app([], page="settings")
     html = _html(at)
     main = re.search(r'<h2 class="section-title">Global job scan interval</h2>.*?<dl class="kv">(.*?)</dl>', html, re.S).group(1)
-    assert "<dt>Current interval</dt><dd><b>Every 3 hours</b></dd>" in main and " IST" in main
+    assert "<dt>Current interval</dt><dd><b>Every 6 hours</b></dd>" in main and " IST" in main
     assert "GitHub may start a scheduled scan later than this." in main
     assert "cron" not in main and ".github" not in main and "API" not in main
     # the implementation facts still exist, tucked into a collapsed section

@@ -50,22 +50,22 @@ def u(day, h, m=0):
 
 # ── E / F / H: the interval's values ────────────────────────────────────────
 
-def test_exactly_four_intervals_and_the_default_is_three_hours():
+def test_exactly_four_intervals_and_the_default_is_six_hours():
     assert scan_schedule.ALLOWED_INTERVALS == (1, 3, 6, 12)
-    assert scan_schedule.DEFAULT_INTERVAL == 3
-    assert scan_schedule.interval_from({}) == 3 and scan_schedule.interval_from(None) == 3
+    assert scan_schedule.DEFAULT_INTERVAL == 6
+    assert scan_schedule.interval_from({}) == 6 and scan_schedule.interval_from(None) == 6
     for h in (1, 3, 6, 12):
         assert scan_schedule.validate_interval(h) == h
         assert scan_schedule.interval_from({"scan_interval_hours": h}) == h
 
 
 @pytest.mark.parametrize("bad", [0, 2, 4, 24, -3, 3.0, "3", "1", None, True, [3], {"h": 3}])
-def test_invalid_intervals_are_rejected_and_stored_ones_fall_back_to_three(bad):
+def test_invalid_intervals_are_rejected_and_stored_ones_fall_back_to_the_default(bad):
     with pytest.raises(scan_schedule.InvalidInterval):
         scan_schedule.validate_interval(bad)
     with pytest.raises(scan_schedule.InvalidInterval):
         scan_schedule.with_interval({}, bad)
-    assert scan_schedule.interval_from({"scan_interval_hours": bad}) == 3     # a hand-edited file fails safe
+    assert scan_schedule.interval_from({"scan_interval_hours": bad}) == scan_schedule.DEFAULT_INTERVAL     # a hand-edited file fails safe
 
 
 def test_saving_the_interval_keeps_every_other_setting():
@@ -159,8 +159,8 @@ def test_a_broken_schedule_file_plans_a_safe_default(tmp_path):
     env = {**os.environ, "EVENT": "schedule", "SCHEDULE": scan_schedule.PLAN_CRON}
     r = subprocess.run([sys.executable, "src/scan_schedule.py", "plan"], cwd=tmp_path, env=env, capture_output=True,
                        text=True, timeout=60)
-    assert r.returncode == 0 and r.stdout.split() == ["scan=true", "deliver=false"]     # no scan yet: scan (default 3 h)
-    assert "interval 3 h" in r.stderr
+    assert r.returncode == 0 and r.stdout.split() == ["scan=true", "deliver=false"]     # no scan yet: scan (default 6 h)
+    assert "interval 6 h" in r.stderr
 
 
 def test_the_workflow_wires_the_plan_to_one_shared_scanner():
@@ -330,9 +330,9 @@ def test_admins_choose_exactly_four_intervals_and_saving_writes_only_the_setting
     at = _admin(app, google_env, ustore, admins)
     pick = _pills(at, "scan_interval_pick")
     assert list(pick.options) == ["Every hour", "Every 3 hours", "Every 6 hours", "Every 12 hours"]
-    assert pick.value == 3 and "<dt>Current interval</dt><dd><b>Every 3 hours</b></dd>" in _html(at)
+    assert pick.value == 6 and "<dt>Current interval</dt><dd><b>Every 6 hours</b></dd>" in _html(at)
     companies_before, seen_before = repo.files["data/companies.json"], repo.files["data/seen_jobs.json"]
-    for hours in (6, 12, 1, 3):
+    for hours in (12, 1, 3, 6):
         pick = _pills(at, "scan_interval_pick")
         pick.set_value(hours).run()
         at.button(key="btn_save_interval").click().run()
@@ -435,3 +435,12 @@ def test_pagination_keeps_the_place(app, google_env, ustore, admins):
     at = _sign_in(app, google_env, A_UID, A_MAIL, seen=many, page="jobs")
     at.button(key="alerts_next").click().run()
     assert not at.exception and not _scrolls(at) and at.session_state["jobs_page"] == 1
+
+
+def test_the_regular_full_scan_runs_every_six_hours():
+    import json
+    from pathlib import Path
+    import scan_schedule as s
+    assert s.DEFAULT_INTERVAL == 6 and s.interval_from({}) == 6 and s.interval_from({"scan_interval_hours": "x"}) == 6
+    settings = json.loads((Path(__file__).resolve().parent.parent / "data" / "settings.json").read_text())
+    assert s.interval_from(settings) == 6

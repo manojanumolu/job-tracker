@@ -118,7 +118,7 @@ def test_the_wait_command_prints_outputs_and_never_fails(tmp_path):
         out = run(broken)                                    # no usable scan time: due -> look again in 30 min
         assert int(out["seconds"]) == 1800 and re.match(r"\d{4}-\d\d-\d\dT\d\d:\d\d", out["at"])
     out = run(json.dumps([{"id": "a", "last_checked": datetime.now(timezone.utc).isoformat()}]))
-    assert 0 < int(out["seconds"]) <= 3 * 3600 + 120
+    assert 0 < int(out["seconds"]) <= scan_schedule.CHAIN_MAX_WAIT.total_seconds()
     assert "Scan scheduler:" in summary.read_text("utf-8")
 
 
@@ -167,7 +167,7 @@ def test_no_external_scheduler_anywhere():
 
 
 def test_scan_cadence_and_personal_alerts_are_unchanged():
-    assert scan_schedule.DEFAULT_INTERVAL == 3 and scan_schedule.MEMBER_ALERT_HOURS == 6
+    assert scan_schedule.DEFAULT_INTERVAL == 6 and scan_schedule.MEMBER_ALERT_HOURS == 6
     assert f'cron: "{scan_schedule.ALERTS_CRON}"' in CHECK and scan_schedule.ALERTS_CRON == "20 */6 * * *"
     assert scan_schedule.plan("schedule", scan_schedule.ALERTS_CRON, {}, [], u(12, 6, 20)) == {"scan": False, "deliver": True}
 

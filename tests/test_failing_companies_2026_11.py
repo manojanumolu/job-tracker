@@ -192,3 +192,31 @@ def test_the_workday_adapter_and_servicenow_are_unchanged():
     assert scraper.COMPANY_SOURCES["jiohotstar"] == [{"type": "workday_sitemap", "site": "https://jiostar.wd102.myworkdayjobs.com/JioStar"}]
     assert scraper.sources_for({"id": "cisco", "url": "https://cisco.wd5.myworkdayjobs.com/Cisco_Careers"}) == [
         {"type": "workday", "api": "https://cisco.wd5.myworkdayjobs.com/wday/cxs/cisco/Cisco_Careers/jobs"}]
+
+
+# ── scheduled-scan block counter (monitoring-failure email, Nov 2026) ──
+
+def test_each_failed_scheduled_full_scan_advances_the_block_counter_once(scan):
+    seen_since = None
+    for n in (1, 2, 3):
+        cos, asked, _ = scan()
+        jio = cos["jiohotstar"]["scan"]
+        assert jio["blocked_scans"] == n and asked["jiostar"] == 1       # one per scan, never one per request
+        seen_since = seen_since or jio["blocked_since"]
+        assert jio["blocked_since"] == seen_since and jio["last_failed_at"]
+
+
+def test_a_valid_empty_result_is_healthy_and_clears_the_block_counter(scan):
+    scan()
+    scan()
+    cos, _, _ = scan(jiostar=lambda: httpx.Response(200, text='<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>'))
+    jio = cos["jiohotstar"]
+    assert jio["status"] == "active" and "blocked_scans" not in jio["scan"]
+
+
+def test_targeted_runs_never_advance_the_scheduled_scan_counter():
+    prev = {"blocked_scans": 2, "blocked_since": "a", "last_failed_at": "b"}
+    out = scraper._blocked_streak(prev, failing=True, full=False, now="c")
+    assert out == {"blocked_scans": 2, "blocked_since": "a", "last_failed_at": "c"}
+    assert scraper._blocked_streak(prev, failing=True, full=True, now="d")["blocked_scans"] == 3
+    assert scraper._blocked_streak(prev, failing=False, full=True, now="d") == {}
