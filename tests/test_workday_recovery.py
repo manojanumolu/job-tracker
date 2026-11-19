@@ -785,3 +785,25 @@ def test_sitemap_throttle_does_not_gate_the_api_fleet(tmp_path, clock, cfg):
         "failures": 1, "http_status": 429, "failure_category": "rate_limit", "retry_after_s": 0, "retry_after_valid": False}
     write(tmp_path / STATE_FILE, STATE_FILE, run.state)
     assert recovery(tmp_path, clock, cfg, companies(2)).mode == "full"
+
+
+def test_cooldown_expiring_mid_run_is_admitted_not_lost_to_rotation(tmp_path, clock, cfg):
+    """19 Nov 00:03: selection ran 76 s before the canary cooldown ended; the
+    canary must be probed when the loop reaches it, not deferred for 3 h."""
+    cfg["mode"] = "auto"
+    cos = throttled_fleet(clock)                       # 429s recorded 10 min ago
+    clock.sleep(3 * 3600 - 600 - 76)                   # 76 s before cooldown ends
+    run = recovery(tmp_path, clock, cfg, cos)
+    assert run.selected == set() and run.defer_reason(cos[0]) == "cooldown"
+    clock.sleep(300)                                   # loop reaches Sanofi after expiry
+    assert run.defer_reason(cos[0]) == "" and "sanofi" in run.selected
+    assert run.defer_reason(cos[2]) == "canary_gate"   # non-canary still waits
+
+
+def test_mid_run_admission_respects_batch_size(tmp_path, clock, cfg):
+    cfg.update(mode="full", batch_size=1)
+    cos = companies(3)
+    run = recovery(tmp_path, clock, cfg, cos)
+    assert len(run.selected) == 1
+    late = next(c for c in cos if c["id"] not in run.selected)
+    assert run.defer_reason(late) == "rotation"

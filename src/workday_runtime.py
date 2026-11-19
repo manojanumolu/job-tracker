@@ -153,19 +153,25 @@ class Recovery:
     def select(self, companies):
         self.probe_ids = self.probes(companies) if self.mode == "canary" else set()
         eligible = []
-        revisit = (self.config["revisit_hours"] - 1) * 3600   # 1 h slack absorbs late scan starts
         for c in companies:
             cfg = self.sources_for(c)
             if not is_api(cfg) or self.defer_reason(c, selection=False):
                 continue
-            prev = self.state["companies"].get(c["id"], {})
-            attempt = epoch(prev.get("last_attempt") or c.get("last_checked"))
-            if prev and self.wall() - attempt < revisit:
+            attempt = self.attempt(c)
+            if not self.due(c):
                 self.not_due.add(c["id"])   # checked recently enough: no request this window
                 continue
             # Old attempts first: a permanently failing portal cannot monopolize slots.
             eligible.append((attempt, c["id"]))
         return {cid for _, cid in sorted(eligible)[:self.config["batch_size"]]}
+
+    def attempt(self, company):
+        prev = self.state["companies"].get(company["id"], {})
+        return epoch(prev.get("last_attempt") or company.get("last_checked"))
+
+    def due(self, company):
+        revisit = (self.config["revisit_hours"] - 1) * 3600   # 1 h slack absorbs late scan starts
+        return not self.state["companies"].get(company["id"]) or self.wall() - self.attempt(company) >= revisit
 
     def defer_reason(self, company, selection=True):
         cfg = self.sources_for(company)
@@ -188,6 +194,14 @@ class Recovery:
         if is_api(cfg) and len(self.http.throttled) >= self.config["api_breaker_hosts"]:
             return "circuit"
         if is_api(cfg) and selection and company["id"] not in self.selected:
+            # Selection is a snapshot at run start. A cooldown that has since expired
+            # (checked above, strictly) is admitted while the batch still has room,
+            # instead of losing a whole 3 h window by seconds (seen 19 Nov 00:03).
+            if (company["id"] not in self.not_due and self.due(company)
+                    and len(self.selected) < self.config["batch_size"]
+                    and (self.mode != "canary" or company["id"] in self.probe_ids)):
+                self.selected.add(company["id"])
+                return ""
             return "rotation"
         return ""
 
