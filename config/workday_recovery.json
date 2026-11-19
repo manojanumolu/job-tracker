@@ -1,7 +1,7 @@
 {
   "mode": "auto",
   "canary_company_ids": ["sanofi", "pwc"],
-  "batch_size": 13,
+  "batch_size": 26,
   "revisit_hours": 6,
   "global_spacing_s": 2,
   "host_spacing_s": 2,

@@ -61,7 +61,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ALLOWED_INTERVALS = (1, 3, 6, 12)
-DEFAULT_INTERVAL = 3
+DEFAULT_INTERVAL = 6
 MEMBER_ALERT_HOURS = 6
 # a person's next email may go out this much before the 6 hours are up, so a
 # pass that GitHub starts a little early or late never skips a whole cycle

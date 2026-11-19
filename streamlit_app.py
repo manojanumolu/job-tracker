@@ -2391,7 +2391,7 @@ if IS_PRIMARY:
         dismissed_jobs = [j for j in dismissed_jobs if _mine(j)]
 
 NOW = datetime.now(timezone.utc)
-# cron asks for every 3 h, but GitHub starts scheduled runs late: measured
+# the scan interval (6 h, Nov 2026) is planned by the scheduler, but GitHub starts runs late: measured
 # gaps were median 5 h, 90th percentile 7.5 h, max 9 h — so a scan only
 # counts as "delayed" once it is overdue by more than that
 _STALE_H = max(10, SCAN_HOURS + 7)          # ... and a longer interval is not "delayed" either

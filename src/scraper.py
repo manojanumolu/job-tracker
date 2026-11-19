@@ -1186,6 +1186,22 @@ def _failure_streak(scan: Scan, previous: dict, was_failing: bool, now: str) -> 
     return {"failing_since": now, "failed_scans": 1}
 
 
+def _blocked_streak(previous: dict, failing: bool, full: bool, now: str) -> dict:
+    """Consecutive SCHEDULED FULL scans (scope "all") this company ended without a
+    healthy scan - attempted and failed, or held back while still failing (a
+    rate-limited Workday data centre). Targeted Workday-only runs never advance
+    it; a healthy scan clears it. Feeds the monitoring-failure email
+    (monitoring_alerts.py): one company, one count per scheduled scan, never
+    one per HTTP retry. A valid empty result is healthy and never counts."""
+    if not failing:
+        return {}
+    old = {k: previous[k] for k in ("blocked_scans", "blocked_since", "last_failed_at") if k in previous}
+    if not full:
+        return {**old, "last_failed_at": now}
+    n = previous.get("blocked_scans") if isinstance(previous.get("blocked_scans"), int) else 0
+    return {"blocked_scans": n + 1, "blocked_since": previous.get("blocked_since") or now, "last_failed_at": now}
+
+
 def _streak_label(iso: str) -> str:
     try:
         dt = datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(timezone.utc)
@@ -1246,7 +1262,10 @@ def run_all(recovery=None, scope: str = "all") -> list[dict]:
                 if (outcome == "deferred" and company["id"] in recovery.not_due and company.get("status") == "active"
                         and last in ("healthy", "degraded")):
                     outcome, reason = last, ""   # checked successfully within the revisit interval: not a deferral
-                company["scan"] = {**previous, "recovery": recovery.projection(company, outcome, reason)}
+                failing = company.get("status") in ("failing", "broken", "needs_config")
+                base = {k: v for k, v in previous.items() if k not in ("blocked_scans", "blocked_since", "last_failed_at")}
+                company["scan"] = {**base, **_blocked_streak(previous, failing, scope == "all", _now_iso()),
+                                   "recovery": recovery.projection(company, outcome, reason)}
                 portals_failed += company.get("status") in ("failing", "broken", "needs_config")
                 continue  # No attempt, timestamp or failure-streak advancement.
             recovery.begin(company)
@@ -1258,7 +1277,10 @@ def run_all(recovery=None, scope: str = "all") -> list[dict]:
                 recovery.end()
         if managed and len(recovery.http.events) == recovery.event_start:
             category = recovery.last_stop.get("failure_category", "budget")
-            company["scan"] = {**previous, "recovery": recovery.projection(company, "deferred", category)}
+            failing = company.get("status") in ("failing", "broken", "needs_config")
+            base = {k: v for k, v in previous.items() if k not in ("blocked_scans", "blocked_since", "last_failed_at")}
+            company["scan"] = {**base, **_blocked_streak(previous, failing, scope == "all", _now_iso()),
+                               "recovery": recovery.projection(company, "deferred", category)}
             portals_failed += company.get("status") in ("failing", "broken", "needs_config")
             continue
         # A Workday stop mid-scan (throttle, error) is a failure. Detail work left for the
@@ -1281,7 +1303,8 @@ def run_all(recovery=None, scope: str = "all") -> list[dict]:
         company["last_checked"] = _now_iso()          # this attempt, whatever its outcome
         if scan.status == "active":
             company["last_success"] = company["last_checked"]   # a failed scan keeps the older one
-        company["scan"] = {**scan.summary(), **(streak or {})}
+        company["scan"] = {**scan.summary(), **(streak or {}),
+                           **_blocked_streak(previous, scan.status != "active", scope == "all", _now_iso())}
         if managed:
             outcome = "healthy" if scan.status == "active" else ("rate_limited" if recovery.last_stop.get("http_status") == 429 else "failed")
             company["scan"]["recovery"] = recovery.projection(company, outcome, attempted=True)
