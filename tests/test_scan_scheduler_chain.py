@@ -170,3 +170,70 @@ def test_scan_cadence_and_personal_alerts_are_unchanged():
     assert scan_schedule.DEFAULT_INTERVAL == 3 and scan_schedule.MEMBER_ALERT_HOURS == 6
     assert f'cron: "{scan_schedule.ALERTS_CRON}"' in CHECK and scan_schedule.ALERTS_CRON == "20 */6 * * *"
     assert scan_schedule.plan("schedule", scan_schedule.ALERTS_CRON, {}, [], u(12, 6, 20)) == {"scan": False, "deliver": True}
+
+
+# ── PR C: automatic Workday recovery dispatch ─────────────────────────────────
+
+def _wd(cid, host, started):
+    return {"id": cid, "scan": {"recovery": {"discovery_method": "workday", "host": host},
+                                "run": {"started_at": started, "finished_at": started}}}
+
+
+def _state(until="2026-11-19T07:39:00+00:00"):
+    return {"hosts": {"sanofi.wd3.myworkdayjobs.com": {"failure_category": "rate_limit", "observed_at": "2026-11-19T01:39:00+00:00",
+                                                       "cooldown_until": until}}, "companies": {}}
+
+
+def _full_marker(started="2026-11-19T06:03:00+00:00"):
+    return {"id": "plain", "scan": {"run": {"recovery_version": 1, "run_id": "full", "started_at": started,
+                                           "finished_at": started}}}
+
+
+def test_chain_dispatches_a_targeted_run_when_a_probe_falls_due_before_the_window():
+    now = datetime(2026, 11, 19, 6, 40, tzinfo=timezone.utc)
+    cos = [_wd("sanofi", "sanofi.wd3.myworkdayjobs.com", "2026-11-19T06:03:00+00:00"), _full_marker()]
+    last = scan_schedule.last_scan(cos)
+    wait, scope = scan_schedule.chain_next(now, 3, last, cos, _state())
+    assert scope == "workday" and now + wait == datetime(2026, 11, 19, 7, 41, tzinfo=timezone.utc)
+
+
+def test_chain_keeps_the_window_when_the_probe_is_close_to_it_or_nothing_is_due():
+    cos = [_wd("sanofi", "sanofi.wd3.myworkdayjobs.com", "2026-11-19T06:03:00+00:00"), _full_marker()]
+    now = datetime(2026, 11, 19, 6, 40, tzinfo=timezone.utc)
+    last = scan_schedule.last_scan(cos)
+    wait, scope = scan_schedule.chain_next(now, 3, last, cos, _state("2026-11-19T08:50:00+00:00"))
+    assert scope == "all" and now + wait == datetime(2026, 11, 19, 9, 2, tzinfo=timezone.utc)   # the window probes it
+    assert scan_schedule.chain_next(now, 3, last, cos, None)[1] == "all"
+    assert scan_schedule.chain_next(now, 3, last, cos, {"hosts": {}, "companies": {}})[1] == "all"
+
+
+def test_chain_prefers_a_pending_full_scan_over_a_targeted_run():
+    cos = [_wd("sanofi", "sanofi.wd3.myworkdayjobs.com", "2026-11-19T03:03:00+00:00"), _full_marker("2026-11-19T03:03:00+00:00")]
+    now = datetime(2026, 11, 19, 6, 1, tzinfo=timezone.utc)                # 06:00 window opened, not yet scanned
+    wait, scope = scan_schedule.chain_next(now, 3, scan_schedule.last_scan(cos), cos, _state("2026-11-19T05:00:00+00:00"))
+    assert scope == "all" and wait == scan_schedule.CHAIN_RETRY
+
+
+def test_no_second_targeted_dispatch_for_the_same_cooldown():
+    """After the targeted run starts (its marker is newer than the cooldown end), the
+    chain goes back to the window and a late/duplicate plan dispatch scans nothing."""
+    cos = [_wd("sanofi", "sanofi.wd3.myworkdayjobs.com", "2026-11-19T07:41:30+00:00"), _full_marker()]
+    now = datetime(2026, 11, 19, 7, 50, tzinfo=timezone.utc)
+    wait, scope = scan_schedule.chain_next(now, 3, scan_schedule.last_scan(cos), cos, _state())
+    assert scope == "all" and now + wait == datetime(2026, 11, 19, 9, 2, tzinfo=timezone.utc)
+    assert not scan_schedule.plan("workflow_dispatch", "", {}, cos, now, mode="plan", scope="workday", state=_state())["scan"]
+
+
+def test_wait_cli_reports_scope(tmp_path, monkeypatch, capsys):
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "companies.json").write_text(json.dumps([_full_marker()]))
+    (tmp_path / "data" / "settings.json").write_text("{}")
+    monkeypatch.setenv("JT_DATA_ROOT", str(tmp_path))
+    assert scan_schedule.main(["wait"]) == 0
+    out = capsys.readouterr().out
+    assert "scope=all" in out and "seconds=" in out
+
+
+def test_scheduler_workflow_reads_state_and_forwards_scope():
+    assert "data/workday_scan_state.json" in CHAIN
+    assert '-f mode=plan -f scope="$SCOPE"' in CHAIN and "steps.wait.outputs.scope" in CHAIN
