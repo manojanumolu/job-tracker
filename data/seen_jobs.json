@@ -5967,5 +5967,76 @@
     "notified": false,
     "repost_last_seen": "2026-11-19",
     "company_id": "deloitte"
+  },
+  {
+    "title": "Analyst | S&P - Cost TakeOut | Bengaluru | Supply Chain & Network Operations",
+    "url": "https://southasiacareers.deloitte.com/job/Bengaluru-Analyst-S&P-Cost-TakeOut-Bengaluru-Supply-Chain-&-Network-Operations/61662044/",
+    "company": "Deloitte",
+    "location": "Bengaluru, IN · India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: '0-2 years'",
+    "evidence": {
+      "experience": [
+        "0-2 years"
+      ],
+      "experience_lines": [
+        "0-2 years of relevant experience in supply chain consulting or industry",
+        "Prior experience with  Big 4 / leading consulting firms  preferred",
+        "Hands-on experience in following areas:",
+        "Experience in  supply chain transformation / digital initiatives"
+      ],
+      "fresher_evidence": "0-2 years",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Bengaluru-Analyst-S&P-Cost-TakeOut-Bengaluru-Supply-Chain-&-Network-Operations/61662044",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      },
+      "skills": {
+        "Communication": "Excellent stakeholder management and communication skills",
+        "Problem solving": "Strong analytical and problem-solving capabilities"
+      },
+      "requirements": [
+        {
+          "text": "Work closely with client leadership to define supply chain strategies and roadmaps",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Bachelor’s degree in Engineering",
+          "importance": "unspecified"
+        },
+        {
+          "text": "0-2 years of relevant experience in supply chain consulting or industry",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Prior experience with Big 4 / leading consulting firms preferred",
+          "importance": "preferred"
+        },
+        {
+          "text": "Excellent stakeholder management and communication skills",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Strong analytical and problem-solving capabilities",
+          "importance": "unspecified"
+        }
+      ]
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Bengaluru-Analyst-S&P-Cost-TakeOut-Bengaluru-Supply-Chain-&-Network-Operations/61662044",
+    "date": "Nov 19, 06:07",
+    "first_seen": "2026-11-19T06:07:26.437697+00:00",
+    "id": "Deloitte_Analyst_|_S&P_-_Cost_TakeOut_|_Bengaluru",
+    "notified": false,
+    "repost_last_seen": "2026-11-19",
+    "company_id": "deloitte"
   }
 ]
