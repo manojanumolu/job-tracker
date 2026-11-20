@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from sources import SourceError, jibe_listings
+from sources import jibe_listings
 
 
 class JibeCoverageTests(unittest.TestCase):
@@ -13,17 +13,20 @@ class JibeCoverageTests(unittest.TestCase):
             return jibe_listings(None, self.host)
 
     def test_empty_final_page_before_reported_total(self):
-        with self.assertRaisesRegex(SourceError, "1 of 2"):
-            self.read([{"jobs": [self.job], "totalCount": 2}, {"jobs": []}])
+        row = {"data": {"country": "India", "title": "Engineer", "slug": "one"}}
+        result = self.read([{"jobs": [row], "totalCount": 2}, {"jobs": []}])
+        self.assertIn("1 of 2", result.coverage_error)
+        self.assertEqual([job.title for job in result.listings], ["Engineer"])
 
     def test_page_cap_without_end_of_results(self):
         with patch("sources.JIBE_MAX_PAGES", 1):
-            with self.assertRaisesRegex(SourceError, "pagination limit"):
-                self.read([{"jobs": [self.job]}])
+            result = self.read([{"jobs": [self.job]}])
+        self.assertIn("pagination limit", result.coverage_error)
 
     def test_exact_total_on_last_allowed_page(self):
         with patch("sources.JIBE_MAX_PAGES", 1):
             result = self.read([{"jobs": [self.job], "totalCount": 1}])
+        self.assertFalse(result.coverage_error)
         self.assertEqual(result.seen, 1)
         self.assertEqual(result.listings, [])
 

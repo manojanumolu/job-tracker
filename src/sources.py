@@ -131,6 +131,7 @@ class SourceResult:
     listings: list[Listing]
     seen: int = 0          # postings looked at before the India filter
     note: str = ""
+    coverage_error: str = ""
 
 
 def _get_json(client: httpx.Client, method: str, url: str, **kw):
@@ -429,9 +430,9 @@ def jibe_listings(client: httpx.Client, cfg: dict) -> SourceResult:
         if not jobs or (isinstance(total, int) and seen >= total):
             break
     else:
-        raise SourceError("job API pagination limit reached; incomplete coverage", "failing")
+        return SourceResult(listings, seen=seen, coverage_error="job API pagination limit reached; incomplete coverage")
     if isinstance(total, int) and seen < total:
-        raise SourceError(f"job API returned {seen} of {total} postings; incomplete coverage", "failing")
+        return SourceResult(listings, seen=seen, coverage_error=f"job API returned {seen} of {total} postings; incomplete coverage")
     return SourceResult(listings, seen=seen)
 
 
