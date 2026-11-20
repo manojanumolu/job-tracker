@@ -642,8 +642,11 @@ section[data-testid="stSidebar"] div:has(> [data-testid="stSidebarResizeHandle"]
 .mon tbody tr:has(.pill.delayed)::before { background: var(--amber); }
 .mon tbody tr:has(.pill.pending)::before, .mon tbody tr:has(.pill.checking)::before { background: var(--gray); }
 .mon td { display: block; padding: 0; border: none; color: var(--text); min-width: 0; font-weight: 600; }
-.mon td.c { grid-column: 1 / 3; font-weight: 700; font-size: 15.5px; letter-spacing: -0.015em; }
-.mon td[data-l="Status"] { grid-column: 3; justify-self: end; }
+/* the status pill has its own row under the name (a long pill used to overlap and clip the name) */
+.mon td.c { grid-column: 1 / -1; grid-row: 1; font-weight: 700; font-size: 15.5px; letter-spacing: -0.015em; }
+.mon td.c .mon-co > div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mon td[data-l="Status"] { grid-column: 1 / -1; grid-row: 2; justify-self: start; max-width: 100%; }
+.mon td[data-l="Status"] .pill { max-width: 100%; white-space: normal; }
 .mon td[data-l="Notes"] { grid-column: 1 / -1; font-weight: 400; color: var(--text-2); font-size: 13px; line-height: 19px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); }
 .mon td[data-l]:not([data-l="Status"])::before { content: attr(data-l); display: block; font-family: var(--label); font-size: 10px; line-height: 14px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin-bottom: 3px; }
 .mon td[data-l="Scraper"] { font-weight: 500; font-size: 13px; color: var(--text-2); }
@@ -830,6 +833,13 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 [class*="st-key-nav_"] [data-testid^="stBaseButton"]:hover [data-testid="stIconMaterial"] { transform: translateX(2px); color: var(--accent-text); }
 [class*="st-key-nav_"] [data-testid="stIconMaterial"] { font-size: 21px !important; color: var(--muted); transition: transform var(--normal) var(--ease), color var(--fast); }
 [class*="st-key-nav_"] p { font-size: 14px !important; font-weight: 600 !important; }
+/* every nav row lines up (Nov 2026): the content fills the row, icons sit in one fixed column, labels
+   start at the same x and never wrap or shift their icon (a long label used to push its row out) */
+[class*="st-key-nav_"] [data-testid^="stBaseButton"] > div { width: 100% !important; min-width: 0 !important; }
+[class*="st-key-nav_"] [data-testid="stIconMaterial"] { flex: 0 0 22px !important; width: 22px !important; text-align: center; }
+[class*="st-key-nav_"] [data-testid="stMarkdownContainer"] { flex: 1 1 auto !important; min-width: 0 !important; text-align: left !important; }
+[class*="st-key-nav_"] p { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; text-align: left !important; margin: 0 !important; }
+.nav-group { padding-left: 12px !important; padding-right: 12px !important; }
 /* the ✕ / ↺ buttons on job rows are icon-only; their label is for screen readers */
 [class*="st-key-dismiss_"] [data-testid="stMarkdownContainer"], [class*="st-key-restore_"] [data-testid="stMarkdownContainer"],
 :is([class*="st-key-ate_"], [class*="st-key-atdel_"]) [data-testid="stMarkdownContainer"],

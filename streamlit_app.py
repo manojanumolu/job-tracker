@@ -4189,9 +4189,13 @@ def page_monitoring():
           <td class="num" data-l="Active jobs">{company_active(c)}</td>
           <td data-l="Scraper">{escape(_source_label(c))}</td>
           <td data-l="Notes"{' class="empty"' if note == "—" else ""}>{note}</td></tr>""")
-    if not (counts["failing"] or counts["delayed"]) and last_scan:
+    if not (counts["failing"] or counts["delayed"] or counts["pending"]) and last_scan:
         st.html(f'<div class="legend" style="border-style:solid;">{_ms("task_alt", "s20")}<div class="note"><b style="color:var(--text);">No monitoring issues.</b> '
                 f'Every portal was scanned successfully in the last {_STALE_H} hours.</div></div>')
+    elif counts["pending"] and not (counts["failing"] or counts["delayed"]):
+        # never "no issues" while some portals are not scanned automatically (Nov 2026)
+        st.html(f'<div class="legend" style="border-style:solid;">{_ms("info", "s20")}<div class="note"><b style="color:var(--text);">Coverage incomplete.</b> '
+                f'{_plural(counts["pending"], "portal")} not scanned automatically; every scanned portal is healthy.</div></div>')
     with st.container(key="mon_table"):
         st.html('<table class="mon"><thead><tr><th>Company</th><th>Status</th><th>Last checked</th><th>Active jobs</th>'
                 '<th>Scraper</th><th>Notes</th></tr></thead><tbody>' + "".join(rows) + "</tbody></table>")
