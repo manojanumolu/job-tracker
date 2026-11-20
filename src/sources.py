@@ -397,9 +397,13 @@ JIBE_MAX_PAGES = 60
 def jibe_listings(client: httpx.Client, cfg: dict) -> SourceResult:
     host = cfg["host"].rstrip("/")
     listings, seen, total = [], 0, None
+    params = {"sortBy": "posted_date", "descending": "true", "internal": "false"}
+    if cfg.get("location"):
+        params["location"] = cfg["location"]          # server-side filter (AMD: 212 India vs 1,281 overall)
     for page in range(1, JIBE_MAX_PAGES + 1):
-        data = _get_json(client, "GET", f"{host}/api/jobs",
-                         params={"page": page, "sortBy": "posted_date", "descending": "true", "internal": "false"})
+        if page > 1 and cfg.get("page_delay_s"):
+            time.sleep(cfg["page_delay_s"])            # the site's robots.txt crawl-delay
+        data = _get_json(client, "GET", f"{host}/api/jobs", params={**params, "page": page})
         jobs = data.get("jobs") if isinstance(data, dict) else None
         if not isinstance(jobs, list):
             raise SourceError("job API changed shape (no 'jobs' list)")
