@@ -115,6 +115,7 @@ def test_end_to_end_three_scheduled_failures_one_warning_then_recovery_and_job_a
     for name, attr in (("seen_jobs.json", "SEEN_FILE"), ("companies.json", "COMPANIES_FILE"), ("settings.json", "SETTINGS_FILE")):
         monkeypatch.setattr(config_store, attr, tmp_path / name)
     monkeypatch.setattr(config_store, "DATA", tmp_path)
+    monkeypatch.setattr(config_store, "COMPANIES_FILE", tmp_path / "companies.json")
     monitor_mail = Mail()
     monkeypatch.setattr(notifier, "_send", monitor_mail)
 
