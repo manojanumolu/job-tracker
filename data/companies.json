@@ -108,17 +108,17 @@
       "failing_since": "2026-11-16T09:04:45.827571+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-20T13:40:08.767714+00:00",
-        "finished_at": "2026-11-20T13:40:14.149180+00:00",
+        "started_at": "2026-11-20T15:52:03.176572+00:00",
+        "finished_at": "2026-11-20T15:52:03.177203+00:00",
         "jobs_found": 0,
         "new_jobs": 0,
-        "portals": 10,
-        "portals_failed": 10,
+        "portals": 2,
+        "portals_failed": 2,
         "reposts_suppressed": 0,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "381a1c264179406b828a4834538d07e0",
+        "run_id": "de025b9abbba444081874630875d86b5",
         "scope": "workday"
       },
       "recovery": {
@@ -134,7 +134,7 @@
         "cooldown_until": "2026-11-19T00:04:19.789091+00:00",
         "last_attempt": "2026-11-18T21:04:19.789091+00:00",
         "last_success": "2026-11-16T06:04:24.837165+00:00",
-        "observed_at": "2026-11-20T13:40:14.148303+00:00",
+        "observed_at": "2026-11-20T15:52:03.176911+00:00",
         "source": "1e659416da76036f124254ee411c1405d15334c6ac5b2863a904dd06228bbb9b",
         "unresolved_failure": true,
         "pending": 0,
@@ -144,7 +144,7 @@
       },
       "blocked_scans": 4,
       "blocked_since": "2026-11-19T18:14:47.128555+00:00",
-      "last_failed_at": "2026-11-20T13:40:14.148231+00:00"
+      "last_failed_at": "2026-11-20T15:52:03.176860+00:00"
     },
     "source": "Workday API",
     "last_success": "2026-11-16T06:04:24.837165+00:00",
@@ -228,7 +228,7 @@
         "cooldown_until": "2026-11-21T12:48:34.563097+00:00",
         "last_attempt": "2026-11-20T12:48:34.563920+00:00",
         "last_success": "2026-11-16T06:06:35.730344+00:00",
-        "observed_at": "2026-11-20T13:40:14.148362+00:00",
+        "observed_at": "2026-11-20T15:52:03.176988+00:00",
         "source": "6ab46f928d378f7252d40c48de0c18502a47c70df5f63840a049f0c847a3d881",
         "unresolved_failure": true,
         "pending": 0,
@@ -237,22 +237,22 @@
         "requests": 0
       },
       "run": {
-        "started_at": "2026-11-20T13:40:08.767714+00:00",
-        "finished_at": "2026-11-20T13:40:14.149180+00:00",
+        "started_at": "2026-11-20T15:52:03.176572+00:00",
+        "finished_at": "2026-11-20T15:52:03.177203+00:00",
         "jobs_found": 0,
         "new_jobs": 0,
-        "portals": 10,
-        "portals_failed": 10,
+        "portals": 2,
+        "portals_failed": 2,
         "reposts_suppressed": 0,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "381a1c264179406b828a4834538d07e0",
+        "run_id": "de025b9abbba444081874630875d86b5",
         "scope": "workday"
       },
       "blocked_scans": 4,
       "blocked_since": "2026-11-19T18:14:47.129006+00:00",
-      "last_failed_at": "2026-11-20T13:40:14.148348+00:00"
+      "last_failed_at": "2026-11-20T15:52:03.176967+00:00"
     },
     "source": "Workday API",
     "last_success": "2026-11-16T06:06:35.730344+00:00",
