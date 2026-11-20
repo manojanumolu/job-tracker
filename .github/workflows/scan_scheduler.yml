@@ -44,7 +44,7 @@ jobs:
       actions: write   # dispatch Check Jobs and the next run of this workflow
     steps:
       - name: Checkout the schedule code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           sparse-checkout: |
@@ -53,7 +53,7 @@ jobs:
 
       # the data branch (JT_DATA_BRANCH, or this run's branch): JSON only
       - name: Checkout schedule inputs
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ vars.JT_DATA_BRANCH || github.ref }}
           path: jt-data
