@@ -6865,5 +6865,141 @@
     "claimed_at": "2026-11-20T00:21:57.614640+00:00",
     "sending_at": "2026-11-20T00:21:57.614640+00:00",
     "notified_at": "2026-11-20T00:21:57.614640+00:00"
+  },
+  {
+    "title": "PS&amp;PV Intern",
+    "url": "https://www.novartis.com/careers/career-search/job/details/req-10092315-pspv-intern",
+    "company": "Novartis",
+    "location": "Hyderabad (Office), IN",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: 'Minimum 0 to 3 years'",
+    "evidence": {
+      "experience": [
+        "Minimum 0 to 3 years"
+      ],
+      "experience_lines": [
+        " Minimum 0 to 3 years of experience in the pharmaceutical",
+        "Experience/Professional requirement:",
+        " Experience of working with project teams in a matrix environment"
+      ],
+      "fresher_evidence": "Minimum 0 to 3 years",
+      "detail_read": true,
+      "detail_match": "JobPosting on the job page",
+      "job_id": "id:REQ-10092315",
+      "canonical_url": "https://novartis.com/careers/career-search/job/details/req-10092315-pspv-intern",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      },
+      "requirements": [
+        {
+          "text": "Education (minimum/desirable): PharmD, M Pharma, MSc or degree in life sciences or",
+          "importance": "preferred"
+        },
+        {
+          "text": "equivalent for PV roles or Btech/Mtech degree forTechnology roles",
+          "importance": "unspecified"
+        },
+        {
+          "text": " Minimum 0 to 3 years of experience in the pharmaceutical",
+          "importance": "mandatory"
+        },
+        {
+          "text": " Good communication and presentation skills",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Why Novartis: Helping people with disease and their families takes more than innovative science. It takes a community of smart, passionate people like you. Collaborating, supporting and inspiring eac…",
+          "importance": "unspecified"
+        }
+      ]
+    },
+    "posted_at": "2026-11-19",
+    "uid": "novartis|url:https://novartis.com/careers/career-search/job/details/req-10092315-pspv-intern",
+    "date": "Nov 20, 06:06",
+    "first_seen": "2026-11-20T06:06:39.099665+00:00",
+    "id": "Novartis_PS&amp;PV_Intern",
+    "notified": false,
+    "repost_last_seen": "2026-11-20",
+    "company_id": "c1793696372"
+  },
+  {
+    "title": "Intern | Fresher | Mumbai | Regulatory & Financial Risk",
+    "url": "https://southasiacareers.deloitte.com/job/Mumbai-Intern-Fresher-Mumbai-Regulatory-&-Financial-Risk/61698544/",
+    "company": "Deloitte",
+    "location": "Mumbai, IN · India",
+    "category": "FRESHER",
+    "reason": "fresher signal: 'Fresher'",
+    "evidence": {
+      "experience": [
+        "no experience requirement stated"
+      ],
+      "experience_lines": [
+        "Undergraduate or recent graduate"
+      ],
+      "fresher_evidence": "Fresher",
+      "detail_read": true,
+      "detail_match": "successfactors job page",
+      "job_id": "",
+      "canonical_url": "https://southasiacareers.deloitte.com/job/Mumbai-Intern-Fresher-Mumbai-Regulatory-&-Financial-Risk/61698544",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      },
+      "skills": {
+        "Communication": "Excellent verbal and written communication skills.",
+        "Teamwork": "Every day, your work will make an impact that matters, while you thrive in a dynamic culture of inclusion, collaboration and high performance. As the undisputed",
+        "Accounting / finance": "To collect, understand, process, verify and report accounting related information to his/her vertical head."
+      },
+      "requirements": [
+        {
+          "text": "Every day, your work will make an impact that matters, while you thrive in a dynamic culture of inclusion, collaboration and high performance. As the undisputed leader in professional services, Deloi…",
+          "importance": "unspecified"
+        },
+        {
+          "text": "To collect, understand, process, verify and report accounting related information to his/her vertical head.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Be given professional analytical and management support work assignments.",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Undergraduate or recent graduate",
+          "importance": "mandatory"
+        },
+        {
+          "text": "Excellent verbal and written communication skills.",
+          "importance": "mandatory"
+        },
+        {
+          "text": "The interns must have knowledge of the basic principles and practices of accounting and financial analysis.",
+          "importance": "mandatory"
+        },
+        {
+          "text": "At Deloitte, our professional development plan focuses on helping people at every level of their career to identify and use their strengths to do their best work every day. From entry-level employees…",
+          "importance": "mandatory"
+        }
+      ]
+    },
+    "uid": "deloitte|url:https://southasiacareers.deloitte.com/job/Mumbai-Intern-Fresher-Mumbai-Regulatory-&-Financial-Risk/61698544",
+    "date": "Nov 20, 06:13",
+    "first_seen": "2026-11-20T06:13:29.537218+00:00",
+    "id": "Deloitte_Intern_|_Fresher_|_Mumbai_|_Regulatory_&",
+    "notified": false,
+    "repost_last_seen": "2026-11-20",
+    "company_id": "deloitte"
   }
 ]
