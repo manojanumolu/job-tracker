@@ -1,16 +1,5 @@
 {
   "open": {
-    "c1793696368": {
-      "name": "Salesforce",
-      "source": "Workday API",
-      "category": "rate-limited",
-      "error": "Workday rate_limit (salesforce.wd12.myworkdayjobs.com) — failing since 16 Nov 00:06 UTC (28 scans in a row)",
-      "first_failure": "2026-11-19T18:14:47.129063+00:00",
-      "latest_failure": "2026-11-20T06:17:25.421507+00:00",
-      "last_success": "2026-11-15T21:07:15.068478+00:00",
-      "scans": 3,
-      "opened_at": "2026-11-20T06:18:05.563235+00:00"
-    },
     "c1793696371": {
       "name": "Wells Fargo",
       "source": "Workday API",
@@ -19,17 +8,6 @@
       "first_failure": "2026-11-19T18:14:47.129109+00:00",
       "latest_failure": "2026-11-20T06:17:25.422014+00:00",
       "last_success": "2026-11-16T06:08:00.141265+00:00",
-      "scans": 3,
-      "opened_at": "2026-11-20T06:18:05.563235+00:00"
-    },
-    "c1793696373": {
-      "name": "Carrier",
-      "source": "Workday API",
-      "category": "rate-limited",
-      "error": "Workday rate_limit (carrier.wd5.myworkdayjobs.com) — failing since 16 Nov 09:05 UTC (23 scans in a row)",
-      "first_failure": "2026-11-19T18:14:47.129409+00:00",
-      "latest_failure": "2026-11-20T06:17:25.422352+00:00",
-      "last_success": "2026-11-16T06:08:40.463356+00:00",
       "scans": 3,
       "opened_at": "2026-11-20T06:18:05.563235+00:00"
     },
@@ -52,17 +30,6 @@
       "first_failure": "2026-11-19T18:14:47.130360+00:00",
       "latest_failure": "2026-11-20T06:17:25.422802+00:00",
       "last_success": "2026-11-16T06:08:53.488039+00:00",
-      "scans": 3,
-      "opened_at": "2026-11-20T06:18:05.563235+00:00"
-    },
-    "c1793696378": {
-      "name": "Bristol Myers Squibb",
-      "source": "Workday API",
-      "category": "rate-limited",
-      "error": "HTTP 429 from bristolmyerssquibb.wd5.myworkdayjobs.com — failing since 16 Nov 09:05 UTC (22 scans in a row)",
-      "first_failure": "2026-11-19T18:14:47.130968+00:00",
-      "latest_failure": "2026-11-20T06:17:25.423128+00:00",
-      "last_success": "2026-11-16T06:09:03.899952+00:00",
       "scans": 3,
       "opened_at": "2026-11-20T06:18:05.563235+00:00"
     },
