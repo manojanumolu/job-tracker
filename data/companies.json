@@ -471,10 +471,10 @@
     "name": "Wells Fargo",
     "url": "https://wf.wd1.myworkdayjobs.com/WellsFargoJobs",
     "locked": false,
-    "status": "failing",
+    "status": "unknown",
     "last_job": "",
     "last_checked": "2026-11-19T13:15:23.043262+00:00",
-    "status_reason": "Workday rate_limit (wf.wd1.myworkdayjobs.com) — failing since 16 Nov 09:05 UTC (23 scans in a row)",
+    "status_reason": "Manual check: https://www.wellsfargojobs.com/ — not scanned automatically because its job pages answer automated requests with a Cloudflare challenge (HTTP 403) (20 Nov 2026)",
     "scan_note": "",
     "last_success": "2026-11-16T06:08:00.141265+00:00",
     "scan": {
@@ -528,7 +528,8 @@
       "blocked_since": "2026-11-19T18:14:47.129109+00:00",
       "last_failed_at": "2026-11-20T13:40:14.148482+00:00"
     },
-    "source": "Workday API"
+    "source": "Workday API",
+    "monitoring": "blocked"
   },
   {
     "id": "c1793696372",
@@ -658,10 +659,10 @@
     "name": "Broadridge",
     "url": "https://broadridge.wd5.myworkdayjobs.com/Careers",
     "locked": false,
-    "status": "failing",
+    "status": "unknown",
     "last_job": "",
     "last_checked": "2026-11-20T12:48:45.595110+00:00",
-    "status_reason": "Workday rate_limit (broadridge.wd5.myworkdayjobs.com) — failing since 16 Nov 09:05 UTC (25 scans in a row)",
+    "status_reason": "Manual check: https://broadridge.wd5.myworkdayjobs.com/Careers — not scanned automatically because its careers link goes straight to Workday, which rate-limits automated requests (20 Nov 2026)",
     "scan_note": "",
     "last_success": "2026-11-16T06:08:48.420508+00:00",
     "scan": {
@@ -715,17 +716,18 @@
       "blocked_since": "2026-11-19T18:14:47.130037+00:00",
       "last_failed_at": "2026-11-20T13:40:14.148525+00:00"
     },
-    "source": "Workday API"
+    "source": "Workday API",
+    "monitoring": "blocked"
   },
   {
     "id": "c1793696376",
     "name": "Invesco",
     "url": "https://invesco.wd1.myworkdayjobs.com/IVZ",
     "locked": false,
-    "status": "failing",
+    "status": "unknown",
     "last_job": "",
     "last_checked": "2026-11-19T19:18:21.891835+00:00",
-    "status_reason": "Workday rate_limit (invesco.wd1.myworkdayjobs.com) — failing since 16 Nov 09:05 UTC (23 scans in a row)",
+    "status_reason": "Manual check: https://invesco.wd1.myworkdayjobs.com/IVZ — not scanned automatically because its careers site lists jobs only through Workday, which rate-limits automated requests (20 Nov 2026)",
     "scan_note": "",
     "last_success": "2026-11-16T06:08:53.488039+00:00",
     "scan": {
@@ -779,7 +781,8 @@
       "blocked_since": "2026-11-19T18:14:47.130360+00:00",
       "last_failed_at": "2026-11-20T13:40:14.148654+00:00"
     },
-    "source": "Workday API"
+    "source": "Workday API",
+    "monitoring": "blocked"
   },
   {
     "id": "c1793696377",
@@ -1039,10 +1042,10 @@
     "name": "Hitachi",
     "url": "https://hitachi.wd1.myworkdayjobs.com/hitachi",
     "locked": false,
-    "status": "failing",
+    "status": "unknown",
     "last_job": "Mechanical Design Engineer",
     "last_checked": "2026-11-20T01:33:36.129324+00:00",
-    "status_reason": "Workday rate_limit (hitachi.wd1.myworkdayjobs.com) — failing since 16 Nov 09:05 UTC (23 scans in a row)",
+    "status_reason": "Manual check: https://careers.hitachi.com/jobs — not scanned automatically because its careers site has no India filter (all ~3,700 jobs on 369 pages) and its Workday API is rate-limited (20 Nov 2026)",
     "scan_note": "",
     "last_success": "2026-11-16T06:14:57.792147+00:00",
     "scan": {
@@ -1096,17 +1099,18 @@
       "blocked_since": "2026-11-19T18:14:47.132537+00:00",
       "last_failed_at": "2026-11-20T13:40:14.148760+00:00"
     },
-    "source": "Workday API"
+    "source": "Workday API",
+    "monitoring": "blocked"
   },
   {
     "id": "c1793696384",
     "name": "Medtronic",
     "url": "https://medtronic.wd1.myworkdayjobs.com/MedtronicCareers",
     "locked": false,
-    "status": "failing",
+    "status": "unknown",
     "last_job": "CA Industrial Trainee",
     "last_checked": "2026-11-20T07:37:16.892624+00:00",
-    "status_reason": "Workday rate_limit (medtronic.wd1.myworkdayjobs.com) — failing since 16 Nov 09:05 UTC (23 scans in a row)",
+    "status_reason": "Manual check: https://www.medtronic.com/en-us/our-company/careers.html — not scanned automatically because its careers site lists jobs only through Workday, which rate-limits automated requests (20 Nov 2026)",
     "scan_note": "",
     "last_success": "2026-11-16T06:15:12.768149+00:00",
     "scan": {
@@ -1160,7 +1164,8 @@
       "blocked_since": "2026-11-19T18:14:47.132883+00:00",
       "last_failed_at": "2026-11-20T13:40:14.148873+00:00"
     },
-    "source": "Workday API"
+    "source": "Workday API",
+    "monitoring": "blocked"
   },
   {
     "id": "c1793696385",
@@ -1210,10 +1215,10 @@
     "name": "Silicon Labs",
     "url": "https://silabs.wd1.myworkdayjobs.com/SiliconlabsCareers",
     "locked": false,
-    "status": "broken",
+    "status": "unknown",
     "last_job": "",
     "last_checked": "2026-11-20T13:40:13.144861+00:00",
-    "status_reason": "Workday response reports zero postings but contains job rows — failing since 16 Nov 09:05 UTC (23 scans in a row)",
+    "status_reason": "Manual check: https://www.silabs.com/about-us/careers — not scanned automatically because its careers site lists jobs only through Workday, which rate-limits automated requests (20 Nov 2026)",
     "scan_note": "",
     "last_success": "2026-11-16T06:15:26.053321+00:00",
     "scan": {
@@ -1269,17 +1274,18 @@
         "scope": "workday"
       }
     },
-    "source": "Workday API"
+    "source": "Workday API",
+    "monitoring": "blocked"
   },
   {
     "id": "c1793696387",
     "name": "Analog Devices",
     "url": "https://analogdevices.wd1.myworkdayjobs.com/External",
     "locked": false,
-    "status": "failing",
+    "status": "unknown",
     "last_job": "Associate Industrial Engineer",
     "last_checked": "2026-11-18T21:04:57.552890+00:00",
-    "status_reason": "HTTP 429 from analogdevices.wd1.myworkdayjobs.com — failing since 16 Nov 09:05 UTC (22 scans in a row)",
+    "status_reason": "Manual check: https://www.analog.com/en/careers.html — not scanned automatically because its careers site lists jobs only through Workday, which rate-limits automated requests (20 Nov 2026)",
     "scan_note": "",
     "last_success": "2026-11-16T06:15:39.229508+00:00",
     "scan": {
@@ -1333,17 +1339,18 @@
       "blocked_since": "2026-11-19T18:14:47.133839+00:00",
       "last_failed_at": "2026-11-20T13:40:14.148975+00:00"
     },
-    "source": "Workday API"
+    "source": "Workday API",
+    "monitoring": "blocked"
   },
   {
     "id": "c1793696388",
     "name": "Marvell",
     "url": "https://marvell.wd1.myworkdayjobs.com/MarvellCareers",
     "locked": false,
-    "status": "failing",
+    "status": "unknown",
     "last_job": "",
     "last_checked": "2026-11-18T21:04:58.624890+00:00",
-    "status_reason": "HTTP 429 from marvell.wd1.myworkdayjobs.com — failing since 16 Nov 09:05 UTC (22 scans in a row)",
+    "status_reason": "Manual check: https://www.marvell.com/company/careers.html — not scanned automatically because its careers site lists jobs only through Workday, which rate-limits automated requests (20 Nov 2026)",
     "scan_note": "",
     "last_success": "2026-11-16T06:15:45.233084+00:00",
     "scan": {
@@ -1397,7 +1404,8 @@
       "blocked_since": "2026-11-19T18:14:47.134173+00:00",
       "last_failed_at": "2026-11-20T13:40:14.149081+00:00"
     },
-    "source": "Workday API"
+    "source": "Workday API",
+    "monitoring": "blocked"
   },
   {
     "id": "c1793696389",

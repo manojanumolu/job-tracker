@@ -238,7 +238,20 @@ def test_a_day_old_scan_is_delayed(app, tmp_path):
 def test_a_recent_scan_is_healthy(app, tmp_path):
     n = _stamp(tmp_path, timedelta(minutes=20))
     html = _html(app([]))
-    assert _overall(html) == ("healthy", "All portals healthy") and f"{n} healthy" in html
+    companies = json.loads((tmp_path / "data" / "companies.json").read_text("utf-8"))
+    manual = [c for c in companies if c.get("monitoring") and c.get("shared_alerts") is not False]
+    # every scanned portal is healthy; companies on manual monitoring (Nov 2026) are not scanned,
+    # so the headline says coverage is incomplete rather than "all healthy"
+    expected = ("delayed", "Monitoring coverage incomplete") if manual else ("healthy", "All portals healthy")
+    assert _overall(html) == expected and f"{n} healthy" in html
+
+
+def test_a_recent_scan_is_healthy_when_every_company_is_scanned(app, tmp_path):
+    _stamp(tmp_path, timedelta(minutes=20))
+    path = tmp_path / "data" / "companies.json"
+    companies = [c for c in json.loads(path.read_text("utf-8")) if not c.get("monitoring")]
+    path.write_text(json.dumps(companies))
+    assert _overall(_html(app([]))) == ("healthy", "All portals healthy")
 
 
 def test_portal_counts_follow_each_portals_own_result(app, tmp_path):

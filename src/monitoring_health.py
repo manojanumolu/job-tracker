@@ -29,6 +29,10 @@ def current_recovery(company):
 
 def company_health(company, now=None):
     now = now or datetime.now(timezone.utc)
+    from config_store import monitoring_state
+    if monitoring_state(company):
+        # on manual monitoring (not scanned): never a failure, never an overdue scan
+        return {"outcome": "manual", "failed": False, "overdue": False, "unavailable": False}
     rec = current_recovery(company)
     failed = company.get("status") in ("failing", "broken", "needs_config") or bool(rec.get("unresolved_failure"))
     last_success = rec.get("last_success") or company.get("last_success")

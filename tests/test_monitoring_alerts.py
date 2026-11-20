@@ -152,3 +152,26 @@ def test_first_failure_is_the_real_start_and_the_count_says_when_it_began():
     text = mail.sent[0][3]
     assert "First failure: 16 Nov 2026 09:05 UTC" in text
     assert "Consecutive scheduled scans: 3 (counted since 19 Nov 2026 12:03 UTC)" in text
+
+
+def test_a_company_moved_to_manual_monitoring_closes_its_incident_silently():
+    mail = Mail()
+    ledger = ma.run([co("hitachi")], {"open": {}}, "a@example.com", mail, NOW)
+    manual = dict(co("hitachi"), monitoring="blocked")
+    assert ma.run([manual], ledger, "a@example.com", mail, NOW) == {"open": {}}
+    assert len(mail.sent) == 1                                   # the warning only; no false "recovered"
+
+
+def test_the_recovery_email_names_the_source_that_recovered_it():
+    mail = Mail()
+    ledger = ma.run([co("carrier")], {"open": {}}, "a@example.com", mail, NOW)
+    ok = dict(co("carrier", status="active"), source="Career-site sitemap + job pages")
+    ma.run([ok], ledger, "a@example.com", mail, NOW)
+    assert "Source: Career-site sitemap + job pages" in mail.sent[-1][3]
+
+
+def test_manual_monitoring_is_never_counted_as_failing():
+    from monitoring_health import health
+    rows = [dict(co("hitachi"), monitoring="blocked"), co("swiggy", status="active")]
+    h = health(rows, NOW)
+    assert h["failures"] == 0 and h["counts"].get("manual") == 1

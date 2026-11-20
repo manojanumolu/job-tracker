@@ -56,14 +56,25 @@ def test_manual_only_companies_left_the_catalogue():
     assert not ({"uber", "tcs", "zepto"} & set(logos))          # as the logo job drops removed companies
 
 
-def test_every_listed_company_is_monitored_automatically():
-    """The catalogue lists only companies the scheduled scan reads by itself:
-    a configured official source, no monitoring hold, never the generic
-    browser fallback."""
+# Moved to manual monitoring on 20 Nov 2026 (no reachable official source: Workday-only careers
+# sites rate-limited by Cloudflare, or Cloudflare challenges on the job pages). Never Account 2's.
+MANUAL = {"c1793696371", "c1793696375", "c1793696376", "c1793696383", "c1793696384", "c1793696386",
+          "c1793696387", "c1793696388"}
+
+
+def test_every_listed_company_is_monitored_automatically_or_manually():
+    """The scheduled scan reads every catalogue company by itself (a configured
+    official source, never the generic browser fallback), except the ones on
+    manual monitoring, which are never requested and say where to check by hand."""
     for cid, c in _catalogue().items():
+        if cid in MANUAL:
+            assert monitoring_state(c) == "blocked", cid
+            assert c["status_reason"].startswith("Manual check: https://"), cid
+            continue
         assert monitoring_state(c) == "", cid
         assert scraper.sources_for(c), cid
         assert "Playwright" not in scraper.source_label(c) and "Not scanned" not in scraper.source_label(c), cid
+    assert not (MANUAL & ACCOUNT_2)
 
 
 def test_account_2s_companies_are_untouched():

@@ -76,11 +76,17 @@ def evaluate(companies: list, ledger: dict, now: datetime | None = None) -> tupl
         if not isinstance(c, dict) or not c.get("id") or not in_shared_alerts(c):
             continue
         cid = str(c["id"])
+        from config_store import monitoring_state
+        if monitoring_state(c):
+            # moved to manual monitoring (not scanned): its incident closes without a "recovered" email
+            open_.pop(cid, None)
+            continue
         scan = c.get("scan") if isinstance(c.get("scan"), dict) else {}
         blocked = scan.get("blocked_scans") if isinstance(scan.get("blocked_scans"), int) else 0
         if c.get("status") == "active":
             if cid in open_:
-                recovered.append({**open_.pop(cid), "id": cid, "recovered_at": c.get("last_success") or now_iso})
+                recovered.append({**open_.pop(cid), "id": cid, "source": _source(c) or "",   # the source that recovered it
+                                  "recovered_at": c.get("last_success") or now_iso})
             continue
         if c.get("status") in FAILING and blocked >= THRESHOLD and cid not in open_:
             inc = _incident(c, now_iso)
