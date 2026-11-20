@@ -457,35 +457,35 @@
       "status": "none",
       "reason": "cisco.com: no usable icon",
       "hint": "a2bb8c9493a44499",
-      "checked_at": "2026-11-05T09:49:12+00:00",
+      "checked_at": "2026-11-20T10:26:27+00:00",
       "finder": 2
     },
     "jiohotstar": {
       "status": "none",
       "reason": "jiohotstarjiostar.com: blocked address",
       "hint": "b78b14ca3db66520",
-      "checked_at": "2026-11-05T09:49:12+00:00",
+      "checked_at": "2026-11-20T10:26:27+00:00",
       "finder": 2
     },
     "amd": {
       "status": "none",
       "reason": "amd.com: ReadTimeout",
       "hint": "76b5e901afee3d2c",
-      "checked_at": "2026-11-06T09:49:08+00:00",
+      "checked_at": "2026-11-20T10:26:40+00:00",
       "finder": 2
     },
     "netflix": {
       "status": "none",
       "reason": "netflix.net: robots.txt; netflix.com: robots.txt",
       "hint": "b5ad65b9d1c5ede8",
-      "checked_at": "2026-11-06T09:49:09+00:00",
+      "checked_at": "2026-11-20T10:26:42+00:00",
       "finder": 2
     },
     "oracle": {
       "status": "none",
       "reason": "oracle.com: HTTP 403",
       "hint": "325d9dda3227f5e9",
-      "checked_at": "2026-11-06T09:49:11+00:00",
+      "checked_at": "2026-11-20T10:26:43+00:00",
       "finder": 2
     },
     "ibm": {
@@ -509,21 +509,21 @@
       "status": "none",
       "reason": "no website to look at",
       "hint": "1c00c10ffbd56753",
-      "checked_at": "2026-11-06T09:49:13+00:00",
+      "checked_at": "2026-11-20T10:26:43+00:00",
       "finder": 2
     },
     "servicenow": {
       "status": "none",
       "reason": "servicenow.com: HTTP 403",
       "hint": "aa95ebb791e401e7",
-      "checked_at": "2026-11-06T09:49:14+00:00",
+      "checked_at": "2026-11-20T10:26:44+00:00",
       "finder": 2
     },
     "swiggy": {
       "status": "none",
       "reason": "swiggy.in: HTTP 403; swiggy.com: HTTP 403",
       "hint": "0bf58c91e0a16e50",
-      "checked_at": "2026-11-06T09:49:21+00:00",
+      "checked_at": "2026-11-20T10:26:51+00:00",
       "finder": 2
     }
   }
