@@ -1,3 +1,28 @@
 {
-  "open": {}
+  "open": {
+    "c1793696375": {
+      "name": "Broadridge",
+      "source": "Workday API",
+      "category": "inaccessible",
+      "error": "Workday response reports zero postings but contains job rows",
+      "first_failure": "2026-11-20T18:14:30.747531+00:00",
+      "counted_since": "2026-11-19T18:14:47.130037+00:00",
+      "latest_failure": "2026-11-20T18:14:30.747566+00:00",
+      "last_success": "2026-11-16T06:08:48.420508+00:00",
+      "scans": 5,
+      "opened_at": "2026-11-20T18:15:24.504323+00:00"
+    },
+    "c1793696387": {
+      "name": "Analog Devices",
+      "source": "Workday API",
+      "category": "rate-limited",
+      "error": "Workday rate_limit (analogdevices.wd1.myworkdayjobs.com)",
+      "first_failure": "2026-11-20T18:14:45.805177+00:00",
+      "counted_since": "2026-11-19T18:14:47.133839+00:00",
+      "latest_failure": "2026-11-20T18:14:45.805209+00:00",
+      "last_success": "2026-11-16T06:15:39.229508+00:00",
+      "scans": 5,
+      "opened_at": "2026-11-20T18:15:24.504323+00:00"
+    }
+  }
 }
