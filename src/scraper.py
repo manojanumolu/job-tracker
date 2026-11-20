@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextvars
 import os
 import random
 import re
@@ -407,9 +408,15 @@ def decide(company: str, listing: Listing, detail: Detail | None) -> tuple[Class
     return result, job
 
 
+# The 72 h detail-verdict cache for companies read from non-Workday sources (Nov 2026):
+# the M7 controller in cache-only mode (Recovery.begin_cache), set by run_all per company.
+DETAIL_CACHE: contextvars.ContextVar = contextvars.ContextVar("detail_cache", default=None)
+
+
 def _evaluate(scan: Scan, listing: Listing, budget: list[int]) -> None:
     recovery = CURRENT.get()
-    fingerprint = recovery.fingerprint(listing) if recovery else ""
+    cache = recovery or DETAIL_CACHE.get()
+    fingerprint = cache.fingerprint(listing) if cache else ""
     scan.candidates += 1
     # judged as a posting here only to avoid dropping programme titles before
     # their JobPosting evidence has been read; the final verdict uses the real evidence
@@ -422,16 +429,26 @@ def _evaluate(scan: Scan, listing: Listing, budget: list[int]) -> None:
         _log_decision(scan.name, listing.title, pre)
         return
     detail = listing.detail
-    hit = recovery.lookup(listing) if recovery else None
+    hit = cache.lookup(listing) if cache else None
     if hit:
+        cache.stats["cache_hits"] += 1
+        if hit["verdict"] == "rejected" and not hit["detail"].get("description"):
+            # same posting (fingerprint), same rules: the stored rejection, no request
+            if recovery:
+                recovery.pending.pop(recovery.key(listing), None)
+            listing.title = hit["title"]
+            scan.rejected += 1
+            reason = hit["detail"].get("reason") or "rejected"
+            scan.reasons[_reason_kind(reason)] += 1
+            log.info("  %s: %s — REJECTED (cached verdict) — %s", scan.name, listing.title, reason)
+            return
         detail = Detail(**hit["detail"])
         listing.title = hit["title"]
-        recovery.stats["cache_hits"] += 1
     if detail is None and listing.fetch_detail is not None:
         if budget[0] > 0:
             budget[0] -= 1
-            if recovery:
-                recovery.stats["cache_misses"] += 1
+            if cache:
+                cache.stats["cache_misses"] += 1
             try:
                 detail = listing.fetch_detail()
             except Exception as e:  # one broken posting never aborts the company
@@ -460,7 +477,10 @@ def _evaluate(scan: Scan, listing: Listing, budget: list[int]) -> None:
         elif hit:
             recovery.pending.pop(recovery.key(listing), None)  # hits never extend TTL
         else:
-            recovery.cache_detail(listing, detail, "accepted" if job else "rejected", fingerprint)
+            recovery.cache_detail(listing, detail, "accepted" if job else "rejected", fingerprint, result.reason)
+    elif cache and not hit and result.category != Category.UNKNOWN:
+        # a real verdict from a readable page; unreadable pages and failures are never cached
+        cache.cache_detail(listing, detail, "accepted" if job else "rejected", fingerprint, result.reason)
     _log_decision(scan.name, listing.title, result)
     if job:
         scan.jobs.append(job)
@@ -1305,6 +1325,7 @@ def run_all(recovery=None, scope: str = "all") -> list[dict]:
         # so a healthy probe releases the rest of its data centre in the same run.
         scanned.sort(key=lambda c: (is_api(sources_for(c)), recovery.order_key(c)))
 
+    cache_totals: Counter = Counter()
     for company in scanned:
         previous = company.get("scan") if isinstance(company.get("scan"), dict) else {}
         from workday_runtime import is_workday
@@ -1330,11 +1351,20 @@ def run_all(recovery=None, scope: str = "all") -> list[dict]:
                 continue  # No attempt, timestamp or failure-streak advancement.
             recovery.begin(company)
         was_failing = company.get("status") not in (None, "", "active", "unknown")
+        cache_token = None
+        if recovery and not managed:
+            recovery.begin_cache(company)                 # 72 h detail-verdict cache for every source
+            cache_token = DETAIL_CACHE.set(recovery)
         try:
             scan = scan_company(company)
         finally:
             if managed:
                 recovery.end()
+            if cache_token is not None:
+                DETAIL_CACHE.reset(cache_token)
+        if recovery:
+            for k in ("cache_hits", "cache_misses"):
+                cache_totals[k] += recovery.stats.get(k, 0)
         if managed and len(recovery.http.events) == recovery.event_start:
             category = recovery.last_stop.get("failure_category", "budget")
             failing = company.get("status") in ("failing", "broken", "needs_config")
@@ -1374,6 +1404,10 @@ def run_all(recovery=None, scope: str = "all") -> list[dict]:
             company["last_job"] = scan.jobs[0]["title"] if scan.jobs else ""
         new_jobs += merge_new_jobs(seen + new_jobs, scan.jobs, company_id=company.get("id"), stats=merge_stats)
         time.sleep(1)
+
+    if recovery:
+        log.info("Detail-verdict cache (all sources): %d hits (job pages not re-read), %d misses (pages read)",
+                 cache_totals["cache_hits"], cache_totals["cache_misses"])
 
     # This scan as a whole, recorded on every company it checked (inside the
     # "scan" field, which already travels merge-safely with each company's

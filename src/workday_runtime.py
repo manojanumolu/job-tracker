@@ -43,7 +43,8 @@ def configuration():
 
 def rules_version():
     return digest(["m7-v1", *[(BASE / "src" / f).read_text("utf-8") for f in
-                  ("job_classifier.py", "job_filters.py", "locations.py", "scraper.py", "job_requirements.py", "skill_taxonomy.py")]])
+                  ("job_classifier.py", "job_filters.py", "locations.py", "scraper.py", "sources.py",
+                   "job_requirements.py", "skill_taxonomy.py")]])
 
 
 def is_api(configs):
@@ -311,6 +312,16 @@ class Recovery:
         self.used_workday = True
         self.token = CURRENT.set(self)
 
+    def begin_cache(self, company):
+        """The 72 h detail-verdict cache only, for a company read from any other
+        official source (Nov 2026): no Workday request gating, cooldown,
+        company delay or pending state - just lookup/cache_detail, keyed by
+        this company, its source configuration and the posting URL."""
+        self.company = company
+        self.source = digest(self.sources_for(company))
+        self.pending = {}
+        self.stats = {"cache_hits": 0, "cache_misses": 0}
+
     def end(self):
         if self.token is not None:
             CURRENT.reset(self.token)
@@ -360,13 +371,17 @@ class Recovery:
             return
         self.pending[key] = {"since": self.pending.get(key, {}).get("since", iso(self.wall())), "reason": reason}
 
-    def cache_detail(self, listing, detail, verdict, fingerprint):
+    def cache_detail(self, listing, detail, verdict, fingerprint, reason=""):
         key = self.key(listing)
         self.pending.pop(key, None)
         if not self.config["cache_enabled"] or not detail or not detail.ok or verdict not in ("accepted", "rejected"):
             return
         # Only the schema's public posting evidence fields, never response metadata.
         payload = {k: v for k, v in asdict(detail).items() if k != "diagnostic"}
+        if verdict == "rejected":
+            # A rejection keeps only its reason (Nov 2026: all sources are cached, so full
+            # descriptions would grow the published file by megabytes); a hit replays it.
+            payload.update(description="", strict_text="", reason=(reason or "rejected")[:2000])
         entry = {"company_id": self.company["id"], "source": self.source, "fingerprint": fingerprint,
                  "rules": self.rules, "evaluated_at": iso(self.wall()),
                  "expires_at": iso(self.wall() + self.config["cache_ttl_hours"] * 3600),
