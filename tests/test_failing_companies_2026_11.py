@@ -190,9 +190,9 @@ def test_the_workday_adapter_and_servicenow_are_unchanged():
     assert scraper.COMPANY_SOURCES["servicenow"] == [{"type": "job_feed", "url": "https://careers.servicenow.com/jobs/xml/"}]
     # JioHotstar reads its sitemap + job pages (its search API is blocked); other Workday companies are unchanged
     assert scraper.COMPANY_SOURCES["jiohotstar"] == [{"type": "workday_sitemap", "site": "https://jiostar.wd102.myworkdayjobs.com/JioStar"}]
-    # (Cisco moved to its official Phenom site in Nov 2026; Salesforce is still a Workday company)
-    assert scraper.sources_for({"id": "c1793696368", "url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site"}) == [
-        {"type": "workday", "api": "https://salesforce.wd12.myworkdayjobs.com/wday/cxs/salesforce/External_Career_Site/jobs"}]
+    # (Cisco and Salesforce moved to official non-Workday sources in Nov 2026; Marvell is still a Workday company)
+    assert scraper.sources_for({"id": "c1793696388", "url": "https://marvell.wd1.myworkdayjobs.com/MarvellCareers"}) == [
+        {"type": "workday", "api": "https://marvell.wd1.myworkdayjobs.com/wday/cxs/marvell/MarvellCareers/jobs"}]
 
 
 # ── scheduled-scan block counter (monitoring-failure email, Nov 2026) ──

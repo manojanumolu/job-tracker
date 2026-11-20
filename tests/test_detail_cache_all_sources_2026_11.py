@@ -154,8 +154,8 @@ def test_a_cached_job_keeps_its_requisition_id_for_cross_source_matching(env):
 def test_run_all_gives_every_non_workday_company_the_cache_and_workday_ones_their_controller(tmp_path, monkeypatch):
     import config_store
     from workday_http import CURRENT
-    cos = [dict(CO, status="active"), {"id": "c1793696368", "name": "Salesforce", "status": "active",
-                                       "url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site"}]
+    cos = [dict(CO, status="active"), {"id": "c1793696388", "name": "Marvell", "status": "active",
+                                       "url": "https://marvell.wd1.myworkdayjobs.com/MarvellCareers"}]
     monkeypatch.setattr(config_store, "load_companies", lambda: cos)
     monkeypatch.setattr(config_store, "load_seen_jobs", lambda: [])
     monkeypatch.setattr(config_store, "save_companies", lambda data, **kw: None)
@@ -172,7 +172,7 @@ def test_run_all_gives_every_non_workday_company_the_cache_and_workday_ones_thei
     rec = Recovery(tmp_path, cos, scraper.sources_for, config=cfg, sleep=lambda s: None)
     scraper.run_all(recovery=rec)
     assert seen["c1793696382"][0] is rec and seen["c1793696382"][1] is None        # Phenom: cache only
-    assert seen["c1793696368"] == (None, rec)                                        # Workday: its controller
+    assert seen["c1793696388"] == (None, rec)                                        # Workday: its controller
     assert scraper.DETAIL_CACHE.get() is None                                        # nothing leaks out
 
 
