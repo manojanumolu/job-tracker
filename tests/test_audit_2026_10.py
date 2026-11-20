@@ -124,16 +124,17 @@ def test_my_alerts_says_when_the_next_email_can_go_out(app, google_env, ustore):
 
 # ── an overdue scan is described truthfully (no countdown) ──────────────────
 
-@pytest.mark.parametrize("hours_ago, overdue", [(0.2, False), (5, True)])
+# 6 h windows (Nov 2026): 8 h ago always spans a whole boundary plus the 90 min grace, whatever the hour
+@pytest.mark.parametrize("hours_ago, overdue", [(0.2, False), (8, True)])
 def test_an_overdue_scan_says_so_without_promising_a_time(app, hours_ago, overdue):
     from datetime import datetime, timedelta, timezone
     from test_ui_redesign import _set_companies
     now = datetime.now(timezone.utc)
     at = app([])
-    # the last scan started right after the latest 3-hour boundary, or two windows ago
+    # the last scan started right after the latest 6-hour boundary, or over a whole window ago
     start = now - timedelta(hours=hours_ago) if not overdue else now - timedelta(hours=hours_ago)
     if not overdue:
-        boundary = now.replace(minute=0, second=0, microsecond=0) - timedelta(hours=now.hour % 3)
+        boundary = now.replace(minute=0, second=0, microsecond=0) - timedelta(hours=now.hour % 6)
         start = boundary + (now - boundary) / 2
     _set_companies(at, [{"id": "a", "name": "Alpha", "url": "https://a.example/jobs", "status": "active",
                          "last_checked": start.isoformat()}])
