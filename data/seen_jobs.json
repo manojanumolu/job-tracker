@@ -6860,8 +6860,9 @@
     "notified": false,
     "repost_last_seen": "2026-11-20",
     "company_id": "cisco",
-    "notify_state": "claimed",
+    "notify_state": "sending",
     "claim_id": "ccd6f2ea4f694acaa0939efa22b19cdb",
-    "claimed_at": "2026-11-20T00:21:57.614640+00:00"
+    "claimed_at": "2026-11-20T00:21:57.614640+00:00",
+    "sending_at": "2026-11-20T00:21:57.614640+00:00"
   }
 ]
