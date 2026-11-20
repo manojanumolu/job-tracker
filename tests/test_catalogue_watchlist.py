@@ -56,10 +56,9 @@ def test_manual_only_companies_left_the_catalogue():
     assert not ({"uber", "tcs", "zepto"} & set(logos))          # as the logo job drops removed companies
 
 
-# Moved to manual monitoring on 20 Nov 2026 (no reachable official source: Workday-only careers
-# sites rate-limited by Cloudflare, or Cloudflare challenges on the job pages). Never Account 2's.
-MANUAL = {"c1793696371", "c1793696375", "c1793696376", "c1793696383", "c1793696384", "c1793696386",
-          "c1793696387", "c1793696388"}
+# Companies on manual monitoring (no reachable official source). Empty since 20 Nov 2026 16:00 UTC:
+# the 8 unreachable Workday-only companies get two more scheduled scans first. Never Account 2's.
+MANUAL: set[str] = set()
 
 
 def test_every_listed_company_is_monitored_automatically_or_manually():
