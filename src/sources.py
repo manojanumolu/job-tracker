@@ -428,6 +428,10 @@ def jibe_listings(client: httpx.Client, cfg: dict) -> SourceResult:
                                     posting_evidence=True, detail=detail))
         if not jobs or (isinstance(total, int) and seen >= total):
             break
+    else:
+        raise SourceError("job API pagination limit reached; incomplete coverage", "failing")
+    if isinstance(total, int) and seen < total:
+        raise SourceError(f"job API returned {seen} of {total} postings; incomplete coverage", "failing")
     return SourceResult(listings, seen=seen)
 
 
