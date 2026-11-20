@@ -631,6 +631,8 @@ def _scan_sources(company: dict, sources: list[dict]) -> Scan:
                 if why:
                     scan.notes.append(why)
                     log.info("%s: %s", scan.name, why)
+            if result.coverage_error:
+                scan.fail("failing", result.coverage_error)
             scan.sources_ok += 1
             scan.seen += result.seen
             if result.note:
