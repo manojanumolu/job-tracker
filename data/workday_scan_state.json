@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "run_id": "1eda9b8236ec4d11a0b32ffa7b85be86",
-  "updated_at": "2026-11-20T18:14:46.808929+00:00",
+  "run_id": "4c249bb6a7c041498b36d11564dcf3da",
+  "updated_at": "2026-11-20T21:18:06.791474+00:00",
   "hosts": {
     "flutterbe.wd3.myworkdayjobs.com": {
       "observed_at": "2026-11-18T21:04:19.789091+00:00",
@@ -118,13 +118,16 @@
       }
     },
     "broadridge.wd5.myworkdayjobs.com": {
-      "observed_at": "2026-11-20T18:14:30.747065+00:00",
-      "cooldown_until": "",
-      "failures": 0,
-      "http_status": 200,
-      "failure_category": "",
+      "observed_at": "2026-11-20T21:18:05.786714+00:00",
+      "cooldown_until": "2026-11-21T00:18:05.786730+00:00",
+      "failures": 1,
+      "http_status": 429,
+      "failure_category": "rate_limit",
       "retry_after_s": 0,
-      "retry_after_valid": false
+      "retry_after_valid": false,
+      "headers": {
+        "server": "cloudflare"
+      }
     },
     "invesco.wd1.myworkdayjobs.com": {
       "observed_at": "2026-11-19T19:18:21.891551+00:00",
@@ -250,13 +253,16 @@
       }
     },
     "marvell.wd1.myworkdayjobs.com": {
-      "observed_at": "2026-11-18T21:04:58.624890+00:00",
-      "cooldown_until": "2026-11-19T00:04:58.624890+00:00",
-      "failures": 1,
+      "observed_at": "2026-11-20T21:17:52.763178+00:00",
+      "cooldown_until": "2026-11-21T03:17:52.763196+00:00",
+      "failures": 2,
       "http_status": 429,
       "failure_category": "rate_limit",
       "retry_after_s": 0,
-      "retry_after_valid": false
+      "retry_after_valid": false,
+      "headers": {
+        "server": "cloudflare"
+      }
     },
     "thermofisher.wd5.myworkdayjobs.com": {
       "observed_at": "2026-11-18T21:04:59.713232+00:00",
@@ -297,7 +303,7 @@
     },
     "pokerstars": {
       "source": "1e659416da76036f124254ee411c1405d15334c6ac5b2863a904dd06228bbb9b",
-      "observed_at": "2026-11-20T18:14:46.808369+00:00",
+      "observed_at": "2026-11-20T21:17:53.769321+00:00",
       "last_attempt": "2026-11-18T21:04:19.789091+00:00",
       "last_success": "2026-11-16T06:04:24.837165+00:00",
       "outcome": "deferred",
@@ -313,7 +319,7 @@
     },
     "pwc": {
       "source": "6ab46f928d378f7252d40c48de0c18502a47c70df5f63840a049f0c847a3d881",
-      "observed_at": "2026-11-20T18:14:46.808435+00:00",
+      "observed_at": "2026-11-20T21:17:53.769424+00:00",
       "last_attempt": "2026-11-20T12:48:34.563920+00:00",
       "last_success": "2026-11-16T06:06:35.730344+00:00",
       "outcome": "cooling_down",
@@ -345,7 +351,7 @@
     },
     "c1793696371": {
       "source": "b677ada9e116dafbbf55ce61e344427248f6568f9de8555d4b17c4541671ac97",
-      "observed_at": "2026-11-20T18:14:46.808507+00:00",
+      "observed_at": "2026-11-20T21:17:53.769554+00:00",
       "last_attempt": "2026-11-19T13:15:23.043350+00:00",
       "last_success": "2026-11-16T06:08:00.141265+00:00",
       "outcome": "deferred",
@@ -377,15 +383,15 @@
     },
     "c1793696375": {
       "source": "eaf495412b2ede6a59559287cfcbe4a3841a16beb31ca44d37d2d0eb333d1c0e",
-      "observed_at": "2026-11-20T18:14:30.747642+00:00",
-      "last_attempt": "2026-11-20T18:14:30.747647+00:00",
+      "observed_at": "2026-11-20T21:18:05.787213+00:00",
+      "last_attempt": "2026-11-20T21:18:05.787223+00:00",
       "last_success": "2026-11-16T06:08:48.420508+00:00",
-      "outcome": "failed",
+      "outcome": "rate_limited",
       "pending": {}
     },
     "c1793696376": {
       "source": "9cf0f853324007c78e8d0efe87adbdca271c9ddb5e8ca82186b866615d7c8b26",
-      "observed_at": "2026-11-20T18:14:46.808569+00:00",
+      "observed_at": "2026-11-20T21:18:06.790869+00:00",
       "last_attempt": "2026-11-19T19:18:21.892365+00:00",
       "last_success": "2026-11-16T06:08:53.488039+00:00",
       "outcome": "deferred",
@@ -441,7 +447,7 @@
     },
     "c1793696383": {
       "source": "94db83524b5745791c940c42e49aa24a30e8dd3023656690b211d28491e6ad1e",
-      "observed_at": "2026-11-20T18:14:46.808627+00:00",
+      "observed_at": "2026-11-20T21:18:06.791023+00:00",
       "last_attempt": "2026-11-20T01:33:36.129900+00:00",
       "last_success": "2026-11-16T06:14:57.792147+00:00",
       "outcome": "deferred",
@@ -449,7 +455,7 @@
     },
     "c1793696384": {
       "source": "8334abb041d8933ab3a698e9d65d6ba6d89023f15bb8091f9ccc3f25435d0c0a",
-      "observed_at": "2026-11-20T18:14:46.808682+00:00",
+      "observed_at": "2026-11-20T21:18:06.791139+00:00",
       "last_attempt": "2026-11-20T07:37:16.892990+00:00",
       "last_success": "2026-11-16T06:15:12.768149+00:00",
       "outcome": "deferred",
@@ -465,7 +471,7 @@
     },
     "c1793696386": {
       "source": "51f41ecd356197a78a8928f4a19ba5862c6d5cf2e8826fb80457b4b8cce6fff0",
-      "observed_at": "2026-11-20T18:14:46.808785+00:00",
+      "observed_at": "2026-11-20T21:18:06.791251+00:00",
       "last_attempt": "2026-11-20T13:40:13.145418+00:00",
       "last_success": "2026-11-16T06:15:26.053321+00:00",
       "outcome": "deferred",
@@ -473,18 +479,18 @@
     },
     "c1793696387": {
       "source": "e54ca40ad4ef66f9051d0b9f3bf57d55411715903e4027dc58d0182be8c46cea",
-      "observed_at": "2026-11-20T18:14:45.805287+00:00",
+      "observed_at": "2026-11-20T21:18:06.791363+00:00",
       "last_attempt": "2026-11-20T18:14:45.805292+00:00",
       "last_success": "2026-11-16T06:15:39.229508+00:00",
-      "outcome": "rate_limited",
+      "outcome": "deferred",
       "pending": {}
     },
     "c1793696388": {
       "source": "c9860503dd452fe98be3f25a244fc83eeb96c3fafde63bc3b5c885a0f583540b",
-      "observed_at": "2026-11-20T18:14:46.808844+00:00",
-      "last_attempt": "2026-11-18T21:04:58.624890+00:00",
+      "observed_at": "2026-11-20T21:17:52.764137+00:00",
+      "last_attempt": "2026-11-20T21:17:52.764144+00:00",
       "last_success": "2026-11-16T06:15:45.233084+00:00",
-      "outcome": "deferred",
+      "outcome": "rate_limited",
       "pending": {}
     },
     "c1793696389": {
@@ -505,8 +511,8 @@
     }
   },
   "last_completed_run": {
-    "run_id": "1eda9b8236ec4d11a0b32ffa7b85be86",
-    "started_at": "2026-11-20T18:03:14.380160+00:00",
-    "finished_at": "2026-11-20T18:14:46.808929+00:00"
+    "run_id": "4c249bb6a7c041498b36d11564dcf3da",
+    "started_at": "2026-11-20T21:17:52.681392+00:00",
+    "finished_at": "2026-11-20T21:18:06.791474+00:00"
   }
 }
