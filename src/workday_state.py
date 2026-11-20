@@ -1,6 +1,8 @@
 """M7 public data schemas and merge rules. No network, credentials or executable data."""
 from __future__ import annotations
 
+from posting_privacy import _EMAIL_RE
+
 import copy
 import hashlib
 import json
@@ -166,8 +168,23 @@ def read(path: Path, name: str) -> dict:
     return data
 
 
+def _public_cache(name: str, data: dict) -> dict:
+    if name != CACHE_FILE:
+        return data
+    # Keep original verdict inputs intact. A posting with a contact address is
+    # evaluated normally and re-read on the next scan instead of being cached.
+    entries = {}
+    for key, entry in data["entries"].items():
+        fields = (entry["title"], *entry["detail"].values())
+        if any(isinstance(v, str) and "@" in v and _EMAIL_RE.search(v) for v in fields):
+            continue
+        entries[key] = entry
+    return {**data, "entries": entries}
+
+
 def write(path: Path, name: str, data: dict) -> None:
     validate(name, data)
+    data = _public_cache(name, data)
     temp = path.with_suffix(".tmp")
     temp.write_text(json.dumps(data, ensure_ascii=True, separators=(",", ":")) + "\n", encoding="utf-8")
     temp.replace(path)
@@ -176,7 +193,7 @@ def write(path: Path, name: str, data: dict) -> None:
 def merge(name: str, remote: dict | None, local: dict) -> dict:
     validate(name, local)
     if remote is None:
-        return copy.deepcopy(local)
+        return _public_cache(name, copy.deepcopy(local))
     validate(name, remote)  # Never overwrite an unsupported/corrupt remote safety record.
     newer = epoch(local["updated_at"]) > epoch(remote["updated_at"])
     out = copy.deepcopy(local if newer else remote)
@@ -200,6 +217,7 @@ def merge(name: str, remote: dict | None, local: dict) -> dict:
     else:
         runs = [r for r in (remote["last_completed_run"], local["last_completed_run"]) if r]
         out["last_completed_run"] = max(runs, key=lambda r: epoch(r["finished_at"])) if runs else {}
+    out = _public_cache(name, out)
     validate(name, out)
     return out
 
