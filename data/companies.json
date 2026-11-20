@@ -108,17 +108,18 @@
       "failing_since": "2026-11-16T09:04:45.827571+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-20T12:03:19.846519+00:00",
-        "finished_at": "2026-11-20T12:20:07.520054+00:00",
-        "jobs_found": 119,
+        "started_at": "2026-11-20T12:48:34.201737+00:00",
+        "finished_at": "2026-11-20T12:48:46.598709+00:00",
+        "jobs_found": 0,
         "new_jobs": 0,
-        "portals": 44,
+        "portals": 10,
         "portals_failed": 10,
-        "reposts_suppressed": 63,
+        "reposts_suppressed": 0,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "14885661ca5046a5bb00ff9283856b00"
+        "run_id": "776d165c476742a6b352ddb95bfff77e",
+        "scope": "workday"
       },
       "recovery": {
         "version": 1,
@@ -133,7 +134,7 @@
         "cooldown_until": "2026-11-19T00:04:19.789091+00:00",
         "last_attempt": "2026-11-18T21:04:19.789091+00:00",
         "last_success": "2026-11-16T06:04:24.837165+00:00",
-        "observed_at": "2026-11-20T12:20:07.518222+00:00",
+        "observed_at": "2026-11-20T12:48:35.567263+00:00",
         "source": "1e659416da76036f124254ee411c1405d15334c6ac5b2863a904dd06228bbb9b",
         "unresolved_failure": true,
         "pending": 0,
@@ -143,7 +144,7 @@
       },
       "blocked_scans": 4,
       "blocked_since": "2026-11-19T18:14:47.128555+00:00",
-      "last_failed_at": "2026-11-20T12:20:07.518123+00:00"
+      "last_failed_at": "2026-11-20T12:48:35.567187+00:00"
     },
     "source": "Workday API",
     "last_success": "2026-11-16T06:04:24.837165+00:00",
@@ -199,8 +200,8 @@
     "locked": true,
     "status": "failing",
     "last_job": "Associate - CA Freshers - RDC",
-    "last_checked": "2026-11-20T00:21:07.584265+00:00",
-    "status_reason": "Workday rate_limit (pwc.wd3.myworkdayjobs.com); Workday cooldown (pwc.wd3.myworkdayjobs.com) — failing since 16 Nov 09:04 UTC (24 scans in a row)",
+    "last_checked": "2026-11-20T12:48:34.563411+00:00",
+    "status_reason": "Workday rate_limit (pwc.wd3.myworkdayjobs.com); Workday cooldown (pwc.wd3.myworkdayjobs.com) — failing since 16 Nov 09:04 UTC (25 scans in a row)",
     "scan_note": "",
     "scan": {
       "postings_seen": 0,
@@ -213,44 +214,47 @@
       "unknown": 0,
       "rejections": {},
       "failing_since": "2026-11-16T09:04:49.564643+00:00",
-      "failed_scans": 24,
+      "failed_scans": 25,
+      "blocked_scans": 4,
+      "blocked_since": "2026-11-19T18:14:47.129006+00:00",
+      "last_failed_at": "2026-11-20T12:48:34.563861+00:00",
       "recovery": {
         "version": 1,
         "company_id": "pwc",
         "discovery_method": "workday, workday",
-        "outcome": "cooling_down",
-        "failure_category": "cooldown",
-        "http_status": null,
+        "outcome": "rate_limited",
+        "failure_category": "rate_limit",
+        "http_status": 429,
         "host": "pwc.wd3.myworkdayjobs.com",
         "retry_after_s": 0,
         "retry_after_valid": false,
-        "cooldown_until": "2026-11-20T12:21:07.583828+00:00",
-        "last_attempt": "2026-11-20T00:21:07.584367+00:00",
+        "cooldown_until": "2026-11-21T12:48:34.563097+00:00",
+        "last_attempt": "2026-11-20T12:48:34.563920+00:00",
         "last_success": "2026-11-16T06:06:35.730344+00:00",
-        "observed_at": "2026-11-20T12:20:07.518299+00:00",
+        "observed_at": "2026-11-20T12:48:34.563915+00:00",
         "source": "6ab46f928d378f7252d40c48de0c18502a47c70df5f63840a049f0c847a3d881",
         "unresolved_failure": true,
         "pending": 0,
         "oldest_pending": "",
         "overdue": true,
-        "requests": 0
+        "requests": 1,
+        "cache_hits": 0,
+        "cache_misses": 0
       },
       "run": {
-        "started_at": "2026-11-20T12:03:19.846519+00:00",
-        "finished_at": "2026-11-20T12:20:07.520054+00:00",
-        "jobs_found": 119,
+        "started_at": "2026-11-20T12:48:34.201737+00:00",
+        "finished_at": "2026-11-20T12:48:46.598709+00:00",
+        "jobs_found": 0,
         "new_jobs": 0,
-        "portals": 44,
+        "portals": 10,
         "portals_failed": 10,
-        "reposts_suppressed": 63,
+        "reposts_suppressed": 0,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "14885661ca5046a5bb00ff9283856b00"
-      },
-      "blocked_scans": 4,
-      "blocked_since": "2026-11-19T18:14:47.129006+00:00",
-      "last_failed_at": "2026-11-20T12:20:07.518279+00:00"
+        "run_id": "776d165c476742a6b352ddb95bfff77e",
+        "scope": "workday"
+      }
     },
     "source": "Workday API",
     "last_success": "2026-11-16T06:06:35.730344+00:00",
@@ -500,7 +504,7 @@
         "cooldown_until": "2026-11-19T19:15:23.043053+00:00",
         "last_attempt": "2026-11-19T13:15:23.043350+00:00",
         "last_success": "2026-11-16T06:08:00.141265+00:00",
-        "observed_at": "2026-11-20T12:20:07.518580+00:00",
+        "observed_at": "2026-11-20T12:48:35.567572+00:00",
         "source": "b677ada9e116dafbbf55ce61e344427248f6568f9de8555d4b17c4541671ac97",
         "unresolved_failure": true,
         "pending": 0,
@@ -509,21 +513,22 @@
         "requests": 0
       },
       "run": {
-        "started_at": "2026-11-20T12:03:19.846519+00:00",
-        "finished_at": "2026-11-20T12:20:07.520054+00:00",
-        "jobs_found": 119,
+        "started_at": "2026-11-20T12:48:34.201737+00:00",
+        "finished_at": "2026-11-20T12:48:46.598709+00:00",
+        "jobs_found": 0,
         "new_jobs": 0,
-        "portals": 44,
+        "portals": 10,
         "portals_failed": 10,
-        "reposts_suppressed": 63,
+        "reposts_suppressed": 0,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "14885661ca5046a5bb00ff9283856b00"
+        "run_id": "776d165c476742a6b352ddb95bfff77e",
+        "scope": "workday"
       },
       "blocked_scans": 4,
       "blocked_since": "2026-11-19T18:14:47.129109+00:00",
-      "last_failed_at": "2026-11-20T12:20:07.518561+00:00"
+      "last_failed_at": "2026-11-20T12:48:35.567531+00:00"
     },
     "source": "Workday API"
   },
@@ -655,10 +660,10 @@
     "name": "Broadridge",
     "url": "https://broadridge.wd5.myworkdayjobs.com/Careers",
     "locked": false,
-    "status": "broken",
+    "status": "failing",
     "last_job": "",
-    "last_checked": "2026-11-20T12:20:06.514620+00:00",
-    "status_reason": "Workday response reports zero postings but contains job rows — failing since 16 Nov 09:05 UTC (24 scans in a row)",
+    "last_checked": "2026-11-20T12:48:45.595110+00:00",
+    "status_reason": "Workday rate_limit (broadridge.wd5.myworkdayjobs.com) — failing since 16 Nov 09:05 UTC (25 scans in a row)",
     "scan_note": "",
     "last_success": "2026-11-16T06:08:48.420508+00:00",
     "scan": {
@@ -672,45 +677,46 @@
       "unknown": 0,
       "rejections": {},
       "failing_since": "2026-11-16T09:05:06.081546+00:00",
-      "failed_scans": 24,
+      "failed_scans": 25,
       "blocked_scans": 4,
       "blocked_since": "2026-11-19T18:14:47.130037+00:00",
-      "last_failed_at": "2026-11-20T12:20:06.514648+00:00",
+      "last_failed_at": "2026-11-20T12:48:45.595125+00:00",
       "recovery": {
         "version": 1,
         "company_id": "c1793696375",
         "discovery_method": "workday",
-        "outcome": "failed",
-        "failure_category": "invalid_response",
-        "http_status": null,
+        "outcome": "rate_limited",
+        "failure_category": "rate_limit",
+        "http_status": 429,
         "host": "broadridge.wd5.myworkdayjobs.com",
         "retry_after_s": 0,
         "retry_after_valid": false,
-        "cooldown_until": "",
-        "last_attempt": "2026-11-20T12:20:06.514750+00:00",
+        "cooldown_until": "2026-11-20T15:48:45.594924+00:00",
+        "last_attempt": "2026-11-20T12:48:45.595179+00:00",
         "last_success": "2026-11-16T06:08:48.420508+00:00",
-        "observed_at": "2026-11-20T12:20:06.514742+00:00",
+        "observed_at": "2026-11-20T12:48:45.595175+00:00",
         "source": "eaf495412b2ede6a59559287cfcbe4a3841a16beb31ca44d37d2d0eb333d1c0e",
         "unresolved_failure": true,
         "pending": 0,
         "oldest_pending": "",
         "overdue": true,
-        "requests": 3,
+        "requests": 1,
         "cache_hits": 0,
         "cache_misses": 0
       },
       "run": {
-        "started_at": "2026-11-20T12:03:19.846519+00:00",
-        "finished_at": "2026-11-20T12:20:07.520054+00:00",
-        "jobs_found": 119,
+        "started_at": "2026-11-20T12:48:34.201737+00:00",
+        "finished_at": "2026-11-20T12:48:46.598709+00:00",
+        "jobs_found": 0,
         "new_jobs": 0,
-        "portals": 44,
+        "portals": 10,
         "portals_failed": 10,
-        "reposts_suppressed": 63,
+        "reposts_suppressed": 0,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "14885661ca5046a5bb00ff9283856b00"
+        "run_id": "776d165c476742a6b352ddb95bfff77e",
+        "scope": "workday"
       }
     },
     "source": "Workday API"
@@ -751,7 +757,7 @@
         "cooldown_until": "2026-11-20T01:18:21.891573+00:00",
         "last_attempt": "2026-11-19T19:18:21.892365+00:00",
         "last_success": "2026-11-16T06:08:53.488039+00:00",
-        "observed_at": "2026-11-20T12:20:07.518872+00:00",
+        "observed_at": "2026-11-20T12:48:46.597743+00:00",
         "source": "9cf0f853324007c78e8d0efe87adbdca271c9ddb5e8ca82186b866615d7c8b26",
         "unresolved_failure": true,
         "pending": 0,
@@ -760,21 +766,22 @@
         "requests": 0
       },
       "run": {
-        "started_at": "2026-11-20T12:03:19.846519+00:00",
-        "finished_at": "2026-11-20T12:20:07.520054+00:00",
-        "jobs_found": 119,
+        "started_at": "2026-11-20T12:48:34.201737+00:00",
+        "finished_at": "2026-11-20T12:48:46.598709+00:00",
+        "jobs_found": 0,
         "new_jobs": 0,
-        "portals": 44,
+        "portals": 10,
         "portals_failed": 10,
-        "reposts_suppressed": 63,
+        "reposts_suppressed": 0,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "14885661ca5046a5bb00ff9283856b00"
+        "run_id": "776d165c476742a6b352ddb95bfff77e",
+        "scope": "workday"
       },
       "blocked_scans": 4,
       "blocked_since": "2026-11-19T18:14:47.130360+00:00",
-      "last_failed_at": "2026-11-20T12:20:07.518843+00:00"
+      "last_failed_at": "2026-11-20T12:48:46.597675+00:00"
     },
     "source": "Workday API"
   },
@@ -1067,7 +1074,7 @@
         "cooldown_until": "2026-11-20T07:33:36.129035+00:00",
         "last_attempt": "2026-11-20T01:33:36.129900+00:00",
         "last_success": "2026-11-16T06:14:57.792147+00:00",
-        "observed_at": "2026-11-20T12:20:07.519125+00:00",
+        "observed_at": "2026-11-20T12:48:46.597959+00:00",
         "source": "94db83524b5745791c940c42e49aa24a30e8dd3023656690b211d28491e6ad1e",
         "unresolved_failure": true,
         "pending": 0,
@@ -1076,21 +1083,22 @@
         "requests": 0
       },
       "run": {
-        "started_at": "2026-11-20T12:03:19.846519+00:00",
-        "finished_at": "2026-11-20T12:20:07.520054+00:00",
-        "jobs_found": 119,
+        "started_at": "2026-11-20T12:48:34.201737+00:00",
+        "finished_at": "2026-11-20T12:48:46.598709+00:00",
+        "jobs_found": 0,
         "new_jobs": 0,
-        "portals": 44,
+        "portals": 10,
         "portals_failed": 10,
-        "reposts_suppressed": 63,
+        "reposts_suppressed": 0,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "14885661ca5046a5bb00ff9283856b00"
+        "run_id": "776d165c476742a6b352ddb95bfff77e",
+        "scope": "workday"
       },
       "blocked_scans": 4,
       "blocked_since": "2026-11-19T18:14:47.132537+00:00",
-      "last_failed_at": "2026-11-20T12:20:07.519109+00:00"
+      "last_failed_at": "2026-11-20T12:48:46.597943+00:00"
     },
     "source": "Workday API"
   },
@@ -1130,7 +1138,7 @@
         "cooldown_until": "2026-11-20T13:37:16.892419+00:00",
         "last_attempt": "2026-11-20T07:37:16.892990+00:00",
         "last_success": "2026-11-16T06:15:12.768149+00:00",
-        "observed_at": "2026-11-20T12:20:07.519223+00:00",
+        "observed_at": "2026-11-20T12:48:46.598006+00:00",
         "source": "8334abb041d8933ab3a698e9d65d6ba6d89023f15bb8091f9ccc3f25435d0c0a",
         "unresolved_failure": true,
         "pending": 0,
@@ -1139,21 +1147,22 @@
         "requests": 0
       },
       "run": {
-        "started_at": "2026-11-20T12:03:19.846519+00:00",
-        "finished_at": "2026-11-20T12:20:07.520054+00:00",
-        "jobs_found": 119,
+        "started_at": "2026-11-20T12:48:34.201737+00:00",
+        "finished_at": "2026-11-20T12:48:46.598709+00:00",
+        "jobs_found": 0,
         "new_jobs": 0,
-        "portals": 44,
+        "portals": 10,
         "portals_failed": 10,
-        "reposts_suppressed": 63,
+        "reposts_suppressed": 0,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "14885661ca5046a5bb00ff9283856b00"
+        "run_id": "776d165c476742a6b352ddb95bfff77e",
+        "scope": "workday"
       },
       "blocked_scans": 4,
       "blocked_since": "2026-11-19T18:14:47.132883+00:00",
-      "last_failed_at": "2026-11-20T12:20:07.519205+00:00"
+      "last_failed_at": "2026-11-20T12:48:46.597994+00:00"
     },
     "source": "Workday API"
   },
@@ -1224,17 +1233,18 @@
       "failing_since": "2026-11-16T09:05:17.587493+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-20T12:03:19.846519+00:00",
-        "finished_at": "2026-11-20T12:20:07.520054+00:00",
-        "jobs_found": 119,
+        "started_at": "2026-11-20T12:48:34.201737+00:00",
+        "finished_at": "2026-11-20T12:48:46.598709+00:00",
+        "jobs_found": 0,
         "new_jobs": 0,
-        "portals": 44,
+        "portals": 10,
         "portals_failed": 10,
-        "reposts_suppressed": 63,
+        "reposts_suppressed": 0,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "14885661ca5046a5bb00ff9283856b00"
+        "run_id": "776d165c476742a6b352ddb95bfff77e",
+        "scope": "workday"
       },
       "recovery": {
         "version": 1,
@@ -1249,7 +1259,7 @@
         "cooldown_until": "2026-11-19T00:04:56.506865+00:00",
         "last_attempt": "2026-11-18T21:04:56.506865+00:00",
         "last_success": "2026-11-16T06:15:26.053321+00:00",
-        "observed_at": "2026-11-20T12:20:07.519472+00:00",
+        "observed_at": "2026-11-20T12:48:46.598213+00:00",
         "source": "51f41ecd356197a78a8928f4a19ba5862c6d5cf2e8826fb80457b4b8cce6fff0",
         "unresolved_failure": true,
         "pending": 0,
@@ -1259,7 +1269,7 @@
       },
       "blocked_scans": 4,
       "blocked_since": "2026-11-19T18:14:47.133522+00:00",
-      "last_failed_at": "2026-11-20T12:20:07.519456+00:00"
+      "last_failed_at": "2026-11-20T12:48:46.598197+00:00"
     },
     "source": "Workday API"
   },
@@ -1287,17 +1297,18 @@
       "failing_since": "2026-11-16T09:05:18.620659+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-20T12:03:19.846519+00:00",
-        "finished_at": "2026-11-20T12:20:07.520054+00:00",
-        "jobs_found": 119,
+        "started_at": "2026-11-20T12:48:34.201737+00:00",
+        "finished_at": "2026-11-20T12:48:46.598709+00:00",
+        "jobs_found": 0,
         "new_jobs": 0,
-        "portals": 44,
+        "portals": 10,
         "portals_failed": 10,
-        "reposts_suppressed": 63,
+        "reposts_suppressed": 0,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "14885661ca5046a5bb00ff9283856b00"
+        "run_id": "776d165c476742a6b352ddb95bfff77e",
+        "scope": "workday"
       },
       "recovery": {
         "version": 1,
@@ -1312,7 +1323,7 @@
         "cooldown_until": "2026-11-19T00:04:57.552890+00:00",
         "last_attempt": "2026-11-18T21:04:57.552890+00:00",
         "last_success": "2026-11-16T06:15:39.229508+00:00",
-        "observed_at": "2026-11-20T12:20:07.519716+00:00",
+        "observed_at": "2026-11-20T12:48:46.598405+00:00",
         "source": "e54ca40ad4ef66f9051d0b9f3bf57d55411715903e4027dc58d0182be8c46cea",
         "unresolved_failure": true,
         "pending": 0,
@@ -1322,7 +1333,7 @@
       },
       "blocked_scans": 4,
       "blocked_since": "2026-11-19T18:14:47.133839+00:00",
-      "last_failed_at": "2026-11-20T12:20:07.519701+00:00"
+      "last_failed_at": "2026-11-20T12:48:46.598393+00:00"
     },
     "source": "Workday API"
   },
@@ -1350,17 +1361,18 @@
       "failing_since": "2026-11-16T09:05:19.649746+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-20T12:03:19.846519+00:00",
-        "finished_at": "2026-11-20T12:20:07.520054+00:00",
-        "jobs_found": 119,
+        "started_at": "2026-11-20T12:48:34.201737+00:00",
+        "finished_at": "2026-11-20T12:48:46.598709+00:00",
+        "jobs_found": 0,
         "new_jobs": 0,
-        "portals": 44,
+        "portals": 10,
         "portals_failed": 10,
-        "reposts_suppressed": 63,
+        "reposts_suppressed": 0,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "14885661ca5046a5bb00ff9283856b00"
+        "run_id": "776d165c476742a6b352ddb95bfff77e",
+        "scope": "workday"
       },
       "recovery": {
         "version": 1,
@@ -1375,7 +1387,7 @@
         "cooldown_until": "2026-11-19T00:04:58.624890+00:00",
         "last_attempt": "2026-11-18T21:04:58.624890+00:00",
         "last_success": "2026-11-16T06:15:45.233084+00:00",
-        "observed_at": "2026-11-20T12:20:07.519957+00:00",
+        "observed_at": "2026-11-20T12:48:46.598623+00:00",
         "source": "c9860503dd452fe98be3f25a244fc83eeb96c3fafde63bc3b5c885a0f583540b",
         "unresolved_failure": true,
         "pending": 0,
@@ -1385,7 +1397,7 @@
       },
       "blocked_scans": 4,
       "blocked_since": "2026-11-19T18:14:47.134173+00:00",
-      "last_failed_at": "2026-11-20T12:20:07.519941+00:00"
+      "last_failed_at": "2026-11-20T12:48:46.598609+00:00"
     },
     "source": "Workday API"
   },
