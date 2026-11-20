@@ -7001,5 +7001,71 @@
     "notified": false,
     "repost_last_seen": "2026-11-20",
     "company_id": "deloitte"
+  },
+  {
+    "title": "Insurance Associate",
+    "url": "https://www.metlifecareers.com/en_US/ml/JobDetail/Associate/21691",
+    "company": "MetLife",
+    "location": "Noida, India",
+    "category": "FRESHER",
+    "reason": "experience starts at 0: 'at least 0-2 years'",
+    "evidence": {
+      "experience": [
+        "at least 0-2 years"
+      ],
+      "experience_lines": [
+        "Professional from the Operations with at least 0-2 years of working experience",
+        "Bachelor’s degree (Any Stream) with a minimum of 15 years of education.",
+        "Experience"
+      ],
+      "fresher_evidence": "at least 0-2 years",
+      "detail_read": true,
+      "detail_match": "page title names the same job ID/title",
+      "job_id": "avature:21691",
+      "canonical_url": "https://metlifecareers.com/en_US/ml/JobDetail/Associate/21691",
+      "checks": {
+        "real_job_posting": true,
+        "india_location": true,
+        "detail_read": true,
+        "detail_is_this_job": true,
+        "no_conflicting_experience": true,
+        "not_programme_story_talent_recruiter": true,
+        "evidence_not_staff_context": true,
+        "fresher_or_entry_evidence": true
+      },
+      "skills": {
+        "AI / LLMs": "As part of our New Frontier strategy, MetLife is building an AI-enabled, people-centered future. We’re looking for people who bring curiosity, adaptability, and",
+        "Problem solving": "Problem Solving/Analytical Ability."
+      },
+      "requirements": [
+        {
+          "text": "Relocation Assistance Available: No",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Bachelor’s degree (Any Stream) with a minimum of 15 years of education.",
+          "importance": "mandatory"
+        },
+        {
+          "text": "Professional from the Operations with at least 0-2 years of working experience",
+          "importance": "unspecified"
+        },
+        {
+          "text": "Problem Solving/Analytical Ability.",
+          "importance": "mandatory"
+        },
+        {
+          "text": "As part of our New Frontier strategy, MetLife is building an AI-enabled, people-centered future. We’re looking for people who bring curiosity, adaptability, and a growth mindset as we use AI to enhan…",
+          "importance": "mandatory"
+        }
+      ]
+    },
+    "uid": "metlife|avature:21691",
+    "date": "Nov 20, 18:04",
+    "first_seen": "2026-11-20T18:04:37.675389+00:00",
+    "id": "MetLife_Insurance_Associate",
+    "notified": false,
+    "repost_last_seen": "2026-11-20",
+    "company_id": "metlife"
   }
 ]

@@ -1,8 +1,608 @@
 {
   "schema_version": 1,
-  "run_id": "de025b9abbba444081874630875d86b5",
-  "updated_at": "2026-11-20T15:52:03.177203+00:00",
+  "run_id": "1eda9b8236ec4d11a0b32ffa7b85be86",
+  "updated_at": "2026-11-20T18:14:46.808929+00:00",
   "entries": {
+    "83385a27f5e04d9ea3a9c2900a081ef2d300fa2c81805196b30983332e29bf6b": {
+      "company_id": "cisco",
+      "source": "3cebd1beafab612e90d38d79708f0da5cee21e02c6f4e1e81a33d36264073033",
+      "fingerprint": "e1d21bf8bc80349abf081f894c487693eed2e639f13b1d2fbb98cd8b26d91741",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:12:48.364582+00:00",
+      "expires_at": "2026-11-23T18:12:48.364592+00:00",
+      "title": "Software Engineer",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Bangalore, India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '5 years' (minimum 5 yr)",
+        "matched": "JobPosting on the job page",
+        "posted_at": "2026-11-20"
+      },
+      "verdict": "rejected"
+    },
+    "1386042882da301c733f68bf2196b46176282ab838b6c42df6d22805d96f0348": {
+      "company_id": "cisco",
+      "source": "3cebd1beafab612e90d38d79708f0da5cee21e02c6f4e1e81a33d36264073033",
+      "fingerprint": "1cc8c0e793187f7141767bb598f4cd37c30fed1fe0c3a058237f75dbb05e112a",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:12:47.988673+00:00",
+      "expires_at": "2026-11-23T18:12:47.988683+00:00",
+      "title": "Software Engineer",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Bangalore, India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '5 years' (minimum 5 yr)",
+        "matched": "JobPosting on the job page",
+        "posted_at": "2026-11-20"
+      },
+      "verdict": "rejected"
+    },
+    "03dfb05920509f7918406483a363171117a2be681c9232db6baafa1e67fae390": {
+      "company_id": "cisco",
+      "source": "3cebd1beafab612e90d38d79708f0da5cee21e02c6f4e1e81a33d36264073033",
+      "fingerprint": "3de8cc98a3566d48cbc65d5bdb507da39d62df7d6e612b99b90cb578f64882b6",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:12:47.391847+00:00",
+      "expires_at": "2026-11-23T18:12:47.391856+00:00",
+      "title": "Solutions Engineer (Optical)",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Mumbai, India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '10+ years' (minimum 10 yr)",
+        "matched": "JobPosting on the job page",
+        "posted_at": "2026-11-20"
+      },
+      "verdict": "rejected"
+    },
+    "588df68ed4a52103805e6f071f151d748fd48d6c3ff9da79f34fa15d5bb555b1": {
+      "company_id": "qualcomm",
+      "source": "2dfc7eea3ecc060eb3d3edb91bb8ce8cf0e0776b3f0f1b08324412ef56187a4f",
+      "fingerprint": "f5056e859467503d429f1b2ea9c4cfdd1eff1c1bb534b4c1ebaeab175dcd937c",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:11:52.084214+00:00",
+      "expires_at": "2026-11-23T18:11:52.084224+00:00",
+      "title": "Engineer - Audio DSP",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Hyderabad, Telangāna, India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '4+ years' (minimum 4 yr)",
+        "matched": "eightfold position",
+        "posted_at": "2026-11-20"
+      },
+      "verdict": "rejected"
+    },
+    "cd8b0c89a0b769081ab7bfe521d1ba2ed056a9014cbb69f94b0e2eee533687d6": {
+      "company_id": "microsoft",
+      "source": "eae7b9d265deafdeec3281d016c799396457073127eb723399503b11e3e63ba0",
+      "fingerprint": "1694be923c4408f2a85f1198812173e04595f4ccaca75e4c647ce579b1fd6ff0",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:10:23.480192+00:00",
+      "expires_at": "2026-11-23T18:10:23.480201+00:00",
+      "title": "Data Center Technician",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "India, Maharashtra, Mumbai",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '1+ years' (minimum 1 yr)",
+        "matched": "eightfold position",
+        "posted_at": "2026-11-20"
+      },
+      "verdict": "rejected"
+    },
+    "68f3db3462aeae89791417da8401464f56d375add24a1b34617602fc72cbd3ba": {
+      "company_id": "microsoft",
+      "source": "eae7b9d265deafdeec3281d016c799396457073127eb723399503b11e3e63ba0",
+      "fingerprint": "34e29388c6adf448f18b295d8443e0057a42c34d631847d921369f45e76eb29c",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:10:23.222905+00:00",
+      "expires_at": "2026-11-23T18:10:23.222914+00:00",
+      "title": "Digital Solution Area Specialists - Copilot",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "India, Karnataka, Bangalore | India, Maharashtra, Mumbai | India, Haryana, Gurgaon",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '10+ years' (minimum 10 yr)",
+        "matched": "eightfold position",
+        "posted_at": "2026-11-20"
+      },
+      "verdict": "rejected"
+    },
+    "c930409232666ef84028d914268276fd02cc7875cd651673c7af3160fbdc8b1a": {
+      "company_id": "microsoft",
+      "source": "eae7b9d265deafdeec3281d016c799396457073127eb723399503b11e3e63ba0",
+      "fingerprint": "6c14368bd462e4356fc104bdc7ff123f00e1dd906fb610332e53ac61b3f6bac4",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:10:22.344804+00:00",
+      "expires_at": "2026-11-23T18:10:22.344813+00:00",
+      "title": "Digital Enterprise Support Specialist- Services Sales",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "India, Haryana, Gurgaon | India, Karnataka, Bangalore | India, Telangana, Hyderabad | India, Uttar Pradesh, Noida",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '4+ years' (minimum 4 yr)",
+        "matched": "eightfold position",
+        "posted_at": "2026-11-18"
+      },
+      "verdict": "rejected"
+    },
+    "89c5cf7adc88ad8ae89db74633d6fdf7ee327b36d2052eb2a7618d452ac09a21": {
+      "company_id": "c1793696380",
+      "source": "7cbab93d602de5428355d16923a176e28508695c6584a34dddd37b3412127a1d",
+      "fingerprint": "923becbaf1c8f056bcdc87ee50ee9aca1c2279a07182d42e229f9c03df3ed09a",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:07:10.934958+00:00",
+      "expires_at": "2026-11-23T18:07:10.934970+00:00",
+      "title": "Program Management Analyst - Cigna Healthcare",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Bengaluru, Karnātaka, India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '3+ years' (minimum 3 yr)",
+        "matched": "JobPosting on the job page",
+        "posted_at": "2026-11-20"
+      },
+      "verdict": "rejected"
+    },
+    "9a782563eed6be11caa6a8990ea3efe630c3daf9740537110ed174d0d06dfd52": {
+      "company_id": "c1793696379",
+      "source": "ec6eb099784b3834e504e2ad45845e0db2ba299ee612eb2f2bc10f093911cbc6",
+      "fingerprint": "3a81091a18bef0a840325ae02996e3a593e37f9d1dbb3b99c9d140efd3ebac8c",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:06:45.296046+00:00",
+      "expires_at": "2026-11-23T18:06:45.296055+00:00",
+      "title": "Data Engineer",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Hyderabad, India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '4-6 years' (minimum 4 yr)",
+        "matched": "JobPosting on the job page",
+        "posted_at": "2026-10-16"
+      },
+      "verdict": "rejected"
+    },
+    "852f6360f59556f67f5c33c3c9eaf9237e16a40d0e8b8be261c3f1493c752c59": {
+      "company_id": "c1793696379",
+      "source": "ec6eb099784b3834e504e2ad45845e0db2ba299ee612eb2f2bc10f093911cbc6",
+      "fingerprint": "dac08e80ce07db5077cba9b6b81ee58c12528cbd02886fb30058c0bb63413945",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:06:44.368140+00:00",
+      "expires_at": "2026-11-23T18:06:44.368150+00:00",
+      "title": "Associate Regulatory Writing",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Hyderabad, India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: 'Minimum of 1 year' (minimum 1 yr)",
+        "matched": "JobPosting on the job page",
+        "posted_at": "2026-11-20"
+      },
+      "verdict": "rejected"
+    },
+    "0ceb48ed9dc606717dfb6b2c75823ced27b5f535e279b6ddb646d087f6940b0e": {
+      "company_id": "c1793696373",
+      "source": "7ea64098f5a5e6d762fa46612e3dae061e33282a18f6f5a9994617ad7128deab",
+      "fingerprint": "bae5cfc7519a16ca2166579afeed4544cd83063e82330a83a126e0cb49545e20",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:06:27.132417+00:00",
+      "expires_at": "2026-11-23T18:06:27.132427+00:00",
+      "title": "Reporting Specialist",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Hyderabad, Telangāna, India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '8+ years' (minimum 8 yr)",
+        "matched": "JobPosting on the job page",
+        "posted_at": "2026-11-20"
+      },
+      "verdict": "rejected"
+    },
+    "3f4885337ea660e1222a4e9d3f954c2fd8953ac602fc4c963fa78122285cc2b2": {
+      "company_id": "c1793696373",
+      "source": "7ea64098f5a5e6d762fa46612e3dae061e33282a18f6f5a9994617ad7128deab",
+      "fingerprint": "630adc0c5711acf0d9d7c0783fb263964cf3a17ff317ff076199b065ce382115",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:06:26.902203+00:00",
+      "expires_at": "2026-11-23T18:06:26.902214+00:00",
+      "title": "Production Engineer-Chiller",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Chennai, Tamil Nādu, India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '3-8 years' (minimum 3 yr)",
+        "matched": "JobPosting on the job page",
+        "posted_at": "2026-11-20"
+      },
+      "verdict": "rejected"
+    },
+    "d34b0600dd2a0d86a509d91d203c8f3251dc2682d3c6f5bd4f5c3a4d1053a531": {
+      "company_id": "c1793696373",
+      "source": "7ea64098f5a5e6d762fa46612e3dae061e33282a18f6f5a9994617ad7128deab",
+      "fingerprint": "e98b09c42fbc1132615c303b766b43e63a558557d19c45f96e9da0fa9f754b1a",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:06:26.408688+00:00",
+      "expires_at": "2026-11-23T18:06:26.408700+00:00",
+      "title": "Electrical Maintenance Engineer",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Chennai, Tamil Nādu, India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '6-10 years' (minimum 6 yr)",
+        "matched": "JobPosting on the job page",
+        "posted_at": "2026-11-20"
+      },
+      "verdict": "rejected"
+    },
+    "d35a4fc8e1e89b26c6fce755653ad1be4044e188dd792f35d0a0ea03440a9504": {
+      "company_id": "c1793696373",
+      "source": "7ea64098f5a5e6d762fa46612e3dae061e33282a18f6f5a9994617ad7128deab",
+      "fingerprint": "3aa8bdfad695ce0b31b178c08065f9c069f180934c49d1b5c42d68f357f6a17d",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:06:25.945989+00:00",
+      "expires_at": "2026-11-23T18:06:25.946000+00:00",
+      "title": "HVAC Total Line Sales for (AP & TS States ) for Strategic Account",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Hyderabad, Telangāna, India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '3-7 years' (minimum 3 yr)",
+        "matched": "JobPosting on the job page",
+        "posted_at": "2026-11-20"
+      },
+      "verdict": "rejected"
+    },
+    "6a7bf24e6b1355210e025ec3a70724fe4d99b52f39164f521aa8a66063c02c2a": {
+      "company_id": "c1793696373",
+      "source": "7ea64098f5a5e6d762fa46612e3dae061e33282a18f6f5a9994617ad7128deab",
+      "fingerprint": "7f3a09f200c34a5e742b0a160722dccb5ad8324c45ed077f5b422c3af0115c8d",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:06:25.621327+00:00",
+      "expires_at": "2026-11-23T18:06:25.621337+00:00",
+      "title": "Process Quality Engineer-Chiller",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Chennai, Tamil Nādu, India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '6-10 years' (minimum 6 yr)",
+        "matched": "JobPosting on the job page",
+        "posted_at": "2026-11-20"
+      },
+      "verdict": "rejected"
+    },
+    "b1e2e819ee11733e51507216275517cd8ddd004af5fbe423c1869b520243f109": {
+      "company_id": "metlife",
+      "source": "43cea8d21c3766a134c39af30326f9c58cfedadacb8d2c5161d32d94ebaa9444",
+      "fingerprint": "3f164a704bdd52c446d4a711a3fb06d3cdba362ffea5094571d56e043cfd17a6",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:04:37.672848+00:00",
+      "expires_at": "2026-11-23T18:04:37.672859+00:00",
+      "title": "TL",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: 'at least 4-5 years' (minimum 4 yr)",
+        "matched": "page title names the same job ID/title",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "64134f6e575329f397efa997918c90de6c1dd1706de330015efebbd26e90e598": {
+      "company_id": "metlife",
+      "source": "43cea8d21c3766a134c39af30326f9c58cfedadacb8d2c5161d32d94ebaa9444",
+      "fingerprint": "c1a8abce2e438a1f99ae9c0fe168502f756af85e5211e29128a7f40dcd1fd956",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:04:36.714551+00:00",
+      "expires_at": "2026-11-23T18:04:36.714568+00:00",
+      "title": "TL",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: 'at least 4-5 years' (minimum 4 yr)",
+        "matched": "page title names the same job ID/title",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "83dae000f7565a573acbbd350de824c65bb0d067bf873daa4885a02401b89553": {
+      "company_id": "metlife",
+      "source": "43cea8d21c3766a134c39af30326f9c58cfedadacb8d2c5161d32d94ebaa9444",
+      "fingerprint": "9f64b0fd955d03801d8ea23632c26b10dcea7eef766337f6e3d1356ed1d60b7c",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:04:35.776379+00:00",
+      "expires_at": "2026-11-23T18:04:35.776390+00:00",
+      "title": "TL",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: 'at least 4-5 years' (minimum 4 yr)",
+        "matched": "page title names the same job ID/title",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "c1ad5cf0ff0228e7a282dc3cd156703623d121c9e6ccefa0436a82803de511be": {
+      "company_id": "metlife",
+      "source": "43cea8d21c3766a134c39af30326f9c58cfedadacb8d2c5161d32d94ebaa9444",
+      "fingerprint": "24c8b0bce9cd85f06c35ac3c68647dfefeea4fcb756dfbb11f15227d4880ecfb",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:04:34.699605+00:00",
+      "expires_at": "2026-11-23T18:04:34.699615+00:00",
+      "title": "TL",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: 'at least 4-5 years' (minimum 4 yr)",
+        "matched": "page title names the same job ID/title",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "56f789e0c2b78491a812bf00544b6bea49068f9d69eb5a09fca2e001c837c057": {
+      "company_id": "metlife",
+      "source": "43cea8d21c3766a134c39af30326f9c58cfedadacb8d2c5161d32d94ebaa9444",
+      "fingerprint": "0064434e6cd9ca9ac19fff89e682190628320cbcaa84387986e07fd9aa3c5d7f",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:04:33.772059+00:00",
+      "expires_at": "2026-11-23T18:04:33.772070+00:00",
+      "title": "TL",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: 'at least 4-5 years' (minimum 4 yr)",
+        "matched": "page title names the same job ID/title",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "7eea64d9d9a07476f1b3d9cfd534a65aa407b76b98659b2b4b88ec7779f16953": {
+      "company_id": "metlife",
+      "source": "43cea8d21c3766a134c39af30326f9c58cfedadacb8d2c5161d32d94ebaa9444",
+      "fingerprint": "4e8284e4ffd31fdfb519f73d790876b8fd8262568b9b507f86448fddaa0c3eeb",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:04:32.819824+00:00",
+      "expires_at": "2026-11-23T18:04:32.819836+00:00",
+      "title": "TL",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: 'at least 4-5 years' (minimum 4 yr)",
+        "matched": "page title names the same job ID/title",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "a1d49ca8813e4562624917a4feddcbbc18b730bf4b80d67d0bac107d28510b99": {
+      "company_id": "metlife",
+      "source": "43cea8d21c3766a134c39af30326f9c58cfedadacb8d2c5161d32d94ebaa9444",
+      "fingerprint": "103e4bca924b666633f8cb7f5515e5040f88e2b4764ec14b2c5291bbbb747a72",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:04:31.868353+00:00",
+      "expires_at": "2026-11-23T18:04:31.868364+00:00",
+      "title": "TL",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: 'at least 4-5 years' (minimum 4 yr)",
+        "matched": "page title names the same job ID/title",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "591122679338b1c1acfc221b79c0a711902a871c0a41c75e1f02f654d7c9c73d": {
+      "company_id": "metlife",
+      "source": "43cea8d21c3766a134c39af30326f9c58cfedadacb8d2c5161d32d94ebaa9444",
+      "fingerprint": "53c705e5fed411c4a14cf998bad5888c8b2b8cd9a9516cde39ec5e6fff222114",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:04:30.927289+00:00",
+      "expires_at": "2026-11-23T18:04:30.927299+00:00",
+      "title": "TL",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: 'at least 4-5 years' (minimum 4 yr)",
+        "matched": "page title names the same job ID/title",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "52ac7a81f3d2bd8482b3745f2131f2a37f47d1e01be9b950c65e2b889c7a8894": {
+      "company_id": "metlife",
+      "source": "43cea8d21c3766a134c39af30326f9c58cfedadacb8d2c5161d32d94ebaa9444",
+      "fingerprint": "fb10ae25a213e05cf835136f2696724e74eb8b1e4b4505cab638005b537f6187",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:04:29.982964+00:00",
+      "expires_at": "2026-11-23T18:04:29.982974+00:00",
+      "title": "TL",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: 'at least 4-5 years' (minimum 4 yr)",
+        "matched": "page title names the same job ID/title",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "f0b98be81ebfdfa6158cd0a211cb19c915a3b342722bd000e3383a94699586f4": {
+      "company_id": "metlife",
+      "source": "43cea8d21c3766a134c39af30326f9c58cfedadacb8d2c5161d32d94ebaa9444",
+      "fingerprint": "1505b1f49b30c22b5d8d4d9d42d0f198c480b2d9037e52c79d85d17a68e02141",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:04:29.007124+00:00",
+      "expires_at": "2026-11-23T18:04:29.007134+00:00",
+      "title": "TL",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: 'at least 4-5 years' (minimum 4 yr)",
+        "matched": "page title names the same job ID/title",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "c4e9bdfcb77bed7ce71275f6c96648d1b5ff1ce8634b1c6470e4c225e1cb6c65": {
+      "company_id": "metlife",
+      "source": "43cea8d21c3766a134c39af30326f9c58cfedadacb8d2c5161d32d94ebaa9444",
+      "fingerprint": "5872b28c0bd19ed9f3bc1bfa486f3d8e7449a7e4c54c1717834394b5178918e1",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:04:28.006864+00:00",
+      "expires_at": "2026-11-23T18:04:28.006875+00:00",
+      "title": "S. Insurance Associate",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '1 to 3 years' (minimum 1 yr)",
+        "matched": "page title names the same job ID/title",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "c42e3e7a88fd5080cfbfb0a798caf69806887ec0fe69ef914437978ea74805ea": {
+      "company_id": "metlife",
+      "source": "43cea8d21c3766a134c39af30326f9c58cfedadacb8d2c5161d32d94ebaa9444",
+      "fingerprint": "4cbbfbcab3c3fe50e0e2aa2f3a2e5e736c7d8cfa7478406867d989e33e839d01",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:04:24.277264+00:00",
+      "expires_at": "2026-11-23T18:04:24.277282+00:00",
+      "title": "Insurance Associate",
+      "detail": {
+        "ok": true,
+        "description": "Location\nNoida, Uttar Pradesh\nWorking Schedule: Full-Time\nWork Arrangement: Hybrid\nRelocation Assistance Available: No\nPosted Date: 20-Nov-2026\nJob ID: 21722\nPosition Summary\nThe process consists of responsibilities currently performed by the Implementation Specialist (IS) when installing a new group customer within MetLife systems. The role consists of a verification and confirmation that all MetLife systems and group customer eligibility information has been properly loaded and the group customer is in a claim-ready status. The key duties consist of the generation of a certificates and group insurance policy, establishing the group customer in the MetLife U.S. Affiliate billing system, the setup of MetLink and MyBenefit and the posting (not collection) of the initial premium check. Once the set up and verification process is complete, a request to send the group customer their MetLife U.S. Affiliate certificate and group insurance policy is initiated, the case is completed and activated, and the group customer is then ready for on-going service. Due to the nature of the business, there is a seasonal volume spike during the months of October to February.\nJob Responsibilities\nEssential Functions\nNew Business Installation executives are responsible for:\nRetrieval of Sold Case doc from WorkDesk/BIZFLOW.\nReview of case to determine case size.\nConfirm that MetLife systems and eligibility are loaded.\nGenerate MetLife group insurance policies/certificates.\nProcess First Bill audit and reconcile billing system if required.\nInitiate MetLink access.\nActivate New Business/Add coverage case in billing system.\nRequest for shipping of group insurance policy and certificate.\nCreate Welcome Call Request for the Account Specialist.\nComplete New Business case.\nPrimary Internal Interactions\nAM for the purpose of reporting performance, clarifying concerns, and seeking feedback and support.\nManager for the purpose of settling issues left unresolved by the AM and monthly evaluation of performance.\nQuality Compliance Analyst (QCA) for the purpose of feedback and audit.\nTrainers for the purpose of process training.\nAssociates for handling day-to-day execution of transactions and process activities with respect to the process.\nPrimary External Interactions\nExternal interactions is required\nEducation\nBachelor’s degree (Any Stream) with a minimum of 15 years of education.\nExperience\n(In Years)\nProfessional from the Operations with at least 0-2 years of working experience\nTechnical Skills\nGood computer navigation skills\nKeyboarding and data entry speed (minimum 30 wpm with 90% accuracy)\nGood knowledge of complete MS Office suite\nProcess Specific Skills\nKnowledge about the Insurance industry in US\nKnowledge about US Culture\nKnowledge of Insurance principles\nCustomer Service\nProblem Solving/Analytical Ability.\nJudgment and Decision Making\nSoft skills (Mandatory / Desired)\nExcellent English comprehension and written skills\nDemonstrated flexibility as per process requirement\nProficient in e-mail management\nEye for detail\nAbout MetLife\nRecognized on Fortune magazine's list of the \"World's Most Admired Companies\" and Fortune World’s 25 Best Workplaces™, MetLife, through its subsidiaries and affiliates, is one of the world’s leading financial services companies; providing insurance, annuities, employee benefits and asset management to individual and institutional customers. With operations in more than 40 markets, we hold leading positions in the United States, Latin America, Asia, Europe, and the Middle East.\nAs part of our New Frontier strategy, MetLife is building an AI-enabled, people-centered future. We’re looking for people who bring curiosity, adaptability, and a growth mindset as we use AI to enhance how we serve customers, support communities, and evolve the way work gets done. At MetLife, AI is a responsible partner that supports human judgment, creativity, and continuous improvement while helping us build trust, inclusion, and long-term value.\nOur purpose is simple - to help our colleagues, customers, communities, and the world at large create a more confident future. United by purpose and guided by our core values - Win Together, Do the Right Thing, Deliver Impact Over Activity, and Think Ahead - we’re inspired to transform the next century in financial services. At MetLife, it’s  #AllTogetherPossible . Join us!",
+        "location": "",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "",
+        "matched": "page title names the same job ID/title",
+        "posted_at": ""
+      },
+      "verdict": "accepted"
+    },
+    "8a41cb3933ee6fd4cc51b9414d07e8ead2e99fd45c93e432ebdd7ed61eac31d2": {
+      "company_id": "metlife",
+      "source": "43cea8d21c3766a134c39af30326f9c58cfedadacb8d2c5161d32d94ebaa9444",
+      "fingerprint": "73ec3cb7ee451fdf7bef896143f896c18fbe081d8a908cf28f0e3d576d6cfa56",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:04:23.280820+00:00",
+      "expires_at": "2026-11-23T18:04:23.280837+00:00",
+      "title": "Insurance Associate",
+      "detail": {
+        "ok": true,
+        "description": "Location\nNoida, Uttar Pradesh\nWorking Schedule: Full-Time\nWork Arrangement: Hybrid\nRelocation Assistance Available: No\nPosted Date: 20-Nov-2026\nJob ID: 21700\nPosition Summary\nThe process consists of responsibilities currently performed by the Implementation Specialist (IS) when installing a new group customer within MetLife systems. The role consists of a verification and confirmation that all MetLife systems and group customer eligibility information has been properly loaded and the group customer is in a claim-ready status. The key duties consist of the generation of a certificates and group insurance policy, establishing the group customer in the MetLife U.S. Affiliate billing system, the setup of MetLink and MyBenefit and the posting (not collection) of the initial premium check. Once the set up and verification process is complete, a request to send the group customer their MetLife U.S. Affiliate certificate and group insurance policy is initiated, the case is completed and activated, and the group customer is then ready for on-going service. Due to the nature of the business, there is a seasonal volume spike during the months of October to February.\nJob Responsibilities\nEssential Functions\nNew Business Installation executives are responsible for:\nRetrieval of Sold Case doc from WorkDesk/BIZFLOW.\nReview of case to determine case size.\nConfirm that MetLife systems and eligibility are loaded.\nGenerate MetLife group insurance policies/certificates.\nProcess First Bill audit and reconcile billing system if required.\nInitiate MetLink access.\nActivate New Business/Add coverage case in billing system.\nRequest for shipping of group insurance policy and certificate.\nCreate Welcome Call Request for the Account Specialist.\nComplete New Business case.\nPrimary Internal Interactions\nAM for the purpose of reporting performance, clarifying concerns, and seeking feedback and support.\nManager for the purpose of settling issues left unresolved by the AM and monthly evaluation of performance.\nQuality Compliance Analyst (QCA) for the purpose of feedback and audit.\nTrainers for the purpose of process training.\nAssociates for handling day-to-day execution of transactions and process activities with respect to the process.\nPrimary External Interactions\nExternal interactions is required\nEducation\nBachelor’s degree (Any Stream) with a minimum of 15 years of education.\nExperience\n(In Years)\nProfessional from the Operations with at least 0-2 years of working experience\nTechnical Skills\nGood computer navigation skills\nKeyboarding and data entry speed (minimum 30 wpm with 90% accuracy)\nGood knowledge of complete MS Office suite\nProcess Specific Skills\nKnowledge about the Insurance industry in US\nKnowledge about US Culture\nKnowledge of Insurance principles\nCustomer Service\nProblem Solving/Analytical Ability.\nJudgment and Decision Making\nSoft skills (Mandatory / Desired)\nExcellent English comprehension and written skills\nDemonstrated flexibility as per process requirement\nProficient in e-mail management\nEye for detail\nAbout MetLife\nRecognized on Fortune magazine's list of the \"World's Most Admired Companies\" and Fortune World’s 25 Best Workplaces™, MetLife, through its subsidiaries and affiliates, is one of the world’s leading financial services companies; providing insurance, annuities, employee benefits and asset management to individual and institutional customers. With operations in more than 40 markets, we hold leading positions in the United States, Latin America, Asia, Europe, and the Middle East.\nAs part of our New Frontier strategy, MetLife is building an AI-enabled, people-centered future. We’re looking for people who bring curiosity, adaptability, and a growth mindset as we use AI to enhance how we serve customers, support communities, and evolve the way work gets done. At MetLife, AI is a responsible partner that supports human judgment, creativity, and continuous improvement while helping us build trust, inclusion, and long-term value.\nOur purpose is simple - to help our colleagues, customers, communities, and the world at large create a more confident future. United by purpose and guided by our core values - Win Together, Do the Right Thing, Deliver Impact Over Activity, and Think Ahead - we’re inspired to transform the next century in financial services. At MetLife, it’s  #AllTogetherPossible . Join us!",
+        "location": "",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "",
+        "matched": "page title names the same job ID/title",
+        "posted_at": ""
+      },
+      "verdict": "accepted"
+    },
+    "f64f5e33ff6f7fa112d0345f96687967e4b3ba212b45b29c107885819c8f9567": {
+      "company_id": "metlife",
+      "source": "43cea8d21c3766a134c39af30326f9c58cfedadacb8d2c5161d32d94ebaa9444",
+      "fingerprint": "95375dbfc4e96ee6f963e186dfdad1456b025761c65b99d84d32d1f82fff3668",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:04:22.280954+00:00",
+      "expires_at": "2026-11-23T18:04:22.280968+00:00",
+      "title": "Insurance Associate",
+      "detail": {
+        "ok": true,
+        "description": "Location\nNoida, Uttar Pradesh\nWorking Schedule: Full-Time\nWork Arrangement: Hybrid\nRelocation Assistance Available: No\nPosted Date: 20-Nov-2026\nJob ID: 21698\nPosition Summary\nThe process consists of responsibilities currently performed by the Implementation Specialist (IS) when installing a new group customer within MetLife systems. The role consists of a verification and confirmation that all MetLife systems and group customer eligibility information has been properly loaded and the group customer is in a claim-ready status. The key duties consist of the generation of a certificates and group insurance policy, establishing the group customer in the MetLife U.S. Affiliate billing system, the setup of MetLink and MyBenefit and the posting (not collection) of the initial premium check. Once the set up and verification process is complete, a request to send the group customer their MetLife U.S. Affiliate certificate and group insurance policy is initiated, the case is completed and activated, and the group customer is then ready for on-going service. Due to the nature of the business, there is a seasonal volume spike during the months of October to February.\nJob Responsibilities\nEssential Functions\nNew Business Installation executives are responsible for:\nRetrieval of Sold Case doc from WorkDesk/BIZFLOW.\nReview of case to determine case size.\nConfirm that MetLife systems and eligibility are loaded.\nGenerate MetLife group insurance policies/certificates.\nProcess First Bill audit and reconcile billing system if required.\nInitiate MetLink access.\nActivate New Business/Add coverage case in billing system.\nRequest for shipping of group insurance policy and certificate.\nCreate Welcome Call Request for the Account Specialist.\nComplete New Business case.\nPrimary Internal Interactions\nAM for the purpose of reporting performance, clarifying concerns, and seeking feedback and support.\nManager for the purpose of settling issues left unresolved by the AM and monthly evaluation of performance.\nQuality Compliance Analyst (QCA) for the purpose of feedback and audit.\nTrainers for the purpose of process training.\nAssociates for handling day-to-day execution of transactions and process activities with respect to the process.\nPrimary External Interactions\nExternal interactions is required\nEducation\nBachelor’s degree (Any Stream) with a minimum of 15 years of education.\nExperience\n(In Years)\nProfessional from the Operations with at least 0-2 years of working experience\nTechnical Skills\nGood computer navigation skills\nKeyboarding and data entry speed (minimum 30 wpm with 90% accuracy)\nGood knowledge of complete MS Office suite\nProcess Specific Skills\nKnowledge about the Insurance industry in US\nKnowledge about US Culture\nKnowledge of Insurance principles\nCustomer Service\nProblem Solving/Analytical Ability.\nJudgment and Decision Making\nSoft skills (Mandatory / Desired)\nExcellent English comprehension and written skills\nDemonstrated flexibility as per process requirement\nProficient in e-mail management\nEye for detail\nAbout MetLife\nRecognized on Fortune magazine's list of the \"World's Most Admired Companies\" and Fortune World’s 25 Best Workplaces™, MetLife, through its subsidiaries and affiliates, is one of the world’s leading financial services companies; providing insurance, annuities, employee benefits and asset management to individual and institutional customers. With operations in more than 40 markets, we hold leading positions in the United States, Latin America, Asia, Europe, and the Middle East.\nAs part of our New Frontier strategy, MetLife is building an AI-enabled, people-centered future. We’re looking for people who bring curiosity, adaptability, and a growth mindset as we use AI to enhance how we serve customers, support communities, and evolve the way work gets done. At MetLife, AI is a responsible partner that supports human judgment, creativity, and continuous improvement while helping us build trust, inclusion, and long-term value.\nOur purpose is simple - to help our colleagues, customers, communities, and the world at large create a more confident future. United by purpose and guided by our core values - Win Together, Do the Right Thing, Deliver Impact Over Activity, and Think Ahead - we’re inspired to transform the next century in financial services. At MetLife, it’s  #AllTogetherPossible . Join us!",
+        "location": "",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "",
+        "matched": "page title names the same job ID/title",
+        "posted_at": ""
+      },
+      "verdict": "accepted"
+    },
+    "8e2b0055568b878fe63793c6800d2a49a92b6135eac75ecb299ed5eb9af24640": {
+      "company_id": "metlife",
+      "source": "43cea8d21c3766a134c39af30326f9c58cfedadacb8d2c5161d32d94ebaa9444",
+      "fingerprint": "80e8e2b94408e1183b8064a039bcca263e8ce215e335ce45b637e38d8fb62b9c",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-20T18:04:21.336486+00:00",
+      "expires_at": "2026-11-23T18:04:21.336510+00:00",
+      "title": "Insurance Associate",
+      "detail": {
+        "ok": true,
+        "description": "Location\nNoida, Uttar Pradesh\nWorking Schedule: Full-Time\nWork Arrangement: Hybrid\nRelocation Assistance Available: No\nPosted Date: 20-Nov-2026\nJob ID: 21691\nPosition Summary\nThe process consists of responsibilities currently performed by the Implementation Specialist (IS) when installing a new group customer within MetLife systems. The role consists of a verification and confirmation that all MetLife systems and group customer eligibility information has been properly loaded and the group customer is in a claim-ready status. The key duties consist of the generation of a certificates and group insurance policy, establishing the group customer in the MetLife U.S. Affiliate billing system, the setup of MetLink and MyBenefit and the posting (not collection) of the initial premium check. Once the set up and verification process is complete, a request to send the group customer their MetLife U.S. Affiliate certificate and group insurance policy is initiated, the case is completed and activated, and the group customer is then ready for on-going service. Due to the nature of the business, there is a seasonal volume spike during the months of October to February.\nJob Responsibilities\nEssential Functions\nNew Business Installation executives are responsible for:\nRetrieval of Sold Case doc from WorkDesk/BIZFLOW.\nReview of case to determine case size.\nConfirm that MetLife systems and eligibility are loaded.\nGenerate MetLife group insurance policies/certificates.\nProcess First Bill audit and reconcile billing system if required.\nInitiate MetLink access.\nActivate New Business/Add coverage case in billing system.\nRequest for shipping of group insurance policy and certificate.\nCreate Welcome Call Request for the Account Specialist.\nComplete New Business case.\nPrimary Internal Interactions\nAM for the purpose of reporting performance, clarifying concerns, and seeking feedback and support.\nManager for the purpose of settling issues left unresolved by the AM and monthly evaluation of performance.\nQuality Compliance Analyst (QCA) for the purpose of feedback and audit.\nTrainers for the purpose of process training.\nAssociates for handling day-to-day execution of transactions and process activities with respect to the process.\nPrimary External Interactions\nExternal interactions is required\nEducation\nBachelor’s degree (Any Stream) with a minimum of 15 years of education.\nExperience\n(In Years)\nProfessional from the Operations with at least 0-2 years of working experience\nTechnical Skills\nGood computer navigation skills\nKeyboarding and data entry speed (minimum 30 wpm with 90% accuracy)\nGood knowledge of complete MS Office suite\nProcess Specific Skills\nKnowledge about the Insurance industry in US\nKnowledge about US Culture\nKnowledge of Insurance principles\nCustomer Service\nProblem Solving/Analytical Ability.\nJudgment and Decision Making\nSoft skills (Mandatory / Desired)\nExcellent English comprehension and written skills\nDemonstrated flexibility as per process requirement\nProficient in e-mail management\nEye for detail\nAbout MetLife\nRecognized on Fortune magazine's list of the \"World's Most Admired Companies\" and Fortune World’s 25 Best Workplaces™, MetLife, through its subsidiaries and affiliates, is one of the world’s leading financial services companies; providing insurance, annuities, employee benefits and asset management to individual and institutional customers. With operations in more than 40 markets, we hold leading positions in the United States, Latin America, Asia, Europe, and the Middle East.\nAs part of our New Frontier strategy, MetLife is building an AI-enabled, people-centered future. We’re looking for people who bring curiosity, adaptability, and a growth mindset as we use AI to enhance how we serve customers, support communities, and evolve the way work gets done. At MetLife, AI is a responsible partner that supports human judgment, creativity, and continuous improvement while helping us build trust, inclusion, and long-term value.\nOur purpose is simple - to help our colleagues, customers, communities, and the world at large create a more confident future. United by purpose and guided by our core values - Win Together, Do the Right Thing, Deliver Impact Over Activity, and Think Ahead - we’re inspired to transform the next century in financial services. At MetLife, it’s  #AllTogetherPossible . Join us!",
+        "location": "",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "",
+        "matched": "page title names the same job ID/title",
+        "posted_at": ""
+      },
+      "verdict": "accepted"
+    },
     "80919390947875f5452e07c70d535220c7baf6dfe5cd7a2fd7d1033ad70b0a80": {
       "company_id": "swiggy",
       "source": "0206b02e14d4d3bd864c1f53e51c2c8e876d59293fecf2d14ca81ba481d8d871",
@@ -11963,26 +12563,6 @@
       },
       "verdict": "rejected"
     },
-    "68f3db3462aeae89791417da8401464f56d375add24a1b34617602fc72cbd3ba": {
-      "company_id": "microsoft",
-      "source": "eae7b9d265deafdeec3281d016c799396457073127eb723399503b11e3e63ba0",
-      "fingerprint": "4f3de773d2c12571dd202c16378e63d8b3a33b8a36d05a3aeb1720c06b234ec9",
-      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
-      "evaluated_at": "2026-11-20T12:13:20.006475+00:00",
-      "expires_at": "2026-11-23T12:13:20.006485+00:00",
-      "title": "Digital Solution Area Specialists IC4",
-      "detail": {
-        "ok": true,
-        "description": "",
-        "location": "India, Karnataka, Bangalore | India, Maharashtra, Mumbai | India, Haryana, Gurgaon",
-        "strict_text": "",
-        "posting_evidence": true,
-        "reason": "explicit requirement: '10+ years' (minimum 10 yr)",
-        "matched": "eightfold position",
-        "posted_at": "2026-11-20"
-      },
-      "verdict": "rejected"
-    },
     "15ff083b6f4b16d53261d4b5226fbdc073c4b88451391fb37e5f3164ae5fd84f": {
       "company_id": "microsoft",
       "source": "eae7b9d265deafdeec3281d016c799396457073127eb723399503b11e3e63ba0",
@@ -12320,26 +12900,6 @@
         "reason": "explicit requirement: 'Two years' (minimum 2 yr)",
         "matched": "eightfold position",
         "posted_at": "2026-11-17"
-      },
-      "verdict": "rejected"
-    },
-    "c930409232666ef84028d914268276fd02cc7875cd651673c7af3160fbdc8b1a": {
-      "company_id": "microsoft",
-      "source": "eae7b9d265deafdeec3281d016c799396457073127eb723399503b11e3e63ba0",
-      "fingerprint": "63ec9faf361147fa2c45976eedc8ece5e0d6a13ee04ec57b0a1794920e1d0789",
-      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
-      "evaluated_at": "2026-11-20T12:13:14.692806+00:00",
-      "expires_at": "2026-11-23T12:13:14.692816+00:00",
-      "title": "Digital Solution Area Specialists",
-      "detail": {
-        "ok": true,
-        "description": "",
-        "location": "India, Haryana, Gurgaon | India, Karnataka, Bangalore | India, Telangana, Hyderabad | India, Uttar Pradesh, Noida",
-        "strict_text": "",
-        "posting_evidence": true,
-        "reason": "explicit requirement: '4+ years' (minimum 4 yr)",
-        "matched": "eightfold position",
-        "posted_at": "2026-11-18"
       },
       "verdict": "rejected"
     },
