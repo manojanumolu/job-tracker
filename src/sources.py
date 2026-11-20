@@ -1437,6 +1437,80 @@ def career_sitemap_detail(client: httpx.Client, listing: Listing) -> Detail:
     return jsonld_page_detail(r.text, listing)
 
 
+# ---------------------------------------------------------------------------
+# Novartis (Nov 2026): its own careers search on novartis.com (not Workday) is
+# server-rendered, filtered by country (country[]=LOC_IN), 10 per page, with
+# the total shown. Each job page has a schema.org JobPosting (date, location,
+# identifier = the Workday requisition "REQ-...") whose description is only a
+# summary; the full posting is the page's field_job_description block.
+# ---------------------------------------------------------------------------
+NOVARTIS_SEARCH = "https://www.novartis.com/careers/career-search"
+NOVARTIS_MAX_PAGES = 60
+_NOVARTIS_LINK_RE = re.compile(r'<a[^>]+href="(/careers/career-search/job/details/(req-\d+)[^"]*)"[^>]*>(.*?)</a>', re.S | re.I)
+_NOVARTIS_COUNT_RE = re.compile(r"(\d[\d,]*)\s*(?:results|jobs)\b")
+_NOVARTIS_BODY_RE = re.compile(r'class="field_job_description\s*"[^>]*>(.*?)(?=class="field_job_(?!description\s*")|<footer)', re.S)
+
+
+def novartis_listings(client: httpx.Client, cfg: dict) -> SourceResult:
+    country = cfg.get("country_code", "LOC_IN")
+    listings, ids, total = [], set(), None
+    for page in range(NOVARTIS_MAX_PAGES):
+        if page:
+            time.sleep(1.0)
+        try:
+            r = client.get(NOVARTIS_SEARCH, params={"country[]": country, "page": page, "order": "Job Title", "sort": "asc"}, headers={"Accept": "text/html"})
+        except httpx.TimeoutException as e:
+            raise SourceError("timeout reading the career-site search", "failing") from e
+        except httpx.HTTPError as e:
+            raise SourceError(f"network error reading the career-site search: {type(e).__name__}", "failing") from e
+        if r.status_code in (429, 500, 502, 503, 504):
+            raise SourceError(f"HTTP {r.status_code} from the career-site search", "failing")
+        if r.status_code >= 400:
+            raise SourceError(f"HTTP {r.status_code} from the career-site search")
+        m = _NOVARTIS_COUNT_RE.search(r.text)
+        if total is None:
+            if not m:
+                raise SourceError("the career-site search page has no result count (unexpected format)")
+            total = int(m.group(1).replace(",", ""))
+        found = _NOVARTIS_LINK_RE.findall(r.text)
+        for href, req, inner in found:
+            req = req.upper()
+            title = html_to_text(html_lib.unescape(inner)).strip()
+            if req in ids or not title:
+                continue
+            ids.add(req)
+            listing = Listing(title=title.splitlines()[0][:200], url=f"https://www.novartis.com{href}", location="India",
+                              job_id=req, posting_evidence=True)
+            listing.fetch_detail = lambda lst=listing: novartis_detail(client, lst)
+            listings.append(listing)
+        # the order can shift between pages (a posting appears twice, another is skipped), so every
+        # page the total implies is read, plus two, before coverage is judged
+        if not found or len(ids) >= total or page >= -(-total // 10) + 2:
+            break
+    else:
+        raise SourceError("career-site search page limit reached; incomplete coverage")
+    if total and len(ids) < total * 0.9:
+        raise SourceError(f"career-site search returned {len(ids)} of {total} postings; incomplete coverage", "failing")
+    return SourceResult(listings, seen=len(ids))
+
+
+def novartis_detail(client: httpx.Client, listing: Listing) -> Detail:
+    try:
+        r = client.get(listing.url, headers={"Accept": "text/html"})
+    except httpx.HTTPError as e:
+        return Detail.unreadable(f"network error reading job page: {type(e).__name__}")
+    if r.status_code >= 400:
+        return Detail.unreadable(f"HTTP {r.status_code} from job page")
+    detail = jsonld_page_detail(r.text, listing)
+    if not detail.ok:
+        return detail
+    m = _NOVARTIS_BODY_RE.search(r.text)
+    body = html_to_text(html_lib.unescape(m.group(1))) if m else ""
+    if len(body) > len(detail.description):
+        detail.description = body                    # the full posting, not the JobPosting summary
+    return detail
+
+
 def read_source(client: httpx.Client, cfg: dict) -> SourceResult:
     kind = cfg.get("type")
     if kind == "workday":
@@ -1475,4 +1549,6 @@ def read_source(client: httpx.Client, cfg: dict) -> SourceResult:
         return phenom_listings(client, cfg)
     if kind == "career_sitemap":
         return career_sitemap_listings(client, cfg)
+    if kind == "novartis":
+        return novartis_listings(client, cfg)
     raise SourceError(f"unknown source type {kind!r}", "needs_config")

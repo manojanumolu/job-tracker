@@ -111,6 +111,9 @@ COMPANY_SOURCES: dict[str, list[dict]] = {
     "sanofi": [{"type": "career_sitemap", "sitemap": "https://jobs.sanofi.com/sitemap.xml"}],                    # 82 of 1,451
     "c1793696374": [{"type": "career_sitemap", "sitemap": "https://www.synchronycareers.com/sitemap.xml"}],      # 14 of 29 (Synchrony)
     "c1793696379": [{"type": "career_sitemap", "sitemap": "https://careers.amgen.com/sitemap.xml"}],            # 592 of 1,670 (Amgen)
+    # Novartis's own careers search on novartis.com (sources.novartis_listings), India filter,
+    # stable title order; full posting from the job page. Checked live 20 Nov 2026: 108 of 111.
+    "c1793696372": [{"type": "novartis", "country_code": "LOC_IN"}],
     # S&P Global's official careers site runs on Jibe/iCIMS (the existing adapter): 57 India of 359
     "c1793696385": [{"type": "jibe", "host": "https://careers.spglobal.com"}],
 }
@@ -123,7 +126,7 @@ _SOURCE_LABELS = {"workday": "Workday API", "accenture": "Accenture job-search A
                   "google": "Google Careers site", "eightfold_v2": "Eightfold API", "oracle": "Oracle Recruiting API",
                   "ibm": "IBM careers API", "job_feed": "Official job feed", "swiggy": "Swiggy careers site",
                   "workday_sitemap": "Workday sitemap + job pages", "phenom": "Phenom career site",
-                  "career_sitemap": "Career-site sitemap + job pages"}
+                  "career_sitemap": "Career-site sitemap + job pages", "novartis": "Novartis careers search"}
 
 
 def sources_for(company: dict) -> list[dict]:
@@ -1158,8 +1161,8 @@ def _posting_key(url: str) -> str:
     return f"{urlparse(url).netloc.lower().removeprefix('www.')}|{ident}" if ident else ""
 
 
-_WD_REQ_RE = re.compile(r"_((?:JR|R)-?\d{4,}(?:-\d{1,2})?|\d{6,}(?:-\d{1,2})?)/?$", re.IGNORECASE)
-_REQ_RE = re.compile(r"(?:JR|R)-?\d{4,}|\d{6,}")
+_WD_REQ_RE = re.compile(r"_((?:JR|REQ|R)-?\d{4,}(?:-\d{1,2})?|\d{6,}(?:-\d{1,2})?)/?$", re.IGNORECASE)
+_REQ_RE = re.compile(r"(?:JR|REQ|R)-?\d{4,}|\d{6,}")
 
 
 def _requisition(job: dict) -> str:
@@ -1179,7 +1182,7 @@ def _requisition(job: dict) -> str:
             values.append(m.group(1))
     for value in values:
         value = value.strip().upper()
-        base = re.sub(r"-\d{1,2}$", "", value) if re.fullmatch(r"(?:(?:JR|R)-?\d{4,}|\d{6,})-\d{1,2}", value) else value
+        base = re.sub(r"-\d{1,2}$", "", value) if re.fullmatch(r"(?:(?:JR|REQ|R)-?\d{4,}|\d{6,})-\d{1,2}", value) else value
         if _REQ_RE.fullmatch(base):
             return base
     return ""
