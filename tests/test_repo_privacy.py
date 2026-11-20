@@ -50,7 +50,10 @@ SAFE = re.compile(r"(?i)x{6,}|placeholder|fake|never-real|your-|example|dummy|no
                   r"os\.environ|getenv|st\.secrets|<[a-z_ -]+>|\.\.\.|…|redacted")
 SECRET_FILES = re.compile(r"(?i)(^|/)(\.env(\..+)?|secrets\.toml|.*service[-_]?account.*\.json|.*firebase-adminsdk.*\.json"
                           r"|.*\.(pem|key|p12|pfx)|id_rsa.*|credentials?\.json)$")
-DATA_FILES = ("data/settings.json", "data/companies.json", "data/seen_jobs.json", "data/logos.json")
+DATA_FILES = ("data/settings.json", "data/companies.json", "data/seen_jobs.json", "data/logos.json",
+              # every other published data file too (an employer contact address reached the
+              # public verdict cache on 20 Nov 2026 before it was covered here)
+              "data/workday_verdict_cache.json", "data/workday_scan_state.json", "data/monitoring_incidents.json")
 
 
 def tracked_files() -> list[str]:
