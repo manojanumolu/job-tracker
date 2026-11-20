@@ -111,6 +111,9 @@ COMPANY_SOURCES: dict[str, list[dict]] = {
     "sanofi": [{"type": "career_sitemap", "sitemap": "https://jobs.sanofi.com/sitemap.xml"}],                    # 82 of 1,451
     "c1793696374": [{"type": "career_sitemap", "sitemap": "https://www.synchronycareers.com/sitemap.xml"}],      # 14 of 29 (Synchrony)
     "c1793696379": [{"type": "career_sitemap", "sitemap": "https://careers.amgen.com/sitemap.xml"}],            # 592 of 1,670 (Amgen)
+    "c1793696373": [{"type": "career_sitemap", "sitemap": "https://jobs.carrier.com/sitemap.xml"}],             # 54 of 934 (Carrier, 20 Nov)
+    # Bristol Myers Squibb's own careers site jobs.bms.com runs on Eightfold (robots allows /careers, /api/apply): 70 India
+    "c1793696378": [{"type": "eightfold", "host": "https://jobs.bms.com", "domain": "bms.com", "location": "India"}],
     # Novartis's own careers search on novartis.com (sources.novartis_listings), India filter,
     # stable title order; full posting from the job page. Checked live 20 Nov 2026: 108 of 111.
     "c1793696372": [{"type": "novartis", "country_code": "LOC_IN"}],
@@ -463,7 +466,9 @@ def _evaluate(scan: Scan, listing: Listing, budget: list[int]) -> None:
             return
         detail = Detail(**hit["detail"])
         listing.title = hit["title"]
+    fetched = False
     if detail is None and listing.fetch_detail is not None:
+        fetched = True
         if budget[0] > 0:
             budget[0] -= 1
             if cache:
@@ -497,8 +502,9 @@ def _evaluate(scan: Scan, listing: Listing, budget: list[int]) -> None:
             recovery.pending.pop(recovery.key(listing), None)  # hits never extend TTL
         else:
             recovery.cache_detail(listing, detail, "accepted" if job else "rejected", fingerprint, result.reason)
-    elif cache and not hit and result.category != Category.UNKNOWN:
-        # a real verdict from a readable page; unreadable pages and failures are never cached
+    elif cache and not hit and fetched and result.category != Category.UNKNOWN:
+        # a real verdict from a page this scan had to read (a listing that already carries its
+        # detail costs no request, so caching it would only grow the file); failures never cached
         cache.cache_detail(listing, detail, "accepted" if job else "rejected", fingerprint, result.reason)
     _log_decision(scan.name, listing.title, result)
     if job:

@@ -66,3 +66,10 @@ def test_sanofi_synchrony_and_sp_global_use_their_official_sites():
                                   ("c1793696385", "jibe", "host", "https://careers.spglobal.com")):
         src = scraper.sources_for({"id": cid, "url": "https://x.wd3.myworkdayjobs.com/External"})
         assert src[0]["type"] == kind and src[0][key] == value
+
+
+def test_carrier_and_bms_use_their_official_sites():
+    assert scraper.sources_for({"id": "c1793696373", "url": "https://carrier.wd5.myworkdayjobs.com/jobs"}) == [
+        {"type": "career_sitemap", "sitemap": "https://jobs.carrier.com/sitemap.xml"}]
+    assert scraper.sources_for({"id": "c1793696378", "url": "https://bristolmyerssquibb.wd5.myworkdayjobs.com/BMS"}) == [
+        {"type": "eightfold", "host": "https://jobs.bms.com", "domain": "bms.com", "location": "India"}]

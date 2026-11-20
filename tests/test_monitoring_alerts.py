@@ -115,6 +115,7 @@ def test_end_to_end_three_scheduled_failures_one_warning_then_recovery_and_job_a
     for name, attr in (("seen_jobs.json", "SEEN_FILE"), ("companies.json", "COMPANIES_FILE"), ("settings.json", "SETTINGS_FILE")):
         monkeypatch.setattr(config_store, attr, tmp_path / name)
     monkeypatch.setattr(config_store, "DATA", tmp_path)
+    monkeypatch.setattr(config_store, "COMPANIES_FILE", tmp_path / "companies.json")
     monitor_mail = Mail()
     monkeypatch.setattr(notifier, "_send", monitor_mail)
 
@@ -141,3 +142,13 @@ def test_end_to_end_three_scheduled_failures_one_warning_then_recovery_and_job_a
     assert json.loads((tmp_path / "monitoring_incidents.json").read_text()) == {"open": {}}
     assert alerts.run(send=job_mail, publisher=remote) == 0
     assert len(monitor_mail.sent) == 2 and job_mail.sent == [["Graduate Engineer Trainee"]]
+
+
+def test_first_failure_is_the_real_start_and_the_count_says_when_it_began():
+    c = co("hitachi")
+    c["scan"]["failing_since"] = "2026-11-16T09:05:00+00:00"            # failing for days before counting began
+    mail = Mail()
+    ma.run([c], {"open": {}}, "a@example.com", mail, NOW)
+    text = mail.sent[0][3]
+    assert "First failure: 16 Nov 2026 09:05 UTC" in text
+    assert "Consecutive scheduled scans: 3 (counted since 19 Nov 2026 12:03 UTC)" in text

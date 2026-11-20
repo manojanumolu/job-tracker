@@ -163,7 +163,9 @@ def _monitoring(companies, recipient, publisher, now, send=None) -> None:
     import monitoring_alerts
     from config_store import DATA
     try:
-        path = DATA / "monitoring_incidents.json"
+        import config_store
+        # beside the companies file it describes (the same data folder in production)
+        path = config_store.COMPANIES_FILE.parent / "monitoring_incidents.json"
         ledger = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"open": {}}
         if send is None:
             from notifier import _send as send
