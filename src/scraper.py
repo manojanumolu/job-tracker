@@ -112,6 +112,9 @@ COMPANY_SOURCES: dict[str, list[dict]] = {
     "c1793696374": [{"type": "career_sitemap", "sitemap": "https://www.synchronycareers.com/sitemap.xml"}],      # 14 of 29 (Synchrony)
     "c1793696379": [{"type": "career_sitemap", "sitemap": "https://careers.amgen.com/sitemap.xml"}],            # 592 of 1,670 (Amgen)
     "c1793696373": [{"type": "career_sitemap", "sitemap": "https://jobs.carrier.com/sitemap.xml"}],             # 54 of 934 (Carrier, 20 Nov)
+    # Salesforce: the job report its own careers site reads from its CDN (sources.report_feed_listings):
+    # 1,617 postings in one request, full descriptions, JR requisition ids; 100 with India. 20 Nov 2026.
+    "c1793696368": [{"type": "report_feed", "url": "https://a.sfdcstatic.com/digital/xsf/careers/prod/jobs_2.json", "country": "India"}],
     # Bristol Myers Squibb's own careers site jobs.bms.com runs on Eightfold (robots allows /careers, /api/apply): 70 India
     "c1793696378": [{"type": "eightfold", "host": "https://jobs.bms.com", "domain": "bms.com", "location": "India"}],
     # Novartis's own careers search on novartis.com (sources.novartis_listings), India filter,
@@ -129,7 +132,8 @@ _SOURCE_LABELS = {"workday": "Workday API", "accenture": "Accenture job-search A
                   "google": "Google Careers site", "eightfold_v2": "Eightfold API", "oracle": "Oracle Recruiting API",
                   "ibm": "IBM careers API", "job_feed": "Official job feed", "swiggy": "Swiggy careers site",
                   "workday_sitemap": "Workday sitemap + job pages", "phenom": "Phenom career site",
-                  "career_sitemap": "Career-site sitemap + job pages", "novartis": "Novartis careers search"}
+                  "career_sitemap": "Career-site sitemap + job pages", "novartis": "Novartis careers search",
+                  "report_feed": "Official job feed (careers site)"}
 
 
 def sources_for(company: dict) -> list[dict]:

@@ -1511,6 +1511,62 @@ def novartis_detail(client: httpx.Client, listing: Listing) -> Detail:
     return detail
 
 
+# ---------------------------------------------------------------------------
+# Salesforce (Nov 2026): its careers site (salesforce.com/company/careers/jobs)
+# reads a job report it publishes on its own CDN (a.sfdcstatic.com/.../jobs_2.json,
+# no robots restriction): every posting with its full description, posting date,
+# countries, locations, the Workday requisition id and the Workday posting URL.
+# One request per scan, nothing on the Cloudflare-blocked myworkdayjobs.com is
+# fetched; the posting URL is kept as the job's link so records match Workday's.
+# ---------------------------------------------------------------------------
+REPORT_FEED_MAX_BYTES = 40 * 1024 * 1024
+
+
+def report_feed_listings(client: httpx.Client, cfg: dict) -> SourceResult:
+    country = cfg.get("country", "India")
+    try:
+        r = client.get(cfg["url"], headers={"Accept": "application/json"})
+    except httpx.TimeoutException as e:
+        raise SourceError("timeout reading the official job feed", "failing") from e
+    except httpx.HTTPError as e:
+        raise SourceError(f"network error reading the official job feed: {type(e).__name__}", "failing") from e
+    if r.status_code in (429, 500, 502, 503, 504):
+        raise SourceError(f"HTTP {r.status_code} from the official job feed", "failing")
+    if r.status_code >= 400:
+        raise SourceError(f"HTTP {r.status_code} from the official job feed")
+    if len(r.content) > REPORT_FEED_MAX_BYTES:
+        raise SourceError("oversized official job feed")
+    try:
+        data = r.json()
+        rows, count, total = data["Report_Entry"], int(data["Count"]), int(data["Total_Jobs"])
+    except (ValueError, KeyError, TypeError):
+        raise SourceError("the official job feed is not a readable job report (unexpected format)") from None
+    if not isinstance(rows, list) or len(rows) != count or count != total:
+        raise SourceError(f"the official job feed lists {len(rows) if isinstance(rows, list) else 0} of {total} postings; "
+                          "incomplete coverage", "failing")
+    listings = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        countries = row.get("Countries") or []
+        primary = str(row.get("Job_Requisition_Primary_Location") or "")
+        if country not in countries and not primary.startswith(country):
+            continue
+        title = str(row.get("Job_Posting_Title") or "").strip()
+        url = str(row.get("External_Job_Posting_Site") or "").strip()
+        req = str(row.get("Job_Requisition_Ref_ID") or "").strip()
+        description = html_to_text(html_lib.unescape(str(row.get("Job_Description") or "")))
+        if not title or not url.startswith("https://") or not req:
+            continue
+        cities = [str(x) for x in (row.get("Locations") or []) if x]
+        location = f"{', '.join(cities)}, {country}" if cities else (primary.replace(" - ", ", ") or country)
+        detail = (Detail(ok=True, description=description, location=location, posting_evidence=True,
+                         matched="official job feed", posted_at=posting_date(row.get("External_Job_Posting_Start_Date")))
+                  if len(description) >= _MIN_DESCRIPTION_CHARS else Detail.unreadable("posting has no description"))
+        listings.append(Listing(title=title, url=url, location=location, job_id=req, posting_evidence=True, detail=detail))
+    return SourceResult(listings, seen=len(rows))
+
+
 def read_source(client: httpx.Client, cfg: dict) -> SourceResult:
     kind = cfg.get("type")
     if kind == "workday":
@@ -1551,4 +1607,6 @@ def read_source(client: httpx.Client, cfg: dict) -> SourceResult:
         return career_sitemap_listings(client, cfg)
     if kind == "novartis":
         return novartis_listings(client, cfg)
+    if kind == "report_feed":
+        return report_feed_listings(client, cfg)
     raise SourceError(f"unknown source type {kind!r}", "needs_config")
