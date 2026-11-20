@@ -194,6 +194,10 @@ def _stamp(tmp_path, ago: timedelta, status="active"):
     for i, c in enumerate(_scanned(companies)):
         c["status"] = status
         c["last_checked"] = (now - ago - timedelta(seconds=10 * i)).isoformat()
+        # a stamped scan stands for itself: drop the live data's own Workday recovery record
+        # (since 20 Nov 2026 some catalogue companies carry a real failed/rate-limited one)
+        if isinstance(c.get("scan"), dict):
+            c["scan"].pop("recovery", None)
         # M7: the completed-run marker is the authoritative last-scan time
         # (scan_schedule.last_scan), so the scan being "ago" old ages it too.
         run = (c.get("scan") or {}).get("run")

@@ -72,7 +72,9 @@ COMPANY_SOURCES: dict[str, list[dict]] = {
     "google": [{"type": "google", "location": "Hyderabad, India"}],
     "deloitte": [{"type": "successfactors", "host": "https://southasiacareers.deloitte.com", "location": "India"}],
     "infosys": [{"type": "infosys", "location": "Hyderabad"}],
-    "amd": [{"type": "jibe", "host": "https://careers.amd.com"}],
+    # AMD has ~1,300 postings, over the 60-page cap: filtered to India server-side (212, 20 Nov 2026),
+    # paced by its robots.txt crawl-delay of 5 s
+    "amd": [{"type": "jibe", "host": "https://careers.amd.com", "location": "India", "page_delay_s": 5}],
     "netflix": [{"type": "eightfold_v2", "host": "https://explore.jobs.netflix.net", "domain": "netflix.com", "location": "India"}],
     "oracle": [{"type": "oracle", "api": "https://eeho.fa.us2.oraclecloud.com/hcmRestApi/resources/latest", "site": "CX_45001",
                 "location_facet": "300000000106947", "job_page": "https://careers.oracle.com/en/sites/jobsearch/job"}],

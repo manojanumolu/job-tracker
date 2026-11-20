@@ -32,3 +32,23 @@ class JibeCoverageTests(unittest.TestCase):
 
     def test_reported_empty_is_valid(self):
         self.assertEqual(self.read([{"jobs": [], "totalCount": 0}]).seen, 0)
+
+
+def test_amd_is_filtered_to_india_server_side_and_paced(monkeypatch):
+    import httpx
+    import scraper
+    import sources
+    asked, waits = [], []
+    monkeypatch.setattr(sources.time, "sleep", lambda s: waits.append(s))
+
+    def handler(request):
+        asked.append(dict(request.url.params))
+        page = int(request.url.params["page"])
+        jobs = [{"data": {"title": f"Engineer {page}-{i}", "city": "Bengaluru", "country": "India", "slug": f"{page}{i}",
+                          "req_id": f"{page}{i}", "description": "<p>Graduate role, freshers welcome.</p>"}} for i in range(10 if page < 3 else 1)]
+        return httpx.Response(200, json={"totalCount": 21, "jobs": jobs})
+    cfg = scraper.COMPANY_SOURCES["amd"][0]
+    assert cfg["location"] == "India" and cfg["page_delay_s"] == 5
+    res = sources.jibe_listings(httpx.Client(transport=httpx.MockTransport(handler)), cfg)
+    assert res.seen == 21 and all(p["location"] == "India" for p in asked) and waits == [5, 5]
+    assert not getattr(res, "coverage_error", "")
