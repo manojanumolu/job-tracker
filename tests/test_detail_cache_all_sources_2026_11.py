@@ -185,3 +185,14 @@ def test_a_listing_that_already_carries_its_detail_is_not_cached(env):
     lst.fetch_detail = None
     scan = run(rec, lst)
     assert len(scan.jobs) == 1 and rec.cache["entries"] == {} and reads == []      # no request to save, nothing stored
+
+
+def test_the_rules_hash_ignores_unrelated_code_but_tracks_the_verdict_logic(monkeypatch):
+    import workday_runtime
+    base = workday_runtime.rules_version()
+    monkeypatch.setattr(scraper, "merge_new_jobs", lambda *a, **k: [])          # unrelated code changes
+    assert workday_runtime.rules_version() == base
+    def decide(company, listing, detail):                                         # the verdict logic changes
+        return None, None
+    monkeypatch.setattr(scraper, "decide", decide)
+    assert workday_runtime.rules_version() != base

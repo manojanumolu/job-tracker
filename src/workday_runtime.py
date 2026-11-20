@@ -41,10 +41,22 @@ def configuration():
     return config
 
 
+# What decides a cached verdict and the job record built from it. Nov 2026: the
+# whole of scraper.py and sources.py used to be hashed, so ANY code change (an
+# unrelated adapter, a log line) invalidated every cache entry - all 3,468 were
+# discarded after one unrelated merge. Now: the classification modules in full,
+# plus only the scraper functions that judge a posting and build its record.
+# Adapter parsing changes are picked up as entries expire (72 h).
+_RULE_MODULES = ("job_classifier.py", "job_filters.py", "locations.py", "job_requirements.py", "skill_taxonomy.py")
+_RULE_FUNCTIONS = ("decide", "_evidence", "_redact_emails", "_posting_requirements", "_posting_skills")
+
+
 def rules_version():
-    return digest(["m7-v1", *[(BASE / "src" / f).read_text("utf-8") for f in
-                  ("job_classifier.py", "job_filters.py", "locations.py", "scraper.py", "sources.py",
-                   "job_requirements.py", "skill_taxonomy.py")]])
+    import inspect
+    import scraper
+    parts = [(BASE / "src" / f).read_text("utf-8") for f in _RULE_MODULES]
+    parts += [inspect.getsource(getattr(scraper, name)) for name in _RULE_FUNCTIONS]
+    return digest(["m7-v2", *parts])
 
 
 def is_api(configs):
