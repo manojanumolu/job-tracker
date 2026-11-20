@@ -55,7 +55,9 @@ def _incident(company: dict, now: str) -> dict:
         "source": _source(company),
         "category": category(company),
         "error": (company.get("status_reason") or "")[:300],
-        "first_failure": scan.get("blocked_since") or scan.get("failing_since") or "",
+        # the real start of the failure streak (any attempt), and when the scheduled-scan count began
+        "first_failure": scan.get("failing_since") or scan.get("blocked_since") or "",
+        "counted_since": scan.get("blocked_since") or "",
         "latest_failure": scan.get("last_failed_at") or company.get("last_checked") or "",
         "last_success": company.get("last_success") or "",
         "scans": scan.get("blocked_scans", 0),
@@ -118,7 +120,8 @@ def build_email(warn: list[dict], recovered: list[dict]) -> tuple[str, str, str]
                       [("Source", i["source"]), ("Problem", i["category"]), ("Error", i["error"] or "—"),
                        ("First failure", _when(i["first_failure"])), ("Latest failure", _when(i["latest_failure"])),
                        ("Last successful scan", _when(i["last_success"])),
-                       ("Consecutive scheduled scans", str(i["scans"]))])
+                       ("Consecutive scheduled scans", f'{i["scans"]} (counted since {_when(i.get("counted_since", ""))})'
+                        if i.get("counted_since") else str(i["scans"]))])
             parts_t.append(f"{title}: {i['name']}\n" + "\n".join(f"  {k}: {v}" for k, v in fields))
             body = "".join(f'<div style="font:400 13px/1.6 {FONT};color:{MUTED};"><b style="color:{TEXT};">'
                            f'{escape(k)}:</b> {escape(str(v))}</div>' for k, v in fields)

@@ -174,3 +174,14 @@ def test_run_all_gives_every_non_workday_company_the_cache_and_workday_ones_thei
     assert seen["c1793696382"][0] is rec and seen["c1793696382"][1] is None        # Phenom: cache only
     assert seen["c1793696368"] == (None, rec)                                        # Workday: its controller
     assert scraper.DETAIL_CACHE.get() is None                                        # nothing leaks out
+
+
+def test_a_listing_that_already_carries_its_detail_is_not_cached(env):
+    _, controller, _ = env
+    rec = controller()
+    lst, reads = listing(11, FRESHER)
+    lst.detail = Detail(ok=True, description=FRESHER, location="Hyderabad, Telangana, India", posting_evidence=True,
+                        matched="feed")
+    lst.fetch_detail = None
+    scan = run(rec, lst)
+    assert len(scan.jobs) == 1 and rec.cache["entries"] == {} and reads == []      # no request to save, nothing stored
