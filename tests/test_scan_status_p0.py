@@ -198,8 +198,10 @@ def _stamp(tmp_path, ago: timedelta, status="active"):
         # (since 20 Nov 2026 some catalogue companies carry a real failed/rate-limited one)
         if isinstance(c.get("scan"), dict):
             c["scan"].pop("recovery", None)
-        # M7: the completed-run marker is the authoritative last-scan time
-        # (scan_schedule.last_scan), so the scan being "ago" old ages it too.
+    # M7: the completed-run marker is the authoritative last-scan time
+    # (scan_schedule.last_scan), so the scan being "ago" old ages it too - on
+    # every company, held ones included (they carry the same scan's marker)
+    for c in companies:
         run = (c.get("scan") or {}).get("run")
         if isinstance(run, dict) and run.get("recovery_version") == 1:
             run["started_at"] = (now - ago - timedelta(minutes=10)).isoformat()
