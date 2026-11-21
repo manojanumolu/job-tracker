@@ -6,7 +6,7 @@
     "locked": true,
     "status": "active",
     "last_job": "Insurance Associate",
-    "last_checked": "2026-11-21T12:04:57.699400+00:00",
+    "last_checked": "2026-11-21T18:04:07.952131+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -25,21 +25,21 @@
         "no fresher/entry-level evidence": 3
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Avature job search",
-    "last_success": "2026-11-21T12:04:57.699400+00:00",
+    "last_success": "2026-11-21T18:04:07.952131+00:00",
     "shared_alerts": false
   },
   {
@@ -49,7 +49,7 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-21T12:05:00.419704+00:00",
+    "last_checked": "2026-11-21T18:04:12.178671+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -68,21 +68,21 @@
         "no fresher/entry-level evidence": 1
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Jibe/iCIMS API",
-    "last_success": "2026-11-21T12:05:00.419704+00:00",
+    "last_success": "2026-11-21T18:04:12.178671+00:00",
     "shared_alerts": false
   },
   {
@@ -108,18 +108,17 @@
       "failing_since": "2026-11-16T09:04:45.827571+00:00",
       "failed_scans": 22,
       "run": {
-        "started_at": "2026-11-21T12:51:32.609446+00:00",
-        "finished_at": "2026-11-21T12:51:34.206095+00:00",
-        "jobs_found": 0,
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
+        "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 2,
-        "portals_failed": 2,
-        "reposts_suppressed": 0,
+        "portals": 44,
+        "portals_failed": 4,
+        "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "9eaad967f775498a889a05188320c992",
-        "scope": "workday"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       },
       "recovery": {
         "version": 1,
@@ -134,7 +133,7 @@
         "cooldown_until": "2026-11-19T00:04:19.789091+00:00",
         "last_attempt": "2026-11-18T21:04:19.789091+00:00",
         "last_success": "2026-11-16T06:04:24.837165+00:00",
-        "observed_at": "2026-11-21T12:51:34.205960+00:00",
+        "observed_at": "2026-11-21T18:15:20.558179+00:00",
         "source": "1e659416da76036f124254ee411c1405d15334c6ac5b2863a904dd06228bbb9b",
         "unresolved_failure": true,
         "pending": 0,
@@ -142,9 +141,9 @@
         "overdue": true,
         "requests": 0
       },
-      "blocked_scans": 8,
+      "blocked_scans": 9,
       "blocked_since": "2026-11-19T18:14:47.128555+00:00",
-      "last_failed_at": "2026-11-21T12:51:34.205887+00:00"
+      "last_failed_at": "2026-11-21T18:15:20.558119+00:00"
     },
     "source": "Workday API",
     "last_success": "2026-11-16T06:04:24.837165+00:00",
@@ -157,11 +156,11 @@
     "locked": true,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-21T12:05:01.679577+00:00",
+    "last_checked": "2026-11-21T18:04:14.620319+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
-      "postings_seen": 1431,
+      "postings_seen": 1440,
       "candidates": 70,
       "details_read": 2,
       "details_unreadable": 0,
@@ -176,21 +175,21 @@
         "no fresher/entry-level evidence": 2
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Career-site sitemap + job pages",
-    "last_success": "2026-11-21T12:05:01.679577+00:00",
+    "last_success": "2026-11-21T18:04:14.620319+00:00",
     "shared_alerts": false
   },
   {
@@ -215,46 +214,43 @@
       "rejections": {},
       "failing_since": "2026-11-16T09:04:49.564643+00:00",
       "failed_scans": 26,
-      "blocked_scans": 8,
-      "blocked_since": "2026-11-19T18:14:47.129006+00:00",
-      "last_failed_at": "2026-11-21T12:51:33.200960+00:00",
       "recovery": {
         "version": 1,
         "company_id": "pwc",
         "discovery_method": "workday, workday",
-        "outcome": "rate_limited",
-        "failure_category": "rate_limit",
-        "http_status": 429,
+        "outcome": "cooling_down",
+        "failure_category": "cooldown",
+        "http_status": null,
         "host": "pwc.wd3.myworkdayjobs.com",
         "retry_after_s": 0,
         "retry_after_valid": false,
         "cooldown_until": "2026-11-22T12:51:33.199823+00:00",
         "last_attempt": "2026-11-21T12:51:33.201027+00:00",
         "last_success": "2026-11-16T06:06:35.730344+00:00",
-        "observed_at": "2026-11-21T12:51:33.201020+00:00",
+        "observed_at": "2026-11-21T18:15:20.558243+00:00",
         "source": "6ab46f928d378f7252d40c48de0c18502a47c70df5f63840a049f0c847a3d881",
         "unresolved_failure": true,
         "pending": 0,
         "oldest_pending": "",
         "overdue": true,
-        "requests": 1,
-        "cache_hits": 0,
-        "cache_misses": 0
+        "requests": 0
       },
       "run": {
-        "started_at": "2026-11-21T12:51:32.609446+00:00",
-        "finished_at": "2026-11-21T12:51:34.206095+00:00",
-        "jobs_found": 0,
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
+        "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 2,
-        "portals_failed": 2,
-        "reposts_suppressed": 0,
+        "portals": 44,
+        "portals_failed": 4,
+        "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "9eaad967f775498a889a05188320c992",
-        "scope": "workday"
-      }
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
+      },
+      "blocked_scans": 9,
+      "blocked_since": "2026-11-19T18:14:47.129006+00:00",
+      "last_failed_at": "2026-11-21T18:15:20.558226+00:00"
     },
     "source": "Workday API",
     "last_success": "2026-11-16T06:06:35.730344+00:00",
@@ -267,7 +263,7 @@
     "locked": true,
     "status": "active",
     "last_job": "Record to Report Ops New Associate",
-    "last_checked": "2026-11-21T12:05:05.659200+00:00",
+    "last_checked": "2026-11-21T18:04:18.639215+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -284,21 +280,21 @@
         "no fresher/entry-level evidence": 13
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Accenture job-search API",
-    "last_success": "2026-11-21T12:05:05.659200+00:00"
+    "last_success": "2026-11-21T18:04:18.639215+00:00"
   },
   {
     "id": "c1783687965",
@@ -307,7 +303,7 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-21T12:05:09.363790+00:00",
+    "last_checked": "2026-11-21T18:04:22.887299+00:00",
     "status_reason": "",
     "scan_note": "",
     "scan": {
@@ -326,21 +322,21 @@
         "alone is not evidence of an entry-level role": 6
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Zoho Recruit career site",
-    "last_success": "2026-11-21T12:05:09.363790+00:00"
+    "last_success": "2026-11-21T18:04:22.887299+00:00"
   },
   {
     "id": "c1793696368",
@@ -349,12 +345,12 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-21T12:05:13.290484+00:00",
+    "last_checked": "2026-11-21T18:04:24.189342+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:05:13.290484+00:00",
+    "last_success": "2026-11-21T18:04:24.189342+00:00",
     "scan": {
-      "postings_seen": 1611,
+      "postings_seen": 1610,
       "candidates": 139,
       "details_read": 0,
       "details_unreadable": 0,
@@ -369,17 +365,17 @@
         "alone is not evidence of an entry-level role": 1
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Official job feed (careers site)"
@@ -391,37 +387,37 @@
     "locked": false,
     "status": "active",
     "last_job": "Associate Engineer, IT Eng System Mgr",
-    "last_checked": "2026-11-21T12:05:36.714416+00:00",
+    "last_checked": "2026-11-21T18:04:51.598517+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:05:36.714416+00:00",
+    "last_success": "2026-11-21T18:04:51.598517+00:00",
     "scan": {
       "postings_seen": 316,
-      "candidates": 292,
-      "details_read": 38,
+      "candidates": 316,
+      "details_read": 42,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 4,
-      "rejected": 254,
-      "unknown": 34,
+      "rejected": 274,
+      "unknown": 38,
       "rejections": {
-        "seniority in title": 211,
-        "explicit requirement": 42,
-        "no fresher/entry-level evidence": 34,
+        "seniority in title": 229,
+        "explicit requirement": 44,
+        "no fresher/entry-level evidence": 38,
         "not a job posting": 1
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Eightfold API"
@@ -433,10 +429,10 @@
     "locked": false,
     "status": "active",
     "last_job": "ASIC Verification Engineer",
-    "last_checked": "2026-11-21T12:05:50.447615+00:00",
+    "last_checked": "2026-11-21T18:05:03.267989+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:05:50.447615+00:00",
+    "last_success": "2026-11-21T18:05:03.267989+00:00",
     "scan": {
       "postings_seen": 237,
       "candidates": 237,
@@ -452,17 +448,17 @@
         "no fresher/entry-level evidence": 1
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Eightfold API"
@@ -472,10 +468,10 @@
     "name": "Wells Fargo",
     "url": "https://wf.wd1.myworkdayjobs.com/WellsFargoJobs",
     "locked": false,
-    "status": "unknown",
+    "status": "failing",
     "last_job": "",
-    "last_checked": "2026-11-19T13:15:23.043262+00:00",
-    "status_reason": "Second chance: two individual attempts in the next scheduled full scans (not held by the shared data-centre gate; its own host cooldown, the throttled-hosts stop and the request cap still apply)",
+    "last_checked": "2026-11-21T18:15:08.430849+00:00",
+    "status_reason": "Workday rate_limit (wf.wd1.myworkdayjobs.com)",
     "scan_note": "",
     "last_success": "2026-11-16T06:08:00.141265+00:00",
     "scan": {
@@ -488,42 +484,56 @@
       "rejected": 0,
       "unknown": 0,
       "rejections": {},
-      "failing_since": "2026-11-16T09:05:01.633914+00:00",
-      "failed_scans": 23,
+      "failing_since": "2026-11-21T18:15:08.430841+00:00",
+      "failed_scans": 1,
+      "blocked_scans": 1,
+      "blocked_since": "2026-11-21T18:15:08.430866+00:00",
+      "last_failed_at": "2026-11-21T18:15:08.430866+00:00",
       "recovery": {
         "version": 1,
         "company_id": "c1793696371",
         "discovery_method": "workday",
-        "outcome": "deferred",
-        "failure_category": "cluster_gate",
-        "http_status": null,
+        "outcome": "rate_limited",
+        "failure_category": "rate_limit",
+        "http_status": 429,
         "host": "wf.wd1.myworkdayjobs.com",
         "retry_after_s": 0,
         "retry_after_valid": false,
-        "cooldown_until": "2026-11-19T19:15:23.043053+00:00",
-        "last_attempt": "2026-11-19T13:15:23.043350+00:00",
+        "cooldown_until": "2026-11-22T06:15:08.430619+00:00",
+        "last_attempt": "2026-11-21T18:15:08.430929+00:00",
         "last_success": "2026-11-16T06:08:00.141265+00:00",
-        "observed_at": "2026-11-21T00:48:32.181661+00:00",
+        "observed_at": "2026-11-21T18:15:08.430924+00:00",
         "source": "b677ada9e116dafbbf55ce61e344427248f6568f9de8555d4b17c4541671ac97",
-        "unresolved_failure": false,
+        "unresolved_failure": true,
         "pending": 0,
         "oldest_pending": "",
         "overdue": true,
-        "requests": 0
+        "requests": 1,
+        "cache_hits": 0,
+        "cache_misses": 0
+      },
+      "second_chance": {
+        "attempts": [
+          {
+            "at": "2026-11-21T18:15:08.430952+00:00",
+            "outcome": "rate_limited",
+            "http_status": 429
+          }
+        ],
+        "skips": []
       },
       "run": {
-        "started_at": "2026-11-21T00:48:31.025400+00:00",
-        "finished_at": "2026-11-21T00:48:32.183061+00:00",
-        "jobs_found": 0,
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
+        "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 10,
-        "portals_failed": 5,
-        "reposts_suppressed": 0,
+        "portals": 44,
+        "portals_failed": 4,
+        "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "9bcca3a6f09448ff863c1bd154ed4763",
-        "scope": "workday"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Workday API",
@@ -536,36 +546,36 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-21T12:06:22.275701+00:00",
+    "last_checked": "2026-11-21T18:05:46.269750+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:06:22.275701+00:00",
+    "last_success": "2026-11-21T18:05:46.269750+00:00",
     "scan": {
-      "postings_seen": 104,
-      "candidates": 104,
-      "details_read": 8,
+      "postings_seen": 102,
+      "candidates": 102,
+      "details_read": 7,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
       "rejected": 96,
-      "unknown": 8,
+      "unknown": 6,
       "rejections": {
         "seniority in title": 74,
         "explicit requirement": 22,
-        "no fresher/entry-level evidence": 8
+        "no fresher/entry-level evidence": 6
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Novartis careers search"
@@ -577,12 +587,12 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-21T12:06:25.724302+00:00",
+    "last_checked": "2026-11-21T18:05:48.615260+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:06:25.724302+00:00",
+    "last_success": "2026-11-21T18:05:48.615260+00:00",
     "scan": {
-      "postings_seen": 927,
+      "postings_seen": 926,
       "candidates": 58,
       "details_read": 3,
       "details_unreadable": 0,
@@ -596,17 +606,17 @@
         "no fresher/entry-level evidence": 3
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Career-site sitemap + job pages"
@@ -618,36 +628,36 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-21T12:06:26.907305+00:00",
+    "last_checked": "2026-11-21T18:05:50.600442+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:06:26.907305+00:00",
+    "last_success": "2026-11-21T18:05:50.600442+00:00",
     "scan": {
-      "postings_seen": 27,
-      "candidates": 13,
+      "postings_seen": 24,
+      "candidates": 11,
       "details_read": 1,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
-      "rejected": 12,
+      "rejected": 10,
       "unknown": 1,
       "rejections": {
-        "seniority in title": 11,
+        "seniority in title": 9,
         "alone is not evidence of an entry-level role": 1,
         "explicit requirement": 1
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Career-site sitemap + job pages"
@@ -657,10 +667,10 @@
     "name": "Broadridge",
     "url": "https://broadridge.wd5.myworkdayjobs.com/Careers",
     "locked": false,
-    "status": "unknown",
+    "status": "failing",
     "last_job": "",
-    "last_checked": "2026-11-21T00:48:31.176217+00:00",
-    "status_reason": "Second chance: two individual attempts in the next scheduled full scans (not held by the shared data-centre gate; its own host cooldown, the throttled-hosts stop and the request cap still apply)",
+    "last_checked": "2026-11-21T18:15:19.554954+00:00",
+    "status_reason": "Workday rate_limit (broadridge.wd5.myworkdayjobs.com)",
     "scan_note": "",
     "last_success": "2026-11-16T06:08:48.420508+00:00",
     "scan": {
@@ -673,11 +683,11 @@
       "rejected": 0,
       "unknown": 0,
       "rejections": {},
-      "failing_since": "2026-11-20T18:14:30.747531+00:00",
-      "failed_scans": 3,
-      "blocked_scans": 6,
+      "failing_since": "2026-11-21T18:15:19.554947+00:00",
+      "failed_scans": 1,
+      "blocked_scans": 7,
       "blocked_since": "2026-11-19T18:14:47.130037+00:00",
-      "last_failed_at": "2026-11-21T00:48:31.176717+00:00",
+      "last_failed_at": "2026-11-21T18:15:19.554971+00:00",
       "recovery": {
         "version": 1,
         "company_id": "c1793696375",
@@ -688,10 +698,10 @@
         "host": "broadridge.wd5.myworkdayjobs.com",
         "retry_after_s": 0,
         "retry_after_valid": false,
-        "cooldown_until": "2026-11-21T06:48:31.175870+00:00",
-        "last_attempt": "2026-11-21T00:48:31.176805+00:00",
+        "cooldown_until": "2026-11-22T06:15:19.554762+00:00",
+        "last_attempt": "2026-11-21T18:15:19.555033+00:00",
         "last_success": "2026-11-16T06:08:48.420508+00:00",
-        "observed_at": "2026-11-21T00:48:31.176799+00:00",
+        "observed_at": "2026-11-21T18:15:19.555029+00:00",
         "source": "eaf495412b2ede6a59559287cfcbe4a3841a16beb31ca44d37d2d0eb333d1c0e",
         "unresolved_failure": true,
         "pending": 0,
@@ -701,19 +711,28 @@
         "cache_hits": 0,
         "cache_misses": 0
       },
+      "second_chance": {
+        "attempts": [
+          {
+            "at": "2026-11-21T18:15:19.555053+00:00",
+            "outcome": "rate_limited",
+            "http_status": 429
+          }
+        ],
+        "skips": []
+      },
       "run": {
-        "started_at": "2026-11-21T00:48:31.025400+00:00",
-        "finished_at": "2026-11-21T00:48:32.183061+00:00",
-        "jobs_found": 0,
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
+        "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 10,
-        "portals_failed": 5,
-        "reposts_suppressed": 0,
+        "portals": 44,
+        "portals_failed": 4,
+        "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "9bcca3a6f09448ff863c1bd154ed4763",
-        "scope": "workday"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Workday API",
@@ -747,7 +766,7 @@
         "company_id": "c1793696376",
         "discovery_method": "workday",
         "outcome": "deferred",
-        "failure_category": "cluster_gate",
+        "failure_category": "circuit",
         "http_status": null,
         "host": "invesco.wd1.myworkdayjobs.com",
         "retry_after_s": 0,
@@ -755,7 +774,7 @@
         "cooldown_until": "2026-11-20T01:18:21.891573+00:00",
         "last_attempt": "2026-11-19T19:18:21.892365+00:00",
         "last_success": "2026-11-16T06:08:53.488039+00:00",
-        "observed_at": "2026-11-21T00:48:32.181910+00:00",
+        "observed_at": "2026-11-21T18:15:20.558306+00:00",
         "source": "9cf0f853324007c78e8d0efe87adbdca271c9ddb5e8ca82186b866615d7c8b26",
         "unresolved_failure": false,
         "pending": 0,
@@ -764,18 +783,26 @@
         "requests": 0
       },
       "run": {
-        "started_at": "2026-11-21T00:48:31.025400+00:00",
-        "finished_at": "2026-11-21T00:48:32.183061+00:00",
-        "jobs_found": 0,
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
+        "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 10,
-        "portals_failed": 5,
-        "reposts_suppressed": 0,
+        "portals": 44,
+        "portals_failed": 4,
+        "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "9bcca3a6f09448ff863c1bd154ed4763",
-        "scope": "workday"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
+      },
+      "second_chance": {
+        "attempts": [],
+        "skips": [
+          {
+            "at": "2026-11-21T18:15:20.558318+00:00",
+            "reason": "circuit"
+          }
+        ]
       }
     },
     "source": "Workday API",
@@ -788,10 +815,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-21T12:06:29.049356+00:00",
+    "last_checked": "2026-11-21T18:05:53.177089+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:06:29.049356+00:00",
+    "last_success": "2026-11-21T18:05:53.177089+00:00",
     "scan": {
       "postings_seen": 7,
       "candidates": 7,
@@ -806,17 +833,17 @@
         "explicit requirement": 2
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Phenom career site"
@@ -828,10 +855,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-21T12:06:35.680493+00:00",
+    "last_checked": "2026-11-21T18:05:58.593101+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:06:35.680493+00:00",
+    "last_success": "2026-11-21T18:05:58.593101+00:00",
     "scan": {
       "postings_seen": 76,
       "candidates": 76,
@@ -848,17 +875,17 @@
         "no fresher/entry-level evidence": 4
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Eightfold API"
@@ -870,38 +897,38 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-21T12:06:37.754154+00:00",
+    "last_checked": "2026-11-21T18:06:05.190262+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:06:37.754154+00:00",
+    "last_success": "2026-11-21T18:06:05.190262+00:00",
     "scan": {
-      "postings_seen": 1635,
-      "candidates": 588,
+      "postings_seen": 1642,
+      "candidates": 595,
       "details_read": 12,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
-      "rejected": 576,
+      "rejected": 583,
       "unknown": 12,
       "rejections": {
-        "seniority in title": 423,
+        "seniority in title": 430,
         "explicit requirement": 152,
         "no fresher/entry-level evidence": 11,
         "levelled title above entry": 1,
         "alone is not evidence of an entry-level role": 1
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Career-site sitemap + job pages"
@@ -913,10 +940,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Program Management Analyst - Cigna Healthcare",
-    "last_checked": "2026-11-21T12:06:58.966062+00:00",
+    "last_checked": "2026-11-21T18:06:23.605109+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:06:58.966062+00:00",
+    "last_success": "2026-11-21T18:06:23.605109+00:00",
     "scan": {
       "postings_seen": 105,
       "candidates": 105,
@@ -933,17 +960,17 @@
         "alone is not evidence of an entry-level role": 2
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Phenom career site"
@@ -955,10 +982,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Technology Early Career Entry Program",
-    "last_checked": "2026-11-21T12:07:38.580230+00:00",
+    "last_checked": "2026-11-21T18:07:07.516895+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:07:38.580230+00:00",
+    "last_success": "2026-11-21T18:07:07.516895+00:00",
     "scan": {
       "postings_seen": 236,
       "candidates": 236,
@@ -975,17 +1002,17 @@
         "no fresher/entry-level evidence": 8
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Phenom career site"
@@ -997,10 +1024,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-21T12:08:03.054565+00:00",
+    "last_checked": "2026-11-21T18:07:38.677303+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:08:03.054565+00:00",
+    "last_success": "2026-11-21T18:07:38.677303+00:00",
     "scan": {
       "postings_seen": 148,
       "candidates": 148,
@@ -1019,17 +1046,17 @@
         "broad experience range and no independent fresher/entry-leve": 1
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Phenom career site"
@@ -1062,7 +1089,7 @@
         "company_id": "c1793696383",
         "discovery_method": "workday",
         "outcome": "deferred",
-        "failure_category": "cluster_gate",
+        "failure_category": "circuit",
         "http_status": null,
         "host": "hitachi.wd1.myworkdayjobs.com",
         "retry_after_s": 0,
@@ -1070,7 +1097,7 @@
         "cooldown_until": "2026-11-20T07:33:36.129035+00:00",
         "last_attempt": "2026-11-20T01:33:36.129900+00:00",
         "last_success": "2026-11-16T06:14:57.792147+00:00",
-        "observed_at": "2026-11-21T00:48:32.182184+00:00",
+        "observed_at": "2026-11-21T18:15:20.558365+00:00",
         "source": "94db83524b5745791c940c42e49aa24a30e8dd3023656690b211d28491e6ad1e",
         "unresolved_failure": false,
         "pending": 0,
@@ -1079,18 +1106,26 @@
         "requests": 0
       },
       "run": {
-        "started_at": "2026-11-21T00:48:31.025400+00:00",
-        "finished_at": "2026-11-21T00:48:32.183061+00:00",
-        "jobs_found": 0,
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
+        "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 10,
-        "portals_failed": 5,
-        "reposts_suppressed": 0,
+        "portals": 44,
+        "portals_failed": 4,
+        "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "9bcca3a6f09448ff863c1bd154ed4763",
-        "scope": "workday"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
+      },
+      "second_chance": {
+        "attempts": [],
+        "skips": [
+          {
+            "at": "2026-11-21T18:15:20.558376+00:00",
+            "reason": "circuit"
+          }
+        ]
       }
     },
     "source": "Workday API",
@@ -1124,7 +1159,7 @@
         "company_id": "c1793696384",
         "discovery_method": "workday",
         "outcome": "deferred",
-        "failure_category": "cluster_gate",
+        "failure_category": "circuit",
         "http_status": null,
         "host": "medtronic.wd1.myworkdayjobs.com",
         "retry_after_s": 0,
@@ -1132,7 +1167,7 @@
         "cooldown_until": "2026-11-20T13:37:16.892419+00:00",
         "last_attempt": "2026-11-20T07:37:16.892990+00:00",
         "last_success": "2026-11-16T06:15:12.768149+00:00",
-        "observed_at": "2026-11-21T00:48:32.182429+00:00",
+        "observed_at": "2026-11-21T18:15:20.558423+00:00",
         "source": "8334abb041d8933ab3a698e9d65d6ba6d89023f15bb8091f9ccc3f25435d0c0a",
         "unresolved_failure": false,
         "pending": 0,
@@ -1141,18 +1176,26 @@
         "requests": 0
       },
       "run": {
-        "started_at": "2026-11-21T00:48:31.025400+00:00",
-        "finished_at": "2026-11-21T00:48:32.183061+00:00",
-        "jobs_found": 0,
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
+        "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 10,
-        "portals_failed": 5,
-        "reposts_suppressed": 0,
+        "portals": 44,
+        "portals_failed": 4,
+        "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "9bcca3a6f09448ff863c1bd154ed4763",
-        "scope": "workday"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
+      },
+      "second_chance": {
+        "attempts": [],
+        "skips": [
+          {
+            "at": "2026-11-21T18:15:20.558432+00:00",
+            "reason": "circuit"
+          }
+        ]
       }
     },
     "source": "Workday API",
@@ -1165,10 +1208,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Apprentice, Insurance Client Services",
-    "last_checked": "2026-11-21T12:08:08.401423+00:00",
+    "last_checked": "2026-11-21T18:07:45.561312+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:08:08.401423+00:00",
+    "last_success": "2026-11-21T18:07:45.561312+00:00",
     "scan": {
       "postings_seen": 355,
       "candidates": 56,
@@ -1186,17 +1229,17 @@
         "alone is not evidence of an entry-level role": 2
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Jibe/iCIMS API"
@@ -1229,7 +1272,7 @@
         "company_id": "c1793696386",
         "discovery_method": "workday",
         "outcome": "deferred",
-        "failure_category": "cluster_gate",
+        "failure_category": "circuit",
         "http_status": null,
         "host": "silabs.wd1.myworkdayjobs.com",
         "retry_after_s": 0,
@@ -1237,7 +1280,7 @@
         "cooldown_until": "",
         "last_attempt": "2026-11-20T13:40:13.145418+00:00",
         "last_success": "2026-11-16T06:15:26.053321+00:00",
-        "observed_at": "2026-11-21T00:48:32.182674+00:00",
+        "observed_at": "2026-11-21T18:15:20.558479+00:00",
         "source": "51f41ecd356197a78a8928f4a19ba5862c6d5cf2e8826fb80457b4b8cce6fff0",
         "unresolved_failure": false,
         "pending": 0,
@@ -1246,18 +1289,26 @@
         "requests": 0
       },
       "run": {
-        "started_at": "2026-11-21T00:48:31.025400+00:00",
-        "finished_at": "2026-11-21T00:48:32.183061+00:00",
-        "jobs_found": 0,
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
+        "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 10,
-        "portals_failed": 5,
-        "reposts_suppressed": 0,
+        "portals": 44,
+        "portals_failed": 4,
+        "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "9bcca3a6f09448ff863c1bd154ed4763",
-        "scope": "workday"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
+      },
+      "second_chance": {
+        "attempts": [],
+        "skips": [
+          {
+            "at": "2026-11-21T18:15:20.558489+00:00",
+            "reason": "circuit"
+          }
+        ]
       }
     },
     "source": "Workday API",
@@ -1291,7 +1342,7 @@
         "company_id": "c1793696387",
         "discovery_method": "workday",
         "outcome": "deferred",
-        "failure_category": "cluster_gate",
+        "failure_category": "circuit",
         "http_status": null,
         "host": "analogdevices.wd1.myworkdayjobs.com",
         "retry_after_s": 0,
@@ -1299,31 +1350,36 @@
         "cooldown_until": "2026-11-20T21:14:45.804847+00:00",
         "last_attempt": "2026-11-20T18:14:45.805292+00:00",
         "last_success": "2026-11-16T06:15:39.229508+00:00",
-        "observed_at": "2026-11-21T00:48:32.182912+00:00",
+        "observed_at": "2026-11-21T18:15:20.558533+00:00",
         "source": "e54ca40ad4ef66f9051d0b9f3bf57d55411715903e4027dc58d0182be8c46cea",
-        "unresolved_failure": true,
+        "unresolved_failure": false,
         "pending": 0,
         "oldest_pending": "",
         "overdue": true,
         "requests": 0
       },
       "run": {
-        "started_at": "2026-11-21T00:48:31.025400+00:00",
-        "finished_at": "2026-11-21T00:48:32.183061+00:00",
-        "jobs_found": 0,
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
+        "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 10,
-        "portals_failed": 5,
-        "reposts_suppressed": 0,
+        "portals": 44,
+        "portals_failed": 4,
+        "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "9bcca3a6f09448ff863c1bd154ed4763",
-        "scope": "workday"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       },
-      "blocked_scans": 6,
-      "blocked_since": "2026-11-19T18:14:47.133839+00:00",
-      "last_failed_at": "2026-11-21T00:48:32.182896+00:00"
+      "second_chance": {
+        "attempts": [],
+        "skips": [
+          {
+            "at": "2026-11-21T18:15:20.558541+00:00",
+            "reason": "circuit"
+          }
+        ]
+      }
     },
     "source": "Workday API",
     "second_chance": 2
@@ -1355,8 +1411,8 @@
         "version": 1,
         "company_id": "c1793696388",
         "discovery_method": "workday",
-        "outcome": "cooling_down",
-        "failure_category": "cooldown",
+        "outcome": "deferred",
+        "failure_category": "circuit",
         "http_status": null,
         "host": "marvell.wd1.myworkdayjobs.com",
         "retry_after_s": 0,
@@ -1364,31 +1420,36 @@
         "cooldown_until": "2026-11-21T03:17:52.763196+00:00",
         "last_attempt": "2026-11-20T21:17:52.764144+00:00",
         "last_success": "2026-11-16T06:15:45.233084+00:00",
-        "observed_at": "2026-11-21T00:48:32.182967+00:00",
+        "observed_at": "2026-11-21T18:15:20.558582+00:00",
         "source": "c9860503dd452fe98be3f25a244fc83eeb96c3fafde63bc3b5c885a0f583540b",
-        "unresolved_failure": true,
+        "unresolved_failure": false,
         "pending": 0,
         "oldest_pending": "",
         "overdue": true,
         "requests": 0
       },
       "run": {
-        "started_at": "2026-11-21T00:48:31.025400+00:00",
-        "finished_at": "2026-11-21T00:48:32.183061+00:00",
-        "jobs_found": 0,
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
+        "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 10,
-        "portals_failed": 5,
-        "reposts_suppressed": 0,
+        "portals": 44,
+        "portals_failed": 4,
+        "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "9bcca3a6f09448ff863c1bd154ed4763",
-        "scope": "workday"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       },
-      "blocked_scans": 1,
-      "blocked_since": "2026-11-21T00:14:25.942246+00:00",
-      "last_failed_at": "2026-11-21T00:48:32.182953+00:00"
+      "second_chance": {
+        "attempts": [],
+        "skips": [
+          {
+            "at": "2026-11-21T18:15:20.558590+00:00",
+            "reason": "circuit"
+          }
+        ]
+      }
     },
     "source": "Workday API",
     "second_chance": 2
@@ -1399,11 +1460,11 @@
     "url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers",
     "locked": false,
     "status": "active",
-    "last_job": "Operations Finance Analyst",
-    "last_checked": "2026-11-21T12:08:54.791656+00:00",
+    "last_job": "IT Intern",
+    "last_checked": "2026-11-21T18:08:38.666777+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:08:54.791656+00:00",
+    "last_success": "2026-11-21T18:08:38.666777+00:00",
     "scan": {
       "postings_seen": 317,
       "candidates": 317,
@@ -1422,17 +1483,17 @@
         "alone is not evidence of an entry-level role": 5
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Phenom career site"
@@ -1444,39 +1505,39 @@
     "locked": false,
     "status": "active",
     "last_job": "VRMO Seller Onboard Asc - ES,  In-Person Verification - VAR",
-    "last_checked": "2026-11-21T12:09:09.010194+00:00",
+    "last_checked": "2026-11-21T18:08:54.008313+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:09:09.010194+00:00",
+    "last_success": "2026-11-21T18:08:54.008313+00:00",
     "scan": {
-      "postings_seen": 2026,
-      "candidates": 2026,
+      "postings_seen": 2024,
+      "candidates": 2024,
       "details_read": 0,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 9,
       "rejected": 1780,
-      "unknown": 237,
+      "unknown": 235,
       "rejections": {
         "seniority in title": 925,
         "explicit requirement": 567,
         "levelled title above entry": 282,
-        "no fresher/entry-level evidence": 191,
-        "alone is not evidence of an entry-level role": 44,
+        "no fresher/entry-level evidence": 190,
+        "alone is not evidence of an entry-level role": 43,
         "not a job posting": 6
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Amazon jobs API"
@@ -1487,39 +1548,39 @@
     "url": "https://apply.careers.microsoft.com/careers?domain=microsoft.com&location=Hyderabad",
     "locked": false,
     "status": "active",
-    "last_job": "Software Engineering",
-    "last_checked": "2026-11-21T12:09:46.430715+00:00",
+    "last_job": "Applied Sciences",
+    "last_checked": "2026-11-21T18:09:10.244401+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:09:46.430715+00:00",
+    "last_success": "2026-11-21T18:09:10.244401+00:00",
     "scan": {
       "postings_seen": 230,
-      "candidates": 224,
-      "details_read": 13,
+      "candidates": 226,
+      "details_read": 12,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 3,
-      "rejected": 210,
+      "rejected": 212,
       "unknown": 11,
       "rejections": {
-        "seniority in title": 141,
-        "explicit requirement": 52,
-        "levelled title above entry": 17,
+        "seniority in title": 142,
+        "explicit requirement": 55,
+        "levelled title above entry": 15,
         "no fresher/entry-level evidence": 8,
         "alone is not evidence of an entry-level role": 3
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Eightfold API"
@@ -1531,10 +1592,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Software Engineer, PhD, Early Career, 2026",
-    "last_checked": "2026-11-21T12:09:49.415907+00:00",
+    "last_checked": "2026-11-21T18:09:13.614120+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:09:49.415907+00:00",
+    "last_success": "2026-11-21T18:09:13.614120+00:00",
     "scan": {
       "postings_seen": 64,
       "candidates": 64,
@@ -1552,17 +1613,17 @@
         "no fresher/entry-level evidence": 2
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Google Careers site"
@@ -1574,10 +1635,10 @@
     "locked": false,
     "status": "active",
     "last_job": "SAP/EWM consultant",
-    "last_checked": "2026-11-21T12:09:53.069809+00:00",
+    "last_checked": "2026-11-21T18:09:18.511678+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:09:53.069809+00:00",
+    "last_success": "2026-11-21T18:09:18.511678+00:00",
     "scan": {
       "postings_seen": 1562,
       "candidates": 1562,
@@ -1594,17 +1655,17 @@
         "broad experience range and no independent fresher/entry-leve": 1
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Infosys jobs API"
@@ -1615,40 +1676,40 @@
     "url": "https://southasiacareers.deloitte.com/search/?locationsearch=Hyderabad",
     "locked": false,
     "status": "active",
-    "last_job": "Intern | Fresher | Mumbai | Regulatory & Financial Risk",
-    "last_checked": "2026-11-21T12:10:51.811724+00:00",
+    "last_job": "Analyst | Finance AI Implementation | Bengaluru | Finance Transformation | Finance Strategy",
+    "last_checked": "2026-11-21T18:10:05.128151+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:10:51.811724+00:00",
+    "last_success": "2026-11-21T18:10:05.128151+00:00",
     "scan": {
-      "postings_seen": 2298,
-      "candidates": 2298,
-      "details_read": 108,
-      "details_unreadable": 3,
+      "postings_seen": 2301,
+      "candidates": 2301,
+      "details_read": 102,
+      "details_unreadable": 4,
       "pending": 0,
       "accepted": 15,
-      "rejected": 2180,
-      "unknown": 103,
+      "rejected": 2181,
+      "unknown": 105,
       "rejections": {
-        "seniority in title": 1841,
+        "seniority in title": 1842,
         "explicit requirement": 338,
         "no fresher/entry-level evidence": 94,
-        "alone is not evidence of an entry-level role": 6,
-        "job page unreadable": 3,
+        "alone is not evidence of an entry-level role": 7,
+        "job page unreadable": 4,
         "levelled title above entry": 1
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "SuccessFactors career site"
@@ -1659,11 +1720,11 @@
     "url": "https://careers.qualcomm.com/careers?domain=qualcomm.com&location=Hyderabad",
     "locked": false,
     "status": "active",
-    "last_job": "2027 Campus Hire_ Engineer_ HW",
-    "last_checked": "2026-11-21T12:11:48.299036+00:00",
+    "last_job": "2027 Campus Hire_ Associate Engineer_ HW",
+    "last_checked": "2026-11-21T18:10:57.544235+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:11:48.299036+00:00",
+    "last_success": "2026-11-21T18:10:57.544235+00:00",
     "scan": {
       "postings_seen": 551,
       "candidates": 551,
@@ -1680,17 +1741,17 @@
         "alone is not evidence of an entry-level role": 4
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Eightfold API"
@@ -1702,37 +1763,37 @@
     "locked": false,
     "status": "active",
     "last_job": "Solutions Engineer - Strategic Partners",
-    "last_checked": "2026-11-21T12:12:33.759566+00:00",
+    "last_checked": "2026-11-21T18:11:47.179139+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:12:33.759566+00:00",
+    "last_success": "2026-11-21T18:11:47.179139+00:00",
     "scan": {
-      "postings_seen": 314,
-      "candidates": 314,
+      "postings_seen": 315,
+      "candidates": 315,
       "details_read": 6,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 4,
-      "rejected": 304,
+      "rejected": 305,
       "unknown": 6,
       "rejections": {
         "explicit requirement": 195,
-        "seniority in title": 108,
+        "seniority in title": 109,
         "no fresher/entry-level evidence": 6,
         "levelled title above entry": 1
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Phenom career site"
@@ -1744,10 +1805,10 @@
     "locked": false,
     "status": "active",
     "last_job": "Intern- On Platform Storefront Merchandising",
-    "last_checked": "2026-11-21T12:12:45.375837+00:00",
+    "last_checked": "2026-11-21T18:11:58.620402+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:12:45.375837+00:00",
+    "last_success": "2026-11-21T18:11:58.620402+00:00",
     "scan": {
       "postings_seen": 100,
       "candidates": 100,
@@ -1775,9 +1836,9 @@
         "retry_after_s": 0,
         "retry_after_valid": false,
         "cooldown_until": "",
-        "last_attempt": "2026-11-21T12:12:45.375891+00:00",
-        "last_success": "2026-11-21T12:12:45.375837+00:00",
-        "observed_at": "2026-11-21T12:12:45.375886+00:00",
+        "last_attempt": "2026-11-21T18:11:58.620464+00:00",
+        "last_success": "2026-11-21T18:11:58.620402+00:00",
+        "observed_at": "2026-11-21T18:11:58.620458+00:00",
         "source": "fe566b637b6b43d4f0d863aa620c0b7bbfc67273cbd89fec78fcc8b32e8da2d0",
         "unresolved_failure": false,
         "pending": 0,
@@ -1788,17 +1849,17 @@
         "cache_misses": 5
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Workday sitemap + job pages"
@@ -1810,10 +1871,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-21T12:14:39.103634+00:00",
+    "last_checked": "2026-11-21T18:13:55.514784+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:14:39.103634+00:00",
+    "last_success": "2026-11-21T18:13:55.514784+00:00",
     "scan": {
       "postings_seen": 212,
       "candidates": 212,
@@ -1829,17 +1890,17 @@
         "explicit requirement": 30
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Jibe/iCIMS API"
@@ -1851,10 +1912,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-21T12:14:40.757700+00:00",
+    "last_checked": "2026-11-21T18:13:57.052318+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:14:40.757700+00:00",
+    "last_success": "2026-11-21T18:13:57.052318+00:00",
     "scan": {
       "postings_seen": 9,
       "candidates": 9,
@@ -1870,17 +1931,17 @@
         "no fresher/entry-level evidence": 2
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Eightfold API"
@@ -1892,10 +1953,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-21T12:14:54.979573+00:00",
+    "last_checked": "2026-11-21T18:14:08.636339+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:14:54.979573+00:00",
+    "last_success": "2026-11-21T18:14:08.636339+00:00",
     "scan": {
       "postings_seen": 338,
       "candidates": 338,
@@ -1906,24 +1967,24 @@
       "rejected": 327,
       "unknown": 11,
       "rejections": {
-        "seniority in title": 279,
-        "levelled title above entry": 33,
+        "seniority in title": 280,
+        "levelled title above entry": 32,
         "explicit requirement": 15,
         "no fresher/entry-level evidence": 9,
         "alone is not evidence of an entry-level role": 2
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Oracle Recruiting API"
@@ -1935,38 +1996,38 @@
     "locked": false,
     "status": "active",
     "last_job": "Process Associate Order Management - Health Care (Voice)",
-    "last_checked": "2026-11-21T12:15:27.995406+00:00",
+    "last_checked": "2026-11-21T18:14:40.235304+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:15:27.995406+00:00",
+    "last_success": "2026-11-21T18:14:40.235304+00:00",
     "scan": {
-      "postings_seen": 3701,
-      "candidates": 3701,
+      "postings_seen": 3710,
+      "candidates": 3710,
       "details_read": 0,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 20,
-      "rejected": 635,
-      "unknown": 3046,
+      "rejected": 641,
+      "unknown": 3049,
       "rejections": {
-        "no fresher/entry-level evidence": 3045,
-        "seniority in title": 370,
-        "explicit requirement": 262,
+        "no fresher/entry-level evidence": 3048,
+        "seniority in title": 378,
+        "explicit requirement": 260,
         "levelled title above entry": 3,
         "alone is not evidence of an entry-level role": 1
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "IBM careers API"
@@ -1978,41 +2039,41 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-21T12:15:33.237453+00:00",
+    "last_checked": "2026-11-21T18:14:45.827965+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:15:33.237453+00:00",
+    "last_success": "2026-11-21T18:14:45.827965+00:00",
     "scan": {
-      "postings_seen": 1504,
+      "postings_seen": 1499,
       "candidates": 42,
       "details_read": 0,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
-      "rejected": 27,
-      "unknown": 15,
+      "rejected": 26,
+      "unknown": 16,
       "rejections": {
-        "explicit requirement": 27,
-        "no fresher/entry-level evidence": 15
+        "explicit requirement": 26,
+        "no fresher/entry-level evidence": 16
       },
       "feed": {
         "baseline": {
-          "postings": 1504,
-          "at": "2026-11-21T12:15:33.097091+00:00"
+          "postings": 1499,
+          "at": "2026-11-21T18:14:45.682396+00:00"
         }
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Official job feed"
@@ -2024,10 +2085,10 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-21T12:15:34.881287+00:00",
+    "last_checked": "2026-11-21T18:14:47.650918+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:15:34.881287+00:00",
+    "last_success": "2026-11-21T18:14:47.650918+00:00",
     "scan": {
       "postings_seen": 982,
       "candidates": 77,
@@ -2042,17 +2103,17 @@
         "explicit requirement": 20
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Official job feed"
@@ -2064,36 +2125,36 @@
     "locked": false,
     "status": "active",
     "last_job": "",
-    "last_checked": "2026-11-21T12:15:44.120303+00:00",
+    "last_checked": "2026-11-21T18:14:57.338927+00:00",
     "status_reason": "",
     "scan_note": "",
-    "last_success": "2026-11-21T12:15:44.120303+00:00",
+    "last_success": "2026-11-21T18:14:57.338927+00:00",
     "scan": {
-      "postings_seen": 173,
-      "candidates": 172,
+      "postings_seen": 175,
+      "candidates": 174,
       "details_read": 11,
       "details_unreadable": 0,
       "pending": 0,
       "accepted": 0,
-      "rejected": 161,
+      "rejected": 163,
       "unknown": 11,
       "rejections": {
-        "seniority in title": 154,
+        "seniority in title": 156,
         "no fresher/entry-level evidence": 11,
         "explicit requirement": 7
       },
       "run": {
-        "started_at": "2026-11-21T12:03:42.889309+00:00",
-        "finished_at": "2026-11-21T12:15:45.123487+00:00",
+        "started_at": "2026-11-21T18:02:59.470017+00:00",
+        "finished_at": "2026-11-21T18:15:20.558673+00:00",
         "jobs_found": 131,
         "new_jobs": 0,
-        "portals": 36,
-        "portals_failed": 2,
+        "portals": 44,
+        "portals_failed": 4,
         "reposts_suppressed": 76,
         "reposts_window_realerted": 0,
         "repost_dates_backfilled": 0,
         "recovery_version": 1,
-        "run_id": "0f1d5359ff634f3585899a4514f7bcd9"
+        "run_id": "d76af423239244d28d1cbf988e8483d7"
       }
     },
     "source": "Swiggy careers site"

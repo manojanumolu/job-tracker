@@ -1,8 +1,48 @@
 {
   "schema_version": 1,
-  "run_id": "9eaad967f775498a889a05188320c992",
-  "updated_at": "2026-11-21T12:51:34.206095+00:00",
+  "run_id": "d76af423239244d28d1cbf988e8483d7",
+  "updated_at": "2026-11-21T18:15:20.558673+00:00",
   "entries": {
+    "1e47bd37141c256db06d3d0b82c4d2c1471abbb93941a707fd1406323951b37b": {
+      "company_id": "microsoft",
+      "source": "eae7b9d265deafdeec3281d016c799396457073127eb723399503b11e3e63ba0",
+      "fingerprint": "34f5a079a8dc28b30eb6661a84d649d3375d74ce14b827c06760217f2073cb37",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T18:09:08.749166+00:00",
+      "expires_at": "2026-11-24T18:09:08.749176+00:00",
+      "title": "Account Executive",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "India, Karnataka, Bangalore",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '3+ years' (minimum 3 yr)",
+        "matched": "eightfold position",
+        "posted_at": "2026-11-21"
+      },
+      "verdict": "rejected"
+    },
+    "24e41c2cb8108ecd1f2fb9968eaaed86907b5ce97a3355e441cc6183c1f6552b": {
+      "company_id": "c1793696372",
+      "source": "bc6fda12f5c238743ab995767a2c5d240ff9cdde468981e249670a2c8e8bd344",
+      "fingerprint": "20f3dcf4508c3428d2b3910ca6517eca1530bdf3d124f189e9788074f5a87bea",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T18:05:37.488272+00:00",
+      "expires_at": "2026-11-24T18:05:37.488283+00:00",
+      "title": "Sales Rep (Territory Business Executive)",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Maharashtra, IN",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: 'Minimum 2+ years' (minimum 2 yr)",
+        "matched": "JobPosting on the job page",
+        "posted_at": "2026-10-23"
+      },
+      "verdict": "rejected"
+    },
     "8d3809ce6ffbd989c3eece9aee31250b673b4c47dfeb8f97799405185c557879": {
       "company_id": "deloitte",
       "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",
@@ -13000,26 +13040,6 @@
         "reason": "explicit requirement: '10+ years' (minimum 10 yr)",
         "matched": "eightfold position",
         "posted_at": "2026-11-08"
-      },
-      "verdict": "rejected"
-    },
-    "1e47bd37141c256db06d3d0b82c4d2c1471abbb93941a707fd1406323951b37b": {
-      "company_id": "microsoft",
-      "source": "eae7b9d265deafdeec3281d016c799396457073127eb723399503b11e3e63ba0",
-      "fingerprint": "51093f6e361658af2860062330d0da170164dd9e171ffaf59e8a4f22504fd214",
-      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
-      "evaluated_at": "2026-11-20T12:13:20.652013+00:00",
-      "expires_at": "2026-11-23T12:13:20.652023+00:00",
-      "title": "Account Management",
-      "detail": {
-        "ok": true,
-        "description": "",
-        "location": "India, Karnataka, Bangalore",
-        "strict_text": "",
-        "posting_evidence": true,
-        "reason": "explicit requirement: '3+ years' (minimum 3 yr)",
-        "matched": "eightfold position",
-        "posted_at": "2026-10-19"
       },
       "verdict": "rejected"
     },
@@ -64800,26 +64820,6 @@
         "reason": "explicit requirement: 'at least 3 years' (minimum 3 yr)",
         "matched": "JobPosting on the job page",
         "posted_at": "2026-10-06"
-      },
-      "verdict": "rejected"
-    },
-    "24e41c2cb8108ecd1f2fb9968eaaed86907b5ce97a3355e441cc6183c1f6552b": {
-      "company_id": "c1793696372",
-      "source": "bc6fda12f5c238743ab995767a2c5d240ff9cdde468981e249670a2c8e8bd344",
-      "fingerprint": "20f3dcf4508c3428d2b3910ca6517eca1530bdf3d124f189e9788074f5a87bea",
-      "rules": "53698bf60a701fbb0ffc58bf99dd98ee22f21d696119950a30536344c3b1ae4b",
-      "evaluated_at": "2026-11-20T06:06:28.252115+00:00",
-      "expires_at": "2026-11-23T06:06:28.252127+00:00",
-      "title": "Sales Rep (Territory Business Executive)",
-      "detail": {
-        "ok": true,
-        "description": "",
-        "location": "Maharashtra, IN",
-        "strict_text": "",
-        "posting_evidence": true,
-        "reason": "explicit requirement: 'Minimum 2+ years' (minimum 2 yr)",
-        "matched": "JobPosting on the job page",
-        "posted_at": "2026-10-23"
       },
       "verdict": "rejected"
     },
