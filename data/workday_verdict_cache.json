@@ -1,8 +1,228 @@
 {
   "schema_version": 1,
-  "run_id": "cf478eb8e777491cb4d54645f4b1f309",
-  "updated_at": "2026-11-21T03:21:00.477558+00:00",
+  "run_id": "bda934a09df94cc997aa2b6851543473",
+  "updated_at": "2026-11-21T06:13:59.218028+00:00",
   "entries": {
+    "09dd4440e7daacd4626fc4b36a0bfd668afad3c32c20cac60ca72ab989247cc6": {
+      "company_id": "deloitte",
+      "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",
+      "fingerprint": "06abf8b4be63935cb331432e43e332a87c8d43259cdf3114871f462a9abfeec2",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T06:09:29.962004+00:00",
+      "expires_at": "2026-11-24T06:09:29.962018+00:00",
+      "title": "Consultant | Backend + Python (Short Fuse) | Bengaluru | Engineering | Platform Development & Integr",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Bengaluru, IN | India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '3-6 Years' (minimum 3 yr)",
+        "matched": "successfactors job page",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "819ed4f855ba16064dc0ae062b115cac3a08e26bcb51b3bac81bf68aab56e7e6": {
+      "company_id": "deloitte",
+      "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",
+      "fingerprint": "43462b3f41c12dd4ad8beb67ac1536cf275b98025c663c0a7b81119d08922635",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T06:09:27.097334+00:00",
+      "expires_at": "2026-11-24T06:09:27.097346+00:00",
+      "title": "EA - R&BP - Executive - Independence and Conflicts - Bengaluru",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Bengaluru, IN | India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '1 year' (minimum 1 yr)",
+        "matched": "successfactors job page",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "5f4c6122470f19c453bd9dc8e7010d19dc6c1608c4ea85f4f1171eb65d09114e": {
+      "company_id": "deloitte",
+      "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",
+      "fingerprint": "05d62cede92b75344da10275a46d0d4af86e0e70624f2ed561295a3d78b00a9d",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T06:09:25.430553+00:00",
+      "expires_at": "2026-11-24T06:09:25.430566+00:00",
+      "title": "Consultant | Azure - Infra, Azure - Devops, Terraform, Python | Bengaluru | Engineering | Platform D",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Bengaluru, IN | India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '3 to 6 yrs' (minimum 3 yr)",
+        "matched": "successfactors job page",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "e8ad20a41618497acf603982a516a4d711af84c3fb26a583c3dc4708dd5b18da": {
+      "company_id": "deloitte",
+      "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",
+      "fingerprint": "cf05447f578c01ec4288e5ea768e281e6778152202f812d1036dc93f9d6c7695",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T06:09:25.008377+00:00",
+      "expires_at": "2026-11-24T06:09:25.008389+00:00",
+      "title": "T&T | Cyber: D&R | Consultant | Vulnerability Assessment & Penetration Testing (VAPT) | Bengaluru",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Bengaluru, IN | India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '2-5 years' (minimum 2 yr)",
+        "matched": "successfactors job page",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "e0bf83b2875d29131eeec803908e9624709f963b2f8dd7b9f883518b6f615790": {
+      "company_id": "deloitte",
+      "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",
+      "fingerprint": "009df56f5413aeeee9aa4a2293d2869c273545425e79394c43f3cd5e4c7787b4",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T06:09:22.695024+00:00",
+      "expires_at": "2026-11-24T06:09:22.695052+00:00",
+      "title": "Consultant | ITDA - TPA | Bengaluru | Controls | IT Controls,AI, Data Analytics",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Bengaluru, IN | India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '2 - 3 years' (minimum 2 yr)",
+        "matched": "successfactors job page",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "9c75e4cf15d06d4181abf44f758023493a314723148b39c1d687d964b15e5244": {
+      "company_id": "deloitte",
+      "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",
+      "fingerprint": "2edcb25a5b210ccf388029bf9ddfe1266e7d29f863feb3323d8469bd9f8d7223",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T06:09:21.265017+00:00",
+      "expires_at": "2026-11-24T06:09:21.265039+00:00",
+      "title": "T&T | Cyber: D&R | Consultant | Cloud Security (CSPM) | Bengaluru",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Bengaluru, IN | India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '2-5 years' (minimum 2 yr)",
+        "matched": "successfactors job page",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "f371398da17c37c320551747e65a4aac147e8b0d4096965ae54e7dea1ce9fc7d": {
+      "company_id": "deloitte",
+      "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",
+      "fingerprint": "f68b8559d9b21cf736e8b05b9c64f9051859f89ff84dc513597dc8af493a4e76",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T06:09:19.187949+00:00",
+      "expires_at": "2026-11-24T06:09:19.187963+00:00",
+      "title": "Analyst | SAP ISU | Kolkata | SAP | DSA Oil, Gas and Utilities",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Kolkata, IN | India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '3+ years' (minimum 3 yr)",
+        "matched": "successfactors job page",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "cd0b4d1538b777fcf54133ef0b05844df3c1e9d543c71f43fde7ac42b9045231": {
+      "company_id": "deloitte",
+      "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",
+      "fingerprint": "24414982d0170a591aa5ec2b8b841d75170af10a72a998090b075c6d0ba65b00",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T06:09:17.726928+00:00",
+      "expires_at": "2026-11-24T06:09:17.726941+00:00",
+      "title": "Consultant | SAP SPP | Chennai ODC | SAP | DSA Auto and Auto Components",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Chennai ODC, IN | India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '3-5 yrs' (minimum 3 yr)",
+        "matched": "successfactors job page",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "c531abad9db797d26fc8a4cec90d8a370472f7d5ae1865a0c8f6ebee7d35c702": {
+      "company_id": "deloitte",
+      "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",
+      "fingerprint": "b73e95bf3fd82db5d92557d3191eb40868dafed15ce101a8973eb18cce549cc2",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T06:09:11.420269+00:00",
+      "expires_at": "2026-11-24T06:09:11.420282+00:00",
+      "title": "Analyst | SAP CPI | Gurugram | SAP | DSA Auto and Auto Components",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Gurugram, IN | India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '2-4 years' (minimum 2 yr)",
+        "matched": "successfactors job page",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "d3ba1b8610b265eefac17b2b46489c22a1c8241a35b60e7bb06cb92947ec5fc2": {
+      "company_id": "microsoft",
+      "source": "eae7b9d265deafdeec3281d016c799396457073127eb723399503b11e3e63ba0",
+      "fingerprint": "60704b85ddb48f6447d28b53bf805f98f7abe58266cfb9ed1bc41ed1b6f33128",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T06:08:39.306720+00:00",
+      "expires_at": "2026-11-24T06:08:39.306731+00:00",
+      "title": "Logistics Technician",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "India, Tamil Nadu, Chennai",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '1+ years' (minimum 1 yr)",
+        "matched": "eightfold position",
+        "posted_at": "2026-11-21"
+      },
+      "verdict": "rejected"
+    },
+    "29fd4780585b90bdbc4fa55a437e16308aba008817d1c39c94856c2e6cb0de1d": {
+      "company_id": "c1793696372",
+      "source": "bc6fda12f5c238743ab995767a2c5d240ff9cdde468981e249670a2c8e8bd344",
+      "fingerprint": "9d5cd800a662e6ad9d621ec38b500ea756730d9daa3cd7f12a38741627fbd115",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T06:05:27.168566+00:00",
+      "expires_at": "2026-11-24T06:05:27.168577+00:00",
+      "title": "Sales Rep (Territory Business Executive)",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "West Bengal, IN",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: 'Minimum 2 years' (minimum 2 yr)",
+        "matched": "JobPosting on the job page",
+        "posted_at": "2026-10-16"
+      },
+      "verdict": "rejected"
+    },
     "5fa4a1ee791af10e7a1cb802c6a01b4adf18562edb094d452722ac700f6735e7": {
       "company_id": "oracle",
       "source": "e9d963b4177eeb1a5c0555d6ce263e9567c3c97899459e27e110865299c36888",
@@ -64400,26 +64620,6 @@
         "reason": "explicit requirement: 'at least 3 years' (minimum 3 yr)",
         "matched": "JobPosting on the job page",
         "posted_at": "2026-10-06"
-      },
-      "verdict": "rejected"
-    },
-    "29fd4780585b90bdbc4fa55a437e16308aba008817d1c39c94856c2e6cb0de1d": {
-      "company_id": "c1793696372",
-      "source": "bc6fda12f5c238743ab995767a2c5d240ff9cdde468981e249670a2c8e8bd344",
-      "fingerprint": "9d5cd800a662e6ad9d621ec38b500ea756730d9daa3cd7f12a38741627fbd115",
-      "rules": "53698bf60a701fbb0ffc58bf99dd98ee22f21d696119950a30536344c3b1ae4b",
-      "evaluated_at": "2026-11-20T06:06:30.109344+00:00",
-      "expires_at": "2026-11-23T06:06:30.109355+00:00",
-      "title": "Sales Rep (Territory Business Executive)",
-      "detail": {
-        "ok": true,
-        "description": "",
-        "location": "West Bengal, IN",
-        "strict_text": "",
-        "posting_evidence": true,
-        "reason": "explicit requirement: 'Minimum 2 years' (minimum 2 yr)",
-        "matched": "JobPosting on the job page",
-        "posted_at": "2026-10-16"
       },
       "verdict": "rejected"
     },
