@@ -1,8 +1,88 @@
 {
   "schema_version": 1,
-  "run_id": "4c249bb6a7c041498b36d11564dcf3da",
-  "updated_at": "2026-11-20T21:18:06.791474+00:00",
+  "run_id": "d23641b925d24d518908ac328da343d5",
+  "updated_at": "2026-11-21T00:14:25.942347+00:00",
   "entries": {
+    "5fa4a1ee791af10e7a1cb802c6a01b4adf18562edb094d452722ac700f6735e7": {
+      "company_id": "oracle",
+      "source": "e9d963b4177eeb1a5c0555d6ce263e9567c3c97899459e27e110865299c36888",
+      "fingerprint": "7836bc31fbe21a6ae4bcb9a106730a93d6fc65fe32230251232b1e144d4d424e",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T00:13:41.165233+00:00",
+      "expires_at": "2026-11-24T00:13:41.165249+00:00",
+      "title": "Oracle Fusion HCM Consultant | Functional / Technical / Techno-Functional Consultant",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "BENGALURU, KARNATAKA, India | HYDERABAD, TELANGANA, India | CHENNAI, TAMIL NADU, India | THIRUVANANTHAPURAM, KERALA, India | GANDHI NAGAR, GUJARAT, India | PUNE, MAHARASHTRA, India | MUMBAI, MAHARASHTRA, India | NOIDA, UTTAR PRADESH, India | GURUGRAM, HARYANA, India | KOLKATA, WEST BENGAL, India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '5+ years' (minimum 5 yr)",
+        "matched": "oracle requisition",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "f079831d23d128744e764f676b2c22abc212af32000686ef58e02fd9fe5ca598": {
+      "company_id": "deloitte",
+      "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",
+      "fingerprint": "a10f0977d0a6527206b0683c94d23c5be802b0a2b809c728463dbab67f6ece0e",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T00:09:32.590061+00:00",
+      "expires_at": "2026-11-24T00:09:32.590075+00:00",
+      "title": "T&T|EAID|QE|Consultant | Automation Testing | Mumbai",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Mumbai, IN | India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '2-6 years' (minimum 2 yr)",
+        "matched": "successfactors job page",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "18ebac0bcaf1c9cd73bc7b4fc1c5aeffcad1434e0a35c64e5e75ed07869c8c13": {
+      "company_id": "microsoft",
+      "source": "eae7b9d265deafdeec3281d016c799396457073127eb723399503b11e3e63ba0",
+      "fingerprint": "e3845af93de7106af5d9a209014daea1c298f90e8a46a73e78fc0b2a5ca62a36",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T00:08:54.821609+00:00",
+      "expires_at": "2026-11-24T00:08:54.821619+00:00",
+      "title": "HR Shared Services Support IC2",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "India, Telangana, Hyderabad",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '5-8 years' (minimum 5 yr)",
+        "matched": "eightfold position",
+        "posted_at": "2026-11-20"
+      },
+      "verdict": "rejected"
+    },
+    "214d1f8ccf8ff2385f55a184a93927c9cb4456098ec02035c1d4b70ebb0d10cb": {
+      "company_id": "c1793696381",
+      "source": "1cfced21420e079623d9adeac9ed3c4d88fb0ad90617292e4dde7dcda2d2e314",
+      "fingerprint": "77602239c6e73064efbb5b68238d8c5d33921f2fdc37095c4128cc77719b6276",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T00:06:46.678618+00:00",
+      "expires_at": "2026-11-24T00:06:46.678629+00:00",
+      "title": "Static Data Management, Officer",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Hyderabad, Telangāna, India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '10+ years' (minimum 10 yr)",
+        "matched": "JobPosting on the job page",
+        "posted_at": "2026-11-20"
+      },
+      "verdict": "rejected"
+    },
     "83385a27f5e04d9ea3a9c2900a081ef2d300fa2c81805196b30983332e29bf6b": {
       "company_id": "cisco",
       "source": "3cebd1beafab612e90d38d79708f0da5cee21e02c6f4e1e81a33d36264073033",
@@ -858,26 +938,6 @@
         "strict_text": "",
         "posting_evidence": true,
         "reason": "explicit requirement: '10+ years' (minimum 10 yr)",
-        "matched": "oracle requisition",
-        "posted_at": ""
-      },
-      "verdict": "rejected"
-    },
-    "5fa4a1ee791af10e7a1cb802c6a01b4adf18562edb094d452722ac700f6735e7": {
-      "company_id": "oracle",
-      "source": "e9d963b4177eeb1a5c0555d6ce263e9567c3c97899459e27e110865299c36888",
-      "fingerprint": "279f5b093e2e70e71164f1313108b0c18c07b11eceeaa17b8ae417185cbb24ed",
-      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
-      "evaluated_at": "2026-11-20T12:19:03.792312+00:00",
-      "expires_at": "2026-11-23T12:19:03.792330+00:00",
-      "title": "Oracle Fusion HCM Functional/ Techno-Functional Consultant (Contractor to Hire Role)",
-      "detail": {
-        "ok": true,
-        "description": "",
-        "location": "BENGALURU, KARNATAKA, India | HYDERABAD, TELANGANA, India | CHENNAI, TAMIL NADU, India | THIRUVANANTHAPURAM, KERALA, India | GANDHI NAGAR, GUJARAT, India | PUNE, MAHARASHTRA, India | MUMBAI, MAHARASHTRA, India | NOIDA, UTTAR PRADESH, India | GURUGRAM, HARYANA, India | KOLKATA, WEST BENGAL, India",
-        "strict_text": "",
-        "posting_evidence": true,
-        "reason": "explicit requirement: '5+ years' (minimum 5 yr)",
         "matched": "oracle requisition",
         "posted_at": ""
       },
