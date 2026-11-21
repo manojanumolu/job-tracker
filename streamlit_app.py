@@ -4181,6 +4181,21 @@ def page_monitoring():
                 "delayed": f"No scan for over {_STALE_H} hours",
                 "pending": reason if monitoring_state(c) and reason else "Not scanned yet — added since the last run",
                 "checking": "Check requested"}.get(k, escape(c.get("scan_note") or "") or "—")
+        if c.get("second_chance"):
+            # Nov 2026: the second-chance ledger, attempts and skips told apart
+            from workday_runtime import second_chance_left
+            sc = (c.get("scan") or {}).get("second_chance") or {}
+            last_try = (sc.get("attempts") or [{}])[-1]
+            last_skip = (sc.get("skips") or [{}])[-1]
+            bits = [f"<b>Second chance: {second_chance_left(c)} of {c['second_chance']} attempts left</b>"]
+            if last_try.get("at"):
+                http = f", HTTP {last_try['http_status']}" if last_try.get("http_status") else ""
+                bits.append(f"last attempted {_ago(_parse_iso(last_try['at']), NOW)} ({escape(str(last_try.get('outcome', '')))}{http})")
+            else:
+                bits.append("not attempted yet")
+            if last_skip.get("at") and (not last_try.get("at") or last_skip["at"] > last_try["at"]):
+                bits.append(f"last skipped {_ago(_parse_iso(last_skip['at']), NOW)} ({escape(str(last_skip.get('reason', '')))})")
+            note = " · ".join(bits) + ("" if note == "—" else f"<br>{note}")
         rows.append(f"""<tr>
           <td class="c"><div class="mon-co">{_avatar(c.get('name') or '', "sm")}<div style="min-width:0;">{escape((c.get('name') or '').strip() or 'Unnamed')}
             <div class="sub">{f'<a class="link" href="{escape(curl, quote=True)}" target="_blank" rel="noopener">{escape(_short_url(curl, 34))}</a>' if curl else 'Invalid URL'}</div></div></div></td>

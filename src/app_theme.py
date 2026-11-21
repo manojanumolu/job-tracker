@@ -838,7 +838,8 @@ section[data-testid="stSidebar"] > div, [data-testid="stSidebarContent"] { backg
 [class*="st-key-nav_"] [data-testid^="stBaseButton"] > div { width: 100% !important; min-width: 0 !important; }
 [class*="st-key-nav_"] [data-testid="stIconMaterial"] { flex: 0 0 22px !important; width: 22px !important; text-align: center; }
 [class*="st-key-nav_"] [data-testid="stMarkdownContainer"] { flex: 1 1 auto !important; min-width: 0 !important; text-align: left !important; }
-[class*="st-key-nav_"] p { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; text-align: left !important; margin: 0 !important; }
+/* labels are never cut off: a long one ("Resume & Job Intelligence") wraps under itself, its icon stays in the column */
+[class*="st-key-nav_"] p { white-space: normal !important; overflow: visible !important; overflow-wrap: anywhere; line-height: 18px !important; text-align: left !important; margin: 0 !important; }
 .nav-group { padding-left: 12px !important; padding-right: 12px !important; }
 /* the ✕ / ↺ buttons on job rows are icon-only; their label is for screen readers */
 [class*="st-key-dismiss_"] [data-testid="stMarkdownContainer"], [class*="st-key-restore_"] [data-testid="stMarkdownContainer"],

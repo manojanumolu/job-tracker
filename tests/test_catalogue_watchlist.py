@@ -58,8 +58,9 @@ def test_manual_only_companies_left_the_catalogue():
 
 # Companies on manual monitoring (no reachable official source). Empty since 20 Nov 2026 16:00 UTC:
 # the 8 unreachable Workday-only companies get two more scheduled scans first. Never Account 2's.
-MANUAL = {"c1793696371", "c1793696375", "c1793696376", "c1793696383", "c1793696384", "c1793696386",
-          "c1793696387", "c1793696388"}     # back on manual after the 20 Nov 18:02 / 21 Nov 00:02 UTC second chance
+MANUAL: set[str] = set()     # the 8 Workday-only companies are on a second chance (21 Nov 2026)
+SECOND_CHANCE = {"c1793696371", "c1793696375", "c1793696376", "c1793696383", "c1793696384", "c1793696386",
+                 "c1793696387", "c1793696388"}
 
 
 def test_every_listed_company_is_monitored_automatically_or_manually():
@@ -74,7 +75,8 @@ def test_every_listed_company_is_monitored_automatically_or_manually():
         assert monitoring_state(c) == "", cid
         assert scraper.sources_for(c), cid
         assert "Playwright" not in scraper.source_label(c) and "Not scanned" not in scraper.source_label(c), cid
-    assert not (MANUAL & ACCOUNT_2)
+    assert not (MANUAL & ACCOUNT_2) and not (SECOND_CHANCE & ACCOUNT_2)
+    assert all(_catalogue()[cid].get("second_chance") == 2 for cid in SECOND_CHANCE)
 
 
 def test_account_2s_companies_are_untouched():
