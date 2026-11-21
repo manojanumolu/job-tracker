@@ -59,6 +59,18 @@ def rules_version():
     return digest(["m7-v2", *parts])
 
 
+def second_chance_left(company):
+    """Opportunities left for a company given a second chance (catalogue
+    "second_chance": N, Nov 2026). Only a real attempt - a request actually
+    sent in a scheduled full scan - uses one (scan.second_chance.attempts);
+    a skip (cooldown, safety stop, budget) keeps it."""
+    granted = company.get("second_chance") if isinstance(company, dict) else 0
+    if isinstance(granted, bool) or not isinstance(granted, int) or granted <= 0:
+        return 0
+    record = ((company.get("scan") or {}).get("second_chance") or {}) if isinstance(company.get("scan"), dict) else {}
+    return max(0, granted - len(record.get("attempts") or []))
+
+
 def is_api(configs):
     return any(c.get("type") == "workday" for c in configs)
 
@@ -214,6 +226,11 @@ class Recovery:
         """"" when the company may be contacted as far as recovery gating goes."""
         if self.mode == "canary":
             return "" if company["id"] in getattr(self, "probe_ids", ()) else "canary_gate"
+        if self.config["mode"] == "auto" and second_chance_left(company):
+            # its own attempt, not the data centre's shared probe (20 Nov 2026: the wd1/wd5
+            # gate held six second-chance companies back for two scans without a request).
+            # Its host's own cooldown, the throttled-hosts stop and the request cap still apply.
+            return ""
         name = self.cluster_of(company)
         # A 429 anywhere in a data centre during THIS run closes that data centre for
         # the rest of the run (15 Nov: one wd1 429 was followed by four more).

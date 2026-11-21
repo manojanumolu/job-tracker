@@ -1301,6 +1301,19 @@ def _blocked_streak(previous: dict, failing: bool, full: bool, now: str) -> dict
     return {"blocked_scans": n + 1, "blocked_since": previous.get("blocked_since") or now, "last_failed_at": now}
 
 
+def _second_chance(company: dict, previous: dict, full: bool, attempted: bool, detail: dict) -> dict | None:
+    """The per-company second-chance ledger (scan.second_chance): one entry per
+    scheduled full scan, an attempt only when a request was actually sent."""
+    if not company.get("second_chance"):
+        return None
+    record = dict(previous.get("second_chance") or {})
+    record = {"attempts": list(record.get("attempts") or []), "skips": list(record.get("skips") or [])}
+    if full:
+        (record["attempts"] if attempted else record["skips"]).append({"at": _now_iso(), **detail})
+        record["skips"] = record["skips"][-6:]
+    return record
+
+
 def _streak_label(iso: str) -> str:
     try:
         dt = datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(timezone.utc)
@@ -1366,6 +1379,9 @@ def run_all(recovery=None, scope: str = "all") -> list[dict]:
                 base = {k: v for k, v in previous.items() if k not in ("blocked_scans", "blocked_since", "last_failed_at")}
                 company["scan"] = {**base, **_blocked_streak(previous, failing, scope == "all", _now_iso()),
                                    "recovery": recovery.projection(company, outcome, reason)}
+                sc = _second_chance(company, previous, scope == "all", False, {"reason": reason or outcome})
+                if sc is not None:
+                    company["scan"]["second_chance"] = sc
                 portals_failed += company.get("status") in ("failing", "broken", "needs_config")
                 continue  # No attempt, timestamp or failure-streak advancement.
             recovery.begin(company)
@@ -1390,6 +1406,9 @@ def run_all(recovery=None, scope: str = "all") -> list[dict]:
             base = {k: v for k, v in previous.items() if k not in ("blocked_scans", "blocked_since", "last_failed_at")}
             company["scan"] = {**base, **_blocked_streak(previous, failing, scope == "all", _now_iso()),
                                "recovery": recovery.projection(company, "deferred", category)}
+            sc = _second_chance(company, previous, scope == "all", False, {"reason": category})
+            if sc is not None:
+                company["scan"]["second_chance"] = sc
             portals_failed += company.get("status") in ("failing", "broken", "needs_config")
             continue
         # A Workday stop mid-scan (throttle, error) is a failure. Detail work left for the
@@ -1417,6 +1436,10 @@ def run_all(recovery=None, scope: str = "all") -> list[dict]:
         if managed:
             outcome = "healthy" if scan.status == "active" else ("rate_limited" if recovery.last_stop.get("http_status") == 429 else "failed")
             company["scan"]["recovery"] = recovery.projection(company, outcome, attempted=True)
+            sc = _second_chance(company, previous, scope == "all", True,
+                                {"outcome": outcome, "http_status": recovery.last_stop.get("http_status") or 0})
+            if sc is not None:
+                company["scan"]["second_chance"] = sc
         company["source"] = source_label(company)
         # reflect what this scrape actually sees — a failed scan saw nothing, so it keeps the last one
         if scan.status == "active":

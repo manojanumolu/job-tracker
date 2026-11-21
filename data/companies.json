@@ -475,7 +475,7 @@
     "status": "unknown",
     "last_job": "",
     "last_checked": "2026-11-19T13:15:23.043262+00:00",
-    "status_reason": "Manual check: https://www.wellsfargojobs.com/ — not scanned automatically because its job pages answer automated requests with a Cloudflare challenge (HTTP 403); in the 20 Nov 18:02 and 21 Nov 00:02 UTC second-chance scans its Workday data centre stayed rate-limited (not attempted)",
+    "status_reason": "Second chance: two individual attempts in the next scheduled full scans (not held by the shared data-centre gate; its own host cooldown, the throttled-hosts stop and the request cap still apply)",
     "scan_note": "",
     "last_success": "2026-11-16T06:08:00.141265+00:00",
     "scan": {
@@ -527,7 +527,7 @@
       }
     },
     "source": "Workday API",
-    "monitoring": "blocked"
+    "second_chance": 2
   },
   {
     "id": "c1793696372",
@@ -660,7 +660,7 @@
     "status": "unknown",
     "last_job": "",
     "last_checked": "2026-11-21T00:48:31.176217+00:00",
-    "status_reason": "Manual check: https://broadridge.wd5.myworkdayjobs.com/Careers — not scanned automatically because its careers link goes straight to Workday: second-chance scans 20 Nov 18:02 UTC unusable Workday response, 21 Nov 00:02 UTC cooling down",
+    "status_reason": "Second chance: two individual attempts in the next scheduled full scans (not held by the shared data-centre gate; its own host cooldown, the throttled-hosts stop and the request cap still apply)",
     "scan_note": "",
     "last_success": "2026-11-16T06:08:48.420508+00:00",
     "scan": {
@@ -717,7 +717,7 @@
       }
     },
     "source": "Workday API",
-    "monitoring": "blocked"
+    "second_chance": 2
   },
   {
     "id": "c1793696376",
@@ -727,7 +727,7 @@
     "status": "unknown",
     "last_job": "",
     "last_checked": "2026-11-19T19:18:21.891835+00:00",
-    "status_reason": "Manual check: https://invesco.wd1.myworkdayjobs.com/IVZ — not scanned automatically because its careers site lists jobs only through Workday; in both second-chance scans (20 Nov 18:02, 21 Nov 00:02 UTC) its Workday data centre stayed rate-limited",
+    "status_reason": "Second chance: two individual attempts in the next scheduled full scans (not held by the shared data-centre gate; its own host cooldown, the throttled-hosts stop and the request cap still apply)",
     "scan_note": "",
     "last_success": "2026-11-16T06:08:53.488039+00:00",
     "scan": {
@@ -779,7 +779,7 @@
       }
     },
     "source": "Workday API",
-    "monitoring": "blocked"
+    "second_chance": 2
   },
   {
     "id": "c1793696377",
@@ -1042,7 +1042,7 @@
     "status": "unknown",
     "last_job": "Mechanical Design Engineer",
     "last_checked": "2026-11-20T01:33:36.129324+00:00",
-    "status_reason": "Manual check: https://careers.hitachi.com/jobs — not scanned automatically because its careers site has no India filter (369 pages) and in both second-chance scans (20 Nov 18:02, 21 Nov 00:02 UTC) its Workday data centre stayed rate-limited",
+    "status_reason": "Second chance: two individual attempts in the next scheduled full scans (not held by the shared data-centre gate; its own host cooldown, the throttled-hosts stop and the request cap still apply)",
     "scan_note": "",
     "last_success": "2026-11-16T06:14:57.792147+00:00",
     "scan": {
@@ -1094,7 +1094,7 @@
       }
     },
     "source": "Workday API",
-    "monitoring": "blocked"
+    "second_chance": 2
   },
   {
     "id": "c1793696384",
@@ -1104,7 +1104,7 @@
     "status": "unknown",
     "last_job": "CA Industrial Trainee",
     "last_checked": "2026-11-20T07:37:16.892624+00:00",
-    "status_reason": "Manual check: https://www.medtronic.com/en-us/our-company/careers.html — not scanned automatically because its careers site lists jobs only through Workday; in both second-chance scans (20 Nov 18:02, 21 Nov 00:02 UTC) its Workday data centre stayed rate-limited",
+    "status_reason": "Second chance: two individual attempts in the next scheduled full scans (not held by the shared data-centre gate; its own host cooldown, the throttled-hosts stop and the request cap still apply)",
     "scan_note": "",
     "last_success": "2026-11-16T06:15:12.768149+00:00",
     "scan": {
@@ -1156,7 +1156,7 @@
       }
     },
     "source": "Workday API",
-    "monitoring": "blocked"
+    "second_chance": 2
   },
   {
     "id": "c1793696385",
@@ -1209,7 +1209,7 @@
     "status": "unknown",
     "last_job": "",
     "last_checked": "2026-11-20T13:40:13.144861+00:00",
-    "status_reason": "Manual check: https://www.silabs.com/about-us/careers — not scanned automatically because its careers site lists jobs only through Workday; in both second-chance scans (20 Nov 18:02, 21 Nov 00:02 UTC) its Workday data centre stayed rate-limited",
+    "status_reason": "Second chance: two individual attempts in the next scheduled full scans (not held by the shared data-centre gate; its own host cooldown, the throttled-hosts stop and the request cap still apply)",
     "scan_note": "",
     "last_success": "2026-11-16T06:15:26.053321+00:00",
     "scan": {
@@ -1261,7 +1261,7 @@
       }
     },
     "source": "Workday API",
-    "monitoring": "blocked"
+    "second_chance": 2
   },
   {
     "id": "c1793696387",
@@ -1271,7 +1271,7 @@
     "status": "unknown",
     "last_job": "Associate Industrial Engineer",
     "last_checked": "2026-11-20T18:14:45.805187+00:00",
-    "status_reason": "Manual check: https://www.analog.com/en/careers.html — not scanned automatically because its careers site lists jobs only through Workday: second-chance scans 20 Nov 18:02 UTC HTTP 429, 21 Nov 00:02 UTC data centre still rate-limited",
+    "status_reason": "Second chance: two individual attempts in the next scheduled full scans (not held by the shared data-centre gate; its own host cooldown, the throttled-hosts stop and the request cap still apply)",
     "scan_note": "",
     "last_success": "2026-11-16T06:15:39.229508+00:00",
     "scan": {
@@ -1326,7 +1326,7 @@
       "last_failed_at": "2026-11-21T00:48:32.182896+00:00"
     },
     "source": "Workday API",
-    "monitoring": "blocked"
+    "second_chance": 2
   },
   {
     "id": "c1793696388",
@@ -1336,7 +1336,7 @@
     "status": "unknown",
     "last_job": "",
     "last_checked": "2026-11-20T21:17:52.763494+00:00",
-    "status_reason": "Manual check: https://www.marvell.com/company/careers.html — not scanned automatically because its careers site lists jobs only through Workday: second-chance scans 20 Nov 18:02 UTC data centre rate-limited, then HTTP 429 and cooling down at 21 Nov 00:02 UTC",
+    "status_reason": "Second chance: two individual attempts in the next scheduled full scans (not held by the shared data-centre gate; its own host cooldown, the throttled-hosts stop and the request cap still apply)",
     "scan_note": "",
     "last_success": "2026-11-16T06:15:45.233084+00:00",
     "scan": {
@@ -1391,7 +1391,7 @@
       "last_failed_at": "2026-11-21T00:48:32.182953+00:00"
     },
     "source": "Workday API",
-    "monitoring": "blocked"
+    "second_chance": 2
   },
   {
     "id": "c1793696389",
