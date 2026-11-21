@@ -1,8 +1,188 @@
 {
   "schema_version": 1,
-  "run_id": "6f2f82cdd4c04770b8f6efd7b8f7be5a",
-  "updated_at": "2026-11-21T06:51:38.971666+00:00",
+  "run_id": "0f1d5359ff634f3585899a4514f7bcd9",
+  "updated_at": "2026-11-21T12:15:45.123487+00:00",
   "entries": {
+    "8d3809ce6ffbd989c3eece9aee31250b673b4c47dfeb8f97799405185c557879": {
+      "company_id": "deloitte",
+      "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",
+      "fingerprint": "0439fb98ae52ea95a96f1eb4ace6cfdd2ac6720086bc338bd215319ffda5b8ca",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T12:10:51.263240+00:00",
+      "expires_at": "2026-11-24T12:10:51.263253+00:00",
+      "title": "Consultant | APM: IT PM | Bengaluru | Finance Transformation | Finance Strategy",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Bengaluru, IN | India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '4-5 years' (minimum 4 yr)",
+        "matched": "successfactors job page",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "d3456c6177d28bc76bbb534f350c8292fa888b0e5a6f54c1ec37fdcae2612bb0": {
+      "company_id": "deloitte",
+      "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",
+      "fingerprint": "e36895582d721d502d6685b465bb47c373026df77c1e68a02839fa0d7f5cb218",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T12:10:50.995467+00:00",
+      "expires_at": "2026-11-24T12:10:50.995479+00:00",
+      "title": "Consultant | .Net Azure Full Stack | Bengaluru | Engineering | Platform Development & Integration",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Bengaluru, IN | India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '3-6 years' (minimum 3 yr)",
+        "matched": "successfactors job page",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "7a37d88ddb666860dd594e92fb878453380a36338f1e7dee38022b6ebcd2816c": {
+      "company_id": "deloitte",
+      "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",
+      "fingerprint": "c3e769465fcd80e2138803a213340e0b7ae780ec15368f09758693dd5ffa4303",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T12:10:47.273094+00:00",
+      "expires_at": "2026-11-24T12:10:47.273106+00:00",
+      "title": "T&T - ET&P - Analyst - SAP Security & GRC AC - Gurugram",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Gurugram, IN | India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '1-3 years' (minimum 1 yr)",
+        "matched": "successfactors job page",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "1249a23838daa263c97fe6a4a87f3d3bcc274600fb78c897c32c2b6d60d736e0": {
+      "company_id": "deloitte",
+      "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",
+      "fingerprint": "a239e619cd556ad358424b7e5e8fa0ccfa5ad12368d7b4a513607021d6aca73d",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T12:10:41.815413+00:00",
+      "expires_at": "2026-11-24T12:10:41.815427+00:00",
+      "title": "Consultant | APM: PMO Coordinator | Bengaluru | Finance Transformation | Finance Strategy",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Bengaluru, IN | India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '3-4 years' (minimum 3 yr)",
+        "matched": "successfactors job page",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "e00f6d87ea2860d904b1ad6928c9735a7354b1fd57fb064d0b354c9c8800c053": {
+      "company_id": "deloitte",
+      "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",
+      "fingerprint": "15a79afac921344d06168562a99789d26edff6948c91e0f85bdf5d1f98fe1a5f",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T12:10:35.072958+00:00",
+      "expires_at": "2026-11-24T12:10:35.072970+00:00",
+      "title": "T&T - ET&P - Consultant - SAP Security & GRC AC - Gurugram",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Gurugram, IN | India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '3-5 years' (minimum 3 yr)",
+        "matched": "successfactors job page",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "7f153e2436a00248e79e78be4b0f101356df7145e70e6ef13cea2e84ca5f0864": {
+      "company_id": "deloitte",
+      "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",
+      "fingerprint": "4db4b65b9cbaed45c48a966cf97839af92bc3e8cc9d7cbe7a7eb60429e0782ce",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T12:10:33.607698+00:00",
+      "expires_at": "2026-11-24T12:10:33.607710+00:00",
+      "title": "T&T - ET&P - Consultant - SAP EWM - Gurugram",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Gurugram, IN | India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '3 - 5 years' (minimum 3 yr)",
+        "matched": "successfactors job page",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "55295f2dfd9c62b852baab362038afd68b286a605990145a570c19ec74c6f248": {
+      "company_id": "deloitte",
+      "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",
+      "fingerprint": "4f9083e37e9a79af0e067f6e1f7a3b6a642a4c5b2ccdf17fa4d3317ab01c12ef",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T12:10:33.344660+00:00",
+      "expires_at": "2026-11-24T12:10:33.344672+00:00",
+      "title": "Consultant | .Net Azure Full Stack | Bengaluru | Engineering | Platform Development & Integration",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "Bengaluru, IN | India",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '3-6 years' (minimum 3 yr)",
+        "matched": "successfactors job page",
+        "posted_at": ""
+      },
+      "verdict": "rejected"
+    },
+    "26d381382d2b0be2ebbb5a41d6c13ea72006bf19d25d2a3841b8bb197a80287b": {
+      "company_id": "microsoft",
+      "source": "eae7b9d265deafdeec3281d016c799396457073127eb723399503b11e3e63ba0",
+      "fingerprint": "b8ca8dd409848d0bdaeaf8977a07f321384f145aab4512858f89c1af909e7d89",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T12:09:44.808039+00:00",
+      "expires_at": "2026-11-24T12:09:44.808048+00:00",
+      "title": "Logistics Technician",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "India, Tamil Nadu, Chennai",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '2+ year' (minimum 2 yr)",
+        "matched": "eightfold position",
+        "posted_at": "2026-11-21"
+      },
+      "verdict": "rejected"
+    },
+    "df1145ec887e13fca6492791a7fb213a88d3abb325eff23f4abc3334252091be": {
+      "company_id": "microsoft",
+      "source": "eae7b9d265deafdeec3281d016c799396457073127eb723399503b11e3e63ba0",
+      "fingerprint": "04a374758bdffa145639183fbac88dc0122e9ef4dc2fe15072d9c7f039d4c698",
+      "rules": "4a0d775e05f9b4e7f2697d71ab8131730b239e91b3af9352b261759711e7bb6b",
+      "evaluated_at": "2026-11-21T12:09:44.506317+00:00",
+      "expires_at": "2026-11-24T12:09:44.506325+00:00",
+      "title": "Data Center Technician",
+      "detail": {
+        "ok": true,
+        "description": "",
+        "location": "India, Tamil Nadu, Chennai",
+        "strict_text": "",
+        "posting_evidence": true,
+        "reason": "explicit requirement: '1+ years' (minimum 1 yr)",
+        "matched": "eightfold position",
+        "posted_at": "2026-11-21"
+      },
+      "verdict": "rejected"
+    },
     "09dd4440e7daacd4626fc4b36a0bfd668afad3c32c20cac60ca72ab989247cc6": {
       "company_id": "deloitte",
       "source": "51e0e26253558334faf603cd35f7e399ca409c3822f16889707d5ede05030567",

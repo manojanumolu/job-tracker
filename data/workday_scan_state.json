@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "run_id": "6f2f82cdd4c04770b8f6efd7b8f7be5a",
-  "updated_at": "2026-11-21T06:51:38.971666+00:00",
+  "run_id": "0f1d5359ff634f3585899a4514f7bcd9",
+  "updated_at": "2026-11-21T12:15:45.123487+00:00",
   "hosts": {
     "flutterbe.wd3.myworkdayjobs.com": {
       "observed_at": "2026-11-18T21:04:19.789091+00:00",
@@ -283,7 +283,7 @@
       "retry_after_valid": false
     },
     "jiostar.wd102.myworkdayjobs.com": {
-      "observed_at": "2026-11-21T06:11:03.016540+00:00",
+      "observed_at": "2026-11-21T12:12:45.361264+00:00",
       "cooldown_until": "",
       "failures": 0,
       "http_status": 200,
@@ -295,15 +295,15 @@
   "companies": {
     "jiohotstar": {
       "source": "fe566b637b6b43d4f0d863aa620c0b7bbfc67273cbd89fec78fcc8b32e8da2d0",
-      "observed_at": "2026-11-21T06:11:03.031424+00:00",
-      "last_attempt": "2026-11-21T06:11:03.031429+00:00",
-      "last_success": "2026-11-21T06:11:03.031376+00:00",
+      "observed_at": "2026-11-21T12:12:45.375886+00:00",
+      "last_attempt": "2026-11-21T12:12:45.375891+00:00",
+      "last_success": "2026-11-21T12:12:45.375837+00:00",
       "outcome": "healthy",
       "pending": {}
     },
     "pokerstars": {
       "source": "1e659416da76036f124254ee411c1405d15334c6ac5b2863a904dd06228bbb9b",
-      "observed_at": "2026-11-21T06:51:38.971464+00:00",
+      "observed_at": "2026-11-21T12:15:45.123328+00:00",
       "last_attempt": "2026-11-18T21:04:19.789091+00:00",
       "last_success": "2026-11-16T06:04:24.837165+00:00",
       "outcome": "deferred",
@@ -319,7 +319,7 @@
     },
     "pwc": {
       "source": "6ab46f928d378f7252d40c48de0c18502a47c70df5f63840a049f0c847a3d881",
-      "observed_at": "2026-11-21T06:51:38.971536+00:00",
+      "observed_at": "2026-11-21T12:15:45.123394+00:00",
       "last_attempt": "2026-11-20T12:48:34.563920+00:00",
       "last_success": "2026-11-16T06:06:35.730344+00:00",
       "outcome": "cooling_down",
@@ -511,8 +511,8 @@
     }
   },
   "last_completed_run": {
-    "run_id": "6f2f82cdd4c04770b8f6efd7b8f7be5a",
-    "started_at": "2026-11-21T06:51:38.971187+00:00",
-    "finished_at": "2026-11-21T06:51:38.971666+00:00"
+    "run_id": "0f1d5359ff634f3585899a4514f7bcd9",
+    "started_at": "2026-11-21T12:03:42.889309+00:00",
+    "finished_at": "2026-11-21T12:15:45.123487+00:00"
   }
 }
